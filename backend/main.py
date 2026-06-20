@@ -37,6 +37,20 @@ app.include_router(orcamentos_router)
 app.include_router(servicos_router)
 app.include_router(projetos_router)
 
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "api": "Mirai Hit Studio API",
+        "version": "1.0.0"
+    }
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy"
+    }
+
 # Inicialização
 @app.on_event("startup")
 async def startup():
