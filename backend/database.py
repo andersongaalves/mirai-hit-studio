@@ -40,28 +40,6 @@ SessionLocal = sessionmaker(
 
 Base = declarative_base()
 
-
-def get_db():
-    """
-    Dependency utilizada pelo FastAPI.
-
-    Exemplo:
-
-    @router.get("/")
-    def listar(db: Session = Depends(get_db)):
-        ...
-    """
-
-    db = SessionLocal()
-
-    try:
-
-        yield db
-
-    finally:
-
-        db.close()
-
 def get_db() -> Generator[Session, None, None]:
 
     db = SessionLocal()
