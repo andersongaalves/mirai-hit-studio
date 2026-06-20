@@ -1,9 +1,15 @@
+import sys
+from pathlib import Path
+
+sys.path.append(
+    str(Path(__file__).resolve().parent.parent)
+)
+
 import argparse
 
 from database import SessionLocal
 from models.usuario import UsuarioModel
 from core.security import get_password_hash
-
 
 parser = argparse.ArgumentParser()
 
