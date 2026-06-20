@@ -1,0 +1,34 @@
+.float-anim { animation: floating 4s ease-in-out infinite; }
+@keyframes floating { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+
+/* Animação de respiração de brilho */
+.logo-pulse {
+    animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.3)); }
+    50% { filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.7)); }
+}
+
+.shine-text {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+}
+
+.shine-text::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shine 4s infinite;
+}
+
+@keyframes shine {
+    0% { left: -100%; }
+    20%, 100% { left: 100%; }
+}

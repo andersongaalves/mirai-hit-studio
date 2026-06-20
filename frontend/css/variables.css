@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@600&family=Rajdhani:wght@700&display=swap');
+
+:root {
+    --cor-fundo: #0b0f19;
+    --cor-ciano: #00D4FF;
+    --cor-roxo: #B22AF0;
+    --cor-branco: #F9FAFB;
+    --font-logo: 'Impact', sans-serif;
+    --font-titulos: 'Oxanium', sans-serif;
+    --font-subtitulos: 'Rajdhani', sans-serif;
+    --font-texto: 'Calibri', sans-serif;
+    --spacing-xs: 8px;
+    --spacing-sm: 16px;
+    --spacing-md: 32px;
+    --spacing-lg: 64px;
+}
+
+@font-face {
+    font-family: 'Ethnocentric';
+    src: url('../fonts/ethnocentric.ttf') format('truetype');
+}

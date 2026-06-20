@@ -1,0 +1,110 @@
+/* --- css/pages/admin.css --- */
+.admin-container { 
+    max-width: 800px; 
+    margin: 20px auto; 
+    background: rgba(17, 24, 39, 0.9); 
+    padding: 40px; 
+    border-radius: 10px; 
+    border: 1px solid var(--cor-roxo); 
+    box-shadow: 0 0 20px rgba(178, 42, 240, 0.2); 
+}
+
+.admin-header { text-align: center; margin-bottom: 30px; }
+.admin-header h2 { color: var(--cor-ciano); margin: 0; }
+.hidden { display: none !important; }
+
+.btn-small { 
+    padding: 5px 10px; 
+    font-size: 0.9rem; 
+    cursor: pointer; 
+    background: rgba(255,255,255,0.1); 
+    border: 1px solid rgba(255,255,255,0.2); 
+    color: white; 
+    border-radius: 4px; 
+    transition: 0.3s;
+}
+.btn-small:hover { background: var(--cor-roxo); }
+.btn-danger { background: #EF4444; border: none; }
+.btn-danger:hover { background: #DC2626; }
+
+.editor-panel { 
+    background: rgba(0,0,0,0.5); 
+    padding: 20px; 
+    border-radius: 8px; 
+    border: 1px dashed var(--cor-ciano); 
+    margin: 50px; 
+}
+
+.admin-section-divider {
+    margin-top: 60px; 
+    border-top: 1px solid var(--cor-roxo); 
+    padding-top: 30px;
+}
+
+.admin-list-container {
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    margin-bottom: 20px;
+}
+
+/* Substituindo os estilos inline das listas no JS */
+.admin-list-item {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    background: rgba(255,255,255,0.05); 
+    padding: 15px; 
+    border-radius: 6px;
+}
+
+.admin-param-item {
+    display: flex; 
+    gap: 5px; 
+    background: rgba(0,212,255,0.1); 
+    padding: 8px 15px; 
+    border-radius: 4px; 
+    align-items: center; 
+    border: 1px solid var(--cor-ciano);
+}
+
+.orcamento-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--cor-ciano);
+}
+
+/* --- NAVEGAÇÃO DO DASHBOARD --- */
+.dashboard-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(178, 42, 240, 0.3);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dashboard-card:hover {
+    background: rgba(0, 212, 255, 0.05);
+    border-color: var(--cor-ciano);
+    transform: translateY(-8px);
+    box-shadow: 0 10px 20px rgba(0, 212, 255, 0.15);
+}
+
+.dashboard-card h3 { 
+    color: var(--cor-branco); 
+    margin-bottom: 8px; 
+    font-size: 1.3rem; 
+    font-family: var(--font-titulos);
+}
+
+.dashboard-card p { 
+    color: #888; 
+    font-size: 0.9rem; 
+    line-height: 1.4;
+}
+
+/* Ocultar divs de módulo padrão */
+.admin-section.hidden { display: none; }

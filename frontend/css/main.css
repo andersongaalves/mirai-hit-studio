@@ -1,0 +1,9 @@
+/* Ficheiro: css/main.css */
+@import url('variables.css'); /* Cores e Fontes primeiro de tudo */
+@import url('base.css');      /* Resets, body, títulos e .container */
+@import url('layout.css');    /* Nav e Footer */
+@import url('components.css');/* Botões genéricos, inputs, etc */
+
+/*ficheiros específicos de cada página */
+@import url('pages/calculator.css');
+@import url('pages/portfolio.css');

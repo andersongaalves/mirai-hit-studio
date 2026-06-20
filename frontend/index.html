@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirai Hit Studio - Criando hits do futuro</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+
+    <main class="container">
+        <!-- HERO SECTION -->
+        <header class="hero">
+            <div class="particles">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <img src="img/logo-principal.png" alt="Mirai Hit Studio" class="hero-logo float-anim logo-pulse">
+            <div class="logo-brand-container">
+                <h1 class="main-brand shine-text">
+                    <span class="mirai">MIRAI </span><span class="hit">HIT</span>
+                </h1>
+                <div class="brand-subline">
+                    <span class="line-deco"></span>
+                    <span class="studio">STUDIO</span>
+                    <span class="line-deco"></span>
+                </div>
+            </div>
+            <h4>Criando <span class="text-gradient">hits do futuro</span></h4>
+            <p class="hero-subtitle">Onde criatividade, técnica, emoção e inovação coexistem.</p>
+        </header>
+
+        <!-- VITRINE DE HITS -->
+        <section class="home-portfolio">
+            <h2 class="section-title">Nossos <span class="text-roxo">Hits</span></h2>
+            <div class="carousel-container">
+                <button class="carousel-btn left-btn" onclick="moverCarrossel(-1)">&#10094;</button>
+                <div class="scrolling-wrapper" id="home-portfolio-track">
+                    <p style="text-align: center; width: 100%; color: #aaa;">Carregando projetos...</p>
+                </div>
+                <button class="carousel-btn right-btn" onclick="moverCarrossel(1)">&#10095;</button>
+            </div>
+        
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="portfolio.html" class="btn-outline">Ver Portfólio Completo</a>
+            </div>
+
+            <div class="hero-actions" style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
+                <a href="calculadora.html" class="btn-cta btn-large">INICIAR PROJETO</a>
+            </div>
+        </section>
+
+        <!-- SEÇÃO CONCEITO E ESSÊNCIA -->
+        <section class="about-brand" style="margin-top: 100px;">
+            <h2 class="section-title">O Conceito <span class="text-cyan">Mirai Hit</span></h2>
+            
+            <div class="brand-story glass-card" style="margin-top: 50px; padding: 40px; text-align: center; max-width: 800px; margin: 50px auto;">
+                <p style="margin-bottom: 30px; line-height: 1.6; color: #ccc; font-size: 1.1rem;">
+                    A união dos nossos pilares traduz a essência do <strong>Mirai Hit Studio</strong>: um espaço onde criatividade, técnica, emoção e inovação coexistem.
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: left;">
+                    <div>
+                        <h4 style="color: var(--cor-roxo);">Mirai (未来)</h4>
+                        <p style="font-size: 0.9rem; color: #aaa;">"Futuro", simbolizando inovação, evolução e busca constante por novas sonoridades.</p>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--cor-roxo);">Hit</h4>
+                        <p style="font-size: 0.9rem; color: #aaa;">Músicas capazes de marcar pessoas, gerar impacto e permanecer na memória.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="symbol-grid" style="margin-top: 60px;">
+                <div class="symbol-card neon-border-cyan"><h4>🎵 Nota Musical</h4><p>A arte pura e nossa capacidade de transformar ideias em experiências sonoras.</p></div>
+                <div class="symbol-card neon-border-purple"><h4>⚔️ Katana</h4><p>Precisão técnica e disciplina em cada detalhe da produção.</p></div>
+                <div class="symbol-card neon-border-cyan"><h4>💓 Onda (ECG)</h4><p>Conexão, energia e emoção verdadeira pulsando através do som.</p></div>
+                <div class="symbol-card neon-border-purple"><h4>⬡ Hexágono</h4><p>Estrutura, design digital e precisão tecnológica.</p></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

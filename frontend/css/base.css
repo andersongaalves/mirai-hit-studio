@@ -1,0 +1,117 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background-color: var(--cor-fundo);
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(178, 42, 240, 0.15) 0%, transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+    color: var(--cor-branco);
+    font-family: var(--font-texto);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+h1, h2 { font-family: var(--font-titulos); font-weight: 600; }
+
+h3, h4 { font-family: var(--font-subtitulos); font-weight: 400; }
+
+a { text-decoration: none; color: var(--cor-branco); transition: 0.3s; }
+
+.container { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+    padding: 60px 20px 80px; /* 60px no topo, 20px nas laterais, 80px no fundo */
+}
+
+h2, .section-title {
+    font-size: 2.5rem;
+    color: var(--cor-branco);
+    text-align: center;
+    margin-bottom: 50px; /* Espaço generoso abaixo do título */
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: relative;
+    padding-bottom: 15px;
+}
+
+/* Efeito decorativo abaixo do título */
+h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: var(--cor-ciano);
+    box-shadow: 0 0 10px var(--cor-ciano);
+}
+
+h3, .category-title {
+    font-size: 2rem;
+    color: var(--cor-branco);
+    text-align: left;
+    margin-top: 20px;
+    margin-bottom: 20px; /* Espaço generoso abaixo do título */
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: relative;
+    padding-bottom: 15px;
+}
+
+/* Efeito decorativo para os subtítulos (Alinhado à esquerda) */
+h3::after, .category-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0; /* Alinha a barra à esquerda, já que o texto é text-align: left */
+    width: 40px; /* Ligeiramente menor que a barra do título principal */
+    height: 3px;
+    background: var(--cor-roxo); /* Usei roxo para dar contraste com o ciano do título principal */
+    box-shadow: 0 0 10px var(--cor-roxo);
+}
+
+#particles-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1; /* Fica atrás de todo o conteúdo */
+    overflow: hidden;
+    pointer-events: none; /* IMPEDE que as partículas bloqueiem os seus cliques nos botões */
+}
+
+.particle {
+    position: absolute;
+    bottom: -10px; /* Começa fora da tela por baixo */
+    border-radius: 50%;
+    background: var(--cor-ciano);
+    box-shadow: 0 0 10px var(--cor-ciano), 0 0 20px var(--cor-ciano);
+    opacity: 0;
+    animation: floatUp var(--duration) ease-in infinite;
+}
+
+/* Animação: Sobe flutuando, aparece suavemente e desaparece no topo */
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) translateX(0) scale(0.5);
+        opacity: 0;
+    }
+    20% {
+        opacity: 0.8;
+    }
+    80% {
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(-110vh) translateX(30px) scale(1.2);
+        opacity: 0;
+    }
+}
+
+/* Utilitário global para ocultar elementos */
+.hidden {
+    display: none !important;
+}

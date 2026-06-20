@@ -1,0 +1,270 @@
+/* --- ESTRUTURA GERAL DA CALCULADORA --- */
+.calc-grid { 
+    display: grid; 
+    grid-template-columns: 2fr 1fr; 
+    gap: 40px; /* Aumentado de 30px para 40px para dar mais respiro entre colunas */
+    align-items: start; 
+}
+
+/* --- PAINÉIS PRINCIPAIS --- */
+.panel { 
+    background: rgba(17, 24, 39, 0.8); 
+    border: 1px solid var(--cor-roxo); 
+    padding: 35px; /* Aumentado para desgrudar o conteúdo das bordas */
+    border-radius: 12px; 
+    margin-bottom: 30px; 
+    display: none; 
+}
+
+.panel.active { 
+    display: block; 
+}
+
+.panel h3 {
+    color: var(--cor-ciano);
+    font-size: 1.5rem;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- CARDS DE SELEÇÃO DE SERVIÇOS --- */
+.service-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.radio-card input { display: none; }
+
+.radio-card label { 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03); 
+    border: 2px solid rgba(255, 255, 255, 0.1); 
+    padding: 25px 20px; /* Mais altura nos cards */
+    text-align: center; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+}
+
+.radio-card label:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.radio-card input:checked + label { 
+    color: var(--cor-ciano); 
+    border-color: var(--cor-ciano); 
+    background: rgba(0, 212, 255, 0.1); 
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2); 
+    transform: translateY(-3px); /* Leve elevação ao ser clicado */
+}
+
+/* --- ESTILIZAÇÃO DOS FORMULÁRIOS E INPUTS (O SEGREDO DO DESIGN) --- */
+.form-group {
+    margin-bottom: 25px; /* Espaço generoso entre cada pergunta */
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--cor-branco);
+    font-family: var(--font-titulos);
+    letter-spacing: 0.5px;
+}
+
+/* Aplica o tema escuro/neon em todos os campos de digitação e seleção */
+.form-group input,
+.form-group select,
+.form-group textarea,
+.result-panel input {
+    width: 100%;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.05); /* Fundo escuro levemente transparente */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--cor-branco);
+    font-family: var(--font-texto);
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+/* Remove a aparência padrão das setinhas do select em alguns navegadores */
+.form-group select {
+    appearance: auto;
+    background-color: #111827; /* Fundo sólido para as opções do select não ficarem transparentes */
+}
+
+/* Efeito ao clicar no campo (Focus) */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.result-panel input:focus {
+    outline: none;
+    border-color: var(--cor-ciano);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Textos de ajuda menores abaixo dos inputs */
+.form-group small {
+    display: block;
+    color: #888;
+    margin-top: 6px;
+    font-size: 0.85rem;
+}
+
+/* --- PAINEL DE RESULTADO (COLUNA DA DIREITA) --- */
+.result-panel { 
+    position: sticky; 
+    top: 100px; 
+    padding: 40px 30px; 
+    text-align: center; 
+    border-radius: 15px; 
+    border: 2px solid rgba(0, 212, 255, 0.3); 
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0.9) 0%, rgba(178, 42, 240, 0.15) 100%); 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 212, 255, 0.1); 
+    /* Animação do card flutuando */
+    animation: floatPanel 6s ease-in-out infinite;
+}
+
+.result-panel h3 {
+    color: var(--cor-branco);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+/* O Valor em Dinheiro */
+.total-price { 
+    margin: 15px 0 25px; 
+    color: var(--cor-ciano); 
+    font-size: 3.5rem; 
+    font-family: var(--font-titulos); 
+    display: inline-block;
+    /* Animação do neon pulsando */
+    animation: neonPulse 2s infinite alternate;
+}
+
+/* Badge de Desconto (Chamativo e Agressivo) */
+#badge-desconto {
+    background: linear-gradient(45deg, #ff0055, #ffaa00);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+    display: inline-block;
+    margin-bottom: 10px;
+    /* Animação de entrada e pulso contínuo */
+    animation: pulseBadge 1.5s infinite alternate;
+}
+
+/* Espaçamento extra para os inputs dentro do painel de resultado */
+.result-panel .form-group {
+    margin-bottom: 15px;
+}
+
+/* Botão Enviar com energia animada */
+.result-panel .btn-submit {
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: linear-gradient(90deg, var(--cor-roxo), var(--cor-ciano), var(--cor-roxo));
+    background-size: 200% auto;
+    transition: all 0.3s ease;
+    /* Animação da cor correndo pelo botão */
+    animation: gradientMove 3s linear infinite;
+}
+
+.result-panel .btn-submit:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 25px var(--cor-ciano);
+}
+
+.calc-section {
+    margin-bottom: var(--spacing-lg); /* Espaçamento padrão grande entre seções */
+    padding: var(--spacing-md);
+    background: rgba(17, 24, 39, 0.6);
+    border-radius: 16px;
+}
+
+/* Espaçamento entre os cards de serviço */
+.servicos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 25px; /* Espaço entre os cards */
+    margin-top: 20px;
+}
+
+/* --- KEYFRAMES (AS ANIMAÇÕES) --- */
+
+/* Card flutuando e mudando o brilho da borda */
+@keyframes floatPanel {
+    0%, 100% { 
+        transform: translateY(0); 
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 212, 255, 0.1); 
+        border-color: rgba(0, 212, 255, 0.3);
+    }
+    50% { 
+        transform: translateY(-8px); 
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(178, 42, 240, 0.4); 
+        border-color: rgba(178, 42, 240, 0.5);
+    }
+}
+
+/* Preço com brilho neon respirando */
+@keyframes neonPulse {
+    0% { 
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.4), 0 0 20px rgba(0, 212, 255, 0.2); 
+        transform: scale(1); 
+    }
+    100% { 
+        text-shadow: 0 0 20px rgba(0, 212, 255, 0.8), 0 0 40px rgba(0, 212, 255, 0.5); 
+        transform: scale(1.03); 
+    }
+}
+
+/* Badge de desconto chamando atenção */
+@keyframes pulseBadge {
+    0% { box-shadow: 0 0 10px rgba(255, 0, 85, 0.4); transform: scale(1); }
+    100% { box-shadow: 0 0 20px rgba(255, 0, 85, 0.8); transform: scale(1.05); }
+}
+
+/* Energia passando pelo botão de concluir */
+@keyframes gradientMove {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+/* --- RESPONSIVIDADE --- */
+@media (max-width: 900px) { 
+    .calc-grid { grid-template-columns: 1fr; gap: 20px;} 
+    .result-panel { position: static; margin-top: 20px; animation: none; /* Desliga o flutuante no mobile para não atrapalhar o scroll */ } 
+}
+
+/* Espaçamento do container de serviços inteiro */
+.services-wrapper {
+    margin-bottom: 60px; /* Afasta os serviços do painel da calculadora abaixo */
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Linha divisória sutil */
+}
+
+/* Espaçamento entre a categoria "Avulso" e a categoria "Combo" */
+.service-category {
+    margin-bottom: 40px; 
+}

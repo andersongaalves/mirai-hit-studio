@@ -1,0 +1,176 @@
+/* Hero */
+.hero { position: relative; overflow: hidden; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.hero::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px); background-size: 50px 50px; mask-image: radial-gradient(circle at center, black, transparent 80%); }
+.hero-logo { max-width: 400px; width: auto; max-height: 40vh; margin-bottom: 10px; position: relative; z-index: 1; }
+
+.logo-brand-container {text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; }
+.logo-nav-container {text-align: center; display: flex; flex-direction: column; align-items: center; }
+.hero-brand-text { 
+    display: flex; 
+    font-family: 'Ethnocentric', sans-serif !important;
+    font-size: 4rem; 
+    letter-spacing: .1rem; 
+    margin-bottom: 10px; 
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+.mirai {font-family: 'Ethnocentric', sans-serif !important; color: var(--cor-ciano); text-shadow: 0 0 15px rgba(0, 212, 255, 0.6); }
+.hit {font-family: 'Ethnocentric', sans-serif !important; color: var(--cor-roxo); text-shadow: 0 0 15px rgba(178, 42, 240, 0.6); }
+.studio {font-family: 'Ethnocentric', sans-serif !important; color: var(--cor-branco); font-weight: 300; letter-spacing: 0.5rem; font-family: 'Ethnocentric', sans-serif; }
+.brand-subline { display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: -10px; }
+.line-deco { width: 60px; height: 3px; background: linear-gradient(to right, var(--cor-ciano), var(--cor-roxo)); border-radius: 2px; }
+
+/* Portfolio & Cards */
+.section-title { text-align: center; margin: 60px 0 30px; font-size: 2rem; }
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.03); 
+    backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); 
+    border-radius: 15px; 
+    }
+.glass-card:hover{
+    background: rgba(255, 255, 255, 0.03); 
+    backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); 
+    border-radius: 15px; 
+    transform: translateY(-15px) scale(1.02); 
+    border-color: var(--cor-ciano); 
+    box-shadow: 0 15px 30px rgba(0,212,255,.2); 
+}
+
+.symbol-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.symbol-card { background: rgba(255, 255, 255, 0.02); padding: 25px; border-radius: 8px; border: 1px solid rgba(178, 42, 240, 0.2); text-align: center; }
+.home-portfolio { width: 100vw; position: relative; left: 50%; transform: translateX(-50%); padding: 40px 0; }
+.scrolling-wrapper { display: flex; gap: 20px; overflow-x: auto; padding: 20px 10%; scrollbar-width: none; cursor: grab; }
+.scrolling-wrapper::-webkit-scrollbar { display: none; }
+.scrolling-card { flex: 0 0 300px; padding: 20px; border-radius: 12px; transition: .4s cubic-bezier(.175,.885,.32,1.275); border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03); }
+.scrolling-card img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; transition: transform .6s ease; }
+
+.scrolling-card:hover {
+    transform: translateY(-15px) scale(1.02); 
+    border-color: var(--cor-ciano); 
+    box-shadow: 0 15px 30px rgba(0,212,255,.2); 
+    background: rgba(255,255,255,.06); 
+}
+
+.scrolling-card:hover img { transform: scale(1.08); }
+.carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(17, 24, 39, 0.8); border: 1px solid var(--cor-roxo); color: var(--cor-ciano); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; z-index: 10; }
+.left-btn { left: 2%; } .right-btn { right: 2%; }
+
+/* Buttons */
+.btn-cta { background: linear-gradient(45deg, var(--cor-ciano), var(--cor-roxo)); color: white; padding: 14px 28px; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
+.btn-cta:hover { box-shadow: 0 0 15px var(--cor-ciano); }
+.btn-outline { background: transparent; border: 2px solid var(--cor-roxo); color: white; padding: 14px 28px; border-radius: 4px; text-transform: uppercase; cursor: pointer; }
+
+.btn-small {
+    background: transparent;
+    color: #E5E7EB;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-small:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #fff;
+}
+
+.btn-small:active {
+    transform: scale(0.96);
+}
+
+/* Variante perigosa (como o botão de Excluir) que você já usa no admin */
+.btn-small.btn-danger {
+    color: #EF4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.btn-small.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #EF4444;
+}
+
+@media (max-width: 768px) {
+    /* 1. Reduz o tamanho da Hero para caber na tela */
+    .hero { min-height: 60vh; padding: 20px 10px; }
+    
+    /* 2. Diminui a Logo para não ficar gigante */
+    .hero-logo { max-width: 200px; max-height: 30vh; }
+    
+    /* 3. Ajusta o texto da marca para não "estourar" a tela */
+    .hero-brand-text { 
+        font-size: 2.2rem !important; /* Estava 4rem */
+        flex-direction: column; /* Empilha MIRAI e HIT se necessário */
+        gap: 5px;
+    }
+
+    /* 4. Ajusta o espaçamento do "Studio" */
+    .studio { letter-spacing: 0.2rem; font-size: 1rem; }
+
+    /* 5. Corrige o Menu de Navegação para não amontoar */
+    nav { padding: 10px 20px; }
+    .nav-menu-wrapper { gap: 10px; }
+    .dropbtn { font-size: 0.9rem; }
+    .btn-cta { padding: 10px 15px; font-size: 0.8rem; }
+    
+    /* 6. Ajusta os cards da Home para não ficarem tão largos */
+    .scrolling-wrapper { padding: 20px 5%; }
+}
+
+/* CSS para o Wizard de Passos */
+.stepper-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    background: rgba(255,255,255,0.05);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.step-indicator {
+    flex: 1;
+    text-align: center;
+    color: #555;
+    font-weight: bold;
+    border-bottom: 3px solid #444;
+    padding-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.step-indicator.active {
+    color: var(--cor-ciano);
+    border-bottom-color: var(--cor-ciano);
+}
+
+.step-content {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+.step-content.hidden {
+    display: none;
+}
+
+.botoes-navegacao {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
