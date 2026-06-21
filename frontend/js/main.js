@@ -321,7 +321,6 @@ if (
 if (
 
     document.getElementById(
-
         "home-portfolio-track"
 
     )

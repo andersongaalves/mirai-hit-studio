@@ -25,7 +25,7 @@ export function renderizarProjetos(lista) {
 
         // Adiciona ao texto acumulado (sem mexer na tela ainda)
         htmlAcumulado += `
-            <div class="portfolio-card glass-card" style="position:relative;">
+            <a href="${p.link_audio}" target="_blank" class="portfolio-card glass-card" style="position:relative;">
                 ${badgeHit}
                 <img src="${capaFinal}" alt="${p.titulo}" style="background-color: #0b0f19;">
                 <div class="portfolio-info">
@@ -33,9 +33,9 @@ export function renderizarProjetos(lista) {
                     <h1 style="color: var(--cor-ciano); margin-top: 10px; font-size: 1.5rem">${p.titulo}</h1>
                     <p>${p.artista}</p>
                     <p style="font-size: 0.85rem; color: #888;">${p.descricao}</p>
-                    <a href="${p.link_audio}" target="_blank" style="color: var(--cor-ciano); font-weight: bold;">▶ Ouvir Faixa</a>
+                    <div style="color: var(--cor-ciano); font-weight: bold;">▶ Ouvir Faixa</div>
                 </div>
-            </div>
+            </a>
         `;
     });
 

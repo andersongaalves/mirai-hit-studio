@@ -69,15 +69,15 @@ export async function renderizarPortfolio() {
     listaHits.forEach(p => {
         const capa = obterCapaInteligente(p.link_audio, p.link_capa);
         htmlLote += `
-            <div class="scrolling-card glass-card">
+            <a href="${p.link_audio}" target="_blank" class="scrolling-card glass-card">
                 <img src="${capa}" alt="${p.titulo}" style="background-color: #0b0f19;">
                 <div class="scrolling-info">
                     <span class="tag" style="background: var(--cor-roxo); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">${p.categoria}</span>
                     <h3 style="color: var(--cor-ciano); margin: 10px 0 5px 0;">${p.titulo}</h3>
                     <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">${p.artista}</p>
-                    <a href="${p.link_audio}" target="_blank" style="color: #fff; text-decoration: none; font-weight: bold; border-bottom: 1px solid var(--cor-roxo);">▶ Ouvir Faixa</a>
+                    <p style="color: #fff; text-decoration: none; font-weight: bold; border-bottom: 1px solid var(--cor-roxo);">▶ Ouvir Faixa</p>
                 </div>
-            </div>`;
+            </a>`;
     });
     htmlLote += `</div>`;
     
