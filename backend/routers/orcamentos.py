@@ -10,6 +10,7 @@ from schemas.orcamento import (
 )
 
 from core.dependencies import get_current_user
+from services.email_service import EmailService
 
 router = APIRouter(
     prefix="/orcamentos",
@@ -28,10 +29,25 @@ def criar_orcamento(
     )
 
     db.add(novo)
-
     db.commit()
-
     db.refresh(novo)
+
+    protocolo = (
+        f"MHS-"
+        f"{novo.data_solicitacao:%Y%m%d}-"
+        f"{novo.id:06d}"
+    )
+
+    
+    EmailService.enviar_confirmacao(
+    novo,
+    protocolo
+    )
+
+    EmailService.enviar_notificacao_admin(
+        novo,
+        protocolo
+    )
 
     return novo
 

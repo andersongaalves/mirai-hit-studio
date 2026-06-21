@@ -1,0 +1,148 @@
+{% extends "email_base.html" %}
+
+{% block content %}
+
+<h1>
+Novo orçamento recebido
+</h1>
+
+<p>
+
+Um novo cliente enviou uma solicitação de orçamento pelo site.
+
+</p>
+
+<div class="card">
+
+<div class="card-title">
+
+📄 Protocolo
+
+</div>
+
+<div class="info">
+
+<strong>{{ protocolo }}</strong>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<div class="card-title">
+
+👤 Dados do Cliente
+
+</div>
+
+<div class="info">
+
+<strong>Nome</strong><br>
+
+{{ nome }}
+
+</div>
+
+<div class="info">
+
+<strong>E-mail</strong><br>
+
+{{ email }}
+
+</div>
+
+<div class="info">
+
+<strong>WhatsApp</strong><br>
+
+{{ telefone }}
+
+</div>
+
+</div>
+
+<div class="card">
+
+<div class="card-title">
+
+🎵 Serviço Solicitado
+
+</div>
+
+<div class="info">
+
+<strong>Serviço</strong><br>
+
+{{ servico }}
+
+</div>
+
+<div class="info">
+
+<strong>Valor estimado</strong><br>
+
+R$ {{ valor }}
+
+</div>
+
+<div class="info">
+
+<strong>Data</strong><br>
+
+{{ data }}
+
+</div>
+
+</div>
+
+{% if observacoes %}
+
+<div class="card">
+
+<div class="card-title">
+
+📝 Observações
+
+</div>
+
+<p>
+
+{{ observacoes }}
+
+</p>
+
+</div>
+
+{% endif %}
+
+<div
+style="
+text-align:center;
+margin-top:45px;
+">
+
+<a
+class="button"
+href="https://miraihitstudio.com.br/admin.html">
+
+Abrir Painel Administrativo
+
+</a>
+
+</div>
+
+<div class="divider"></div>
+
+<p
+style="
+font-size:14px;
+color:#A8B3CF;
+">
+
+Este e-mail foi enviado automaticamente pelo sistema da
+<strong>Mirai Hit Studio</strong>.
+
+</p>
+
+{% endblock %}

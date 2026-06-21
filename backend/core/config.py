@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     BACKUP_FOLDER: str
     BACKUP_KEEP_DAYS: int
 
+    RESEND_API_KEY: str
+    EMAIL_FROM: str
+    ADMIN_EMAIL: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"

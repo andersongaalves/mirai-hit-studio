@@ -12,7 +12,6 @@ router = APIRouter(
     tags=["Configurações"]
 )
 
-
 @router.get("", response_model=ConfigResponse)
 def get_config(db: Session = Depends(get_db)):
     return (

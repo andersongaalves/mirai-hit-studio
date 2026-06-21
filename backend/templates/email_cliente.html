@@ -1,0 +1,209 @@
+{% extends "email_base.html" %}
+
+{% block content %}
+
+<h1>Recebemos seu orçamento! 🎵</h1>
+
+<p style="margin-top:-8px; margin-bottom:30px; color:#8FA3BF; font-size:14px;"><strong>Protocolo:</strong>
+{{ protocolo }}
+</p>
+<p>
+
+    Olá <strong>{{ nome }}</strong>,
+
+</p>
+
+<p>
+
+Recebemos sua solicitação de orçamento com sucesso.
+
+Ficamos felizes pelo seu interesse em trabalhar com a <strong>Mirai Hit Studio</strong>.
+
+Nossa equipe irá analisar cuidadosamente todas as informações enviadas para preparar uma proposta personalizada para o seu projeto.
+
+</p>
+
+<div class="card">
+
+    <div class="card-title">
+
+    Resumo da Solicitação
+
+    </div>
+
+    <div class="info">
+
+        <strong>📄 Protocolo</strong><br>
+
+        {{ protocolo }}
+
+    </div>
+
+    <div class="info">
+
+        <strong>🎵 Serviço</strong><br>
+
+        {{ servico }}
+
+    </div>
+
+    <div class="info">
+
+        <strong>💰 Valor estimado</strong><br>
+
+        R$ {{ valor }}
+
+    </div>
+
+    <div class="info">
+
+        <strong>📅 Data da solicitação</strong><br>
+
+        {{ data }}
+
+    </div>
+
+</div>
+
+<div class="info">
+
+    <strong>💰 Valor estimado</strong><br>
+
+    R$ {{ valor }}
+
+</div>
+
+<div class="info">
+
+    <strong>📅 Data da solicitação</strong><br>
+
+    {{ data }}
+
+</div>
+
+{% if observacoes %}
+
+<div class="info">
+
+    <strong>📝 Observações</strong><br>
+
+    {{ observacoes }}
+
+</div>
+
+{% endif %}
+
+<h2>
+
+O que acontece agora?
+
+</h2>
+
+<p>
+
+Nossa equipe seguirá as etapas abaixo:
+
+</p>
+
+<table width="100%" style="margin-top:20px;">
+
+    <tr>
+
+        <td style="padding:12px 0;">
+
+        ✅ Análise das informações enviadas.
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td style="padding:12px 0;">
+
+        🎼 Avaliação técnica da produção solicitada.
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td style="padding:12px 0;">
+
+        📄 Preparação de uma proposta personalizada.
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td style="padding:12px 0;">
+
+        📧 Retorno através deste e-mail ou WhatsApp informado.
+
+        </td>
+
+    </tr>
+
+</table>
+
+<div style="text-align:center; margin-top:45px;">
+
+    <a
+    class="button"
+    href="https://miraihitstudio.com.br">
+
+    Conhecer nosso Portfólio
+
+    </a>
+
+</div>
+
+<div class="divider"></div>
+
+<div
+class="card"
+style="margin-top:40px;">
+
+<div class="card-title">
+
+Guarde este protocolo
+
+</div>
+
+<p>
+
+Caso precise entrar em contato com nossa equipe
+antes do envio da proposta, informe o protocolo:
+
+</p>
+
+<h2
+style="
+margin:20px 0;
+text-align:center;
+letter-spacing:2px;
+">
+
+{{ protocolo }}
+
+</h2>
+
+</div>
+<p>
+
+Atenciosamente,
+
+<br><br>
+
+<strong>Equipe Mirai Hit Studio</strong>
+
+<br>
+
+Criando hits do futuro.
+
+</p>
+
+{% endblock %}
