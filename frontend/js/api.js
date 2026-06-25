@@ -38,6 +38,33 @@ export async function postOrcamento(payload) {
     return await res.json();
 }
 
+export async function postNewsletter(payload) {
+
+    const res = await fetch(
+        `${API_URL}/newsletter`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        }
+    );
+
+    if (!res.ok) {
+
+        const erro = await res.json();
+
+        throw new Error(
+            erro.detail || "Erro ao cadastrar e-mail."
+        );
+
+    }
+
+    return await res.json();
+
+}
+
 export async function getProjetos() {
 
     const res = await fetch(

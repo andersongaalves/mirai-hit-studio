@@ -219,15 +219,12 @@ const btnSolicitar = document.getElementById(
 );
 
 if (btnSolicitar) {
-
     btnSolicitar.addEventListener(
-
         "click",
 
         async () => {
 
             if (!state.servicoSelecionadoOBJ) {
-
                 alert("Selecione um serviço.");
 
                 return;
@@ -238,44 +235,68 @@ if (btnSolicitar) {
 
                 nome_cliente:
                     document.getElementById("nome_cliente").value,
-
                 email:
                     document.getElementById("email").value,
-
                 whatsapp:
                     document.getElementById("whatsapp").value,
-
                 servico:
                     state.servicoSelecionadoOBJ.nome,
-
                 valor_total:
                     state.valorTotalCalculado,
-
                 link_guia:
                     document.getElementById("guia")?.value || "",
-
                 detalhes: ""
 
             };
 
             try {
-
                 await API.postOrcamento(payload);
 
                 alert("Proposta enviada com sucesso!");
 
             } catch (error) {
-
                 console.error(error);
 
                 alert("Erro ao enviar proposta.");
-
             }
-
         }
-
     );
+}
 
+const btnNewsletter =
+    document.getElementById("btn-newsletter");
+
+if (btnNewsletter) {
+    btnNewsletter.addEventListener(
+        "click",
+
+        async () => {
+            const payload = {
+                email: document
+                    .getElementById("email")
+                    .value
+                    .trim()
+
+            };
+
+            try {
+                await API.postNewsletter(
+                    payload
+                );
+
+                alert(
+                    "Cadastro realizado com sucesso!"
+                );
+
+            } catch (error) {
+                console.error(error);
+
+                alert(
+                    error.message
+                );
+            }
+        }
+    );
 }
 
 // ==========================================

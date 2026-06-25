@@ -3,3 +3,4 @@ from .projeto import ProjetoModel
 from .servico import ServicoModel
 from .orcamento import OrcamentoModel
 from .config import ConfigModel
+from .newsletter import NewsletterModel

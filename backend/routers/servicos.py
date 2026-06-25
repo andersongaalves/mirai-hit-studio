@@ -33,9 +33,7 @@ def criar_servico(
     )
 
     db.add(novo)
-
     db.commit()
-
     db.refresh(novo)
 
     return novo

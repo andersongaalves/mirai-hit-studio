@@ -124,3 +124,22 @@ class EmailService:
             assunto=f"Novo orçamento • {protocolo}",
             html=html
         )
+    
+    @classmethod
+    def enviar_boas_vindas(
+        cls,
+        email: str
+    ):
+
+        html = cls.render(
+
+            "email_newsletter.html",
+            nome=email.split("@")[0].replace(".", " ").title()
+        )
+
+        return cls.enviar(
+
+            destino=email,
+            assunto="🎵 Bem-vindo à Mirai Hit Studio!",
+            html=html
+        )

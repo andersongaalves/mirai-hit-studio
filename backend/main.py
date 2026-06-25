@@ -10,6 +10,7 @@ from routers.orcamentos import router as orcamentos_router
 from routers.projetos import router as projetos_router
 from routers.servicos import router as servicos_router
 from services.startup_service import startup_database
+from routers.newsletter import router as newsletter_router
 
 # Criação das tabelas
 Base.metadata.create_all(bind=engine)
@@ -36,6 +37,7 @@ app.include_router(config_router)
 app.include_router(orcamentos_router)
 app.include_router(servicos_router)
 app.include_router(projetos_router)
+app.include_router(newsletter_router)
 
 @app.get("/")
 def root():
