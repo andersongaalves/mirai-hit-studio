@@ -153,7 +153,8 @@
 
 /* Badge de Desconto (Chamativo e Agressivo) */
 #badge-desconto {
-    background: linear-gradient(45deg, #ff0055, #ffaa00);
+    display: inline-flex;
+    background: linear-gradient(45deg, #ea00ff, #9900ff);
     color: white;
     padding: 6px 14px;
     border-radius: 20px;
@@ -161,7 +162,7 @@
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
-    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+    box-shadow: 0 0 15px rgba(204, 0, 255, 0.5);
     display: inline-block;
     margin-bottom: 10px;
     /* Animação de entrada e pulso contínuo */
