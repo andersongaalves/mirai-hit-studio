@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { $, $$, $$$ } from "./utils/dom.js";
 
 export function obterCapaInteligente(linkAudio, linkCapa) {
     if (linkCapa && linkCapa.trim() !== "") return linkCapa;
@@ -9,7 +10,7 @@ export function obterCapaInteligente(linkAudio, linkCapa) {
 }
 
 export function renderizarProjetos(lista) {
-    const container = document.getElementById('render-portfolio');
+    const container = $('render-portfolio');
     
     if(lista.length === 0) {
         container.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Nenhum projeto encontrado.</p>";
@@ -45,7 +46,7 @@ export function renderizarProjetos(lista) {
 
 export function renderizarFiltros(projetos, callbackFiltrar) {
     const categorias = [...new Set(projetos.map(p => p.categoria))];
-    const filterContainer = document.getElementById('filtros-portfolio');
+    const filterContainer = $('filtros-portfolio');
     
     filterContainer.innerHTML = `<button class="filter-btn active" data-cat="Todos">Todos</button>`;
     
@@ -58,7 +59,7 @@ export function renderizarFiltros(projetos, callbackFiltrar) {
     // Event Listeners para os botões de filtro
     filterContainer.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            $$$('.filter-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             callbackFiltrar(e.target.getAttribute('data-cat'));
         });

@@ -1,5 +1,7 @@
 import * as API from "../api.js";
 import { authFetch } from "./auth.js";
+import * as Notify from "../utils/notifications.js";
+import { $, $$, $$$ } from "../utils/dom.js";
 
 let orcamentos = [];
 
@@ -30,7 +32,7 @@ export async function carregarOrcamentos() {
 
 function renderizarOrcamentos() {
 
-    const container = document.getElementById("orcamentos-list");
+    const container = $("orcamentos-list");
 
     if (!container) return;
 
@@ -56,7 +58,7 @@ function renderizarOrcamentos() {
                     ${item.servico}
                 </div>
                 <div>
-                    R$ ${Number(item.valor_total).toFixed(2)}
+                    R$ ${money(item.valor_total)}
                 </div>
                 <div>
                     <button onclick="visualizarOrcamento(${item.id})">
@@ -81,38 +83,38 @@ export function visualizarOrcamento(id) {
 
     if (!orcamento) return;
 
-    document.getElementById("orc_nome").innerText =
+    $("orc_nome").innerText =
         orcamento.nome_cliente;
 
-    document.getElementById("orc_email").innerText =
+    $("orc_email").innerText =
         orcamento.email;
 
-    document.getElementById("orc_whatsapp").innerText =
+    $("orc_whatsapp").innerText =
         orcamento.whatsapp;
 
-    document.getElementById("orc_servico").innerText =
+    $("orc_servico").innerText =
         orcamento.servico;
 
-    document.getElementById("orc_valor").innerText =
-        `R$ ${Number(orcamento.valor_total).toFixed(2)}`;
+    $("orc_valor").innerText =
+        `R$ ${money(valor_total)}`;
 
-    document.getElementById("orc_data").innerText =
+    $("orc_data").innerText =
         orcamento.data_solicitacao;
 
-    document.getElementById("orc_detalhes").innerText =
+    $("orc_detalhes").innerText =
         orcamento.detalhes;
 
-    document.getElementById("orc_guia").href =
+    $("orc_guia").href =
         orcamento.link_guia;
 
-    document.getElementById("modal-orcamento")
+    $("modal-orcamento")
         .classList.remove("hidden");
 
 }
 
 export function fecharModalOrcamento() {
 
-    document.getElementById("modal-orcamento")
+    $("modal-orcamento")
         .classList.add("hidden");
 
 }
@@ -131,7 +133,7 @@ export async function deletarOrcamento(id) {
     );
 
     if (!response.ok) {
-        alert("Erro ao excluir orçamento.");
+        Notify.error("Erro ao excluir orçamento.");
         return;
 
     }

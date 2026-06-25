@@ -2,6 +2,7 @@ import {carregarServicos, inicializarParametros} from "./servicos.js";
 import {carregarPortfolio} from "./projetos.js";
 import {carregarOrcamentos} from "./orcamentos.js";
 import {carregarConfiguracoes} from "./configuracoes.js";
+import { $, $$, $$$ } from "../utils/dom.js";
 
 export async function inicializarDashboard() {
 
@@ -48,7 +49,7 @@ export function mostrarSecao(id) {
             section.classList.add("hidden");
         });
 
-    const secao = document.getElementById(id);
+    const secao = $(id);
 
     if (secao) {
         secao.classList.remove("hidden");
@@ -76,7 +77,7 @@ export function atualizarTudo() {
 
 export function abrirModal(id) {
 
-    const modal = document.getElementById(id);
+    const modal = $(id);
 
     if (modal) {
         modal.classList.remove("hidden");
@@ -86,7 +87,7 @@ export function abrirModal(id) {
 
 export function fecharModal(id) {
 
-    const modal = document.getElementById(id);
+    const modal = $(id);
 
     if (modal) {
         modal.classList.add("hidden");

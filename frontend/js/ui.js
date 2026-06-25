@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { getProjetos } from './api.js'; // <- Movido para o topo!
+import { $, $$, $$$ } from "./utils/dom.js";
 
 export const PARAM_TEMPLATES = {
     "duracao": { html: `<div class="form-group"><label>Duração Estimada (s)</label><input type="number" id="duracao" value="180" min="30"></div>`, detalhe: (v) => `Duração: ${v}s` },
@@ -16,8 +17,8 @@ export const PARAM_TEMPLATES = {
 };
 
 export function renderizarBotoes(servicos) {
-    const boxAvulso = document.getElementById('render-avulsos');
-    const boxCombo = document.getElementById('render-combos');
+    const boxAvulso = $('render-avulsos');
+    const boxCombo = $('render-combos');
     if(!boxAvulso || !boxCombo) return; 
 
     boxAvulso.innerHTML = ""; boxCombo.innerHTML = "";
@@ -39,8 +40,8 @@ export function renderizarBotoes(servicos) {
         srv.categoria === 'combo' ? boxCombo.innerHTML += html : boxAvulso.innerHTML += html;
     });
 
-    if(boxAvulso.innerHTML !== "") document.getElementById('categoria-avulso').style.display = 'block';
-    if(boxCombo.innerHTML !== "") document.getElementById('categoria-combo').style.display = 'block';
+    if(boxAvulso.innerHTML !== "") $('categoria-avulso').style.display = 'block';
+    if(boxCombo.innerHTML !== "") $('categoria-combo').style.display = 'block';
 }
 
 export function obterCapaInteligente(linkAudio, linkCapa) {
@@ -53,7 +54,7 @@ export function obterCapaInteligente(linkAudio, linkCapa) {
 
 // Renderiza o Carrossel da Home Page
 export async function renderizarPortfolio() {
-    const track = document.getElementById('home-portfolio-track');
+    const track = $('home-portfolio-track');
     if (!track) return; // Se não estiver na home, não faz nada
 
     const lista = await getProjetos();
@@ -91,7 +92,7 @@ export async function renderizarPortfolio() {
 
 export function initHeroParallax() {
     document.addEventListener("mousemove", (e) => {
-        const logo = document.querySelector('.hero-logo');
+        const logo = $$('.hero-logo');
         if (!logo) return;
         let x = (e.clientX / window.innerWidth - 0.5) * 20;
         let y = (e.clientY / window.innerHeight - 0.5) * 20;
@@ -99,14 +100,19 @@ export function initHeroParallax() {
     });
 }
 
-export function carregarComponente(id, arquivo) {
-    const elemento = document.getElementById(id);
+export async function carregarComponente(id, arquivo) {
+
+    const elemento = $(id);
+
     if (!elemento) return;
 
-    fetch(arquivo)
-        .then(response => response.text())
-        .then(html => elemento.innerHTML = html)
-        .catch(err => console.error('Erro:', err));
+    try {
+        const response = await fetch(arquivo);
+        elemento.innerHTML = await response.text();
+
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 export function initParticles() {
@@ -146,7 +152,7 @@ export function initParticles() {
 }
 
 export function renderizarFormularioParametros(parametrosString) {
-    const container = document.getElementById('render-parametros');
+    const container = $('render-parametros');
     if (!container || !parametrosString) return;
 
     let html = "";
@@ -165,8 +171,8 @@ export function renderizarFormularioParametros(parametrosString) {
 
     // --- LÓGICA ESPECIAL PARA O INSTRUMENTAL ABERTO ---
     // Faz o campo "Quantidade de Canais" aparecer apenas se a pessoa marcar "Sim"
-    const selectInstAberto = document.getElementById('inst_aberto');
-    const containerCanais = document.getElementById('container_canais_inst');
+    const selectInstAberto = $('inst_aberto');
+    const containerCanais = $('container_canais_inst');
     
     if (selectInstAberto && containerCanais) {
         selectInstAberto.addEventListener('change', (e) => {

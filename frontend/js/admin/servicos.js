@@ -1,5 +1,8 @@
 import * as API from "../api.js";
 import { authFetch } from "./auth.js";
+import * as Notify from "../utils/notifications.js";
+import { money } from "../utils/format.js";
+import { $, $$, $$$ } from "../utils/dom.js";
 
 const DICIONARIO_PARAMETROS = {
     duracao: "Duração",
@@ -22,7 +25,7 @@ export async function carregarServicos() {
 
     listaServicos = await API.getAPI("servicos");
 
-    const container = document.getElementById("lista-servicos");
+    const container = $("lista-servicos");
 
     if (!container) return;
 
@@ -41,7 +44,7 @@ export async function carregarServicos() {
 
                     | ${servico.categoria}
 
-                    | R$ ${servico.valor_base.toFixed(2)}
+                    | ${money(servico.valor_base)}
 
                 </span>
 
@@ -75,8 +78,7 @@ export async function carregarServicos() {
 
 export function abrirEditorServico(id = null) {
 
-    document
-        .getElementById("editor-servico")
+    $("editor-servico")
         .classList
         .remove("hidden");
 
@@ -96,23 +98,23 @@ export function abrirEditorServico(id = null) {
 
     if (!servico) return;
 
-    document.getElementById("srv_id").value = servico.id;
+    $("srv_id").value = servico.id;
 
-    document.getElementById("srv_nome").value = servico.nome;
+    $("srv_nome").value = servico.nome;
 
-    document.getElementById("srv_subtitulo").value =
+    $("srv_subtitulo").value =
         servico.subtitulo ?? "";
 
-    document.getElementById("srv_valor").value =
+    $("srv_valor").value =
         servico.valor_base;
 
-    document.getElementById("srv_categoria").value =
+    $("srv_categoria").value =
         servico.categoria;
 
-    document.getElementById("srv_aplica_desconto").value =
+    $("srv_aplica_desconto").value =
         String(servico.aplica_desconto);
 
-    document.getElementById("srv_descricao").value =
+    $("srv_descricao").value =
         servico.descricao_servico ?? "";
 
     parametros = servico.parametros
@@ -125,13 +127,12 @@ export function abrirEditorServico(id = null) {
 
 export function adicionarParametro() {
 
-    const valor = document
-        .getElementById("param_selector")
+    const valor = $("param_selector")
         .value;
 
     if (parametros.includes(valor)) {
 
-        alert("Parâmetro já existe.");
+        Notify.warning("Parâmetro já existe.");
 
         return;
 
@@ -181,7 +182,7 @@ export function moverParametro(index, direcao) {
 
 function renderizarParametros() {
 
-    const container = document.getElementById(
+    const container = $(
     "param_list_render"
     );
 
@@ -221,25 +222,25 @@ function renderizarParametros() {
 
 export async function salvarServico() {
 
-    const id = document.getElementById("srv_id").value;
+    const id = $("srv_id").value;
 
     const payload = {
 
-        nome: document.getElementById("srv_nome").value,
+        nome: $("srv_nome").value,
 
-        subtitulo: document.getElementById("srv_subtitulo").value,
+        subtitulo: $("srv_subtitulo").value,
 
         valor_base: Number(
 
-            document.getElementById("srv_valor").value
+            $("srv_valor").value
 
         ),
 
-        categoria: document.getElementById("srv_categoria").value,
+        categoria: $("srv_categoria").value,
 
         aplica_desconto:
 
-            document.getElementById(
+            $(
 
                 "srv_aplica_desconto"
 
@@ -249,7 +250,7 @@ export async function salvarServico() {
 
         descricao_servico:
 
-            document.getElementById(
+            $(
 
                 "srv_descricao"
 
@@ -277,14 +278,13 @@ export async function salvarServico() {
 
     if (!response.ok) {
 
-        alert("Erro ao salvar serviço.");
+        Notify.error("Erro ao salvar serviço.");
 
         return;
 
     }
 
-    document
-        .getElementById("editor-servico")
+    $("editor-servico")
         .classList
         .add("hidden");
 
@@ -318,15 +318,15 @@ export async function deletarServico(id) {
 
 function limparFormulario() {
 
-    document.getElementById("srv_id").value = "";
+    $("srv_id").value = "";
 
-    document.getElementById("srv_nome").value = "";
+    $("srv_nome").value = "";
 
-    document.getElementById("srv_subtitulo").value = "";
+    $("srv_subtitulo").value = "";
 
-    document.getElementById("srv_valor").value = 0;
+    $("srv_valor").value = 0;
 
-    document.getElementById("srv_descricao").value = "";
+    $("srv_descricao").value = "";
 
     parametros = [];
 
@@ -336,7 +336,7 @@ function limparFormulario() {
 
 export function inicializarParametros() {
 
-    const select = document.getElementById("param_selector");
+    const select = $("param_selector");
 
     if (!select) return;
 

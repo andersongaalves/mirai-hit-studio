@@ -1,5 +1,7 @@
 import * as API from "../api.js";
 import { authFetch } from "./auth.js";
+import * as Notify from "../utils/notifications.js";
+import { $, $$, $$$ } from "../utils/dom.js";
 
 let projetos = [];
 
@@ -7,7 +9,7 @@ export async function carregarPortfolio() {
 
     projetos = await API.getAPI("projetos");
 
-    const container = document.getElementById("portfolio-list");
+    const container = $("portfolio-list");
 
     if (!container) return;
 
@@ -85,21 +87,21 @@ export function editarProjeto(id) {
 
     if (!projeto) return;
 
-    document.getElementById("proj_id").value = projeto.id;
+    $("proj_id").value = projeto.id;
 
-    document.getElementById("proj_titulo").value = projeto.titulo;
+    $("proj_titulo").value = projeto.titulo;
 
-    document.getElementById("proj_artista").value = projeto.artista;
+    $("proj_artista").value = projeto.artista;
 
-    document.getElementById("proj_categoria").value = projeto.categoria;
+    $("proj_categoria").value = projeto.categoria;
 
-    document.getElementById("proj_audio").value = projeto.link_audio;
+    $("proj_audio").value = projeto.link_audio;
 
-    document.getElementById("proj_capa").value = projeto.link_capa;
+    $("proj_capa").value = projeto.link_capa;
 
-    document.getElementById("proj_descricao").value = projeto.descricao;
+    $("proj_descricao").value = projeto.descricao;
 
-    document.getElementById("proj_destaque").checked = projeto.destaque;
+    $("proj_destaque").checked = projeto.destaque;
 
     document
 
@@ -113,29 +115,29 @@ export function editarProjeto(id) {
 
 export async function salvarProjeto() {
 
-    const id = document.getElementById("proj_id").value;
+    const id = $("proj_id").value;
     const payload = {
 
         titulo:
-            document.getElementById("proj_titulo").value,
+            $("proj_titulo").value,
 
         artista:
-            document.getElementById("proj_artista").value,
+            $("proj_artista").value,
 
         categoria:
-            document.getElementById("proj_categoria").value,
+            $("proj_categoria").value,
 
         link_audio:
-            document.getElementById("proj_audio").value,
+            $("proj_audio").value,
 
         link_capa:
-            document.getElementById("proj_capa").value,
+            $("proj_capa").value,
 
         descricao:
-            document.getElementById("proj_descricao").value,
+            $("proj_descricao").value,
 
         destaque:
-            document.getElementById("proj_destaque").checked
+            $("proj_destaque").checked
 
     };
 
@@ -152,7 +154,7 @@ export async function salvarProjeto() {
     );
 
     if (!response.ok) {
-        alert("Erro ao salvar projeto.");
+        Notify.error("Erro ao salvar projeto.");
         return;
 
     }
@@ -189,13 +191,13 @@ export function fecharModal() {
 
 function limparFormulario() {
 
-    document.getElementById("proj_id").value = "";
-    document.getElementById("proj_titulo").value = "";
-    document.getElementById("proj_artista").value = "";
-    document.getElementById("proj_categoria").value = "";
-    document.getElementById("proj_audio").value = "";
-    document.getElementById("proj_capa").value = "";
-    document.getElementById("proj_descricao").value = "";
-    document.getElementById("proj_destaque").checked = false;
+    $("proj_id").value = "";
+    $("proj_titulo").value = "";
+    $("proj_artista").value = "";
+    $("proj_categoria").value = "";
+    $("proj_audio").value = "";
+    $("proj_capa").value = "";
+    $("proj_descricao").value = "";
+    $("proj_destaque").checked = false;
 
 }

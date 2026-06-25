@@ -1,10 +1,11 @@
 import { API_URL } from "../config.js";
+import { $, $$, $$$ } from "../utils/dom.js";
 
 export async function fazerLogin() {
 
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value;
-    const errorEl = document.getElementById("login-error");
+    const username = $("username").value.trim();
+    const password = $("password").value;
+    const errorEl = $("login-error");
 
     errorEl.classList.add("hidden");
 
@@ -92,9 +93,9 @@ export function logout() {
 
         .classList.remove("hidden");
 
-    document.getElementById("username").value = "";
+    $("username").value = "";
 
-    document.getElementById("password").value = "";
+    $("password").value = "";
 
 }
 

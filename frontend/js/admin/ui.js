@@ -1,6 +1,9 @@
+import * as Notify from "../utils/notifications.js";
+import { $, $$, $$$ } from "../utils/dom.js";
+
 export function abrirModal(id) {
 
-    const modal = document.getElementById(id);
+    const modal = $(id);
 
     if (!modal) return;
 
@@ -10,7 +13,7 @@ export function abrirModal(id) {
 
 export function fecharModal(id) {
 
-    const modal = document.getElementById(id);
+    const modal = $(id);
 
     if (!modal) return;
 
@@ -20,7 +23,7 @@ export function fecharModal(id) {
 
 export function toggleModal(id) {
 
-    const modal = document.getElementById(id);
+    const modal = $(id);
 
     if (!modal) return;
 
@@ -30,7 +33,7 @@ export function toggleModal(id) {
 
 export function mostrarLoading() {
 
-    const loading = document.getElementById("loading");
+    const loading = $("loading");
 
     if (loading) {
 
@@ -42,7 +45,7 @@ export function mostrarLoading() {
 
 export function esconderLoading() {
 
-    const loading = document.getElementById("loading");
+    const loading = $("loading");
 
     if (loading) {
 
@@ -54,11 +57,11 @@ export function esconderLoading() {
 
 export function mostrarErro(mensagem) {
 
-    const box = document.getElementById("error-message");
+    const box = $("error-message");
 
     if (!box) {
 
-        alert(mensagem);
+        Notify.error(mensagem);
 
         return;
 
@@ -72,7 +75,7 @@ export function mostrarErro(mensagem) {
 
 export function limparErro() {
 
-    const box = document.getElementById("error-message");
+    const box = $("error-message");
 
     if (!box) return;
 
@@ -84,11 +87,11 @@ export function limparErro() {
 
 export function mostrarSucesso(mensagem) {
 
-    const box = document.getElementById("success-message");
+    const box = $("success-message");
 
     if (!box) {
 
-        alert(mensagem);
+        Notify.success(mensagem);
 
         return;
 
@@ -114,7 +117,7 @@ export function confirmar(mensagem) {
 
 export function limparFormulario(formId) {
 
-    const form = document.getElementById(formId);
+    const form = $(formId);
 
     if (!form) return;
 
@@ -124,7 +127,7 @@ export function limparFormulario(formId) {
 
 export function preencherFormulario(formId, dados) {
 
-    const form = document.getElementById(formId);
+    const form = $(formId);
 
     if (!form) return;
 
@@ -156,7 +159,7 @@ export function preencherFormulario(formId, dados) {
 
 export function bloquearBotao(id, texto = "Salvando...") {
 
-    const btn = document.getElementById(id);
+    const btn = $(id);
 
     if (!btn) return;
 
@@ -170,7 +173,7 @@ export function bloquearBotao(id, texto = "Salvando...") {
 
 export function desbloquearBotao(id) {
 
-    const btn = document.getElementById(id);
+    const btn = $(id);
 
     if (!btn) return;
 
