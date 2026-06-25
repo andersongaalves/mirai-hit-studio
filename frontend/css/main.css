@@ -7,3 +7,4 @@
 /*ficheiros específicos de cada página */
 @import url('pages/calculator.css');
 @import url('pages/portfolio.css');
+@import url("notifications.css");
