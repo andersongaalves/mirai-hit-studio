@@ -2,33 +2,237 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfólio - Mirai Hit Studio</title>
-    <link rel="stylesheet" href="css/main.css">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    
+    <title>Portfólio | Produções Musicais da Mirai Hit Studio</title>
+
+    <meta
+        name="description"
+        content="Conheça o portfólio da Mirai Hit Studio. Ouça beats exclusivos, mixagens, masterizações e produções musicais para Rap Geek, Anime, Games e outros estilos."
+    >
+    <meta
+        name="author"
+        content="Mirai Hit Studio"
+    >
+    <meta
+        name="robots"
+        content="index,follow"
+    >
+    <meta
+        name="theme-color"
+        content="#111827"
+    >
+
+    <!-- Open Graph -->
+    <meta
+        property="og:type"
+        content="website"
+    >
+    <meta
+        property="og:title"
+        content="Portfólio | Mirai Hit Studio"
+    >
+    <meta
+        property="og:description"
+        content="Ouça algumas das produções musicais desenvolvidas pela Mirai Hit Studio para artistas do universo Geek, Anime e Games."
+    >
+    <meta
+    property="og:image"
+    content="https://www.miraihitstudio.com.br/assets/banner-social.png"
+    >
+    <meta
+    property="og:url"
+    content="https://www.miraihitstudio.com.br/portfolio.html"
+    >
+    <meta
+        property="og:site_name"
+        content="Mirai Hit Studio"
+    >
+
+    <!-- Twitter Card -->
+    <meta
+        name="twitter:card"
+        content="summary_large_image"
+    >
+    <meta
+        name="twitter:title"
+        content="Portfólio | Mirai Hit Studio"
+    >
+    <meta
+        name="twitter:description"
+        content="Conheça nossos beats, mixagens, masterizações e produções musicais."
+    >
+    <meta
+    name="twitter:image"
+    content="https://www.miraihitstudio.com.br/assets/banner-social.png"
+    >
+
+    <!-- Canonical -->
+    <link
+    rel="canonical"
+    href="https://www.miraihitstudio.com.br/portfolio"
+    >
+
+    <!-- Manifest -->
+    <link
+        rel="manifest"
+        href="/site.webmanifest"
+    >
+
+    <!-- CSS -->
+    <link
+        rel="stylesheet"
+        href="css/main.css"
+    >
+
+    <!-- Favicon -->
+    <link
+        rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="./assets/favicon.png"
+    >
+    <link
+        rel="apple-touch-icon"
+        href="./assets/favicon.png"
+    >
+
     <style>
-        .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; margin-top: 40px; }
-        .portfolio-card { transition: transform 0.3s ease; }
-        .portfolio-card img { width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .portfolio-info { padding: 20px; }
-        
-        /* Estilos dos Filtros */
-        .filter-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 30px; }
-        .filter-btn { 
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); 
-            color: var(--cor-branco); padding: 8px 20px; border-radius: 20px; 
-            cursor: pointer; font-family: var(--font-titulos); transition: 0.3s;
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
         }
-        .filter-btn:hover { background: rgba(0, 212, 255, 0.1); border-color: var(--cor-ciano); }
-        .filter-btn.active { background: var(--cor-roxo); border-color: var(--cor-roxo); color: white; box-shadow: 0 0 10px rgba(178, 42, 240, 0.5); }
+
+        .portfolio-card {
+            transition: transform 0.3s ease;
+        }
+
+        .portfolio-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .portfolio-info {
+            padding: 20px;
+        }
+
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--cor-branco);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: var(--font-titulos);
+            transition: .3s;
+        }
+
+        .filter-btn:hover {
+            background: rgba(0,212,255,.1);
+            border-color: var(--cor-ciano)
+        }
+
+        .filter-btn.active {
+            background: var(--cor-roxo);
+            border-color: var(--cor-roxo);
+            color: white;
+            box-shadow: 0 0 10px rgba(178,42,240,.5);
+        }
     </style>
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+
+        "name": "Portfólio - Mirai Hit Studio",
+
+        "description": "Portfólio de produções musicais da Mirai Hit Studio com beats, mixagens, masterizações e instrumentais personalizados.",
+
+        "url": "https://www.miraihitstudio.com.br/portfolio",
+
+        "image": "https://www.miraihitstudio.com.br/assets/banner-social.png",
+
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "Mirai Hit Studio",
+            "url": "https://www.miraihitstudio.com.br"
+        },
+        
+        "mainEntity": {
+            "@type": "ItemList",
+            "name": "Produções Musicais"
+        },
+
+        "publisher": {
+            "@type": "Organization",
+            "name": "Mirai Hit Studio",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://www.miraihitstudio.com.br/img/logo-principal.png"
+            }
+        },
+
+        "about": [
+            {
+                "@type": "MusicRecording",
+                "name": "Produções Musicais"
+            },
+            {
+                "@type": "MusicComposition",
+                "name": "Beats Exclusivos"
+            },
+            {
+                "@type": "Service",
+                "name": "Mixagem e Masterização"
+            }
+        ],
+        
+        "keywords": [
+            "Rap Geek",
+            "Anime",
+            "Games",
+            "Beat Exclusivo",
+            "Mixagem",
+            "Masterização",
+            "Produção Musical"
+        ]
+    }
+    </script>
+
 </head>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W4GLJXPRDM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-W4GLJXPRDM');
+</script>
+
 <body>
     <div id="nav-placeholder"></div>
 
     <main class="container">
         <header class="section-header">
-            <h2 class="section-title">Portfólio</h2>
+            <h1 class="section-title">Portfólio da Mirai Hit Studio</h1>
             <p class="section-subtitle">Selecione a categoria para explorar nossos trabalhos.</p>
         </header>
 
