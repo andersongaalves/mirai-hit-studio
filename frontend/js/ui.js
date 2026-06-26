@@ -83,7 +83,7 @@ export async function renderizarPortfolio() {
     htmlLote += `</div>`;
     
     // Duplica o HTML para criar o efeito de carrossel infinito
-    track.innerHTML = htmlLote + htmlLote + htmlLote + htmlLote + htmlLote + htmlLote + htmlLote;
+    track.innerHTML = htmlLote + htmlLote + htmlLote;
     
     setTimeout(() => { 
         if(track.children[0]) track.scrollLeft = track.children[0].offsetWidth + 20; 
