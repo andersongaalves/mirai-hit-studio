@@ -1,34 +1,52 @@
 import "./modules/globals.js";
 
 import { initComponents } from "./modules/components.js";
-import { initHome } from "./modules/home.js";
-import { initPortfolioPage } from "./modules/portfolio.js";
-import { initEventosCalculadora } from "./modules/calculator.js";
-import { initNewsletter } from "./modules/newsletter.js";
-import { initOrcamento } from "./modules/orcamento.js";
-
 import { $ } from "./utils/dom.js";
 
 async function init() {
 
-    // Navbar + Footer + Partículas
     await initComponents();
 
-    // Newsletter (Footer)
-    initNewsletter();
+    if ($("btn-newsletter")) {
 
-    // Home
-    await initHome();
+        const { initNewsletter } =
+            await import("./modules/newsletter.js");
 
-    // Página de Portfólio
+        initNewsletter();
+
+    }
+
+    if ($("home-portfolio-track")) {
+
+        const { initHome } =
+            await import("./modules/home.js");
+
+        await initHome();
+
+    }
+
     if ($("render-portfolio")) {
+
+        const { initPortfolioPage } =
+            await import("./modules/portfolio.js");
 
         await initPortfolioPage();
 
     }
 
-    // Página da Calculadora
     if ($("render-parametros")) {
+
+        const {
+
+            initEventosCalculadora
+
+        } = await import("./modules/calculator.js");
+
+        const {
+
+            initOrcamento
+
+        } = await import("./modules/orcamento.js");
 
         await initEventosCalculadora();
 
