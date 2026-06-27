@@ -108,3 +108,38 @@
 
 /* Ocultar divs de módulo padrão */
 .admin-section.hidden { display: none; }
+
+.builder-card{
+    background:#1A1F2E;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:25px;
+}
+
+.builder-header{
+    display:flex;
+    gap:15px;
+    margin-bottom:20px;
+}
+
+.builder-icon{
+    width:70px;
+    text-align:center;
+    font-size:1.5rem;
+}
+
+.builder-title{
+    flex:1;
+}
+
+.builder-items{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.builder-benefit{
+    margin-bottom:12px;
+}

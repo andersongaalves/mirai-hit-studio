@@ -9,15 +9,13 @@ class ServicoBase(BaseModel):
     aplica_desconto: bool
     parametros: str
     descricao_servico: str
-
+    estrutura_servico: str
 
 class ServicoCreate(ServicoBase):
     pass
 
-
 class ServicoUpdate(ServicoBase):
     pass
-
 
 class ServicoResponse(ServicoBase):
     id: int

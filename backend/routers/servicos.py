@@ -83,7 +83,6 @@ def deletar_servico(
         raise HTTPException(status_code=404)
 
     db.delete(servico)
-
     db.commit()
 
     return {"status": "ok"}
