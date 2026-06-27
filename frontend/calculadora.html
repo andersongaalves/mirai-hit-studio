@@ -168,72 +168,227 @@
         </div>
 
         <div id="step-1" class="step-content active">
-            <h3 style="text-align: center; margin-bottom: 30px; color: var(--cor-ciano);">O que você precisa hoje?</h3>
-            
+            <h3 style="text-align:center; margin-bottom:30px; color:var(--cor-ciano);">
+                O que você precisa hoje?
+            </h3>
             <div class="services-wrapper">
-                <div class="service-category" id="categoria-avulso" style="display: none;">
-                    <h4 class="category-title">Monte seu Projeto</h4>
-                    <div class="service-selector" id="render-avulsos"></div>
+                <div
+                    class="service-category"
+                    id="categoria-avulso"
+                    style="display:none;"
+                >
+                    <h4 class="category-title">
+                        Monte seu Projeto
+                    </h4>
+
+                    <div
+                        class="service-selector"
+                        id="render-avulsos"
+                    ></div>
                 </div>
-                <div class="service-category" id="categoria-combo" style="display: none;">
-                    <h4 class="category-title">Combos e Pacotes</h4>
-                    <div class="service-selector" id="render-combos"></div>
+
+                <div
+                    class="service-category"
+                    id="categoria-combo"
+                    style="display:none;"
+                >
+                    <h4 class="category-title">
+                        Combos e Pacotes
+                    </h4>
+
+                    <div
+                        class="service-selector"
+                        id="render-combos"
+                    ></div>
                 </div>
             </div>
 
-            <div class="botoes-navegacao" style="justify-content: flex-end;">
-                <button id="btn-next-1" class="btn-cta disabled" onclick="avancarPasso(2)" disabled>Continuar ➔</button>
+            <div
+                class="panel hidden"
+                style="
+                    border-color:var(--cor-ciano);
+                    background:rgba(0,212,255,.05);
+                    margin-top:30px;
+                "
+            >
+                <h3
+                    id="info-title"
+                    style="
+                        color:var(--cor-ciano);
+                        margin-top:0;
+                        border-bottom:1px solid rgba(0,212,255,.2);
+                        padding-bottom:10px;
+                    "
+                >
+                    Sobre o Serviço
+                </h3>
+
+                <div
+                    id="info-desc"
+                    style="
+                        white-space:pre-line;
+                        color:#E5E7EB;
+                        line-height:1.8;
+                        font-family:var(--font-texto);
+                        font-size:1.05rem;
+                    "
+                ></div>
+            </div>
+
+            <div
+                class="botoes-navegacao"
+                style="justify-content:flex-end;"
+            >
+                <button
+                    id="btn-next-1"
+                    class="btn-cta disabled"
+                    onclick="avancarPasso(2)"
+                    disabled
+                >
+                    Continuar ➔
+                </button>
             </div>
         </div>
 
         <div id="step-2" class="step-content hidden">
-            <div style="max-width: 800px; margin: 0 auto;">
-                <div id="service-info-box" class="panel" style="display: none; border-color: var(--cor-ciano); background: rgba(0, 212, 255, 0.05); margin-bottom: 20px;">
-                    <h3 id="info-title" style="color: var(--cor-ciano); margin-top: 0; border-bottom: 1px solid rgba(0, 212, 255, 0.2); padding-bottom: 10px;">Sobre o Serviço</h3>
-                    <div id="info-desc" style="white-space: pre-line; color: #E5E7EB; line-height: 1.8; font-family: var(--font-texto); font-size: 1.1rem;"></div>
-                </div>
+            <div
+                style="
+                    max-width:800px;
+                    margin:0 auto;
+                "
+            >
+                <div
+                    id="panel-dinamico"
+                    class="panel active"
+                >
+                    <h3 id="titulo-panel">
 
-                <div id="panel-dinamico" class="panel active">
-                    <h3 id="titulo-panel">Personalize os detalhes</h3>
+                        Personalize os detalhes
+
+                    </h3>
                     <div id="render-parametros"></div>
                 </div>
             </div>
 
             <div class="botoes-navegacao">
-                <button class="btn-small" onclick="voltarPasso(1)">⬅ Escolher outro serviço</button>
-                <button class="btn-cta" onclick="avancarPasso(3)">Ver Valor Final ➔</button>
+                <button
+                    class="btn-small"
+                    onclick="voltarPasso(1)"
+                >
+
+                    ⬅ Escolher outro serviço
+
+                </button>
+                <button
+                    class="btn-cta"
+                    onclick="avancarPasso(3)"
+                >
+                    Ver Valor Final ➔
+                </button>
             </div>
         </div>
 
         <div id="step-3" class="step-content hidden">
-            <div style="max-width: 600px; margin: 0 auto;">
+            <div
+                style="
+                    max-width:600px;
+                    margin:0 auto;
+                "
+            >
                 <div class="result-panel">
-                    <h2>INVESTIMENTO ESTIMADO</h2>
-                    <div id="badge-desconto">DESCONTO APLICADO</div>
+                    <h2>
+                        INVESTIMENTO ESTIMADO
+                    </h2>
+                    <div id="badge-desconto">
+                        DESCONTO APLICADO
+                    </div>
                     <div></div>
-                    <div class="total-price" id="valorTotal">R$ 0,00</div>
-                    
-                    <div style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                        <h3 style="margin-bottom: 20px; font-size: 1.2rem; color: #ccc;">Para onde enviamos a proposta?</h3>
-                        <div class="form-group" style="text-align: left;">
-                            <label>Seu Nome *</label>
-                            <input type="text" id="nome_cliente" placeholder="Como te chamamos?">
+                    <div
+                        class="total-price"
+                        id="valorTotal"
+                    >
+                        R$ 0,00
+
+                    </div>
+                    <div
+                        style="
+                            margin-top:30px;
+                            border-top:1px solid rgba(255,255,255,.1);
+                            padding-top:20px;
+                        "
+                    >
+                        <h3
+                            style="
+                                margin-bottom:20px;
+                                font-size:1.2rem;
+                                color:#ccc;
+                            "
+                        >
+                            Para onde enviamos a proposta?
+                        </h3>
+                        <div
+                            class="form-group"
+                            style="text-align:left;"
+                        >
+                            <label>
+                                Seu Nome *
+                            </label>
+                            <input
+                                type="text"
+                                id="nome_cliente"
+                                placeholder="Como te chamamos?"
+                            >
                         </div>
-                        <div class="form-group" style="text-align: left;">
-                            <label>Seu Email</label>
-                            <input type="email" id="email" placeholder="seu@email.com">
+
+                        <div
+                            class="form-group"
+                            style="text-align:left;"
+                        >
+                            <label>
+                                Seu Email
+                            </label>
+                            <input
+                                type="email"
+                                id="email"
+                                placeholder="seu@email.com"
+                            >
                         </div>
-                        <div class="form-group" style="text-align: left;">
-                            <label>Seu WhatsApp *</label>
-                            <input type="text" id="whatsapp" placeholder="(00) 99999-9999">
+
+                        <div
+                            class="form-group"
+                            style="text-align:left;"
+                        >
+                            <label>
+                                Seu WhatsApp *
+                            </label>
+                            <input
+                                type="text"
+                                id="whatsapp"
+                                placeholder="(00) 99999-9999"
+                            >
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="botoes-navegacao">
-                <button class="btn-small" onclick="voltarPasso(2)">⬅ Alterar Parâmetros</button>
-                <button id="btn-solicitar" class="btn-cta btn-submit" style="background: var(--cor-ciano); color: black;">ENVIAR PEDIDO</button>
+                <button
+                    class="btn-small"
+                    onclick="voltarPasso(2)"
+                >
+                    ⬅ Alterar Parâmetros
+                </button>
+
+                <button
+                    id="btn-solicitar"
+                    class="btn-cta btn-submit"
+                    style="
+                        background:var(--cor-ciano);
+                        color:black;
+                    "
+                >
+                    ENVIAR PEDIDO
+                </button>
             </div>
         </div>
     </div>

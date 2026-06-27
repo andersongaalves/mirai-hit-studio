@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { getProjetos } from './api.js'; // <- Movido para o topo!
+import { money } from "./utils/format.js";
 import { $, $$, $$$ } from "./utils/dom.js";
 
 export const PARAM_TEMPLATES = {
@@ -17,31 +18,98 @@ export const PARAM_TEMPLATES = {
 };
 
 export function renderizarBotoes(servicos) {
-    const boxAvulso = $('render-avulsos');
-    const boxCombo = $('render-combos');
-    if(!boxAvulso || !boxCombo) return; 
 
-    boxAvulso.innerHTML = ""; boxCombo.innerHTML = "";
-    
+    const boxAvulso = $("render-avulsos");
+    const boxCombo = $("render-combos");
+
+    if (!boxAvulso || !boxCombo) return;
+
+    boxAvulso.innerHTML = "";
+    boxCombo.innerHTML = "";
+
     servicos.forEach(srv => {
-        // Prepara o HTML do subtítulo apenas se o banco de dados enviar algum texto nele
-        const subtituloHTML = srv.subtitulo ? `<small style="display:block; font-size:0.85rem; color:#aaa; margin-top:5px; font-weight:normal;">${srv.subtitulo}</small>` : "";
 
-        // O label agora é flex-direction: column (definido no CSS) e empilha o nome e o subtítulo
+        const subtituloHTML = srv.subtitulo
+            ? `
+                <small class="service-subtitle">
+                    ${srv.subtitulo}
+                </small>
+            `
+            : "";
+
+        const descricaoHTML = srv.descricao_servico
+            ? `
+                <div class="service-details">
+                    <div class="service-description">
+                        ${formatarDescricao(srv.descricao_servico)}
+                    </div>
+
+                    <div class="service-price">
+                        A partir de
+
+                        <strong>
+                            ${money(srv.valor_base)}
+                        </strong>
+                    </div>
+
+                    <div class="service-selected">
+                        ✓ Serviço selecionado
+                    </div>
+                </div>
+            `
+            : "";
+
         const html = `
             <div class="radio-card">
-                <input type="radio" name="servico" id="srv_${srv.id}" value="${srv.id}">
+
+                <input
+                    type="radio"
+                    name="servico"
+                    id="srv_${srv.id}"
+                    value="${srv.id}"
+
+                >
+
                 <label for="srv_${srv.id}">
-                    <span style="font-weight:bold; font-size:1.1rem;">${srv.nome}</span>
+                    <span class="service-title">
+                        ${srv.nome}
+                    </span>
+
                     ${subtituloHTML}
+                    ${descricaoHTML}
                 </label>
-            </div>`;
-            
-        srv.categoria === 'combo' ? boxCombo.innerHTML += html : boxAvulso.innerHTML += html;
+            </div>
+        `;
+
+        if (srv.categoria === "combo") {
+            boxCombo.innerHTML += html;
+        }
+
+        else {
+            boxAvulso.innerHTML += html;
+        }
     });
 
-    if(boxAvulso.innerHTML !== "") $('categoria-avulso').style.display = 'block';
-    if(boxCombo.innerHTML !== "") $('categoria-combo').style.display = 'block';
+    if (boxAvulso.innerHTML)
+        $("categoria-avulso").style.display = "block";
+
+    if (boxCombo.innerHTML)
+        $("categoria-combo").style.display = "block";
+}
+
+function formatarDescricao(texto){
+
+    if(!texto) return "";
+
+    return texto
+        .replace(/\[titulo\]([\s\S]*?)\[\/titulo\]/g,
+            "<h5>$1</h5>")
+
+        .replace(/\[item\]([\s\S]*?)\[\/item\]/g,
+            "<div class='service-item'>$1</div>")
+
+        .replace(/\[beneficio\]([\s\S]*?)\[\/beneficio\]/g,
+            "<div class='service-benefit'>$1</div>");
 }
 
 export function obterCapaInteligente(linkAudio, linkCapa) {

@@ -3,7 +3,7 @@ import * as API from "../api.js";
 import * as UI from "../ui.js";
 import { CalculatorLogic } from "../calculator.js";
 import { registerCalcular } from "./globals.js";
-import { money } from "../utils/format.js";
+import {money} from "../utils/format.js";
 import { $, $$, $$$ } from "../utils/dom.js";
 
 export async function initCalculadora() {
@@ -200,23 +200,6 @@ export async function initEventosCalculadora() {
 
                     );
 
-                }
-
-                const infoDesc =
-                    $(
-                        "info-desc"
-                    );
-
-                if (
-                    infoDesc
-                ) {
-
-                    infoDesc.innerText =
-                        state
-                            .servicoSelecionadoOBJ
-                            .descricao_servico ||
-
-                        "Personalize as opções abaixo:";
                 }
 
                 UI.renderizarFormularioParametros(
