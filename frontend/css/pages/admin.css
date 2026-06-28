@@ -143,3 +143,33 @@
 .builder-benefit{
     margin-bottom:12px;
 }
+
+.builder-item-row,
+.builder-benefit-row{
+
+    display:flex;
+
+    gap:10px;
+
+    margin-bottom:10px;
+
+}
+
+.builder-item-row input,
+.builder-benefit-row input{
+    flex:1;
+}
+
+.builder-header{
+    display:flex;
+    gap:15px;
+    align-items:center;
+}
+
+.builder-icon{
+    width:70px;
+}
+
+.builder-title{
+    flex:1;
+}

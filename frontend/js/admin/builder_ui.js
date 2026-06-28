@@ -15,39 +15,28 @@ export function renderBuilder() {
 function registrarEventos() {
 
     document.getElementById(
-
         "btn-add-section"
 
     ).onclick = () => {
-
         Builder.adicionarSecao();
-
         renderBuilder();
 
     };
 
     document.getElementById(
-
         "btn-add-benefit"
 
     ).onclick = () => {
-
         Builder.adicionarBeneficio();
-
         renderBuilder();
-
     };
 
     document.getElementById(
-
         "builder-intro"
 
     ).oninput = e => {
-
-        builderState.intro = e.target.value;
-
+        Builder.atualizarIntro(e.target.value)
     };
-
 }
 
 function sincronizarIntro() {
@@ -88,7 +77,7 @@ function criarCard(secao) {
 
     const card = document.createElement("div");
 
-    card.className = "builder-card";
+    const bodyDisplay = secao.open? "block": "none";
 
     card.innerHTML = `
 
@@ -120,21 +109,24 @@ function criarCard(secao) {
 
         <div style="display:flex;gap:10px;margin-top:15px;">
 
-            <button class="btn-small add-item">
-
-                + Item
-
+            <button type="button" class="btn-small add-item">
+                + Adicionar Item
             </button>
 
-            <button class="btn-small remove-section">
-
-                Remover
-
+            <button type="button" class="btn-small remove-section">
+                🗑 Remover Seção
             </button>
 
         </div>
 
     `;
+
+    card.querySelector(".builder-header").onclick=()=>{
+        Builder.alternarSecao(
+            secao.id
+        );
+        renderBuilder();
+    };
 
     const icon = card.querySelector(".builder-icon");
 
@@ -212,78 +204,49 @@ function renderItems(container, secao) {
 
     container.innerHTML = "";
 
-    const itens = secao.items.length
-        ? secao.items
-        : [""];
+    if (secao.items.length === 0) {
+        Builder.adicionarItem(secao.id);
+    }
 
-    itens.forEach((item, index) => {
+    secao.items.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "builder-item-row";
+        const input = document.createElement("input");
+        input.className = "builder-item";
+        input.placeholder = "Novo Item";
+        input.value = item;
+        input.oninput = e => {
+            Builder.atualizarItem(
+                secao.id,
+                index,
+                e.target.value
+            );
+        };
 
-        const linha = document.createElement("div");
+        const btn = document.createElement("button");
+        btn.className = "btn-small";
+        btn.textContent = "✕";
+        btn.onclick = () => {
+            Builder.removerItem(
+                secao.id,
+                index
+            );
+            renderBuilder();
+        };
 
-        linha.className = "builder-item-row";
-
-        linha.innerHTML = `
-
-            <input
-                class="builder-item"
-                value="${item}"
-                placeholder="Novo item"
-            >
-
-            <button
-                class="btn-small remove-item"
-            >
-
-                ✕
-
-            </button>
-
-        `;
-
-        linha
-            .querySelector(".builder-item")
-            .addEventListener("input", e => {
-
-                Builder.atualizarItem(
-
-                    secao.id,
-
-                    index,
-
-                    e.target.value
-
-                );
-
-            });
-
-        linha
-            .querySelector(".remove-item")
-            .addEventListener("click", () => {
-
-                Builder.removerItem(
-
-                    secao.id,
-
-                    index
-
-                );
-
-                renderBuilder();
-
-            });
-
-        container.appendChild(linha);
-
+        row.appendChild(input);
+        row.appendChild(btn);
+        container.appendChild(row);
     });
-
 }
 
 function renderBenefits() {
 
-    const container =
-        document.getElementById(
-            "builder-benefits"
-        );
+    const container = document.getElementById(
+
+        "builder-benefits"
+
+    );
 
     if (!container) return;
 
@@ -293,64 +256,54 @@ function renderBenefits() {
 
         (beneficio, index) => {
 
-            const linha = document.createElement("div");
+            const row = document.createElement("div");
 
-            linha.className =
+            row.className = "builder-benefit-row";
 
-                "builder-benefit-row";
+            const input = document.createElement("input");
 
-            linha.innerHTML = `
+            input.className = "builder-benefit";
 
-                <input
+            input.placeholder = "Benefício";
 
-                    class="builder-benefit"
+            input.value = beneficio;
 
-                    value="${beneficio}"
+            input.oninput = e => {
 
-                    placeholder="Benefício"
+                Builder.atualizarBeneficio(
 
-                >
+                    index,
 
-                <button
+                    e.target.value
 
-                    class="btn-small remove-benefit"
+                );
 
-                >
+            };
 
-                    ✕
+            const btn = document.createElement("button");
 
-                </button>
+            btn.className = "btn-small";
 
-            `;
+            btn.textContent = "✕";
 
-            linha
-                .querySelector(".builder-benefit")
-                .addEventListener("input", e => {
+            btn.onclick = () => {
 
-                    Builder.atualizarBeneficio(
+                Builder.removerBeneficio(index);
 
-                        index,
+                renderBuilder();
 
-                        e.target.value
+            };
 
-                    );
+            row.appendChild(input);
 
-                });
+            row.appendChild(btn);
 
-            linha
-                .querySelector(".remove-benefit")
-                .addEventListener("click", () => {
+            container.appendChild(row);
 
-                    Builder.removerBeneficio(
-                        index
-                    );
-
-                    renderBuilder();
-
-                });
-            container.appendChild(linha);
         }
+
     );
+
 }
 
 export function atualizarBuilder(json) {

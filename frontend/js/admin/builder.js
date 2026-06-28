@@ -46,6 +46,7 @@ export function adicionarSecao() {
         id: gerarId(),
         icon: "",
         title: "",
+        open: true,
         items:[]
     });
 }
@@ -123,4 +124,26 @@ export function gerarJSON() {
     return JSON.stringify(
         gerarObjeto()
     );
+}
+
+export function obterState() {
+    return builderState;
+}
+
+export function atualizarIntro(valor) {
+    builderState.intro = valor;
+}
+
+export function alternarSecao(id){
+
+    const secao = builderState.sections.find(
+
+        s=>s.id===id
+
+    );
+
+    if(!secao) return;
+
+    secao.open = !secao.open;
+
 }

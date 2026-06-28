@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, Float, String, Text, Boolean
 from database import Base
+from sqlalchemy.dialects.postgresql import JSONB
 
 class ServicoModel(Base):
     __tablename__ = "servicos"
@@ -16,8 +17,9 @@ class ServicoModel(Base):
         nullable=False,
         default=""
     )
+    
     estrutura_servico = Column(
         Text,
         nullable=False,
-        default="{}"
+        default='{"intro":"","sections":[],"benefits":[]}'
     )
