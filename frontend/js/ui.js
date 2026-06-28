@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { getProjetos } from './api.js'; // <- Movido para o topo!
 import { money } from "./utils/format.js";
 import { $, $$, $$$ } from "./utils/dom.js";
+import { renderizarEstrutura } from "./modules/service_renderer.js";
 
 export const PARAM_TEMPLATES = {
     "duracao": { html: `<div class="form-group"><label>Duração Estimada (s)</label><input type="number" id="duracao" value="180" min="30"></div>`, detalhe: (v) => `Duração: ${v}s` },
@@ -37,27 +38,33 @@ export function renderizarBotoes(servicos) {
             `
             : "";
 
-        const descricaoHTML = srv.descricao_servico
-            ? `
-                <div class="service-details">
-                    <div class="service-description">
-                        ${formatarDescricao(srv.descricao_servico)}
-                    </div>
+        const descricaoHTML = srv.estrutura_servico
+        ? `
+            <div class="service-details">
 
-                    <div class="service-price">
-                        A partir de
-
-                        <strong>
-                            ${money(srv.valor_base)}
-                        </strong>
-                    </div>
-
-                    <div class="service-selected">
-                        ✓ Serviço selecionado
-                    </div>
+                <div class="service-description">
+                    ${renderizarEstrutura(srv.estrutura_servico)}
                 </div>
-            `
-            : "";
+
+                <div class="service-price">
+
+                    A partir de
+
+                    <strong>
+                        ${money(srv.valor_base)}
+                    </strong>
+
+                </div>
+
+                <div class="service-selected">
+
+                    ✓ Serviço selecionado
+
+                </div>
+
+            </div>
+        `
+        : "";
 
         const html = `
             <div class="radio-card">
@@ -95,21 +102,6 @@ export function renderizarBotoes(servicos) {
 
     if (boxCombo.innerHTML)
         $("categoria-combo").style.display = "block";
-}
-
-function formatarDescricao(texto){
-
-    if(!texto) return "";
-
-    return texto
-        .replace(/\[titulo\]([\s\S]*?)\[\/titulo\]/g,
-            "<h5>$1</h5>")
-
-        .replace(/\[item\]([\s\S]*?)\[\/item\]/g,
-            "<div class='service-item'>$1</div>")
-
-        .replace(/\[beneficio\]([\s\S]*?)\[\/beneficio\]/g,
-            "<div class='service-benefit'>$1</div>");
 }
 
 export function obterCapaInteligente(linkAudio, linkCapa) {

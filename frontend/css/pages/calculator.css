@@ -274,52 +274,142 @@
     margin-top: 20px;
 }
 
+/* =======================================================
+   SERVICE RENDERER
+======================================================= */
+
 .service-description{
+
     margin-top:20px;
     text-align:left;
+    color:#DDD;
+    animation:fadeIn .35s ease;
+
 }
 
-.service-description h5{
-    margin:22px 0 18px;
+.service-intro{
+
+    margin-bottom:22px;
+    color:#EEE;
+    line-height:1.7;
+
+}
+
+.service-section{
+
+    margin:22px 0;
+    padding-top:18px;
+    border-top:1px solid rgba(255,255,255,.08);
+
+}
+
+.service-section:first-child{
+
+    margin-top:0;
+    padding-top:0;
+    border-top:none;
+
+}
+
+.service-section-title{
+
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    margin-bottom:15px;
+
     color:var(--cor-ciano);
-    text-align:center;
+
     font-family:var(--font-titulos);
-    letter-spacing:2px;
     font-size:1rem;
+    font-weight:bold;
+
+}
+
+.service-icon{
+
+    width:34px;
+    height:34px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:8px;
+
+    background:rgba(0,212,255,.08);
+
+    font-size:1.2rem;
+
+}
+
+.service-items{
+
+    list-style:none;
+    padding:0;
+    margin:0;
+
+}
+
+.service-items li{
+
     position:relative;
+
+    padding-left:22px;
+
+    margin:10px 0;
+
+    color:#DDD;
+
 }
 
-.service-description h5::before, .service-description h5::after{
-    content:"";
+.service-items li::before{
+
+    content:"•";
+
     position:absolute;
-    top:50%;
-    width:25%;
-    height:2px;
-    background:var(--cor-roxo);
-}
 
-.service-description h5::before{
     left:0;
+
+    color:var(--cor-ciano);
+
+    font-size:1.1rem;
+
 }
 
-.service-description h5::after{
-    right:0;
-}
+.service-benefits{
 
-.service-item{
-    padding:15px 0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    line-height:1.8;
-}
+    margin-top:25px;
+    padding-top:18px;
 
-.service-item strong{
-    color:white;
+    border-top:1px solid rgba(255,255,255,.08);
+
 }
 
 .service-benefit{
-    padding:10px 0;
-    color:#4ADE80;
+
+    display:flex;
+    align-items:center;
+
+    margin:10px 0;
+
+    color:#7EF2AE;
+
     font-weight:600;
+
+}
+
+.service-benefit::before{
+
+    content:"✓";
+
+    margin-right:10px;
+
+    color:#22C55E;
+
+    font-weight:bold;
+
 }
 
 /* --- KEYFRAMES (AS ANIMAÇÕES) --- */
@@ -378,6 +468,24 @@
         opacity:1;
         transform:none;
     }
+}
+
+@keyframes fadeIn{
+
+    from{
+
+        opacity:0;
+        transform:translateY(-8px);
+
+    }
+
+    to{
+
+        opacity:1;
+        transform:none;
+
+    }
+
 }
 
 /* Espaçamento do container de serviços inteiro */
