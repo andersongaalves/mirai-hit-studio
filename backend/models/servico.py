@@ -12,12 +12,6 @@ class ServicoModel(Base):
     categoria = Column(String(100))
     aplica_desconto = Column(Boolean, default=False)
     parametros = Column(Text)
-    descricao_servico = Column(
-        Text,
-        nullable=False,
-        default=""
-    )
-    
     estrutura_servico = Column(
         Text,
         nullable=False,

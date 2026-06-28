@@ -122,7 +122,9 @@ export function abrirEditorServico(id = null) {
     $("srv_descricao").value =
         servico.descricao_servico ?? "";
     
-        Builder.carregarBuilder(servico.descricao_servico);
+        Builder.carregarBuilder(
+            servico.estrutura_servico
+        );
 
         BuilderUI.renderBuilder();
 
@@ -235,28 +237,16 @@ export async function salvarServico() {
     const payload = {
 
         nome: $("srv_nome").value,
-
         subtitulo: $("srv_subtitulo").value,
-
         valor_base: Number(
-
             $("srv_valor").value
-
         ),
-
         categoria: $("srv_categoria").value,
-
         aplica_desconto:
-
-            $(
-
-                "srv_aplica_desconto"
-
-            ).value === "true",
-
+            $("srv_aplica_desconto").value === "true",
         parametros: parametros.join(","),
-
-        descricao_servico:Builder.gerarJSON()
+        estrutura_servico:
+            Builder.gerarJSON()
     };
 
     const response = await authFetch(

@@ -8,7 +8,6 @@ class ServicoBase(BaseModel):
     categoria: str
     aplica_desconto: bool
     parametros: str
-    descricao_servico: str
     estrutura_servico: str
 
 class ServicoCreate(ServicoBase):
