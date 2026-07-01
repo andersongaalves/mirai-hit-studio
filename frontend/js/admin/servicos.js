@@ -3,8 +3,8 @@ import { authFetch } from "./auth.js";
 import * as Notify from "../utils/notifications.js";
 import { money } from "../utils/format.js";
 import { $, $$, $$$ } from "../utils/dom.js";
-import * as Builder from "./builder.js";
-import * as BuilderUI from "./builder_ui.js";
+import * as Builder from "./builder/builder.js";
+import * as BuilderUI from "./builder/builder_ui.js";
 
 const DICIONARIO_PARAMETROS = {
     duracao: "Duração",
@@ -82,17 +82,18 @@ export function abrirEditorServico(id = null) {
 
     Builder.resetBuilder();
 
-    BuilderUI.initBuilder();
-
     $("editor-servico")
         .classList
         .remove("hidden");
 
     if (!id) {
+
         limparFormulario();
-        Builder.resetBuilder();
-        BuilderUI.renderBuilder();
+
+        BuilderUI.initBuilder();
+
         return;
+
     }
 
     const servico = listaServicos.find(
@@ -119,20 +120,18 @@ export function abrirEditorServico(id = null) {
     $("srv_aplica_desconto").value =
         String(servico.aplica_desconto);
 
-    $("srv_descricao").value =
-        servico.descricao_servico ?? "";
-    
-        Builder.carregarBuilder(
-            servico.estrutura_servico
-        );
+    Builder.carregarBuilder(
+        servico.estrutura_servico
+    );
 
-        BuilderUI.renderBuilder();
+    BuilderUI.initBuilder();
 
     parametros = servico.parametros
         ? servico.parametros.split(",")
         : [];
 
     renderizarParametros();
+
 }
 
 export function adicionarParametro() {
@@ -310,19 +309,13 @@ export async function deletarServico(id) {
 function limparFormulario() {
 
     $("srv_id").value = "";
-
     $("srv_nome").value = "";
-
     $("srv_subtitulo").value = "";
-
     $("srv_valor").value = 0;
 
     Builder.resetBuilder();
-
     BuilderUI.renderBuilder();
-
     parametros = [];
-
     renderizarParametros();
 
 }

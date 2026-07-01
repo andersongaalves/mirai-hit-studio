@@ -11,7 +11,7 @@
 <body>
     <div id="nav-placeholder"></div>
 
-    <main class="container">
+    <main class="admin-main">
         <div class="admin-container">
             
             <div id="login-panel">
@@ -70,62 +70,72 @@
                         <h3 id="editor-title" style="color: var(--cor-ciano); margin-top: 0;">Editar Serviço</h3>
                         <input type="hidden" id="srv_id">
                         
-                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-                            <div class="form-group"><label>Nome do Serviço</label><input type="text" id="srv_nome"></div>
-                            <div class="form-group"><label>Subtítulo do Botão</label><input type="text" id="srv_subtitulo" placeholder="Ex: Tem uma ideia?"></div>
-                            <div class="form-group"><label>Valor Base (R$)</label><input type="number" id="srv_valor"></div>
-                        </div>
+                        <div class="builder-layout">
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div class="form-group"><label>Categoria</label><select id="srv_categoria"><option value="avulso">Avulso</option><option value="combo">Combo/Pacote</option><option value="personalizado">Personalizado</option></select></div>
-                            <div class="form-group"><label>Aplicar Desconto?</label><select id="srv_aplica_desconto"><option value="false">Não</option><option value="true">Sim (-10%)</option></select></div>
-                        </div>
+                            <div class="builder-editor">
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                                    <div class="form-group"><label>Nome do Serviço</label><input type="text" id="srv_nome"></div>
+                                    <div class="form-group"><label>Subtítulo do Botão</label><input type="text" id="srv_subtitulo" placeholder="Ex: Tem uma ideia?"></div>
+                                    <div class="form-group"><label>Valor Base (R$)</label><input type="number" id="srv_valor"></div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div class="form-group"><label>Categoria</label><select id="srv_categoria"><option value="avulso">Avulso</option><option value="combo">Combo/Pacote</option><option value="personalizado">Personalizado</option></select></div>
+                                    <div class="form-group"><label>Aplicar Desconto?</label><select id="srv_aplica_desconto"><option value="false">Não</option><option value="true">Sim (-10%)</option></select></div>
+                                </div>
 
-                        <h4 style="color: var(--cor-roxo); margin-top:30px;">
-                            Conteúdo do Serviço
-                        </h4>
+                                <h4 style="color: var(--cor-roxo); margin-top:30px;">
+                                    Conteúdo do Serviço
+                                </h4>
 
-                        <div class="form-group">
+                                <div class="form-group">
 
-                            <label>Descrição Inicial</label>
+                                    <label>Descrição Inicial</label>
 
-                            <textarea
-                                id="builder-intro"
-                                rows="3"
-                            ></textarea>
+                                    <textarea
+                                        id="builder-intro"
+                                        rows="3"
+                                    ></textarea>
 
-                        </div>
+                                </div>
 
-                        <div id="builder-sections"></div>
+                                <div id="builder-sections"></div>
 
-                        <button id="btn-add-section">
-                            + Nova Seção
-                        </button>
+                                <button id="btn-add-section">
+                                    + Nova Seção
+                                </button>
 
-                        <hr style="margin:30px 0;">
+                                <hr style="margin:30px 0;">
 
-                        <h4 style="color: var(--cor-roxo);">
+                                <h4 style="color: var(--cor-roxo);">
 
-                            Benefícios
+                                    Benefícios
 
-                        </h4>
+                                </h4>
 
-                        <div id="builder-benefits"></div>
+                                <div id="builder-benefits"></div>
 
-                        <button id="btn-add-benefit">
-                            + Novo Benefício
-                        </button>
+                                <button id="btn-add-benefit">
+                                    + Novo Benefício
+                                </button>
 
-                        <h4 style="color: var(--cor-roxo); margin-bottom: 5px;">Estrutura de Parâmetros</h4>
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                            <select id="param_selector" style="flex: 1; padding: 10px; background: rgba(255,255,255,0.1); color: white;"></select>
-                            <button class="btn-small" onclick="adicionarParametroBloco()" style="background: var(--cor-ciano); color: black; font-weight: bold;">Adicionar Bloco</button>
-                        </div>
-                        <div id="param_list_render" class="admin-list-container"></div>
+                                <h4 style="color: var(--cor-roxo); margin-bottom: 5px;">Estrutura de Parâmetros</h4>
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <select id="param_selector" style="flex: 1; padding: 10px; background: rgba(255,255,255,0.1); color: white;"></select>
+                                    <button class="btn-small" onclick="adicionarParametroBloco()" style="background: var(--cor-ciano); color: black; font-weight: bold;">Adicionar Bloco</button>
+                                </div>
+                                <div id="param_list_render" class="admin-list-container"></div>
 
-                        <div style="display: flex; gap: 10px;">
-                            <button class="btn-cta btn-submit" style="background: linear-gradient(45deg, #10B981, #059669);" onclick="salvarServico()">SALVAR SERVIÇO</button>
-                            <button class="btn-cta btn-submit" style="background: #444;" onclick="document.getElementById('editor-servico').classList.add('hidden')">CANCELAR</button>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn-cta btn-submit" style="background: linear-gradient(45deg, #10B981, #059669);" onclick="salvarServico()">SALVAR SERVIÇO</button>
+                                    <button class="btn-cta btn-submit" style="background: #444;" onclick="document.getElementById('editor-servico').classList.add('hidden')">CANCELAR</button>
+                                </div>
+                            </div>
+
+                            <div class="builder-preview">
+                                <h3>Preview</h3>
+                                <div id="builder-preview-render"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -1,13 +1,22 @@
 /* --- css/pages/admin.css --- */
+.admin-main{
+    width:100%;
+    display:flex;
+    justify-content:center;
+    padding:40px 20px;
+}
+
 .admin-container { 
-    max-width: 800px; 
-    margin: 20px auto; 
+    width:min(95vw,1450px);
+    max-width:none;
+    margin:0; 
     background: rgba(17, 24, 39, 0.9); 
     padding: 40px; 
     border-radius: 10px; 
     border: 1px solid var(--cor-roxo); 
     box-shadow: 0 0 20px rgba(178, 42, 240, 0.2); 
 }
+
 
 .admin-header { text-align: center; margin-bottom: 30px; }
 .admin-header h2 { color: var(--cor-ciano); margin: 0; }
@@ -32,7 +41,10 @@
     padding: 20px; 
     border-radius: 8px; 
     border: 1px dashed var(--cor-ciano); 
-    margin: 50px; 
+    width:100%;
+    margin-top:40px;
+    margin-left:0;
+    margin-right:0;
 }
 
 .admin-section-divider {
@@ -172,4 +184,84 @@
 
 .builder-title{
     flex:1;
+}
+
+.builder-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 420px;
+    gap:40px;
+    align-items:start;
+}
+
+.builder-preview{
+    position:sticky;
+    top:20px;
+    background:rgba(17,24,39,.9);
+    border:1px solid var(--cor-ciano);
+    border-radius:12px;
+    padding:25px;
+}
+
+.builder-preview h3{
+    color:var(--cor-ciano);
+    margin-top:0;
+    margin-bottom:20px;
+}
+
+#section-servicos{
+    width:95%;
+    max-width:1600px;
+    margin:auto;
+}
+
+.preview-intro{
+    color:#ddd;
+    line-height:1.7;
+    margin-bottom:20px;
+}
+
+.preview-section{
+
+    margin-bottom:30px;
+
+}
+
+.preview-section h4{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    color:var(--cor-ciano);
+
+    margin-bottom:12px;
+
+    font-size:1.1rem;
+
+}
+
+.preview-icon{
+
+    font-size:1.4rem;
+
+}
+
+.preview-section ul{
+
+    padding-left:20px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:8px;
+
+}
+
+.preview-section li{
+
+    color:#DDD;
+
 }

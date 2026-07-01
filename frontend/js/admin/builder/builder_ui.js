@@ -1,5 +1,6 @@
 import * as Builder from "./builder.js";
 import { builderState } from "./builder_state.js";
+import { renderPreview } from "./builder_preview.js";
 
 export function initBuilder() {
     registrarEventos();
@@ -7,36 +8,55 @@ export function initBuilder() {
 }
 
 export function renderBuilder() {
-    sincronizarIntro();
+    const intro = document.getElementById("builder-intro");
+
+    if (intro) {
+        intro.value = builderState.intro;
+    }
+
     renderSections();
     renderBenefits();
+    renderPreview();
 }
 
 function registrarEventos() {
 
-    document.getElementById(
-        "btn-add-section"
+    const intro = document.getElementById("builder-intro");
 
-    ).onclick = () => {
-        Builder.adicionarSecao();
-        renderBuilder();
+    if (intro) {
 
-    };
+        intro.oninput = (e) => {
 
-    document.getElementById(
-        "btn-add-benefit"
+            builderState.intro = e.target.value;
 
-    ).onclick = () => {
-        Builder.adicionarBeneficio();
-        renderBuilder();
-    };
+            renderPreview();
 
-    document.getElementById(
-        "builder-intro"
+        };
 
-    ).oninput = e => {
-        Builder.atualizarIntro(e.target.value)
-    };
+    }
+
+    const btnAddSection =
+        document.getElementById("btn-add-section");
+
+    if (btnAddSection) {
+
+        btnAddSection.onclick = () => {
+
+            novaSecao();
+
+        };
+
+    }
+
+    const btnAddBenefit =
+        document.getElementById("btn-add-benefit");
+
+    if (btnAddBenefit) {
+
+        btnAddBenefit.onclick = () => {
+            novoBeneficio();
+        };
+    }
 }
 
 function sincronizarIntro() {
@@ -51,7 +71,7 @@ function sincronizarIntro() {
 
 }
 
- function renderSections() {
+function renderSections() {
 
     const container = document.getElementById(
         "builder-sections"
@@ -82,33 +102,18 @@ function criarCard(secao) {
     card.innerHTML = `
 
         <div class="builder-header">
+            <button class="toggle-section">
+                ▼
+            </button>
 
-            <input
-
-                class="builder-icon"
-
-                value="${secao.icon}"
-
-                placeholder="🎹"
-
-            >
-
-            <input
-
-                class="builder-title"
-
-                value="${secao.title}"
-
-                placeholder="Título"
-
-            >
-
+            <input class="builder-icon">
+            <input class="builder-title">
         </div>
 
-        <div class="builder-items"></div>
+        <div class="builder-items" style="display:${bodyDisplay}"></div>
 
         <div style="display:flex;gap:10px;margin-top:15px;">
-
+        
             <button type="button" class="btn-small add-item">
                 + Adicionar Item
             </button>
@@ -116,15 +121,11 @@ function criarCard(secao) {
             <button type="button" class="btn-small remove-section">
                 🗑 Remover Seção
             </button>
-
         </div>
-
     `;
 
-    card.querySelector(".builder-header").onclick=()=>{
-        Builder.alternarSecao(
-            secao.id
-        );
+    card.querySelector(".toggle-section").onclick = () => {
+        Builder.alternarSecao(secao.id);
         renderBuilder();
     };
 
@@ -135,29 +136,22 @@ function criarCard(secao) {
     icon.addEventListener("input", e => {
 
         Builder.atualizarSecao(
-
             secao.id,
-
             "icon",
-
             e.target.value
-
         );
-
+        renderPreview();
     });
 
     title.addEventListener("input", e => {
 
         Builder.atualizarSecao(
-
             secao.id,
-
             "title",
-
             e.target.value
-
         );
 
+        renderPreview();
     });
 
     card
@@ -165,13 +159,11 @@ function criarCard(secao) {
         .addEventListener("click", () => {
 
             Builder.removerSecao(
-
                 secao.id
-
             );
 
             renderBuilder();
-
+            renderPreview();
         });
 
     card
@@ -179,13 +171,11 @@ function criarCard(secao) {
         .addEventListener("click", () => {
 
             Builder.adicionarItem(
-
                 secao.id
-
             );
 
             renderBuilder();
-
+            renderPreview();
         });
 
     renderItems(
@@ -210,17 +200,24 @@ function renderItems(container, secao) {
 
     secao.items.forEach((item, index) => {
         const row = document.createElement("div");
+
         row.className = "builder-item-row";
+
         const input = document.createElement("input");
+
         input.className = "builder-item";
         input.placeholder = "Novo Item";
         input.value = item;
+        
         input.oninput = e => {
+
             Builder.atualizarItem(
                 secao.id,
                 index,
                 e.target.value
             );
+
+            renderPreview();
         };
 
         const btn = document.createElement("button");
@@ -313,6 +310,18 @@ export function atualizarBuilder(json) {
     renderBuilder();
 }
 
+function novaSecao() {
+    console.log(builderState);
+    Builder.adicionarSecao();
+    renderBuilder();
+
+}
+
+function novoBeneficio() {
+    Builder.adicionarBeneficio();
+    renderBuilder();
+}
+
 export function limparBuilder() {
     Builder.resetBuilder();
     renderBuilder();
@@ -322,5 +331,7 @@ window.BuilderUI = {
     initBuilder,
     renderBuilder,
     atualizarBuilder,
-    limparBuilder
+    limparBuilder,
+    novaSecao,
+    novoBeneficio
 };

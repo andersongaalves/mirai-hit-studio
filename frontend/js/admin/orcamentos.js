@@ -2,6 +2,7 @@ import * as API from "../api.js";
 import { authFetch } from "./auth.js";
 import * as Notify from "../utils/notifications.js";
 import { $, $$, $$$ } from "../utils/dom.js";
+import {money} from "../utils/format.js"
 
 let orcamentos = [];
 
@@ -96,7 +97,7 @@ export function visualizarOrcamento(id) {
         orcamento.servico;
 
     $("orc_valor").innerText =
-        `R$ ${money(valor_total)}`;
+        `R$ ${money(orcamento.valor_total)}`;
 
     $("orc_data").innerText =
         orcamento.data_solicitacao;
