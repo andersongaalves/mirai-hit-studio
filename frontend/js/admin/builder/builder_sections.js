@@ -1,6 +1,11 @@
 import * as Builder from "./builder.js";
 import { builderState } from "./builder_state.js";
-import { renderPreview } from "./builder_preview.js";
+import { createItemRowElement, createSectionCardElement } from "./builder_dom.js";
+import { refresh } from "./builder_ui.js";
+
+/* ============================================================
+ * Renderização
+ * ========================================================== */
 
 export function renderSections() {
 
@@ -15,78 +20,26 @@ export function renderSections() {
     builderState.sections.forEach(secao => {
 
         container.appendChild(
-
             createSectionCard(secao)
-
         );
 
     });
 
 }
 
+/* ============================================================
+ * Card
+ * ========================================================== */
+
 function createSectionCard(secao) {
 
-    const card = document.createElement("div");
+    const card =
+        createSectionCardElement(secao);
 
-    card.className = "builder-card";
-
-    const bodyDisplay =
-        secao.open ? "block" : "none";
-
-    card.innerHTML = `
-
-        <div class="builder-header">
-
-            <button
-                type="button"
-                class="toggle-section"
-            >
-                ${secao.open ? "▼" : "▶"}
-            </button>
-
-            <input
-                class="builder-icon"
-                value="${secao.icon}"
-                placeholder="🎹"
-            >
-
-            <input
-                class="builder-title"
-                value="${secao.title}"
-                placeholder="Título"
-            >
-
-        </div>
-
-        <div
-            class="builder-items"
-            style="display:${bodyDisplay}"
-        ></div>
-
-        <div
-            class="builder-actions"
-            style="display:${bodyDisplay}"
-        >
-
-            <button
-                type="button"
-                class="btn-small add-item"
-            >
-                + Adicionar Item
-            </button>
-
-            <button
-                type="button"
-                class="btn-small remove-section"
-            >
-                🗑 Remover Seção
-            </button>
-
-        </div>
-
-    `;
-
-    bindSectionEvents(card, secao);
+    bindSectionEvents(
+        card,
+        secao
+    );
 
     renderItems(
         card.querySelector(".builder-items"),
@@ -96,6 +49,10 @@ function createSectionCard(secao) {
     return card;
 
 }
+
+/* ============================================================
+ * Eventos
+ * ========================================================== */
 
 function bindSectionEvents(card, secao) {
 
@@ -108,19 +65,19 @@ function bindSectionEvents(card, secao) {
     const title =
         card.querySelector(".builder-title");
 
-    const btnAddItem =
+    const addItem =
         card.querySelector(".add-item");
 
-    const btnRemove =
+    const removeSection =
         card.querySelector(".remove-section");
 
     toggle.onclick = () => {
 
-        Builder.alternarSecao(secao.id);
+        Builder.alternarSecao(
+            secao.id
+        );
 
-        renderSections();
-
-        renderPreview();
+        refresh("sections");
 
     };
 
@@ -132,7 +89,7 @@ function bindSectionEvents(card, secao) {
             e.target.value
         );
 
-        renderPreview();
+        refresh("preview");
 
     };
 
@@ -144,93 +101,97 @@ function bindSectionEvents(card, secao) {
             e.target.value
         );
 
-        renderPreview();
+        refresh("preview");
 
     };
 
-    btnAddItem.onclick = () => {
+    addItem.onclick = () => {
 
-        Builder.adicionarItem(secao.id);
+        Builder.adicionarItem(
+            secao.id
+        );
 
-        renderSections();
-
-        renderPreview();
+        refresh("sections");
 
     };
 
-    btnRemove.onclick = () => {
+    removeSection.onclick = () => {
 
-        Builder.removerSecao(secao.id);
+        Builder.removerSecao(
+            secao.id
+        );
 
-        renderSections();
-
-        renderPreview();
+        refresh("sections");
 
     };
 
 }
 
+/* ============================================================
+ * Itens
+ * ========================================================== */
+
 function renderItems(container, secao) {
 
     container.innerHTML = "";
 
-    if (secao.items.length === 0) {
+    secao.items.forEach(
 
-        Builder.adicionarItem(secao.id);
+        (item, index) => {
 
-    }
+            const ui =
+                createItemRowElement({
 
-    secao.items.forEach((item, index) => {
+                    value: item
 
-        const row = document.createElement("div");
+                });
 
-        row.className = "builder-item-row";
-
-        const input = document.createElement("input");
-
-        input.className = "builder-item";
-
-        input.value = item;
-
-        input.placeholder = "Novo Item";
-
-        input.oninput = (e) => {
-
-            Builder.atualizarItem(
-                secao.id,
-                index,
-                e.target.value
-            );
-
-            renderPreview();
-
-        };
-
-        const btn = document.createElement("button");
-
-        btn.className = "btn-small";
-
-        btn.textContent = "✕";
-
-        btn.onclick = () => {
-
-            Builder.removerItem(
-                secao.id,
+            bindItemEvents(
+                ui,
+                secao,
                 index
             );
 
-            renderSections();
+            container.appendChild(
+                ui.row
+            );
 
-            renderPreview();
+        }
 
-        };
+    );
 
-        row.appendChild(input);
+}
 
-        row.appendChild(btn);
+function bindItemEvents(ui, secao, index) {
 
-        container.appendChild(row);
+    ui.input.oninput = (e) => {
 
-    });
+        Builder.atualizarItem(
+
+            secao.id,
+
+            index,
+
+            e.target.value
+
+        );
+
+        refresh("preview");
+
+    };
+
+    ui.button.onclick = () => {
+
+        Builder.removerItem(
+
+            secao.id,
+
+            index
+
+        );
+
+        refresh("sections");
+
+    };
 
 }

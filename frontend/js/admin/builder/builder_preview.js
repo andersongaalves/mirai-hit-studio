@@ -1,5 +1,9 @@
 import { builderState } from "./builder_state.js";
 
+/* ============================================================
+ * Renderização
+ * ========================================================== */
+
 export function renderPreview() {
 
     const preview = document.getElementById(
@@ -8,55 +12,140 @@ export function renderPreview() {
 
     if (!preview) return;
 
-    let html = "";
+    preview.innerHTML = [
 
-    // INTRO
-    if (builderState.intro.trim()) {
+        renderIntro(),
 
-        html += `
-            <p class="preview-intro">
-                ${builderState.intro}
-            </p>
-        `;
+        renderSections(),
 
+        renderBenefits()
+
+    ].join("");
+
+}
+
+/* ============================================================
+ * Intro
+ * ========================================================== */
+
+function renderIntro() {
+
+    if (!builderState.intro.trim()) {
+        return "";
     }
 
-    // SEÇÕES
-    builderState.sections.forEach(secao => {
+    return `
 
-        html += `
+        <p class="preview-intro">
 
-            <div class="preview-section">
+            ${builderState.intro}
 
-                <h4>
+        </p>
 
-                    <span class="preview-icon">
+    `;
 
-                        ${secao.icon}
+}
 
-                    </span>
+/* ============================================================
+ * Seções
+ * ========================================================== */
 
-                    ${secao.title}
+function renderSections() {
 
-                </h4>
+    return builderState.sections
 
-                <ul>
+        .map(renderSection)
 
-                    ${secao.items
-                        .filter(item => item.trim() !== "")
-                        .map(item => `
-                            <li>${item}</li>
-                        `)
-                        .join("")}
+        .join("");
 
-                </ul>
+}
 
-            </div>
+function renderSection(secao) {
 
-        `;
+    return `
 
-    });
+        <div class="preview-section">
 
-    preview.innerHTML = html;
+            <h4>
+
+                <span class="preview-icon">
+
+                    ${secao.icon}
+
+                </span>
+
+                ${secao.title}
+
+            </h4>
+
+            <ul>
+
+                ${renderItems(secao)}
+
+            </ul>
+
+        </div>
+
+    `;
+
+}
+
+function renderItems(secao) {
+
+    return secao.items
+
+        .filter(item => item.trim())
+
+        .map(item => `
+
+            <li>${item}</li>
+
+        `)
+
+        .join("");
+
+}
+
+/* ============================================================
+ * Benefícios
+ * ========================================================== */
+
+function renderBenefits() {
+
+    const benefits = builderState.benefits
+
+        .filter(item => item.trim());
+
+    if (benefits.length === 0) {
+        return "";
+    }
+
+    return `
+
+        <div class="preview-benefits">
+
+            <h4>
+
+                Benefícios
+
+            </h4>
+
+            <ul>
+
+                ${benefits
+
+                    .map(item => `
+
+                        <li>${item}</li>
+
+                    `)
+
+                    .join("")}
+
+            </ul>
+
+        </div>
+
+    `;
 
 }
