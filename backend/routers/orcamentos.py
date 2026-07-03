@@ -16,7 +16,8 @@ import crud.crud_orcamento as crud_orcamento
 
 import models
 
-
+from crud import crud_producao
+from schemas.producao import ProducaoResponse
 
 router = APIRouter(
     prefix="/orcamentos",
@@ -197,3 +198,58 @@ def alterar_observacoes(
 
 
     return orcamento
+
+@router.post(
+    "/{orcamento_id}/converter",
+    response_model=ProducaoResponse
+)
+def converter_para_producao(
+
+    orcamento_id: int,
+
+    db: Session = Depends(get_db),
+
+    user=Depends(get_current_user)
+
+):
+
+
+    orcamento = (
+
+        db.query(models.OrcamentoModel)
+
+        .filter(
+            models.OrcamentoModel.id == orcamento_id
+        )
+
+        .first()
+
+    )
+
+
+    if not orcamento:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Orçamento não encontrado"
+        )
+
+
+    if orcamento.status != "aprovado":
+
+        raise HTTPException(
+            status_code=400,
+            detail="Apenas orçamentos aprovados podem virar produção"
+        )
+
+
+    producao = crud_producao.criar_por_orcamento(
+
+        db,
+
+        orcamento
+
+    )
+
+
+    return producao

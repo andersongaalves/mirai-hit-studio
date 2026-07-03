@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from models.orcamento import OrcamentoModel
+from crud import crud_producao
 
 def criar(db, orcamento):
 
@@ -43,9 +44,24 @@ def atualizar_status(
 
     orcamento.status = status
 
+
+    if status == "aprovado":
+
+        crud_producao.criar_por_orcamento(
+
+            db,
+
+            orcamento
+
+        )
+
+
     db.commit()
 
-    db.refresh(orcamento)
+    db.refresh(
+        orcamento
+    )
+
 
     return orcamento
 
