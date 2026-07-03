@@ -144,3 +144,43 @@ export async function atualizarProdutor(
     return await response.json();
 
 }
+
+export async function atualizarObservacoes(
+    id,
+    observacoes
+) {
+
+    const response = await authFetch(
+
+        `/orcamentos/${id}/observacoes`,
+
+        {
+            method: "PATCH",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+                observacoes
+
+            })
+
+        }
+
+    );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Erro ao atualizar observações"
+        );
+
+    }
+
+
+    return await response.json();
+
+}

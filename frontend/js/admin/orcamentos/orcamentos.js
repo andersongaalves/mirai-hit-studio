@@ -8,6 +8,9 @@ import * as OrcamentosUI from "./orcamentos_ui.js";
 import * as OrcamentosModal from "./orcamentos_modal.js";
 import { orcamentosState } from "./orcamentos_state.js";
 import { filtrarOrcamentos } from "./orcamentos_filters.js";
+import {
+    registrarEventosModal
+} from "./orcamentos_modal.js";
 
 export function refresh(tipo = "all") {
 
@@ -142,8 +145,8 @@ function registrarEventos() {
 }
 
 export function initOrcamentos() {
-
     registrarEventos();
+    registrarEventosModal();
     carregarOrcamentos();
 }
 
@@ -232,6 +235,64 @@ export async function alterarProdutor(
 
         Notify.error(
             "Erro ao alterar produtor"
+        );
+
+    }
+
+}
+
+export async function salvarObservacoes(
+    id,
+    observacoes
+) {
+
+    try {
+
+        const atualizado =
+            await OrcamentosAPI.atualizarObservacoes(
+
+                id,
+
+                observacoes
+
+            );
+
+
+        const index =
+            orcamentosState.lista.findIndex(
+
+                item => item.id === id
+
+            );
+
+
+        if (index !== -1) {
+
+            orcamentosState.lista[index] =
+                atualizado;
+
+        }
+
+
+        Notify.success(
+            "Observações salvas."
+        );
+
+
+        refresh("lista");
+
+    }
+
+
+    catch(error) {
+
+        console.error(error);
+
+
+        Notify.error(
+
+            "Erro ao salvar observações"
+
         );
 
     }

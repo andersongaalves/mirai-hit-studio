@@ -80,3 +80,35 @@ def atualizar_produtor(
 
 
     return orcamento
+
+def atualizar_observacoes(
+    db,
+    orcamento_id: int,
+    observacoes: str
+):
+
+    orcamento = (
+        db.query(OrcamentoModel)
+        .filter(
+            OrcamentoModel.id == orcamento_id
+        )
+        .first()
+    )
+
+
+    if not orcamento:
+
+        return None
+
+
+    orcamento.observacoes = observacoes
+
+
+    db.commit()
+
+    db.refresh(
+        orcamento
+    )
+
+
+    return orcamento

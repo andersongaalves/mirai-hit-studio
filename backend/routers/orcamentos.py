@@ -7,13 +7,16 @@ from schemas.orcamento import (
     OrcamentoCreate,
     OrcamentoResponse,
     OrcamentoStatusUpdate,
-    OrcamentoProdutorUpdate
+    OrcamentoProdutorUpdate,
+    OrcamentoObservacoesUpdate
 )
 from core.dependencies import get_current_user
 from services.email_service import EmailService
 import crud.crud_orcamento as crud_orcamento
 
 import models
+
+
 
 router = APIRouter(
     prefix="/orcamentos",
@@ -142,6 +145,45 @@ def alterar_produtor(
             db,
             orcamento_id,
             dados.produtor_id
+        )
+    )
+
+
+    if not orcamento:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Orçamento não encontrado"
+        )
+
+
+    return orcamento
+
+@router.patch(
+    "/{orcamento_id}/observacoes",
+    response_model=OrcamentoResponse
+)
+def alterar_observacoes(
+
+    orcamento_id: int,
+
+    dados: OrcamentoObservacoesUpdate,
+
+    db: Session = Depends(get_db),
+
+    user=Depends(get_current_user)
+
+):
+
+    orcamento = (
+        crud_orcamento.atualizar_observacoes(
+
+            db,
+
+            orcamento_id,
+
+            dados.observacoes
+
         )
     )
 
