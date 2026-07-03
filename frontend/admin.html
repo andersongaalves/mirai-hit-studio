@@ -173,6 +173,32 @@
                 <div id="section-orcamentos" class="admin-section hidden">
                     <button class="btn-small" style="margin-bottom: 20px;" onclick="mostrarDashboard()">⬅ Voltar ao Menu</button>
                     <div class="admin-header"><h2>Orçamentos Recebidos</h2></div>
+                    <input id="orcamentos-search" class="admin-search" placeholder="🔍 Buscar orçamento...">
+                    <select id="orcamentos-status-filter">
+                        <option value="todos">
+                            Todos
+                        </option>
+
+                        <option value="novo">
+                            🟡 Novo
+                        </option>
+
+                        <option value="em_analise">
+                            🔵 Em análise
+                        </option>
+
+                        <option value="aprovado">
+                            🟢 Aprovado
+                        </option>
+
+                        <option value="recusado">
+                            🔴 Recusado
+                        </option>
+
+                        <option value="arquivado">
+                            ⚫ Arquivado
+                        </option>
+                    </select>
                     <div id="orcamentos-list" class="admin-list-container"></div>
                 </div>
             </div>

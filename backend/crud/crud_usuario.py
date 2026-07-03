@@ -19,3 +19,12 @@ def buscar_por_username(
         .first()
 
     )
+
+def listar_usuarios(
+    db: Session
+):
+
+    return (
+        db.query(UsuarioModel)
+        .all()
+    )

@@ -1,3 +1,6 @@
+from sqlalchemy.orm import Session
+from models.orcamento import OrcamentoModel
+
 def criar(db, orcamento):
 
     novo = OrcamentoModel(
@@ -23,3 +26,57 @@ def listar(db):
         .all()
     )
 
+def atualizar_status(
+    db: Session,
+    orcamento_id: int,
+    status: str
+) -> OrcamentoModel | None:
+
+    orcamento = db.query(
+        OrcamentoModel
+    ).filter(
+        OrcamentoModel.id == orcamento_id
+    ).first()
+
+    if not orcamento:
+        return None
+
+    orcamento.status = status
+
+    db.commit()
+
+    db.refresh(orcamento)
+
+    return orcamento
+
+def atualizar_produtor(
+    db,
+    orcamento_id: int,
+    produtor_id: int | None
+):
+
+    orcamento = (
+        db.query(OrcamentoModel)
+        .filter(
+            OrcamentoModel.id == orcamento_id
+        )
+        .first()
+    )
+
+
+    if not orcamento:
+
+        return None
+
+
+    orcamento.produtor_id = produtor_id
+
+
+    db.commit()
+
+    db.refresh(
+        orcamento
+    )
+
+
+    return orcamento

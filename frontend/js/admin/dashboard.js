@@ -1,6 +1,6 @@
 import {carregarServicos, inicializarParametros} from "./servicos.js";
 import {carregarPortfolio} from "./projetos.js";
-import {carregarOrcamentos} from "./orcamentos.js";
+import {initOrcamentos} from "./orcamentos/orcamentos.js";
 import {carregarConfiguracoes} from "./configuracoes.js";
 import { $, $$, $$$ } from "../utils/dom.js";
 
@@ -13,7 +13,7 @@ export async function inicializarDashboard() {
 
         carregarServicos(),
         carregarPortfolio(),
-        carregarOrcamentos(),
+        initOrcamentos(),
         carregarConfiguracoes()
 
     ]);

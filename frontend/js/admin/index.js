@@ -2,7 +2,7 @@ import * as Auth from "./auth.js";
 import * as Dashboard from "./dashboard.js";
 import * as Servicos from "./servicos.js";
 import * as Projetos from "./projetos.js";
-import * as Orcamentos from "./orcamentos.js";
+import * as Orcamentos from "./orcamentos/orcamentos.js";
 import * as Config from "./configuracoes.js";
 
 

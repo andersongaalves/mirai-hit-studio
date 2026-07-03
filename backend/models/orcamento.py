@@ -1,5 +1,14 @@
-from sqlalchemy import Column, Integer, Float, String, Text, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Float,
+    Text,
+    DateTime,
+    ForeignKey
+)
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 from database import Base
 
@@ -30,4 +39,33 @@ class OrcamentoModel(Base):
     data_solicitacao = Column(
         DateTime(timezone=True),
         server_default=func.now()
+    )
+
+    status = Column(
+        String(20),
+        default="novo",
+        nullable=False
+    )
+
+    produtor_id = Column(
+        Integer,
+        ForeignKey("usuarios.id"),
+        nullable=True
+    )
+
+    observacoes = Column(
+        Text,
+        default="",
+        nullable=False
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    produtor = relationship(
+        "UsuarioModel",
+        foreign_keys=[produtor_id]
     )
