@@ -105,6 +105,20 @@ function createOrcamentoCard(item) {
 
     });
 
+    produtor.onchange = e => {
+
+        alterarProdutor(
+
+            item.id,
+
+            e.target.value
+                ? Number(e.target.value)
+                : null
+
+        );
+
+    };
+
     const nome = createTextElement(
         "strong",
         item.nome_cliente
