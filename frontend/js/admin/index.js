@@ -1,100 +1,57 @@
 import * as Auth from "./auth.js";
 import * as Dashboard from "./dashboard.js";
-import * as Servicos from "./servicos.js";
+import * as Servicos from "./servicos/servicos.js";
 import * as Projetos from "./projetos.js";
 import * as Orcamentos from "./orcamentos/orcamentos.js";
 import * as Config from "./configuracoes.js";
 
+import {
+    fecharModalProducao
+} from "./producoes/producoes_modal.js";
 
-// ==========================================
-// LOGIN
-// ==========================================
+function expose(name, callback) {
+    window[name] = callback;
+}
 
-window.fazerLogin = Auth.fazerLogin;
+expose("fazerLogin", Auth.fazerLogin);
+expose("fazerLogout", Auth.logout);
 
-window.fazerLogout = Auth.logout;
+expose("mostrarDashboard", Dashboard.mostrarDashboard);
+expose("mostrarSecao", Dashboard.mostrarSecao);
 
-// ==========================================
-// DASHBOARD
-// ==========================================
+expose("abrirEditorServico", Servicos.abrirEditorServico);
+expose("fecharEditorServico", Servicos.fecharEditorServico);
+expose("salvarServico", Servicos.salvarServico);
+expose("deletarServico", Servicos.deletarServico);
+expose("adicionarParametroBloco", Servicos.adicionarParametro);
+expose("removerParametro", Servicos.removerParametro);
+expose("moverParametro", Servicos.moverParametro);
 
-window.mostrarDashboard =
-    Dashboard.mostrarDashboard;
+expose("novoProjeto", Projetos.novoProjeto);
+expose("editarProjeto", Projetos.editarProjeto);
+expose("fecharModalProjeto", Projetos.fecharModal);
+expose("salvarProjeto", Projetos.salvarProjeto);
+expose("deletarProjeto", Projetos.deletarProjeto);
 
-window.mostrarSecao =
-    Dashboard.mostrarSecao;
+expose("visualizarOrcamento", Orcamentos.visualizarOrcamento);
+expose("fecharModalOrcamento", Orcamentos.fecharModalOrcamento);
+expose("deletarOrcamento", Orcamentos.deletarOrcamento);
 
-// ==========================================
-// SERVIÇOS
-// ==========================================
+expose("fecharModalProducao", fecharModalProducao);
 
-window.abrirEditorServico =
-    Servicos.abrirEditorServico;
+expose("salvarConfiguracoesExtras", Config.salvarConfiguracoesExtras);
 
-window.salvarServico =
-    Servicos.salvarServico;
-
-window.deletarServico =
-    Servicos.deletarServico;
-
-window.adicionarParametroBloco =
-    Servicos.adicionarParametro;
-
-window.removerParametro =
-    Servicos.removerParametro;
-
-window.moverParametro =
-    Servicos.moverParametro;
-
-// ==========================================
-// PROJETOS
-// ==========================================
-
-window.novoProjeto =
-    Projetos.novoProjeto;
-
-window.editarProjeto =
-    Projetos.editarProjeto;
-
-window.salvarProjeto =
-    Projetos.salvarProjeto;
-
-window.deletarProjeto =
-    Projetos.deletarProjeto;
-
-// ==========================================
-// ORÇAMENTOS
-// ==========================================
-
-window.visualizarOrcamento =
-    Orcamentos.visualizarOrcamento;
-
-window.fecharModalOrcamento =
-    Orcamentos.fecharModalOrcamento;
-
-window.deletarOrcamento =
-    Orcamentos.deletarOrcamento;
-
-// ==========================================
-// CONFIGURAÇÕES
-// ==========================================
-
-window.salvarConfiguracoesExtras = 
-    Config.salvarConfiguracoesExtras;
-
-// ==========================================
-// STARTUP
-// ==========================================
-
-document.addEventListener(
-
-    "DOMContentLoaded",
-
-    async () => {
-        if (
-            Auth.restaurarSessao()
-        ) {
-            Dashboard.inicializarDashboard();
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        if (Auth.restaurarSessao()) {
+            await Dashboard.inicializarDashboard();
         }
     }
-);
+
+    catch(error) {
+        console.error(
+            "Erro ao iniciar admin:",
+            error
+        );
+    }
+});

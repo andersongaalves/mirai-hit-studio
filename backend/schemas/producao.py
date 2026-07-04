@@ -16,6 +16,8 @@ class ProducaoBase(BaseModel):
 
     observacoes: str = ""
 
+    etapas: str = "[]"
+
 
 # ===========================
 # CREATE
@@ -55,9 +57,22 @@ class ProducaoResponse(ProducaoBase):
 
     updated_at: datetime
 
-
     model_config = {
 
         "from_attributes": True
 
     }
+
+    etapas: str
+
+    prazo_entrega: datetime | None
+
+    created_at: datetime
+
+    updated_at: datetime
+
+class ProducaoEtapasUpdate(BaseModel):
+    etapas: str
+
+class ProducaoPrazoUpdate(BaseModel):
+    prazo_entrega: datetime

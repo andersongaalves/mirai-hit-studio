@@ -1,143 +1,81 @@
 export function createDivElement(className = "") {
-
     const div = document.createElement("div");
 
-    div.className = className;
+    if (className) {
+        div.className = className;
+    }
 
     return div;
-
 }
 
 export function createButtonElement({
-
     text = "",
-
     className = "",
-
     type = "button"
-
-}) {
-
+} = {}) {
     const button = document.createElement("button");
 
     button.type = type;
+    button.textContent = text ?? "";
 
-    button.className = className;
-
-    button.textContent = text;
+    if (className) {
+        button.className = className;
+    }
 
     return button;
-
 }
 
 export function createOrcamentoCardElement() {
+    const card = createDivElement("admin-list-item");
+    const info = createDivElement("orcamento-info");
+    const actions = createDivElement("orcamento-actions");
 
-    const card = createDivElement(
-        "admin-list-item"
-    );
-
-    const info = createDivElement(
-        "orcamento-info"
-    );
-
-    const actions = createDivElement(
-        "orcamento-actions"
-    );
-
-    card.appendChild(info);
-
-    card.appendChild(actions);
+    card.append(info, actions);
 
     return {
-
         card,
-
         info,
-
         actions
-
     };
-
 }
 
 export function createTextElement(
-    tag,
+    tag = "span",
     text = "",
     className = ""
 ) {
+    const element = document.createElement(tag);
 
-    const element =
-        document.createElement(tag);
+    element.textContent = text ?? "";
 
-    element.textContent = text;
-
-    element.className = className;
+    if (className) {
+        element.className = className;
+    }
 
     return element;
-
-}
-
-export function createBadgeElement({
-
-    text = "",
-
-    status = ""
-
-}) {
-
-    const badge =
-        document.createElement("span");
-
-    badge.className =
-        `status-badge status-${status}`;
-
-    badge.textContent = text;
-
-    return badge;
-
 }
 
 export function createSelectElement({
-
     options = [],
-
     value = "",
-
     className = ""
+} = {}) {
+    const select = document.createElement("select");
 
-}) {
-
-    const select =
-        document.createElement("select");
-
-
-    select.className =
-        className;
-
+    if (className) {
+        select.className = className;
+    }
 
     options.forEach(item => {
+        const option = document.createElement("option");
 
-        const option =
-            document.createElement("option");
-
-
-        option.value =
-            item.value;
-
-
-        option.textContent =
-            item.label;
-
+        option.value = item.value ?? "";
+        option.textContent = item.label ?? "";
 
         select.appendChild(option);
-
     });
 
-
-    select.value =
-        value;
-
+    select.value = value ?? "";
 
     return select;
-
 }

@@ -1,186 +1,123 @@
 import { authFetch } from "../auth.js";
 
-export async function buscarOrcamentos() {
+const jsonHeaders = {
+    "Content-Type": "application/json"
+};
 
+async function handleResponse(
+    response,
+    message
+) {
+    if (!response.ok) {
+        throw new Error(message);
+    }
+
+    if (response.status === 204) {
+        return null;
+    }
+
+    const text = await response.text();
+
+    return text
+        ? JSON.parse(text)
+        : null;
+}
+
+export async function buscarOrcamentos() {
     const response = await authFetch(
         "/orcamentos"
     );
 
-    if (!response.ok) {
+    return handleResponse(
+        response,
+        "Erro ao buscar orçamentos."
+    );
+}
 
-        throw new Error(
-            "Erro ao buscar orçamentos."
-        );
+export async function buscarProdutores() {
+    const response = await authFetch(
+        "/usuarios"
+    );
 
-    }
-
-    return await response.json();
-
+    return handleResponse(
+        response,
+        "Erro ao buscar produtores."
+    );
 }
 
 export async function excluirOrcamento(id) {
-
     const response = await authFetch(
-
         `/orcamentos/${id}`,
-
         {
             method: "DELETE"
         }
-
     );
 
-    if (!response.ok) {
-
-        throw new Error(
-            "Erro ao excluir orçamento."
-        );
-
-    }
-
+    return handleResponse(
+        response,
+        "Erro ao excluir orçamento."
+    );
 }
 
 export async function atualizarStatus(
     id,
     status
 ) {
-
     const response = await authFetch(
-
         `/orcamentos/${id}/status`,
-
         {
             method: "PATCH",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
+            headers: jsonHeaders,
             body: JSON.stringify({
-
                 status
-
             })
-
         }
-
     );
 
-
-    if (!response.ok) {
-
-        throw new Error(
-            "Erro ao atualizar status."
-        );
-
-    }
-
-
-    return await response.json();
-
-}
-
-export async function buscarProdutores() {
-
-    const response = await authFetch(
-        "/usuarios"
+    return handleResponse(
+        response,
+        "Erro ao atualizar status."
     );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            "Erro ao buscar produtores"
-        );
-
-    }
-
-
-    return await response.json();
-
 }
-
 
 export async function atualizarProdutor(
     id,
     produtor_id
 ) {
-
     const response = await authFetch(
-
         `/orcamentos/${id}/produtor`,
-
         {
-
             method: "PATCH",
-
-            headers: {
-
-                "Content-Type": "application/json"
-
-            },
-
-
+            headers: jsonHeaders,
             body: JSON.stringify({
-
                 produtor_id
-
             })
-
         }
-
     );
 
-
-    if (!response.ok) {
-
-        throw new Error(
-            "Erro ao atualizar produtor"
-        );
-
-    }
-
-
-    return await response.json();
-
+    return handleResponse(
+        response,
+        "Erro ao atualizar produtor."
+    );
 }
 
 export async function atualizarObservacoes(
     id,
     observacoes
 ) {
-
     const response = await authFetch(
-
         `/orcamentos/${id}/observacoes`,
-
         {
             method: "PATCH",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
+            headers: jsonHeaders,
             body: JSON.stringify({
-
                 observacoes
-
             })
-
         }
-
     );
 
-
-    if (!response.ok) {
-
-        throw new Error(
-            "Erro ao atualizar observações"
-        );
-
-    }
-
-
-    return await response.json();
-
+    return handleResponse(
+        response,
+        "Erro ao atualizar observações."
+    );
 }

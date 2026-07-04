@@ -1,123 +1,179 @@
 import { API_URL } from "../config.js";
-import { $, $$, $$$ } from "../utils/dom.js";
+
+import {
+    $
+} from "../utils/dom.js";
+
+
+// ===========================
+// UI
+// ===========================
+
+function mostrarAdmin() {
+
+    $("login-panel")
+        ?.classList
+        .add("hidden");
+
+
+    $("admin-area")
+        ?.classList
+        .remove("hidden");
+
+}
+
+
+function mostrarLogin() {
+
+    $("admin-area")
+        ?.classList
+        .add("hidden");
+
+
+    $("login-panel")
+        ?.classList
+        .remove("hidden");
+
+}
+
+
+// ===========================
+// LOGIN
+// ===========================
 
 export async function fazerLogin() {
 
-    const username = $("username").value.trim();
-    const password = $("password").value;
-    const errorEl = $("login-error");
+    const username =
+        $("username").value.trim();
 
-    errorEl.classList.add("hidden");
+
+    const password =
+        $("password").value;
+
+
+    const errorEl =
+        $("login-error");
+
+
+    errorEl?.classList.add(
+        "hidden"
+    );
+
 
     try {
-        const response = await fetch(
-            `${API_URL}/auth/login`,
 
-            {
-                method: "POST",
-                headers: {
+        const response =
+            await fetch(
 
-                    "Content-Type": "application/json"
+                `${API_URL}/auth/login`,
 
-                },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            }
-        );
+                {
 
-        const data = await response.json();
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body: JSON.stringify({
+
+                        username,
+
+                        password
+
+                    })
+
+                }
+
+            );
+
+
+        const data =
+            await response.json();
+
 
         if (!response.ok) {
+
             throw new Error(
-                data.detail || "Usuário ou senha incorretos."
+
+                data.detail ||
+
+                "Usuário ou senha incorretos."
+
             );
 
         }
 
+
         localStorage.setItem(
+
             "access_token",
+
             data.access_token
 
         );
 
-        localStorage.setItem(
-            "admin_logged",
-            "true"
 
-        );
+        mostrarAdmin();
 
-        document
-            .getElementById("login-panel")
-            .classList.add("hidden");
-
-        document
-            .getElementById("admin-area")
-            .classList.remove("hidden");
 
         return true;
 
     }
 
+
     catch (error) {
+
 
         console.error(error);
 
-        errorEl.innerText = error.message;
 
-        errorEl.classList.remove("hidden");
+        if (errorEl) {
+
+            errorEl.innerText =
+                error.message;
+
+
+            errorEl
+                .classList
+                .remove("hidden");
+
+        }
+
 
         return false;
 
     }
-    console.log("TOKEN SALVO:", data.access_token);
 
 }
 
-export function logout() {
 
-    localStorage.removeItem("access_token");
-
-    localStorage.removeItem("admin_logged");
-
-    document
-
-        .getElementById("admin-area")
-
-        .classList.add("hidden");
-
-    document
-
-        .getElementById("login-panel")
-
-        .classList.remove("hidden");
-
-    $("username").value = "";
-
-    $("password").value = "";
-
-}
+// ===========================
+// TOKEN
+// ===========================
 
 export function getToken() {
 
     return localStorage.getItem(
-
         "access_token"
-
     );
 
 }
+
 
 export function isAuthenticated() {
 
-    return !!localStorage.getItem(
-
-        "access_token"
-
-    );
+    return !!getToken();
 
 }
+
+
+// ===========================
+// AUTH FETCH
+// ===========================
 
 export async function authFetch(
 
@@ -127,55 +183,114 @@ export async function authFetch(
 
 ) {
 
-    const token = getToken();
+    const token =
+        getToken();
 
-    console.log("TOKEN ENVIADO:", token);
 
     const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {})
+
+        ...(options.headers || {}),
+
+        Authorization:
+            `Bearer ${token}`
+
     };
 
-    const response = await fetch(
 
-        `${API_URL}${endpoint}`,
+    if (
 
-        {
+        options.body &&
 
-            ...options,
+        !(options.body instanceof FormData)
 
-            headers
+    ) {
 
-        }
-
-    );
-
-    if (response.status === 401) {
-        logout();
-        throw new Error("Sessão expirada.");
+        headers["Content-Type"] =
+            "application/json";
 
     }
+
+
+    const response =
+        await fetch(
+
+            `${API_URL}${endpoint}`,
+
+            {
+
+                ...options,
+
+                headers
+
+            }
+
+        );
+
+
+    if (response.status === 401) {
+
+        logout();
+
+
+        throw new Error(
+            "Sessão expirada."
+        );
+
+    }
+
 
     return response;
 
 }
 
+
+// ===========================
+// SESSÃO
+// ===========================
+
 export function restaurarSessao() {
 
     if (!isAuthenticated()) {
+
         return false;
 
     }
 
-    document
-        .getElementById("login-panel")
-        .classList.add("hidden");
 
-    document
-        .getElementById("admin-area")
-        .classList.remove("hidden");
+    mostrarAdmin();
+
 
     return true;
+
+}
+
+
+// ===========================
+// LOGOUT
+// ===========================
+
+export function logout() {
+
+
+    localStorage.removeItem(
+        "access_token"
+    );
+
+
+    mostrarLogin();
+
+
+    if ($("username")) {
+
+        $("username").value = "";
+
+    }
+
+
+    if ($("password")) {
+
+        $("password").value = "";
+
+    }
 
 }

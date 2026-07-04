@@ -133,7 +133,7 @@
 
                                 <div style="display: flex; gap: 10px;">
                                     <button class="btn-cta btn-submit" style="background: linear-gradient(45deg, #10B981, #059669);" onclick="salvarServico()">SALVAR SERVIÇO</button>
-                                    <button class="btn-cta btn-submit" style="background: #444;" onclick="document.getElementById('editor-servico').classList.add('hidden')">CANCELAR</button>
+                                    <button class="btn-cta btn-submit" style="background: #444;" onclick="fecharEditorServico()">CANCELAR</button>
                                 </div>
                             </div>
 
@@ -260,7 +260,7 @@
                     </div>
 
                     <div style="display:flex; justify-content:flex-end; gap: 10px; margin-top:20px;">
-                        <button class="btn-small" style="background: #444;" onclick="fecharModal()">Cancelar</button>
+                        <button class="btn-small" style="background: #444;" onclick="fecharModalProjeto()">Cancelar</button>
                         <button class="btn-small" style="background: var(--cor-ciano); color: black; font-weight: bold;" onclick="salvarProjeto()">Salvar Projeto</button>
                     </div>
                 </div>
@@ -306,7 +306,52 @@
                     </div>
                 </div>
             </div>
+            <div id="modal-producao" class="modal hidden">
 
+                <div class="modal-content">
+                    <h2 id="prod_titulo"></h2>
+
+                    <p>Cliente: <span id="prod_cliente"></span></p>
+                    <p>Serviço: <span id="prod_servico"></span></p>
+                    <p>Status: <span id="prod_status"></span></p>
+                    <p>Criado em: <span id="prod_data"></span></p>
+
+                    <label>
+                        Observações
+                    </label>
+
+                    <br>
+                    <textarea
+                        id="prod_observacoes"
+                        placeholder="observações..."
+                    ></textarea>
+                    <br>
+
+                    <h3>
+                        Etapas
+                    </h3>
+                    <div id="prod_etapas"></div>
+
+                    <label>
+                        Prazo de entrega
+                    </label>
+
+
+                    <input
+                        type="datetime-local"
+                        id="prod_prazo"
+                    />
+
+
+                    <button id="btn-save-prazo">
+                        Salvar prazo
+                    </button>
+
+                    <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                        <button class="btn-small" onclick="fecharModalProducao()">Fechar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
     

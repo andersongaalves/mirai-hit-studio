@@ -1,184 +1,344 @@
-import * as Notify from "../utils/notifications.js";
-import { $, $$, $$$ } from "../utils/dom.js";
+import * as Notify
+from "../utils/notifications.js";
 
-export function abrirModal(id) {
 
-    const modal = $(id);
+import {
 
-    if (!modal) return;
+    $,
+    show,
+    hide,
+    text
 
-    modal.classList.remove("hidden");
+} from "../utils/dom.js";
+
+
+// ===========================
+// MODAL
+// ===========================
+
+export function abrirModal(
+    id
+) {
+
+    show(
+        $(id)
+    );
+
+}
+
+
+
+export function fecharModal(
+    id
+) {
+
+    hide(
+        $(id)
+    );
 
 }
 
-export function fecharModal(id) {
 
-    const modal = $(id);
 
-    if (!modal) return;
+export function toggleModal(
+    id
+) {
 
-    modal.classList.add("hidden");
-
-}
-
-export function toggleModal(id) {
-
-    const modal = $(id);
-
-    if (!modal) return;
-
-    modal.classList.toggle("hidden");
+    $(id)
+        ?.classList
+        .toggle("hidden");
 
 }
+
+
+// ===========================
+// LOADING
+// ===========================
 
 export function mostrarLoading() {
 
-    const loading = $("loading");
-
-    if (loading) {
-
-        loading.classList.remove("hidden");
-
-    }
+    show(
+        $("loading")
+    );
 
 }
+
+
 
 export function esconderLoading() {
 
-    const loading = $("loading");
-
-    if (loading) {
-
-        loading.classList.add("hidden");
-
-    }
+    hide(
+        $("loading")
+    );
 
 }
 
-export function mostrarErro(mensagem) {
 
-    const box = $("error-message");
+// ===========================
+// MENSAGENS
+// ===========================
+
+export function mostrarErro(
+    mensagem
+) {
+
+
+    const box =
+        $("error-message");
+
 
     if (!box) {
 
-        Notify.error(mensagem);
+
+        Notify.error(
+            mensagem
+        );
+
 
         return;
 
     }
 
-    box.innerText = mensagem;
 
-    box.classList.remove("hidden");
+    text(
+        box,
+
+        mensagem
+    );
+
+
+    show(
+        box
+    );
 
 }
+
+
 
 export function limparErro() {
 
-    const box = $("error-message");
 
-    if (!box) return;
+    const box =
+        $("error-message");
 
-    box.innerText = "";
 
-    box.classList.add("hidden");
+    text(
+        box,
+        ""
+    );
+
+
+    hide(
+        box
+    );
 
 }
 
-export function mostrarSucesso(mensagem) {
 
-    const box = $("success-message");
+
+export function mostrarSucesso(
+    mensagem
+) {
+
+
+    const box =
+        $("success-message");
+
 
     if (!box) {
 
-        Notify.success(mensagem);
+
+        Notify.success(
+            mensagem
+        );
+
 
         return;
 
     }
 
-    box.innerText = mensagem;
 
-    box.classList.remove("hidden");
+    text(
+        box,
 
-    setTimeout(() => {
+        mensagem
+    );
 
-        box.classList.add("hidden");
 
-    }, 3000);
+    show(
+        box
+    );
+
+
+    setTimeout(
+        () => hide(box),
+        3000
+    );
 
 }
 
-export function confirmar(mensagem) {
 
-    return window.confirm(mensagem);
+// ===========================
+// CONFIRM
+// ===========================
+
+export function confirmar(
+    mensagem
+) {
+
+    return confirm(
+        mensagem
+    );
 
 }
 
-export function limparFormulario(formId) {
 
-    const form = $(formId);
+// ===========================
+// FORM
+// ===========================
+
+export function limparFormulario(
+    formId
+) {
+
+
+    $(formId)
+        ?.reset();
+
+}
+
+
+
+export function preencherFormulario(
+    formId,
+    dados
+) {
+
+
+    const form =
+        $(formId);
+
 
     if (!form) return;
 
-    form.reset();
+
+
+    Object
+        .entries(dados)
+        .forEach(([campo, valor]) => {
+
+
+            const elemento =
+                form.querySelector(
+
+                    `[name="${campo}"]`
+
+                );
+
+
+            if (!elemento) {
+
+                return;
+
+            }
+
+
+
+            if (
+
+                elemento.type ===
+                "checkbox"
+
+            ) {
+
+
+                elemento.checked =
+                    Boolean(valor);
+
+
+            }
+
+
+            else {
+
+
+                elemento.value =
+                    valor ?? "";
+
+
+            }
+
+
+        });
 
 }
 
-export function preencherFormulario(formId, dados) {
 
-    const form = $(formId);
+// ===========================
+// BUTTON
+// ===========================
 
-    if (!form) return;
+export function bloquearBotao(
 
-    Object.entries(dados).forEach(([campo, valor]) => {
+    id,
 
-        const elemento = form.querySelector(
+    texto = "Salvando..."
 
-            `[name="${campo}"]`
+) {
 
-        );
 
-        if (!elemento) return;
+    const btn =
+        $(id);
 
-        if (elemento.type === "checkbox") {
-
-            elemento.checked = valor;
-
-        }
-
-        else {
-
-            elemento.value = valor ?? "";
-
-        }
-
-    });
-
-}
-
-export function bloquearBotao(id, texto = "Salvando...") {
-
-    const btn = $(id);
 
     if (!btn) return;
 
-    btn.dataset.original = btn.innerText;
 
-    btn.innerText = texto;
 
-    btn.disabled = true;
+    if (!btn.dataset.original) {
+
+
+        btn.dataset.original =
+            btn.innerText;
+
+
+    }
+
+
+
+    btn.innerText =
+        texto;
+
+
+    btn.disabled =
+        true;
 
 }
 
-export function desbloquearBotao(id) {
 
-    const btn = $(id);
+
+export function desbloquearBotao(
+    id
+) {
+
+
+    const btn =
+        $(id);
+
 
     if (!btn) return;
 
-    btn.innerText = btn.dataset.original || "Salvar";
 
-    btn.disabled = false;
+
+    btn.innerText =
+
+        btn.dataset.original ||
+
+        "Salvar";
+
+
+
+    btn.disabled =
+        false;
 
 }

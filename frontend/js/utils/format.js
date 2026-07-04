@@ -1,31 +1,129 @@
-export function money(value) {
-    return Number(value).toLocaleString(
+// ===========================
+// MONEY
+// ===========================
+
+export function money(
+    value = 0
+) {
+
+    const number =
+        Number(value);
+
+
+    if (isNaN(number)) {
+
+        return "R$ 0,00";
+
+    }
+
+
+    return number.toLocaleString(
 
         "pt-BR",
 
         {
+
             style: "currency",
+
             currency: "BRL"
+
         }
 
     );
 
 }
 
-export function number(value) {
-    return Number(value).toLocaleString(
+
+// ===========================
+// NUMBER
+// ===========================
+
+export function number(
+    value = 0
+) {
+
+    const number =
+        Number(value);
+
+
+    if (isNaN(number)) {
+
+        return "0";
+
+    }
+
+
+    return number.toLocaleString(
         "pt-BR"
     );
 
 }
 
-export function percent(value) {
-    return `${value}%`;
+
+// ===========================
+// PERCENT
+// ===========================
+
+export function percent(
+    value = 0
+) {
+
+    return `${number(value)}%`;
 
 }
 
-export function date(value) {
+
+// ===========================
+// DATE
+// ===========================
+
+export function date(
+    value
+) {
+
+    if (!value) {
+
+        return "-";
+
+    }
+
+
     return new Date(value)
-        .toLocaleDateString("pt-BR");
+        .toLocaleDateString(
+            "pt-BR"
+        );
+
+}
+
+
+// ===========================
+// DATETIME
+// ===========================
+
+export function datetime(
+    value
+) {
+
+    if (!value) {
+
+        return "-";
+
+    }
+
+
+    return new Date(value)
+        .toLocaleString(
+
+            "pt-BR",
+
+            {
+
+                dateStyle: "short",
+
+                timeStyle: "short"
+
+            }
+
+        );
 
 }

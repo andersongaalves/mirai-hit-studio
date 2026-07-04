@@ -1,55 +1,29 @@
-import { orcamentosState } from "./orcamentos_state.js";
+function normalize(value = "") {
+    return String(value ?? "")
+        .trim()
+        .toLowerCase();
+}
 
+function matchesBusca(item, busca) {
+    if (!busca) return true;
 
-export function filtrarOrcamentos() {
-
-    return orcamentosState.lista.filter(
-
-        item => {
-
-            const busca =
-                orcamentosState.filtro.busca
-                    .toLowerCase();
-
-
-            const filtroStatus =
-                orcamentosState.filtro.status;
-
-
-            const matchBusca =
-
-                item.nome_cliente
-                    .toLowerCase()
-                    .includes(busca)
-
-                ||
-
-                item.servico
-                    .toLowerCase()
-                    .includes(busca);
-
-
-            const matchStatus =
-
-                filtroStatus === "todos"
-
-                ||
-
-                item.status === filtroStatus;
-
-
-            return (
-
-                matchBusca
-
-                &&
-
-                matchStatus
-
-            );
-
-        }
-
+    return (
+        normalize(item.nome_cliente).includes(busca) ||
+        normalize(item.servico).includes(busca)
     );
+}
 
+function matchesStatus(item, status) {
+    return status === "todos" || item.status === status;
+}
+
+export function filtrarOrcamentos(orcamentos = [], filtro = {}) {
+    const busca = normalize(filtro.busca);
+    const status = filtro.status || "todos";
+
+    return orcamentos.filter(
+        item =>
+            matchesBusca(item, busca) &&
+            matchesStatus(item, status)
+    );
 }

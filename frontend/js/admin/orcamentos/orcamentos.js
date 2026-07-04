@@ -1,90 +1,109 @@
-import * as API from "../../api.js";
 import * as Notify from "../../utils/notifications.js";
-import { $, $$, $$$ } from "../../utils/dom.js";
-import {money} from "../../utils/format.js"
+import { $ } from "../../utils/dom.js";
 
 import * as OrcamentosAPI from "./orcamentos_api.js";
 import * as OrcamentosUI from "./orcamentos_ui.js";
 import * as OrcamentosModal from "./orcamentos_modal.js";
+
 import { orcamentosState } from "./orcamentos_state.js";
 import { filtrarOrcamentos } from "./orcamentos_filters.js";
-import {
-    registrarEventosModal
-} from "./orcamentos_modal.js";
 
-export function refresh(tipo = "all") {
+function getUiHandlers() {
+    return {
+        onVisualizar: visualizarOrcamento,
+        onDeletar: deletarOrcamento,
+        onAlterarStatus: alterarStatus,
+        onAlterarProdutor: alterarProdutor
+    };
+}
 
-    switch (tipo) {
+function atualizarState(atualizado) {
+    const index = orcamentosState.lista.findIndex(
+        item => item.id === atualizado.id
+    );
 
-        case "lista":
+    if (index !== -1) {
+        orcamentosState.lista[index] = atualizado;
+    }
+}
 
-            OrcamentosUI.renderizarOrcamentos(
+function registrarEventos() {
+    const busca = $("orcamentos-search");
+    const status = $("orcamentos-status-filter");
 
-                filtrarOrcamentos()
-
-            );
-
-            break;
-
-        default:
-
-            OrcamentosUI.renderizarOrcamentos(
-
-                filtrarOrcamentos()
-
-            );
-
+    if (status) {
+        status.onchange = e => {
+            orcamentosState.filtro.status = e.target.value;
+            refresh();
+        };
     }
 
+    if (busca) {
+        busca.oninput = e => {
+            orcamentosState.filtro.busca = e.target.value;
+            refresh();
+        };
+    }
+}
+
+export function refresh() {
+    OrcamentosUI.renderizarOrcamentos(
+        filtrarOrcamentos(
+            orcamentosState.lista,
+            orcamentosState.filtro
+        ),
+        {
+            produtores: orcamentosState.produtores,
+            handlers: getUiHandlers()
+        }
+    );
 }
 
 export async function carregarOrcamentos() {
-
     try {
-
         const [
             orcamentos,
             produtores
         ] = await Promise.all([
-
             OrcamentosAPI.buscarOrcamentos(),
-
             OrcamentosAPI.buscarProdutores()
-
         ]);
 
+        orcamentosState.lista = Array.isArray(orcamentos)
+            ? orcamentos
+            : [];
 
-        orcamentosState.lista =
-            orcamentos;
+        orcamentosState.produtores = Array.isArray(produtores)
+            ? produtores
+            : [];
 
-
-        orcamentosState.produtores =
-            produtores;
-
-
-        refresh("lista");
-
+        refresh();
     }
 
     catch(error) {
-
         console.error(error);
 
+        Notify.error(
+            "Erro ao carregar orçamentos."
+        );
     }
-
 }
 
 export function visualizarOrcamento(id) {
-
     const orcamento = orcamentosState.lista.find(
         item => item.id === id
     );
 
-    OrcamentosModal.abrirModalOrcamento(
-        orcamento
-    );
+    if (!orcamento) {
+        Notify.error(
+            "Orçamento não encontrado."
+        );
+        return;
+    }
+
+    OrcamentosModal.abrirModalOrcamento(orcamento);
 }
- 
+
 export const fecharModalOrcamento =
     OrcamentosModal.fecharModalOrcamento;
 
@@ -97,204 +116,108 @@ export async function deletarOrcamento(id) {
 
     try {
         await OrcamentosAPI.excluirOrcamento(id);
-        carregarOrcamentos();
+
+        orcamentosState.lista =
+            orcamentosState.lista.filter(
+                item => item.id !== id
+            );
+
+        refresh();
+
+        Notify.success(
+            "Orçamento excluído."
+        );
     }
 
-    catch {
+    catch(error) {
+        console.error(error);
+
         Notify.error(
             "Erro ao excluir orçamento."
         );
     }
 }
 
-function registrarEventos() {
-
-    const busca = $("orcamentos-search");
-    const status =
-        $("orcamentos-status-filter");
-
-
-    if (status) {
-
-        status.onchange = (e) => {
-
-
-            orcamentosState.filtro.status =
-                e.target.value;
-
-
-            refresh(
-                "lista"
-            );
-
-        };
-
-    }
-
-    if (!busca) return;
-
-    busca.oninput = (e) => {
-
-        orcamentosState.filtro.busca =
-            e.target.value;
-
-        refresh("lista");
-
-    };
-
-}
-
 export function initOrcamentos() {
     registrarEventos();
-    registrarEventosModal();
-    carregarOrcamentos();
+
+    OrcamentosModal.registrarEventosModal({
+        onSalvarObservacoes: salvarObservacoes
+    });
+
+    return carregarOrcamentos();
 }
 
-export async function alterarStatus(
-    id,
-    status
-) {
-
+export async function alterarStatus(id, status) {
     try {
-
         const atualizado =
             await OrcamentosAPI.atualizarStatus(
                 id,
                 status
             );
 
-
-        const index =
-            orcamentosState.lista.findIndex(
-
-                item => item.id === id
-
-            );
-
-
-        if (index !== -1) {
-
-            orcamentosState.lista[index] =
-                atualizado;
-
-        }
-
-
-        refresh("lista");
-
+        atualizarState(atualizado);
+        refresh();
     }
 
     catch(error) {
-
         console.error(error);
 
         Notify.error(
             "Erro ao atualizar status."
         );
-
     }
-
 }
 
 export async function alterarProdutor(
     id,
     produtor_id
 ) {
-
     try {
-
         const atualizado =
             await OrcamentosAPI.atualizarProdutor(
                 id,
-                produtor_id || null
+                produtor_id ?? null
             );
 
-
-        const index =
-            orcamentosState.lista.findIndex(
-                item => item.id === id
-            );
-
-
-        if (index !== -1) {
-
-            orcamentosState.lista[index] =
-                atualizado;
-
-        }
-
-
-        refresh("lista");
-
+        atualizarState(atualizado);
+        refresh();
     }
 
-
     catch(error) {
-
         console.error(error);
 
         Notify.error(
-            "Erro ao alterar produtor"
+            "Erro ao alterar produtor."
         );
-
     }
-
 }
 
 export async function salvarObservacoes(
     id,
     observacoes
 ) {
-
     try {
-
         const atualizado =
             await OrcamentosAPI.atualizarObservacoes(
-
                 id,
-
                 observacoes
-
             );
 
-
-        const index =
-            orcamentosState.lista.findIndex(
-
-                item => item.id === id
-
-            );
-
-
-        if (index !== -1) {
-
-            orcamentosState.lista[index] =
-                atualizado;
-
-        }
-
+        atualizarState(atualizado);
 
         Notify.success(
             "Observações salvas."
         );
 
-
-        refresh("lista");
-
+        refresh();
     }
-
 
     catch(error) {
-
         console.error(error);
 
-
         Notify.error(
-
-            "Erro ao salvar observações"
-
+            "Erro ao salvar observações."
         );
-
     }
-
 }

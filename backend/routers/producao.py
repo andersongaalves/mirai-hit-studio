@@ -13,7 +13,9 @@ from core.dependencies import get_current_user
 from schemas.producao import (
     ProducaoCreate,
     ProducaoResponse,
-    ProducaoStatusUpdate
+    ProducaoStatusUpdate,
+    ProducaoEtapasUpdate,
+    ProducaoPrazoUpdate
 )
 
 from crud import crud_producao
@@ -104,6 +106,82 @@ def atualizar_status(
         raise HTTPException(
             status_code=404,
             detail="Produção não encontrada"
+        )
+
+
+    return producao
+
+@router.patch(
+    "/{producao_id}/etapas",
+    response_model=ProducaoResponse
+)
+def atualizar_etapas(
+
+    producao_id: int,
+
+    dados: ProducaoEtapasUpdate,
+
+    db: Session = Depends(get_db),
+
+    user=Depends(get_current_user)
+
+):
+
+    producao = (
+        crud_producao.atualizar_etapas(
+
+            db,
+
+            producao_id,
+
+            dados.etapas
+
+        )
+    )
+
+
+    if not producao:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Produção não encontrada"
+        )
+
+
+    return producao
+
+@router.patch(
+    "/{producao_id}/prazo",
+    response_model=ProducaoResponse
+)
+def alterar_prazo(
+
+    producao_id:int,
+
+    dados: ProducaoPrazoUpdate,
+
+    db: Session = Depends(get_db),
+
+    user=Depends(get_current_user)
+
+):
+
+    producao = crud_producao.atualizar_prazo(
+
+        db,
+
+        producao_id,
+
+        dados.prazo_entrega
+
+    )
+
+
+    if not producao:
+
+        raise HTTPException(
+            404,
+            "Produção não encontrada"
         )
 
 

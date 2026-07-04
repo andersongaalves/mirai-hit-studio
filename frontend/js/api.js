@@ -1,80 +1,151 @@
 import { API_URL } from "./config.js";
 
-export async function getAPI(endpoint) {
 
-    const res = await fetch(
-        `${API_URL}/${endpoint}`
+// ===========================
+// REQUEST BASE
+// ===========================
+
+async function request(
+    endpoint,
+    options = {}
+) {
+
+    const response = await fetch(
+
+        `${API_URL}/${endpoint}`,
+
+        options
+
     );
 
-    if (!res.ok) {
-        throw new Error(
-            `Erro ao buscar ${endpoint}: ${res.status}`
-        );
 
-    }
+    if (!response.ok) {
 
-    return await res.json();
-}
+        let mensagem =
+            `Erro na requisição: ${response.status}`;
 
-export async function postOrcamento(payload) {
 
-    const res = await fetch(
-        `${API_URL}/orcamentos`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
+        try {
+
+            const erro =
+                await response.json();
+
+
+            mensagem =
+                erro.detail || mensagem;
+
         }
-    );
 
-    if (!res.ok) {
+        catch {}
+
+
         throw new Error(
-            "Erro ao enviar o orçamento"
+            mensagem
         );
 
     }
-    return await res.json();
+
+
+    return await response.json();
+
 }
 
-export async function postNewsletter(payload) {
 
-    const res = await fetch(
-        `${API_URL}/newsletter`,
+// ===========================
+// GET
+// ===========================
+
+export function getAPI(
+    endpoint
+) {
+
+    return request(
+        endpoint
+    );
+
+}
+
+
+// ===========================
+// POST
+// ===========================
+
+export function postAPI(
+    endpoint,
+    payload
+) {
+
+    return request(
+
+        endpoint,
+
         {
+
             method: "POST",
+
             headers: {
+
                 "Content-Type": "application/json"
+
             },
-            body: JSON.stringify(payload)
+
+            body: JSON.stringify(
+                payload
+            )
+
         }
+
     );
-
-    if (!res.ok) {
-
-        const erro = await res.json();
-
-        throw new Error(
-            erro.detail || "Erro ao cadastrar e-mail."
-        );
-
-    }
-
-    return await res.json();
 
 }
 
-export async function getProjetos() {
 
-    const res = await fetch(
-        `${API_URL}/projetos`
+// ===========================
+// ORÇAMENTO
+// ===========================
+
+export function postOrcamento(
+    payload
+) {
+
+    return postAPI(
+
+        "orcamentos",
+
+        payload
+
     );
 
-    if (!res.ok) {
-        throw new Error(
-            "Erro ao buscar projetos"
-        );
-    }
-    return await res.json();
+}
+
+
+// ===========================
+// NEWSLETTER
+// ===========================
+
+export function postNewsletter(
+    payload
+) {
+
+    return postAPI(
+
+        "newsletter",
+
+        payload
+
+    );
+
+}
+
+
+// ===========================
+// PORTFÓLIO
+// ===========================
+
+export function getProjetos() {
+
+    return getAPI(
+        "projetos"
+    );
+
 }

@@ -1,100 +1,80 @@
 import { $ } from "../../utils/dom.js";
 import { money } from "../../utils/format.js";
 
-import {
-    salvarObservacoes
-} from "./orcamentos.js";
-
-
 let orcamentoAtual = null;
 
+function setText(id, value = "") {
+    const element = $(id);
+
+    if (element) {
+        element.textContent = value ?? "";
+    }
+}
+
+function setValue(id, value = "") {
+    const element = $(id);
+
+    if (element) {
+        element.value = value ?? "";
+    }
+}
+
+function setHref(id, value = "") {
+    const element = $(id);
+
+    if (!element) return;
+
+    if (value) {
+        element.href = value;
+        return;
+    }
+
+    element.removeAttribute("href");
+}
 
 export function abrirModalOrcamento(orcamento) {
-
     if (!orcamento) return;
-
 
     orcamentoAtual = orcamento;
 
-
-    $("orc_nome").innerText =
-        orcamento.nome_cliente;
-
-
-    $("orc_email").innerText =
-        orcamento.email;
-
-
-    $("orc_whatsapp").innerText =
-        orcamento.whatsapp;
-
-
-    $("orc_servico").innerText =
-        orcamento.servico;
-
-
-    $("orc_valor").innerText =
-        `R$ ${money(orcamento.valor_total)}`;
-
-
-    $("orc_data").innerText =
-        orcamento.data_solicitacao;
-
-
-    $("orc_detalhes").innerText =
-        orcamento.detalhes;
-
-
-    $("orc_guia").href =
-        orcamento.link_guia;
-
-
-    $("orc_observacoes").value =
-        orcamento.observacoes
-
-        ||
-
-        "";
-
+    setText("orc_nome", orcamento.nome_cliente);
+    setText("orc_email", orcamento.email);
+    setText("orc_whatsapp", orcamento.whatsapp);
+    setText("orc_servico", orcamento.servico);
+    setText("orc_valor", money(orcamento.valor_total));
+    setText("orc_data", orcamento.data_solicitacao);
+    setValue("orc_detalhes", orcamento.detalhes);
+    setValue("orc_observacoes", orcamento.observacoes);
+    setHref("orc_guia", orcamento.link_guia);
 
     $("modal-orcamento")
-        .classList.remove("hidden");
-
+        ?.classList
+        .remove("hidden");
 }
 
-
-export function registrarEventosModal() {
-
-    const btn =
-        $("btn-save-observacoes");
-
+export function registrarEventosModal({
+    onSalvarObservacoes = () => {}
+} = {}) {
+    const btn = $("btn-save-observacoes");
 
     if (!btn) return;
 
-
     btn.onclick = () => {
+        const observacoes = $("orc_observacoes");
 
+        if (!orcamentoAtual || !observacoes) return;
 
-        if (!orcamentoAtual) return;
-
-
-        salvarObservacoes(
-
+        onSalvarObservacoes(
             orcamentoAtual.id,
-
-            $("orc_observacoes").value
-
+            observacoes.value
         );
-
-
     };
-
 }
 
-
 export function fecharModalOrcamento() {
+    orcamentoAtual = null;
 
     $("modal-orcamento")
-        .classList.add("hidden");
-
+        ?.classList
+        .add("hidden");
 }

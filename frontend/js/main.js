@@ -1,59 +1,146 @@
 import "./modules/globals.js";
 
-import { initComponents } from "./modules/components.js";
-import { $ } from "./utils/dom.js";
 
-async function init() {
+import {
+    initComponents
+} from "./modules/components.js";
 
-    await initComponents();
 
-    if ($("btn-newsletter")) {
+import {
+    $, $$, $$$
+} from "./utils/dom.js";
 
-        const { initNewsletter } =
-            await import("./modules/newsletter.js");
 
-        initNewsletter();
+// ===========================
+// LOAD MODULE
+// ===========================
 
-    }
+async function loadModule(
+    elementId,
+    path,
+    callback
+) {
 
-    if ($("home-portfolio-track")) {
+    if (!$(elementId)) {
 
-        const { initHome } =
-            await import("./modules/home.js");
-
-        await initHome();
-
-    }
-
-    if ($("render-portfolio")) {
-
-        const { initPortfolioPage } =
-            await import("./modules/portfolio.js");
-
-        await initPortfolioPage();
+        return;
 
     }
 
-    if ($("render-parametros")) {
 
-        const {
+    const module =
+        await import(path);
 
-            initEventosCalculadora
 
-        } = await import("./modules/calculator.js");
+    await callback(
+        module
+    );
 
-        const {
+}
 
-            initOrcamento
 
-        } = await import("./modules/orcamento.js");
+// ===========================
+// INIT
+// ===========================
 
-        await initEventosCalculadora();
+async function initApp() {
 
-        initOrcamento();
+
+    try {
+
+
+        await initComponents();
+
+
+
+        await loadModule(
+
+            "btn-newsletter",
+
+            "./modules/newsletter.js",
+
+            module =>
+
+                module.initNewsletter()
+
+        );
+
+
+
+        await loadModule(
+
+            "home-portfolio-track",
+
+            "./modules/home.js",
+
+            module =>
+
+                module.initHome()
+
+        );
+
+
+
+        await loadModule(
+
+            "render-portfolio",
+
+            "./modules/portfolio.js",
+
+            module =>
+
+                module.initPortfolioPage()
+
+        );
+
+
+
+        await loadModule(
+
+            "render-parametros",
+
+            "./modules/calculator.js",
+
+            module =>
+
+                module.initEventosCalculadora()
+
+        );
+
+
+
+        await loadModule(
+
+            "render-parametros",
+
+            "./modules/orcamento.js",
+
+            module =>
+
+                module.initOrcamento()
+
+        );
+
+
+    }
+
+
+    catch (error) {
+
+
+        console.error(
+            "Erro ao iniciar aplicação:",
+            error
+        );
+
 
     }
 
 }
 
-init();
+
+// ===========================
+// START
+// ===========================
+
+initApp();

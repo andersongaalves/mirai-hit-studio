@@ -134,3 +134,74 @@ def criar_por_orcamento(
 
 
     return producao
+
+def atualizar_etapas(
+    db: Session,
+    producao_id: int,
+    etapas: str
+):
+
+    producao = (
+
+        db.query(ProducaoModel)
+
+        .filter(
+            ProducaoModel.id == producao_id
+        )
+
+        .first()
+
+    )
+
+
+    if not producao:
+
+        return None
+
+
+    producao.etapas = etapas
+
+
+    db.commit()
+
+
+    db.refresh(
+        producao
+    )
+
+
+    return producao
+
+def atualizar_prazo(
+    db,
+    producao_id,
+    prazo
+):
+
+    producao = (
+
+        db.query(ProducaoModel)
+
+        .filter(
+            ProducaoModel.id == producao_id
+        )
+
+        .first()
+
+    )
+
+
+    if not producao:
+
+        return None
+
+
+    producao.prazo_entrega = prazo
+
+
+    db.commit()
+
+    db.refresh(producao)
+
+
+    return producao

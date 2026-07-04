@@ -1,69 +1,227 @@
-import * as API from "../api.js";
-import { authFetch } from "./auth.js";
-import * as Notify from "../utils/notifications.js";
-import { $, $$, $$$ } from "../utils/dom.js";
+import * as API
+from "../api.js";
 
-let configuracaoAtual = null;
+
+import {
+    authFetch
+} from "./auth.js";
+
+
+import * as Notify
+from "../utils/notifications.js";
+
+
+import {
+    $
+} from "../utils/dom.js";
+
+
+// ===========================
+// CAMPOS
+// ===========================
+
+const CONFIG_FIELDS = [
+
+    "cfg_desconto",
+
+    "val_extra_duracao",
+
+    "val_extra_pessoa",
+
+    "val_extra_canal_voz",
+
+    "val_extra_canal_inst",
+
+    "val_extra_melodia",
+
+    "val_extra_revisao",
+
+    "val_inst_hibrido",
+
+    "val_inst_gravado",
+
+    "val_prazo_urgente",
+
+    "val_prazo_express",
+
+    "val_lease_desconto"
+
+];
+
+
+// ===========================
+// LOAD
+// ===========================
 
 export async function carregarConfiguracoes() {
 
+
     try {
-        configuracaoAtual = await API.getAPI("config");
-        preencherFormulario();
+
+
+        const config =
+            await API.getAPI(
+                "config"
+            );
+
+
+        preencherFormulario(
+            config
+        );
+
 
     }
-    catch (error) {
+
+
+    catch(error){
+
+
         console.error(error);
+
+
+        Notify.error(
+            "Erro ao carregar configurações."
+        );
+
+
     }
+
 }
 
-function preencherFormulario() {
 
-    if (!configuracaoAtual) return;
-    Object.entries(configuracaoAtual).forEach(
-        ([campo, valor]) => {
-            const input = $(campo);
+// ===========================
+// FORM
+// ===========================
 
-            if (input) {
-                input.value = valor;
+function preencherFormulario(
+    config
+) {
+
+
+    Object
+        .entries(config)
+        .forEach(([campo, valor]) => {
+
+
+            const input =
+                $(campo);
+
+
+            if (!input) {
+
+                return;
+
             }
-        }
-    );
-}
 
-export async function salvarConfiguracoesExtras() {
-    // 1. Captura os valores direto do HTML
-    const payload = {
-        desconto: parseFloat($('cfg_desconto').value) || 0,
-        val_extra_duracao: parseFloat($('val_extra_duracao').value) || 0,
-        val_extra_pessoa: parseFloat($('val_extra_pessoa').value) || 0,
-        val_extra_canal_voz: parseFloat($('val_extra_canal_voz').value) || 0,
-        val_extra_canal_inst: parseFloat($('val_extra_canal_inst').value) || 0,
-        val_extra_melodia: parseFloat($('val_extra_melodia').value) || 0,
-        val_extra_revisao: parseFloat($('val_extra_revisao').value) || 0,
-        val_inst_hibrido: parseFloat($('val_inst_hibrido').value) || 0,
-        val_inst_gravado: parseFloat($('val_inst_gravado').value) || 0,
-        val_prazo_urgente: parseFloat($('val_prazo_urgente').value) || 0,
-        val_prazo_express: parseFloat($('val_prazo_express').value) || 0,
-        val_lease_desconto: parseFloat($('val_lease_desconto').value) || 0
-    };
 
-    try {
-        // Envia para o backend
-        const response = await authFetch('/config', {
-            method: 'PUT',
-            body: JSON.stringify(payload)
+            input.value =
+                valor ?? "";
+
+
         });
 
+}
+
+
+// ===========================
+// PAYLOAD
+// ===========================
+
+function gerarPayload() {
+
+
+    const payload = {};
+
+
+    CONFIG_FIELDS
+        .forEach(campo => {
+
+
+            payload[campo] =
+
+                parseFloat(
+                    $(campo)?.value
+                )
+
+                ||
+
+                0;
+
+
+        });
+
+
+    return payload;
+
+}
+
+
+// ===========================
+// SAVE
+// ===========================
+
+export async function salvarConfiguracoesExtras() {
+
+
+    try {
+
+
+        const response =
+            await authFetch(
+
+                "/config",
+
+                {
+
+                    method: "PUT",
+
+                    body: JSON.stringify(
+
+                        gerarPayload()
+
+                    )
+
+                }
+
+            );
+
+
         if (!response.ok) {
-            Notify.error("Erro ao salvar as configurações. Verifique o servidor.");
-            return;
+
+
+            throw new Error(
+                "Erro ao salvar configurações"
+            );
+
+
         }
 
-        Notify.success("Tabela de custos atualizada com sucesso!");
-        
-    } catch (error) {
-        console.error("Erro ao salvar config:", error);
-        Notify.error("Erro de conexão ao tentar salvar.");
+
+        Notify.success(
+
+            "Configurações atualizadas."
+
+        );
+
+
     }
+
+
+    catch(error){
+
+
+        console.error(error);
+
+
+        Notify.error(
+
+            error.message ||
+
+            "Erro ao salvar."
+
+        );
+
+
+    }
+
 }

@@ -1,62 +1,70 @@
-import {carregarServicos, inicializarParametros} from "./servicos.js";
-import {carregarPortfolio} from "./projetos.js";
-import {initOrcamentos} from "./orcamentos/orcamentos.js";
-import {carregarConfiguracoes} from "./configuracoes.js";
-import { $, $$, $$$ } from "../utils/dom.js";
-import { initProducoes } from "./producoes/producoes.js";
+import {
+    carregarServicos,
+    inicializarParametros
+} from "./servicos/servicos.js";
+
+import {
+    carregarPortfolio
+} from "./projetos.js";
+
+import {
+    initOrcamentos
+} from "./orcamentos/orcamentos.js";
+
+import {
+    carregarConfiguracoes
+} from "./configuracoes.js";
+
+import {
+    initProducoes
+} from "./producoes/producoes.js";
+
+import {
+    $,
+    $$$,
+    show,
+    hide
+} from "../utils/dom.js";
+
+const loaders = [
+    carregarServicos,
+    carregarPortfolio,
+    initOrcamentos,
+    carregarConfiguracoes,
+    initProducoes
+];
 
 export async function inicializarDashboard() {
-
     mostrarDashboard();
     inicializarParametros();
 
-    await Promise.all([
-
-        carregarServicos(),
-        carregarPortfolio(),
-        initOrcamentos(),
-        carregarConfiguracoes(),
-        initProducoes()
-
-    ]);
-
+    await Promise.all(
+        loaders.map(loader => loader())
+    );
 }
 
 export function mostrarDashboard() {
+    $$$(".admin-section").forEach(
+        section => hide(section)
+    );
 
-    document
-        .querySelectorAll(".admin-section")
-        .forEach(section => {
-
-            section.classList.add("hidden");
-
-        });
-
-    document
-        .getElementById("dashboard-menu")
-        .classList.remove("hidden");
-
+    show(
+        $("dashboard-menu")
+    );
 }
 
 export function mostrarSecao(id) {
+    hide(
+        $("dashboard-menu")
+    );
 
-    document
-        .getElementById("dashboard-menu")
-        .classList.add("hidden");
+    $$$(".admin-section").forEach(
+        section => hide(section)
+    );
 
-    document
-        .querySelectorAll(".admin-section")
-
-        .forEach(section => {
-            section.classList.add("hidden");
-        });
-
-    const secao = $(id);
-
-    if (secao) {
-        secao.classList.remove("hidden");
-    }
-
+    show(
+        $(id)
+    );
 }
 
 export function voltarDashboard() {
@@ -64,36 +72,22 @@ export function voltarDashboard() {
 }
 
 export function atualizarTudo() {
-
-    Promise.all([
-        carregarServicos(),
-        carregarPortfolio(),
-        initOrcamentos(),
-        carregarConfiguracoes(),
-        initProducoes()
-    ])
-
+    Promise.all(
+        loaders.map(loader => loader())
+    )
     .catch(error => {
         console.error(error);
-
     });
 }
 
 export function abrirModal(id) {
-
-    const modal = $(id);
-
-    if (modal) {
-        modal.classList.remove("hidden");
-    }
-
+    show(
+        $(id)
+    );
 }
 
 export function fecharModal(id) {
-
-    const modal = $(id);
-
-    if (modal) {
-        modal.classList.add("hidden");
-    }
+    hide(
+        $(id)
+    );
 }

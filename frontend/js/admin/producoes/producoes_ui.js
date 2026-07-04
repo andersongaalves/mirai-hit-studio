@@ -6,15 +6,15 @@ import {
 
 
 import {
-    STATUS_PRODUCAO
+    STATUS_PRODUCAO,
+    calcularPrazo
 } from "./producoes_utils.js";
 
 
 import {
-    alterarStatus
+    alterarStatus,
+    visualizarProducao
 } from "./producoes.js";
-
-
 
 export function renderizarProducoes(
     producoes
@@ -65,7 +65,8 @@ function criarCardProducao(item){
 
     const {
         card,
-        info
+        info,
+        actions
     } = createProducaoCardElement();
 
 
@@ -129,6 +130,19 @@ function criarCardProducao(item){
 
         );
 
+    const prazo =
+        createTextElement(
+
+            "p",
+
+            calcularPrazo(
+                item.prazo_entrega
+            ),
+
+            "producao-prazo"
+
+        );
+
 
 
     info.append(
@@ -139,11 +153,30 @@ function criarCardProducao(item){
 
         cliente,
 
-        servico
+        servico,
+
+        prazo
 
     );
 
+    const btnVer = document.createElement("button");
 
+    btnVer.textContent =
+        "Ver";
+
+
+    btnVer.onclick = () => {
+
+        visualizarProducao(
+            item.id
+        );
+
+    };
+
+
+    actions.append(
+        btnVer
+    );
 
     return card;
 

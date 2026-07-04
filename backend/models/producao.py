@@ -84,3 +84,14 @@ class ProducaoModel(Base):
     produtor = relationship(
         "UsuarioModel"
     )
+
+    etapas = Column(
+        Text,
+        default="[]",
+        nullable=False
+    )
+
+    prazo_entrega = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
