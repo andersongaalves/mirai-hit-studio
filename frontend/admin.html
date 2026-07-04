@@ -56,6 +56,11 @@
                             <h3>Orçamentos</h3>
                             <p>Solicitações recebidas dos clientes.</p>
                         </div>
+                        <div class="dashboard-card" onclick="mostrarSecao('section-producoes')">
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">🎼</div>
+                            <h3>Produções</h3>
+                            <p>Produções em andamento.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -200,6 +205,13 @@
                         </option>
                     </select>
                     <div id="orcamentos-list" class="admin-list-container"></div>
+                </div>
+
+                <div id="section-producoes" class="admin-section hidden">
+                    <button class="btn-small" style="margin-bottom: 20px;" onclick="mostrarDashboard()">⬅ Voltar ao Menu</button>
+                    <h2>Produções</h2>
+
+                    <div id="producoes-list"></div>
                 </div>
             </div>
 

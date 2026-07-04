@@ -3,6 +3,7 @@ import {carregarPortfolio} from "./projetos.js";
 import {initOrcamentos} from "./orcamentos/orcamentos.js";
 import {carregarConfiguracoes} from "./configuracoes.js";
 import { $, $$, $$$ } from "../utils/dom.js";
+import { initProducoes } from "./producoes/producoes.js";
 
 export async function inicializarDashboard() {
 
@@ -14,7 +15,8 @@ export async function inicializarDashboard() {
         carregarServicos(),
         carregarPortfolio(),
         initOrcamentos(),
-        carregarConfiguracoes()
+        carregarConfiguracoes(),
+        initProducoes()
 
     ]);
 
@@ -62,17 +64,19 @@ export function voltarDashboard() {
 }
 
 export function atualizarTudo() {
+
     Promise.all([
         carregarServicos(),
         carregarPortfolio(),
-        carregarOrcamentos(),
-        carregarConfiguracoes()
+        initOrcamentos(),
+        carregarConfiguracoes(),
+        initProducoes()
     ])
 
     .catch(error => {
         console.error(error);
-    });
 
+    });
 }
 
 export function abrirModal(id) {
