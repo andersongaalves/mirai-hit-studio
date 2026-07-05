@@ -80,7 +80,7 @@ export function renderizarBotoes(servicos) {
 
         const descontoHTML = temDesconto
             ? `
-                <span class="service-discount">
+                <span id="badge-desconto" class="service-discount ">
                     -${state.configGlobal.desconto}% OFF
                 </span>
                 <br>
@@ -96,14 +96,13 @@ export function renderizarBotoes(servicos) {
                 </div>
 
                 <div class="service-price">
-
-                    ${descontoHTML}
-
                     A partir de
 
                     <strong>
                         R$ ${money(valorFinal)}
                     </strong>
+
+                    ${descontoHTML}
 
                 </div>
 

@@ -75,7 +75,6 @@ export function calcular() {
 }
 
 export async function initEventosCalculadora() {
-    console.log("Calculadora iniciada");
 
     await initCalculadora();
 
