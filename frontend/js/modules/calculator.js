@@ -85,7 +85,7 @@ export async function initEventosCalculadora() {
         (e) => {
             if (e.target.name === "servico") {
                 state.servicoSelecionadoOBJ = state.servicosDB.find(
-                    (s) => s.id === e.target.value,
+                    (s) => s.id == e.target.value,
                 );
 
                 const btnNext1 = $("btn-next-1");
