@@ -27,8 +27,6 @@ export async function initCalculadora() {
 export function calcular() {
     if (!state.servicoSelecionadoOBJ) return;
 
-    console.log(state.servicoSelecionadoOBJ);
-
     let total = state.servicoSelecionadoOBJ.valor_base;
 
     state.servicoSelecionadoOBJ.parametros

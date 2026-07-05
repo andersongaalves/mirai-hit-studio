@@ -99,7 +99,7 @@ export function renderizarBotoes(servicos) {
                     A partir de
 
                     <strong>
-                        R$ ${money(valorFinal)}
+                        ${money(valorFinal)}
                     </strong>
 
                     ${descontoHTML}
