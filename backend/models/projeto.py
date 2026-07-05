@@ -23,12 +23,6 @@ class ProjetoModel(Base):
 
     destaque = Column(Boolean, default=False)
 
-    link_audio = Column(
-        String(500),
-        nullable=False
-    )
+    link_audio = Column(String(500), nullable=False)
 
-    link_capa = Column(
-        String(500),
-        nullable=False
-    )
+    link_capa = Column(String(500), nullable=False)

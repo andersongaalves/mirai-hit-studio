@@ -1,8 +1,5 @@
 import { $, clear } from "../../utils/dom.js";
-import {
-    DICIONARIO_PARAMETROS,
-    getParametroLabel
-} from "./servicos_utils.js";
+import { DICIONARIO_PARAMETROS, getParametroLabel } from "./servicos_utils.js";
 
 export function inicializarParametrosSelector() {
     const select = $("param_selector");
@@ -11,24 +8,19 @@ export function inicializarParametrosSelector() {
 
     clear(select);
 
-    Object.entries(DICIONARIO_PARAMETROS).forEach(
-        ([key, label]) => {
-            const option = document.createElement("option");
+    Object.entries(DICIONARIO_PARAMETROS).forEach(([key, label]) => {
+        const option = document.createElement("option");
 
-            option.value = key;
-            option.textContent = label;
+        option.value = key;
+        option.textContent = label;
 
-            select.appendChild(option);
-        }
-    );
+        select.appendChild(option);
+    });
 }
 
 export function renderizarParametros(
     parametros = [],
-    {
-        onMover = () => {},
-        onRemover = () => {}
-    } = {}
+    { onMover = () => {}, onRemover = () => {} } = {},
 ) {
     const container = $("param_list_render");
 
@@ -47,25 +39,15 @@ export function renderizarParametros(
 
     parametros.forEach((parametro, index) => {
         container.appendChild(
-            createParametroItem(
-                parametro,
-                index,
-                parametros.length,
-                {
-                    onMover,
-                    onRemover
-                }
-            )
+            createParametroItem(parametro, index, parametros.length, {
+                onMover,
+                onRemover,
+            }),
         );
     });
 }
 
-function createParametroItem(
-    parametro,
-    index,
-    total,
-    handlers
-) {
+function createParametroItem(parametro, index, total, handlers) {
     const item = document.createElement("div");
     const texto = document.createElement("span");
     const subir = document.createElement("button");
@@ -74,8 +56,7 @@ function createParametroItem(
 
     item.className = "admin-param-item";
 
-    texto.textContent =
-        `${index + 1}. ${getParametroLabel(parametro)}`;
+    texto.textContent = `${index + 1}. ${getParametroLabel(parametro)}`;
 
     subir.type = "button";
     subir.textContent = "⬆";
@@ -97,12 +78,7 @@ function createParametroItem(
         handlers.onRemover(index);
     };
 
-    item.append(
-        texto,
-        subir,
-        descer,
-        remover
-    );
+    item.append(texto, subir, descer, remover);
 
     return item;
 }

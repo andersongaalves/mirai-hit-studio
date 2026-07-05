@@ -1,39 +1,29 @@
 export function renderizarEstrutura(estrutura) {
-
     if (!estrutura) return "";
 
     let dados = estrutura;
 
     if (typeof estrutura === "string") {
-
         try {
-
             dados = JSON.parse(estrutura);
-
         } catch {
-
             return "";
-
         }
-
     }
 
     let html = "";
 
     // INTRO
     if (dados.intro) {
-
         html += `
             <p class="service-intro">
                 ${dados.intro}
             </p>
         `;
-
     }
 
     // SEÇÕES
-    (dados.sections ?? []).forEach(secao => {
-
+    (dados.sections ?? []).forEach((secao) => {
         html += `
             <div class="service-section">
 
@@ -52,12 +42,10 @@ export function renderizarEstrutura(estrutura) {
                 <ul class="service-items">
         `;
 
-        (secao.items ?? []).forEach(item => {
-
+        (secao.items ?? []).forEach((item) => {
             html += `
                 <li>${item}</li>
             `;
-
         });
 
         html += `
@@ -65,20 +53,17 @@ export function renderizarEstrutura(estrutura) {
 
             </div>
         `;
-
     });
 
     // BENEFÍCIOS
     if ((dados.benefits ?? []).length) {
-
         html += `
 
             <div class="service-benefits">
 
         `;
 
-        dados.benefits.forEach(item => {
-
+        dados.benefits.forEach((item) => {
             html += `
 
                 <div class="service-benefit">
@@ -88,7 +73,6 @@ export function renderizarEstrutura(estrutura) {
                 </div>
 
             `;
-
         });
 
         html += `
@@ -96,9 +80,7 @@ export function renderizarEstrutura(estrutura) {
             </div>
 
         `;
-
     }
 
     return html;
-
 }

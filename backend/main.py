@@ -18,10 +18,7 @@ from routers.producao import router as producao_router
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Mirai Hit Studio API",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    title="Mirai Hit Studio API", version="1.0.0", docs_url="/docs", redoc_url="/redoc"
 )
 
 # CORS
@@ -43,19 +40,16 @@ app.include_router(newsletter_router)
 app.include_router(usuarios_router)
 app.include_router(producao_router)
 
+
 @app.get("/")
 def root():
-    return {
-        "status": "online",
-        "api": "Mirai Hit Studio API",
-        "version": "1.0.0"
-    }
+    return {"status": "online", "api": "Mirai Hit Studio API", "version": "1.0.0"}
+
 
 @app.get("/health")
 def health():
-    return {
-        "status": "healthy"
-    }
+    return {"status": "healthy"}
+
 
 # Inicialização
 @app.on_event("startup")

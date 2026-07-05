@@ -1,151 +1,87 @@
 import { API_URL } from "./config.js";
 
-
 // ===========================
 // REQUEST BASE
 // ===========================
 
-async function request(
-    endpoint,
-    options = {}
-) {
-
+async function request(endpoint, options = {}) {
     const response = await fetch(
-
         `${API_URL}/${endpoint}`,
 
-        options
-
+        options,
     );
 
-
     if (!response.ok) {
-
-        let mensagem =
-            `Erro na requisição: ${response.status}`;
-
+        let mensagem = `Erro na requisição: ${response.status}`;
 
         try {
+            const erro = await response.json();
 
-            const erro =
-                await response.json();
+            mensagem = erro.detail || mensagem;
+        } catch {}
 
-
-            mensagem =
-                erro.detail || mensagem;
-
-        }
-
-        catch {}
-
-
-        throw new Error(
-            mensagem
-        );
-
+        throw new Error(mensagem);
     }
 
-
     return await response.json();
-
 }
-
 
 // ===========================
 // GET
 // ===========================
 
-export function getAPI(
-    endpoint
-) {
-
-    return request(
-        endpoint
-    );
-
+export function getAPI(endpoint) {
+    return request(endpoint);
 }
-
 
 // ===========================
 // POST
 // ===========================
 
-export function postAPI(
-    endpoint,
-    payload
-) {
-
+export function postAPI(endpoint, payload) {
     return request(
-
         endpoint,
 
         {
-
             method: "POST",
 
             headers: {
-
-                "Content-Type": "application/json"
-
+                "Content-Type": "application/json",
             },
 
-            body: JSON.stringify(
-                payload
-            )
-
-        }
-
+            body: JSON.stringify(payload),
+        },
     );
-
 }
-
 
 // ===========================
 // ORÇAMENTO
 // ===========================
 
-export function postOrcamento(
-    payload
-) {
-
+export function postOrcamento(payload) {
     return postAPI(
-
         "orcamentos",
 
-        payload
-
+        payload,
     );
-
 }
-
 
 // ===========================
 // NEWSLETTER
 // ===========================
 
-export function postNewsletter(
-    payload
-) {
-
+export function postNewsletter(payload) {
     return postAPI(
-
         "newsletter",
 
-        payload
-
+        payload,
     );
-
 }
-
 
 // ===========================
 // PORTFÓLIO
 // ===========================
 
 export function getProjetos() {
-
-    return getAPI(
-        "projetos"
-    );
-
+    return getAPI("projetos");
 }

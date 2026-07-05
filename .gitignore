@@ -1,58 +1,88 @@
+# ======================
 # Python
+# ======================
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 
 # Virtual Environment
 .venv/
 venv/
+**/venv/
 
+# ======================
 # Environment
+# ======================
 .env
+.env.*
+!.env.example
 
+# ======================
 # Database
+# ======================
 *.db
 *.sqlite
 *.sqlite3
 
-# Alembic
-alembic/versions/__pycache__/
-
-# VSCode
-.vscode/
-
-# JetBrains
-.idea/
-
-# Node
-node_modules/
-
-# Logs
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Python cache
+# ======================
+# Cache / Quality tools
+# ======================
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
 
-# Coverage
 .coverage
 htmlcov/
 
+# ======================
+# Node
+# ======================
+node_modules/
+**/node_modules/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ======================
 # Build
+# ======================
 dist/
 build/
 
-# Uploads
+# ======================
+# IDE
+# ======================
+.vscode/
+.idea/
+
+# ======================
+# AI / Agents
+# ======================
+.agents/
+
+# ======================
+# Generated files
+# ======================
+estrutura_projeto.txt
+
+# ======================
+# Uploads / Backups
+# ======================
 uploads/
-
-# Backup
 backups/
+**/backups/
 
-# Misc
+# ======================
+# OS
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# Temporary
+# ======================
 *.bak
 *.tmp
+*.temp

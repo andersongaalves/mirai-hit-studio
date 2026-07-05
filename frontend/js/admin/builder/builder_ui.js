@@ -9,11 +9,9 @@ import { renderSections } from "./builder_sections.js";
  * ========================================================== */
 
 export function initBuilder() {
-
     registerEvents();
 
     renderBuilder();
-
 }
 
 /* ============================================================
@@ -21,7 +19,6 @@ export function initBuilder() {
  * ========================================================== */
 
 export function renderBuilder() {
-
     syncIntro();
 
     renderSections();
@@ -29,21 +26,16 @@ export function renderBuilder() {
     renderBenefits();
 
     renderPreview();
-
 }
 
 export function refresh(type = "all") {
-
     switch (type) {
-
         case "preview":
-
             renderPreview();
 
             break;
 
         case "sections":
-
             renderSections();
 
             renderPreview();
@@ -51,7 +43,6 @@ export function refresh(type = "all") {
             break;
 
         case "benefits":
-
             renderBenefits();
 
             renderPreview();
@@ -59,11 +50,8 @@ export function refresh(type = "all") {
             break;
 
         default:
-
             renderBuilder();
-
     }
-
 }
 
 /* ============================================================
@@ -71,59 +59,35 @@ export function refresh(type = "all") {
  * ========================================================== */
 
 function registerEvents() {
-
     bindIntro();
 
     bindButtons();
-
 }
 
 function bindIntro() {
-
-    const intro = document.getElementById(
-        "builder-intro"
-    );
+    const intro = document.getElementById("builder-intro");
 
     if (!intro) return;
 
     intro.oninput = (e) => {
-
-        Builder.atualizarIntro(
-            e.target.value
-        );
+        Builder.atualizarIntro(e.target.value);
 
         refresh("preview");
-
     };
-
 }
 
 function bindButtons() {
-
-    const btnAddSection =
-        document.getElementById(
-            "btn-add-section"
-        );
+    const btnAddSection = document.getElementById("btn-add-section");
 
     if (btnAddSection) {
-
-        btnAddSection.onclick =
-            handleAddSection;
-
+        btnAddSection.onclick = handleAddSection;
     }
 
-    const btnAddBenefit =
-        document.getElementById(
-            "btn-add-benefit"
-        );
+    const btnAddBenefit = document.getElementById("btn-add-benefit");
 
     if (btnAddBenefit) {
-
-        btnAddBenefit.onclick =
-            handleAddBenefit;
-
+        btnAddBenefit.onclick = handleAddBenefit;
     }
-
 }
 
 /* ============================================================
@@ -131,19 +95,15 @@ function bindButtons() {
  * ========================================================== */
 
 function handleAddSection() {
-
     Builder.adicionarSecao();
 
     refresh();
-
 }
 
 function handleAddBenefit() {
-
     Builder.adicionarBeneficio();
 
     refresh();
-
 }
 
 /* ============================================================
@@ -151,31 +111,23 @@ function handleAddBenefit() {
  * ========================================================== */
 
 function syncIntro() {
-
-    const intro = document.getElementById(
-        "builder-intro"
-    );
+    const intro = document.getElementById("builder-intro");
 
     if (!intro) return;
 
     intro.value = builderState.intro;
-
 }
 
 export function atualizarBuilder(json) {
-
     Builder.carregarBuilder(json);
 
     renderBuilder();
-
 }
 
 export function limparBuilder() {
-
     Builder.resetBuilder();
 
     renderBuilder();
-
 }
 
 /* ============================================================
@@ -183,7 +135,6 @@ export function limparBuilder() {
  * ========================================================== */
 
 window.BuilderUI = {
-
     initBuilder,
 
     renderBuilder,
@@ -192,6 +143,5 @@ window.BuilderUI = {
 
     atualizarBuilder,
 
-    limparBuilder
-
+    limparBuilder,
 };

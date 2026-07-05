@@ -1,22 +1,22 @@
 /* --- ESTRUTURA GERAL DA CALCULADORA --- */
-.calc-grid { 
-    display: grid; 
-    grid-template-columns: 2fr 1fr; 
+.calc-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
     gap: 40px; /* Aumentado de 30px para 40px para dar mais respiro entre colunas */
-    align-items: start; 
+    align-items: start;
 }
 
 /* --- PAINÉIS PRINCIPAIS --- */
-.panel { 
-    background: rgba(17, 24, 39, 0.8); 
-    border: 1px solid var(--cor-roxo); 
+.panel {
+    background: rgba(17, 24, 39, 0.8);
+    border: 1px solid var(--cor-roxo);
     padding: 35px; /* Aumentado para desgrudar o conteúdo das bordas */
-    border-radius: 12px; 
-    margin-bottom: 30px; 
+    border-radius: 12px;
+    margin-bottom: 30px;
 }
 
-.panel.active { 
-    display: block; 
+.panel.active {
+    display: block;
 }
 
 .panel h3 {
@@ -34,94 +34,92 @@
     gap: 20px;
 }
 
-.radio-card input{
-    display:none;
+.radio-card input {
+    display: none;
 }
 
-.radio-card label{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    background:rgba(255,255,255,.03);
-    border:2px solid rgba(255,255,255,.08);
-    border-radius:12px;
-    padding:24px;
-    cursor:pointer;
-    transition:.35s;
-    overflow:hidden;
+.radio-card label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 24px;
+    cursor: pointer;
+    transition: 0.35s;
+    overflow: hidden;
 }
 
-.radio-card label:hover{
-    border-color:rgba(0,212,255,.35);
-    transform:translateY(-3px);
-    background:rgba(255,255,255,.05);
+.radio-card label:hover {
+    border-color: rgba(0, 212, 255, 0.35);
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.radio-card input:checked + label{
-    border-color:var(--cor-ciano);
-    background:rgba(0,212,255,.08);
-    box-shadow:0 0 20px rgba(0,212,255,.18);
+.radio-card input:checked + label {
+    border-color: var(--cor-ciano);
+    background: rgba(0, 212, 255, 0.08);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.18);
 }
 
-.service-title{
-    font-size:1.15rem;
-    font-weight:700;
-    color:white;
+.service-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: white;
 }
 
-.service-subtitle{
-    margin-top:8px;
-    color:#AAA;
-    font-size:.9rem;
+.service-subtitle {
+    margin-top: 8px;
+    color: #aaa;
+    font-size: 0.9rem;
 }
 
-.service-details{
-    width:100%;
-    max-height:0;
-    overflow:hidden;
-    opacity:0;
+.service-details {
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
     transition:
-        max-height .45s ease,
-        opacity .35s ease,
-        margin-top .35s ease;
-
+        max-height 0.45s ease,
+        opacity 0.35s ease,
+        margin-top 0.35s ease;
 }
 
-.radio-card input:checked + label .service-details{
-    max-height:500px;
-    opacity:1;
-    margin-top:22px;
-    animation:expandCard .35s ease;
+.radio-card input:checked + label .service-details {
+    max-height: 500px;
+    opacity: 1;
+    margin-top: 22px;
+    animation: expandCard 0.35s ease;
 }
 
-.service-details p{
-    color:#DDD;
-    line-height:1.7;
-    margin-bottom:20px;
-    text-align:left;
+.service-details p {
+    color: #ddd;
+    line-height: 1.7;
+    margin-bottom: 20px;
+    text-align: left;
 }
 
-.service-price{
-    text-align:center;
-    padding:15px;
-    border-top:1px solid rgba(255,255,255,.08);
-    border-bottom:1px solid rgba(255,255,255,.08);
-    margin:20px 0;
+.service-price {
+    text-align: center;
+    padding: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 20px 0;
 }
 
-.service-price strong{
-    display:block;
-    margin-top:8px;
-    color:var(--cor-ciano);
-    font-size:2rem;
-    font-family:var(--font-titulos);
+.service-price strong {
+    display: block;
+    margin-top: 8px;
+    color: var(--cor-ciano);
+    font-size: 2rem;
+    font-family: var(--font-titulos);
 }
 
-.service-selected{
-    text-align:center;
-    color:#4ADE80;
-    font-weight:bold;
-
+.service-selected {
+    text-align: center;
+    color: #4ade80;
+    font-weight: bold;
 }
 
 /* --- ESTILIZAÇÃO DOS FORMULÁRIOS E INPUTS (O SEGREDO DO DESIGN) --- */
@@ -146,7 +144,12 @@
 .result-panel input {
     width: 100%;
     padding: 14px;
-    background: rgba(255, 255, 255, 0.05); /* Fundo escuro levemente transparente */
+    background: rgba(
+        255,
+        255,
+        255,
+        0.05
+    ); /* Fundo escuro levemente transparente */
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
     color: var(--cor-branco);
@@ -181,15 +184,21 @@
 }
 
 /* --- PAINEL DE RESULTADO (COLUNA DA DIREITA) --- */
-.result-panel { 
-    position: sticky; 
-    top: 100px; 
-    padding: 40px 30px; 
-    text-align: center; 
-    border-radius: 15px; 
-    border: 2px solid rgba(0, 212, 255, 0.3); 
-    background: linear-gradient(180deg, rgba(17, 24, 39, 0.9) 0%, rgba(178, 42, 240, 0.15) 100%); 
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 212, 255, 0.1); 
+.result-panel {
+    position: sticky;
+    top: 100px;
+    padding: 40px 30px;
+    text-align: center;
+    border-radius: 15px;
+    border: 2px solid rgba(0, 212, 255, 0.3);
+    background: linear-gradient(
+        180deg,
+        rgba(17, 24, 39, 0.9) 0%,
+        rgba(178, 42, 240, 0.15) 100%
+    );
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(0, 212, 255, 0.1);
     /* Animação do card flutuando */
     animation: floatPanel 6s ease-in-out infinite;
 }
@@ -203,11 +212,11 @@
 }
 
 /* O Valor em Dinheiro */
-.total-price { 
-    margin: 15px 0 25px; 
-    color: var(--cor-ciano); 
-    font-size: 3.5rem; 
-    font-family: var(--font-titulos); 
+.total-price {
+    margin: 15px 0 25px;
+    color: var(--cor-ciano);
+    font-size: 3.5rem;
+    font-family: var(--font-titulos);
     display: inline-block;
     /* Animação do neon pulsando */
     animation: neonPulse 2s infinite alternate;
@@ -247,7 +256,12 @@
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    background: linear-gradient(90deg, var(--cor-roxo), var(--cor-ciano), var(--cor-roxo));
+    background: linear-gradient(
+        90deg,
+        var(--cor-roxo),
+        var(--cor-ciano),
+        var(--cor-roxo)
+    );
     background-size: 200% auto;
     transition: all 0.3s ease;
     /* Animação da cor correndo pelo botão */
@@ -260,7 +274,9 @@
 }
 
 .calc-section {
-    margin-bottom: var(--spacing-lg); /* Espaçamento padrão grande entre seções */
+    margin-bottom: var(
+        --spacing-lg
+    ); /* Espaçamento padrão grande entre seções */
     padding: var(--spacing-md);
     background: rgba(17, 24, 39, 0.6);
     border-radius: 16px;
@@ -278,214 +294,210 @@
    SERVICE RENDERER
 ======================================================= */
 
-.service-description{
-
-    margin-top:20px;
-    text-align:left;
-    color:#DDD;
-    animation:fadeIn .35s ease;
-
+.service-description {
+    margin-top: 20px;
+    text-align: left;
+    color: #ddd;
+    animation: fadeIn 0.35s ease;
 }
 
-.service-intro{
-
-    margin-bottom:22px;
-    color:#EEE;
-    line-height:1.7;
-
+.service-intro {
+    margin-bottom: 22px;
+    color: #eee;
+    line-height: 1.7;
 }
 
-.service-section{
-
-    margin:22px 0;
-    padding-top:18px;
-    border-top:1px solid rgba(255,255,255,.08);
-
+.service-section {
+    margin: 22px 0;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.service-section:first-child{
-
-    margin-top:0;
-    padding-top:0;
-    border-top:none;
-
+.service-section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
-.service-section-title{
+.service-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 
-    display:flex;
-    align-items:center;
-    gap:10px;
+    margin-bottom: 15px;
 
-    margin-bottom:15px;
+    color: var(--cor-ciano);
 
-    color:var(--cor-ciano);
-
-    font-family:var(--font-titulos);
-    font-size:1rem;
-    font-weight:bold;
-
+    font-family: var(--font-titulos);
+    font-size: 1rem;
+    font-weight: bold;
 }
 
-.service-icon{
+.service-icon {
+    width: 34px;
+    height: 34px;
 
-    width:34px;
-    height:34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    border-radius: 8px;
 
-    border-radius:8px;
+    background: rgba(0, 212, 255, 0.08);
 
-    background:rgba(0,212,255,.08);
-
-    font-size:1.2rem;
-
+    font-size: 1.2rem;
 }
 
-.service-items{
-
-    list-style:none;
-    padding:0;
-    margin:0;
-
+.service-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-.service-items li{
+.service-items li {
+    position: relative;
 
-    position:relative;
+    padding-left: 22px;
 
-    padding-left:22px;
+    margin: 10px 0;
 
-    margin:10px 0;
-
-    color:#DDD;
-
+    color: #ddd;
 }
 
-.service-items li::before{
+.service-items li::before {
+    content: "•";
 
-    content:"•";
+    position: absolute;
 
-    position:absolute;
+    left: 0;
 
-    left:0;
+    color: var(--cor-ciano);
 
-    color:var(--cor-ciano);
-
-    font-size:1.1rem;
-
+    font-size: 1.1rem;
 }
 
-.service-benefits{
+.service-benefits {
+    margin-top: 25px;
+    padding-top: 18px;
 
-    margin-top:25px;
-    padding-top:18px;
-
-    border-top:1px solid rgba(255,255,255,.08);
-
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.service-benefit{
+.service-benefit {
+    display: flex;
+    align-items: center;
 
-    display:flex;
-    align-items:center;
+    margin: 10px 0;
 
-    margin:10px 0;
+    color: #7ef2ae;
 
-    color:#7EF2AE;
-
-    font-weight:600;
-
+    font-weight: 600;
 }
 
-.service-benefit::before{
+.service-benefit::before {
+    content: "✓";
 
-    content:"✓";
+    margin-right: 10px;
 
-    margin-right:10px;
+    color: #22c55e;
 
-    color:#22C55E;
-
-    font-weight:bold;
-
+    font-weight: bold;
 }
 
 /* --- KEYFRAMES (AS ANIMAÇÕES) --- */
 
 /* Card flutuando e mudando o brilho da borda */
 @keyframes floatPanel {
-    0%, 100% { 
-        transform: translateY(0); 
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 212, 255, 0.1); 
+    0%,
+    100% {
+        transform: translateY(0);
+        box-shadow:
+            0 10px 30px rgba(0, 0, 0, 0.5),
+            0 0 15px rgba(0, 212, 255, 0.1);
         border-color: rgba(0, 212, 255, 0.3);
     }
-    50% { 
-        transform: translateY(-8px); 
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(178, 42, 240, 0.4); 
+    50% {
+        transform: translateY(-8px);
+        box-shadow:
+            0 15px 35px rgba(0, 0, 0, 0.6),
+            0 0 25px rgba(178, 42, 240, 0.4);
         border-color: rgba(178, 42, 240, 0.5);
     }
 }
 
 /* Preço com brilho neon respirando */
 @keyframes neonPulse {
-    0% { 
-        text-shadow: 0 0 10px rgba(0, 212, 255, 0.4), 0 0 20px rgba(0, 212, 255, 0.2); 
-        transform: scale(1); 
+    0% {
+        text-shadow:
+            0 0 10px rgba(0, 212, 255, 0.4),
+            0 0 20px rgba(0, 212, 255, 0.2);
+        transform: scale(1);
     }
-    100% { 
-        text-shadow: 0 0 20px rgba(0, 212, 255, 0.8), 0 0 40px rgba(0, 212, 255, 0.5); 
-        transform: scale(1.03); 
+    100% {
+        text-shadow:
+            0 0 20px rgba(0, 212, 255, 0.8),
+            0 0 40px rgba(0, 212, 255, 0.5);
+        transform: scale(1.03);
     }
 }
 
 /* Badge de desconto chamando atenção */
 @keyframes pulseBadge {
-    0% { box-shadow: 0 0 10px rgba(255, 0, 85, 0.4); transform: scale(1); }
-    100% { box-shadow: 0 0 20px rgba(255, 0, 85, 0.8); transform: scale(1.05); }
+    0% {
+        box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(255, 0, 85, 0.8);
+        transform: scale(1.05);
+    }
 }
 
 /* Energia passando pelo botão de concluir */
 @keyframes gradientMove {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+        background-position: 0% center;
+    }
+    100% {
+        background-position: 200% center;
+    }
 }
 
 /* --- RESPONSIVIDADE --- */
-@media (max-width: 900px) { 
-    .calc-grid { grid-template-columns: 1fr; gap: 20px;} 
-    .result-panel { position: static; margin-top: 20px; animation: none; /* Desliga o flutuante no mobile para não atrapalhar o scroll */ } 
-}
-
-@keyframes expandCard{
-    from{
-        opacity:0;
-        transform:translateY(-8px);
+@media (max-width: 900px) {
+    .calc-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
     }
-
-    to{
-        opacity:1;
-        transform:none;
+    .result-panel {
+        position: static;
+        margin-top: 20px;
+        animation: none; /* Desliga o flutuante no mobile para não atrapalhar o scroll */
     }
 }
 
-@keyframes fadeIn{
-
-    from{
-
-        opacity:0;
-        transform:translateY(-8px);
-
+@keyframes expandCard {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
     }
 
-    to{
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
 
-        opacity:1;
-        transform:none;
-
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
     }
 
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 /* Espaçamento do container de serviços inteiro */
@@ -497,5 +509,5 @@
 
 /* Espaçamento entre a categoria "Avulso" e a categoria "Combo" */
 .service-category {
-    margin-bottom: 40px; 
+    margin-bottom: 40px;
 }

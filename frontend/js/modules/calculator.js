@@ -3,145 +3,74 @@ import * as API from "../api.js";
 import * as UI from "../ui.js";
 import { CalculatorLogic } from "../calculator.js";
 import { registerCalcular } from "./globals.js";
-import {money} from "../utils/format.js";
-import { $, $$, $$$ } from "../utils/dom.js";
+import { money } from "../utils/format.js";
+import {$} from "../utils/dom.js";
 
 export async function initCalculadora() {
-
     const [config, servicos] = await Promise.all([
-
         API.getAPI("config"),
 
-        API.getAPI("servicos")
-
+        API.getAPI("servicos"),
     ]);
 
     state.configGlobal = {
-
         ...config,
 
-        mult_desconto:
-
-            (100 - config.desconto) / 100
-
+        mult_desconto: (100 - config.desconto) / 100,
     };
 
     state.servicosDB = servicos;
 
-    UI.renderizarBotoes(
-
-        state.servicosDB
-
-    );
-
+    UI.renderizarBotoes(state.servicosDB);
 }
 
 export function calcular() {
+    if (!state.servicoSelecionadoOBJ) return;
 
-    if (!state.servicoSelecionadoOBJ)
-
-        return;
-    
     console.log(state.servicoSelecionadoOBJ);
 
-    let total =
-
-        state.servicoSelecionadoOBJ.valor_base;
+    let total = state.servicoSelecionadoOBJ.valor_base;
 
     state.servicoSelecionadoOBJ.parametros
 
         .split(",")
 
-        .forEach(param => {
-
-            const el = $(
-
-                param.trim()
-
-            );
+        .forEach((param) => {
+            const el = $(param.trim());
 
             if (!el) return;
 
-            if (
+            if (CalculatorLogic[param]) {
+                total += CalculatorLogic[param](
+                    el.value,
 
-                CalculatorLogic[param]
-
-            ) {
-
-                total +=
-
-                    CalculatorLogic[param](
-
-                        el.value,
-
-                        $(
-
-                            "canais_inst"
-
-                        )?.value
-
-                    );
-
+                    $("canais_inst")?.value,
+                );
             }
-
         });
 
-    const badge =
+    const badge = $("badge-desconto");
 
-        $(
-
-            "badge-desconto"
-
-        );
-
-    if (
-
-        state.servicoSelecionadoOBJ.aplica_desconto
-
-    ) {
-
-        total *=
-
-            state.configGlobal.mult_desconto;
+    if (state.servicoSelecionadoOBJ.aplica_desconto) {
+        total *= state.configGlobal.mult_desconto;
 
         if (badge) {
+            badge.style.display = "inline-block";
 
-            badge.style.display =
-
-                "inline-block";
-
-            badge.innerText =
-
-                `DESCONTO DE ${state.configGlobal.desconto}% APLICADO`;
-
+            badge.innerText = `DESCONTO DE ${state.configGlobal.desconto}% APLICADO`;
         }
-
-    }
-
-    else {
-
+    } else {
         if (badge) {
-
-            badge.style.display =
-
-                "none";
-
+            badge.style.display = "none";
         }
-
     }
 
     state.valorTotalCalculado = total;
 
-    const valor =
-
-        $(
-
-            "valorTotal"
-
-        );
+    const valor = $("valorTotal");
 
     if (valor) {
-        valor.innerText = money(total)
+        valor.innerText = money(total);
     }
 }
 
@@ -151,70 +80,31 @@ export async function initEventosCalculadora() {
     await initCalculadora();
 
     document.body.addEventListener(
-
         "input",
 
         (e) => {
+            if (e.target.name === "servico") {
+                state.servicoSelecionadoOBJ = state.servicosDB.find(
+                    (s) => s.id === e.target.value,
+                );
 
-            if (
+                const btnNext1 = $("btn-next-1");
 
-                e.target.name ===
+                if (btnNext1) {
+                    btnNext1.disabled = false;
 
-                "servico"
-
-            ) {
-
-                state.servicoSelecionadoOBJ =
-
-                    state.servicosDB.find(
-
-                        s =>
-
-                            s.id ==
-
-                            e.target.value
-
-                    );
-
-                const btnNext1 =
-
-                    $(
-
-                        "btn-next-1"
-
-                    );
-
-                if (
-
-                    btnNext1
-
-                ) {
-
-                    btnNext1.disabled =
-
-                        false;
-
-                    btnNext1.classList.remove(
-
-                        "disabled"
-
-                    );
-
+                    btnNext1.classList.remove("disabled");
                 }
 
                 UI.renderizarFormularioParametros(
-                    state
-                        .servicoSelecionadoOBJ
-                        .parametros
+                    state.servicoSelecionadoOBJ.parametros,
                 );
             }
 
-            if (
-                state.servicoSelecionadoOBJ
-            ) {
+            if (state.servicoSelecionadoOBJ) {
                 calcular();
             }
-        }
+        },
     );
 }
 

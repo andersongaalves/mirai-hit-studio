@@ -13,13 +13,13 @@ function getUiHandlers() {
         onVisualizar: visualizarOrcamento,
         onDeletar: deletarOrcamento,
         onAlterarStatus: alterarStatus,
-        onAlterarProdutor: alterarProdutor
+        onAlterarProdutor: alterarProdutor,
     };
 }
 
 function atualizarState(atualizado) {
     const index = orcamentosState.lista.findIndex(
-        item => item.id === atualizado.id
+        (item) => item.id === atualizado.id,
     );
 
     if (index !== -1) {
@@ -32,14 +32,14 @@ function registrarEventos() {
     const status = $("orcamentos-status-filter");
 
     if (status) {
-        status.onchange = e => {
+        status.onchange = (e) => {
             orcamentosState.filtro.status = e.target.value;
             refresh();
         };
     }
 
     if (busca) {
-        busca.oninput = e => {
+        busca.oninput = (e) => {
             orcamentosState.filtro.busca = e.target.value;
             refresh();
         };
@@ -48,93 +48,67 @@ function registrarEventos() {
 
 export function refresh() {
     OrcamentosUI.renderizarOrcamentos(
-        filtrarOrcamentos(
-            orcamentosState.lista,
-            orcamentosState.filtro
-        ),
+        filtrarOrcamentos(orcamentosState.lista, orcamentosState.filtro),
         {
             produtores: orcamentosState.produtores,
-            handlers: getUiHandlers()
-        }
+            handlers: getUiHandlers(),
+        },
     );
 }
 
 export async function carregarOrcamentos() {
     try {
-        const [
-            orcamentos,
-            produtores
-        ] = await Promise.all([
+        const [orcamentos, produtores] = await Promise.all([
             OrcamentosAPI.buscarOrcamentos(),
-            OrcamentosAPI.buscarProdutores()
+            OrcamentosAPI.buscarProdutores(),
         ]);
 
-        orcamentosState.lista = Array.isArray(orcamentos)
-            ? orcamentos
-            : [];
+        orcamentosState.lista = Array.isArray(orcamentos) ? orcamentos : [];
 
         orcamentosState.produtores = Array.isArray(produtores)
             ? produtores
             : [];
 
         refresh();
-    }
-
-    catch(error) {
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            "Erro ao carregar orçamentos."
-        );
+        Notify.error("Erro ao carregar orçamentos.");
     }
 }
 
 export function visualizarOrcamento(id) {
-    const orcamento = orcamentosState.lista.find(
-        item => item.id === id
-    );
+    const orcamento = orcamentosState.lista.find((item) => item.id === id);
 
     if (!orcamento) {
-        Notify.error(
-            "Orçamento não encontrado."
-        );
+        Notify.error("Orçamento não encontrado.");
         return;
     }
 
     OrcamentosModal.abrirModalOrcamento(orcamento);
 }
 
-export const fecharModalOrcamento =
-    OrcamentosModal.fecharModalOrcamento;
+export const fecharModalOrcamento = OrcamentosModal.fecharModalOrcamento;
 
 export async function deletarOrcamento(id) {
-    if (!confirm(
-        "Deseja realmente excluir este orçamento?"
-    )) {
+    if (!confirm("Deseja realmente excluir este orçamento?")) {
         return;
     }
 
     try {
         await OrcamentosAPI.excluirOrcamento(id);
 
-        orcamentosState.lista =
-            orcamentosState.lista.filter(
-                item => item.id !== id
-            );
+        orcamentosState.lista = orcamentosState.lista.filter(
+            (item) => item.id !== id,
+        );
 
         refresh();
 
-        Notify.success(
-            "Orçamento excluído."
-        );
-    }
-
-    catch(error) {
+        Notify.success("Orçamento excluído.");
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            "Erro ao excluir orçamento."
-        );
+        Notify.error("Erro ao excluir orçamento.");
     }
 }
 
@@ -142,7 +116,7 @@ export function initOrcamentos() {
     registrarEventos();
 
     OrcamentosModal.registrarEventosModal({
-        onSalvarObservacoes: salvarObservacoes
+        onSalvarObservacoes: salvarObservacoes,
     });
 
     return carregarOrcamentos();
@@ -150,74 +124,48 @@ export function initOrcamentos() {
 
 export async function alterarStatus(id, status) {
     try {
-        const atualizado =
-            await OrcamentosAPI.atualizarStatus(
-                id,
-                status
-            );
+        const atualizado = await OrcamentosAPI.atualizarStatus(id, status);
 
         atualizarState(atualizado);
         refresh();
-    }
-
-    catch(error) {
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            "Erro ao atualizar status."
-        );
+        Notify.error("Erro ao atualizar status.");
     }
 }
 
-export async function alterarProdutor(
-    id,
-    produtor_id
-) {
+export async function alterarProdutor(id, produtor_id) {
     try {
-        const atualizado =
-            await OrcamentosAPI.atualizarProdutor(
-                id,
-                produtor_id ?? null
-            );
+        const atualizado = await OrcamentosAPI.atualizarProdutor(
+            id,
+            produtor_id ?? null,
+        );
 
         atualizarState(atualizado);
         refresh();
-    }
-
-    catch(error) {
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            "Erro ao alterar produtor."
-        );
+        Notify.error("Erro ao alterar produtor.");
     }
 }
 
-export async function salvarObservacoes(
-    id,
-    observacoes
-) {
+export async function salvarObservacoes(id, observacoes) {
     try {
-        const atualizado =
-            await OrcamentosAPI.atualizarObservacoes(
-                id,
-                observacoes
-            );
+        const atualizado = await OrcamentosAPI.atualizarObservacoes(
+            id,
+            observacoes,
+        );
 
         atualizarState(atualizado);
 
-        Notify.success(
-            "Observações salvas."
-        );
+        Notify.success("Observações salvas.");
 
         refresh();
-    }
-
-    catch(error) {
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            "Erro ao salvar observações."
-        );
+        Notify.error("Erro ao salvar observações.");
     }
 }

@@ -1,8 +1,4 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException
-)
+from fastapi import APIRouter, Depends, HTTPException
 
 from sqlalchemy.orm import Session
 
@@ -15,174 +11,89 @@ from schemas.producao import (
     ProducaoResponse,
     ProducaoStatusUpdate,
     ProducaoEtapasUpdate,
-    ProducaoPrazoUpdate
+    ProducaoPrazoUpdate,
 )
 
 from crud import crud_producao
 
-
-router = APIRouter(
-    prefix="/producoes",
-    tags=["Produções"]
-)
+router = APIRouter(prefix="/producoes", tags=["Produções"])
 
 
 # ===========================
 # CRIAR
 # ===========================
 
-@router.post(
-    "",
-    response_model=ProducaoResponse
-)
+
+@router.post("", response_model=ProducaoResponse)
 def criar_producao(
-    dados: ProducaoCreate,
-    db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    dados: ProducaoCreate, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
 
-    return crud_producao.criar(
-
-        db,
-
-        dados.model_dump()
-
-    )
+    return crud_producao.criar(db, dados.model_dump())
 
 
 # ===========================
 # LISTAR
 # ===========================
 
-@router.get(
-    "",
-    response_model=list[ProducaoResponse]
-)
-def listar_producoes(
-    db: Session = Depends(get_db),
-    user=Depends(get_current_user)
-):
 
-    return crud_producao.listar(
-        db
-    )
+@router.get("", response_model=list[ProducaoResponse])
+def listar_producoes(db: Session = Depends(get_db), user=Depends(get_current_user)):
+
+    return crud_producao.listar(db)
 
 
 # ===========================
 # STATUS
 # ===========================
 
-@router.patch(
-    "/{producao_id}/status",
-    response_model=ProducaoResponse
-)
+
+@router.patch("/{producao_id}/status", response_model=ProducaoResponse)
 def atualizar_status(
-
     producao_id: int,
-
     dados: ProducaoStatusUpdate,
-
     db: Session = Depends(get_db),
-
-    user=Depends(get_current_user)
-
+    user=Depends(get_current_user),
 ):
 
-    producao = (
-        crud_producao.atualizar_status(
-
-            db,
-
-            producao_id,
-
-            dados.status
-
-        )
-    )
-
+    producao = crud_producao.atualizar_status(db, producao_id, dados.status)
 
     if not producao:
 
-        raise HTTPException(
-            status_code=404,
-            detail="Produção não encontrada"
-        )
-
+        raise HTTPException(status_code=404, detail="Produção não encontrada")
 
     return producao
 
-@router.patch(
-    "/{producao_id}/etapas",
-    response_model=ProducaoResponse
-)
+
+@router.patch("/{producao_id}/etapas", response_model=ProducaoResponse)
 def atualizar_etapas(
-
     producao_id: int,
-
     dados: ProducaoEtapasUpdate,
-
     db: Session = Depends(get_db),
-
-    user=Depends(get_current_user)
-
+    user=Depends(get_current_user),
 ):
 
-    producao = (
-        crud_producao.atualizar_etapas(
-
-            db,
-
-            producao_id,
-
-            dados.etapas
-
-        )
-    )
-
+    producao = crud_producao.atualizar_etapas(db, producao_id, dados.etapas)
 
     if not producao:
 
-        raise HTTPException(
-            status_code=404,
-            detail="Produção não encontrada"
-        )
-
+        raise HTTPException(status_code=404, detail="Produção não encontrada")
 
     return producao
 
-@router.patch(
-    "/{producao_id}/prazo",
-    response_model=ProducaoResponse
-)
+
+@router.patch("/{producao_id}/prazo", response_model=ProducaoResponse)
 def alterar_prazo(
-
-    producao_id:int,
-
+    producao_id: int,
     dados: ProducaoPrazoUpdate,
-
     db: Session = Depends(get_db),
-
-    user=Depends(get_current_user)
-
+    user=Depends(get_current_user),
 ):
 
-    producao = crud_producao.atualizar_prazo(
-
-        db,
-
-        producao_id,
-
-        dados.prazo_entrega
-
-    )
-
+    producao = crud_producao.atualizar_prazo(db, producao_id, dados.prazo_entrega)
 
     if not producao:
 
-        raise HTTPException(
-            404,
-            "Produção não encontrada"
-        )
-
+        raise HTTPException(404, "Produção não encontrada")
 
     return producao

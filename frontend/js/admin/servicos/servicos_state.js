@@ -1,4 +1,4 @@
 export const servicosState = {
     lista: [],
-    parametros: []
+    parametros: [],
 };

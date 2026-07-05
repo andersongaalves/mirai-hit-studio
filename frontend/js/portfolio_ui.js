@@ -1,28 +1,32 @@
-import { state } from './state.js';
-import { $, $$, $$$ } from "./utils/dom.js";
+import { $, $$$ } from "./utils/dom.js";
 
 export function obterCapaInteligente(linkAudio, linkCapa) {
     if (linkCapa && linkCapa.trim() !== "") return linkCapa;
-    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+    const ytRegex =
+        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
     const match = linkAudio.match(ytRegex);
-    if (match && match[1]) return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
-    return "img/logo-principal.png"; 
+    if (match && match[1])
+        return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+    return "img/logo-principal.png";
 }
 
 export function renderizarProjetos(lista) {
-    const container = $('render-portfolio');
-    
-    if(lista.length === 0) {
-        container.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Nenhum projeto encontrado.</p>";
+    const container = $("render-portfolio");
+
+    if (lista.length === 0) {
+        container.innerHTML =
+            "<p style='text-align:center; grid-column: 1/-1;'>Nenhum projeto encontrado.</p>";
         return;
     }
 
     // Cria uma variável para acumular o HTML
     let htmlAcumulado = "";
 
-    lista.forEach(p => {
+    lista.forEach((p) => {
         const capaFinal = obterCapaInteligente(p.link_audio, p.link_capa);
-        const badgeHit = p.destaque ? `<span style="position:absolute; top:10px; right:10px; background:var(--cor-ciano); color:black; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:bold;">HIT 🔥</span>` : "";
+        const badgeHit = p.destaque
+            ? `<span style="position:absolute; top:10px; right:10px; background:var(--cor-ciano); color:black; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:bold;">HIT 🔥</span>`
+            : "";
 
         // Adiciona ao texto acumulado (sem mexer na tela ainda)
         htmlAcumulado += `
@@ -45,23 +49,23 @@ export function renderizarProjetos(lista) {
 }
 
 export function renderizarFiltros(projetos, callbackFiltrar) {
-    const categorias = [...new Set(projetos.map(p => p.categoria))];
-    const filterContainer = $('filtros-portfolio');
-    
+    const categorias = [...new Set(projetos.map((p) => p.categoria))];
+    const filterContainer = $("filtros-portfolio");
+
     filterContainer.innerHTML = `<button class="filter-btn active" data-cat="Todos">Todos</button>`;
-    
-    categorias.forEach(cat => {
-        if(cat.trim() !== "") {
+
+    categorias.forEach((cat) => {
+        if (cat.trim() !== "") {
             filterContainer.innerHTML += `<button class="filter-btn" data-cat="${cat}">${cat}</button>`;
         }
     });
 
     // Event Listeners para os botões de filtro
-    filterContainer.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            $$$('.filter-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            callbackFiltrar(e.target.getAttribute('data-cat'));
+    filterContainer.querySelectorAll(".filter-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            $$$(".filter-btn").forEach((b) => b.classList.remove("active"));
+            e.target.classList.add("active");
+            callbackFiltrar(e.target.getAttribute("data-cat"));
         });
     });
 }

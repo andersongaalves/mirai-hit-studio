@@ -8,11 +8,7 @@ export function createDivElement(className = "") {
     return div;
 }
 
-export function createTextElement(
-    tag = "span",
-    text = "",
-    className = ""
-) {
+export function createTextElement(tag = "span", text = "", className = "") {
     const element = document.createElement(tag);
 
     element.textContent = text ?? "";
@@ -27,7 +23,7 @@ export function createTextElement(
 export function createButtonElement({
     text = "",
     className = "btn-small",
-    type = "button"
+    type = "button",
 } = {}) {
     const button = document.createElement("button");
 
@@ -51,6 +47,6 @@ export function createServicoCardElement() {
     return {
         card,
         info,
-        actions
+        actions,
     };
 }

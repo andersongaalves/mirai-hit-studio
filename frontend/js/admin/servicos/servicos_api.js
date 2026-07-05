@@ -12,9 +12,7 @@ async function handleResponse(response, message) {
 
     const text = await response.text();
 
-    return text
-        ? JSON.parse(text)
-        : null;
+    return text ? JSON.parse(text) : null;
 }
 
 export function buscarServicos() {
@@ -22,30 +20,18 @@ export function buscarServicos() {
 }
 
 export async function salvarServicoRequest(id, payload) {
-    const response = await authFetch(
-        id ? `/servicos/${id}` : "/servicos",
-        {
-            method: id ? "PUT" : "POST",
-            body: JSON.stringify(payload)
-        }
-    );
+    const response = await authFetch(id ? `/servicos/${id}` : "/servicos", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+    });
 
-    return handleResponse(
-        response,
-        "Erro ao salvar serviço."
-    );
+    return handleResponse(response, "Erro ao salvar serviço.");
 }
 
 export async function excluirServico(id) {
-    const response = await authFetch(
-        `/servicos/${id}`,
-        {
-            method: "DELETE"
-        }
-    );
+    const response = await authFetch(`/servicos/${id}`, {
+        method: "DELETE",
+    });
 
-    return handleResponse(
-        response,
-        "Erro ao excluir serviço."
-    );
+    return handleResponse(response, "Erro ao excluir serviço.");
 }

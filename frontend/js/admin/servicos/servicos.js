@@ -11,28 +11,25 @@ import { servicosState } from "./servicos_state.js";
 function getUiHandlers() {
     return {
         onEditar: abrirEditorServico,
-        onDeletar: deletarServico
+        onDeletar: deletarServico,
     };
 }
 
 function getParametroHandlers() {
     return {
         onMover: moverParametro,
-        onRemover: removerParametro
+        onRemover: removerParametro,
     };
 }
 
 function renderizarServicos() {
-    ServicosUI.renderizarServicos(
-        servicosState.lista,
-        getUiHandlers()
-    );
+    ServicosUI.renderizarServicos(servicosState.lista, getUiHandlers());
 }
 
 function renderizarParametros() {
     ServicosParametros.renderizarParametros(
         servicosState.parametros,
-        getParametroHandlers()
+        getParametroHandlers(),
     );
 }
 
@@ -44,34 +41,25 @@ function setParametrosFromServico(servico) {
 
 export async function carregarServicos() {
     try {
-        const servicos =
-            await ServicosAPI.buscarServicos();
+        const servicos = await ServicosAPI.buscarServicos();
 
-        servicosState.lista = Array.isArray(servicos)
-            ? servicos
-            : [];
+        servicosState.lista = Array.isArray(servicos) ? servicos : [];
 
         renderizarServicos();
-    }
-
-    catch(error) {
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            "Erro ao carregar serviços."
-        );
+        Notify.error("Erro ao carregar serviços.");
     }
 }
 
 export function abrirEditorServico(id = null) {
     const servico = id
-        ? servicosState.lista.find(item => item.id === id)
+        ? servicosState.lista.find((item) => item.id === id)
         : null;
 
     if (id && !servico) {
-        Notify.error(
-            "Serviço não encontrado."
-        );
+        Notify.error("Serviço não encontrado.");
         return;
     }
 
@@ -90,9 +78,7 @@ export function adicionarParametro() {
     if (!valor) return;
 
     if (servicosState.parametros.includes(valor)) {
-        Notify.warning(
-            "Parâmetro já existe."
-        );
+        Notify.warning("Parâmetro já existe.");
         return;
     }
 
@@ -108,90 +94,61 @@ export function removerParametro(index) {
 export function moverParametro(index, direcao) {
     const destino = index + direcao;
 
-    if (
-        destino < 0 ||
-        destino >= servicosState.parametros.length
-    ) {
+    if (destino < 0 || destino >= servicosState.parametros.length) {
         return;
     }
 
-    [
-        servicosState.parametros[index],
-        servicosState.parametros[destino]
-    ] = [
+    [servicosState.parametros[index], servicosState.parametros[destino]] = [
         servicosState.parametros[destino],
-        servicosState.parametros[index]
+        servicosState.parametros[index],
     ];
 
     renderizarParametros();
 }
 
 export async function salvarServico() {
-    const {
-        id,
-        payload
-    } = ServicosForm.getServicoFormPayload(
-        servicosState.parametros
+    const { id, payload } = ServicosForm.getServicoFormPayload(
+        servicosState.parametros,
     );
 
     if (!payload.nome) {
-        Notify.warning(
-            "Informe o nome do serviço."
-        );
+        Notify.warning("Informe o nome do serviço.");
         return;
     }
 
     try {
-        await ServicosAPI.salvarServicoRequest(
-            id,
-            payload
-        );
+        await ServicosAPI.salvarServicoRequest(id, payload);
 
-        Notify.success(
-            "Serviço salvo."
-        );
+        Notify.success("Serviço salvo.");
 
         fecharEditorServico();
         carregarServicos();
-    }
-
-    catch(error) {
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            error.message
-        );
+        Notify.error(error.message);
     }
 }
 
 export async function deletarServico(id) {
-    if (!confirm(
-        "Deseja realmente excluir este serviço?"
-    )) {
+    if (!confirm("Deseja realmente excluir este serviço?")) {
         return;
     }
 
     try {
         await ServicosAPI.excluirServico(id);
 
-        servicosState.lista =
-            servicosState.lista.filter(
-                item => item.id !== id
-            );
+        servicosState.lista = servicosState.lista.filter(
+            (item) => item.id !== id,
+        );
 
         renderizarServicos();
 
-        Notify.success(
-            "Serviço removido."
-        );
-    }
-
-    catch(error) {
+        Notify.success("Serviço removido.");
+    } catch (error) {
         console.error(error);
 
-        Notify.error(
-            "Erro ao excluir serviço."
-        );
+        Notify.error("Erro ao excluir serviço.");
     }
 }
 

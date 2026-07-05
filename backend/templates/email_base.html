@@ -1,413 +1,305 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mirai Hit Studio</title>
 
-    <title>Mirai Hit Studio</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background: #111827;
+                font-family: Arial, Helvetica, sans-serif;
+            }
 
-    <style>
-        body{
-            margin:0;
-            padding:0;
-            background:#111827;
-            font-family:Arial, Helvetica, sans-serif;
-        }
+            table {
+                border-collapse: collapse;
+            }
 
-        table{
-            border-collapse:collapse;
-        }
+            a {
+                text-decoration: none;
+            }
 
-        a{
-            text-decoration:none;
-        }
+            img {
+                border: 0;
+                display: block;
+            }
 
-        img{
-            border:0;
-            display:block;
-        }
+            .wrapper {
+                width: 100%;
+                background: #111827;
+                padding: 40px 15px;
+            }
 
-        .wrapper{
+            .container {
+                width: 100%;
+                max-width: 680px;
 
-            width:100%;
-            background:#111827;
-            padding:40px 15px;
+                margin: auto;
 
-        }
+                background: #1a2433;
 
-        .container{
+                border-radius: 18px;
 
-            width:100%;
-            max-width:680px;
+                overflow: hidden;
+            }
 
-            margin:auto;
+            .header {
+                background: linear-gradient(135deg, #00d4ff, #b22af0);
 
-            background:#1A2433;
+                padding: 45px;
 
-            border-radius:18px;
+                text-align: center;
+            }
 
-            overflow:hidden;
+            .logo {
+                width: 240px;
 
-        }
+                margin: auto;
+            }
 
-        .header{
+            .subtitle {
+                color: white;
 
-            background:linear-gradient(
-                135deg,
-                #00D4FF,
-                #B22AF0
-            );
+                font-size: 15px;
 
-            padding:45px;
+                margin-top: 18px;
 
-            text-align:center;
+                letter-spacing: 0.6px;
+            }
 
-        }
+            .content {
+                padding: 50px;
 
-        .logo{
+                color: #f9fafb;
 
-            width:240px;
+                font-size: 16px;
 
-            margin:auto;
+                line-height: 1.8;
+            }
 
-        }
+            h1 {
+                color: #00d4ff;
 
-        .subtitle{
+                font-size: 30px;
 
-            color:white;
+                margin-top: 0;
 
-            font-size:15px;
+                margin-bottom: 25px;
+            }
 
-            margin-top:18px;
+            h2 {
+                color: #00d4ff;
+            }
 
-            letter-spacing:.6px;
+            .card {
+                background: #111827;
 
-        }
+                border: 1px solid rgba(0, 212, 255, 0.18);
 
-        .content{
+                border-left: 4px solid #00d4ff;
 
-            padding:50px;
+                border-radius: 14px;
 
-            color:#F9FAFB;
+                padding: 22px;
 
-            font-size:16px;
+                margin: 30px 0;
+            }
 
-            line-height:1.8;
+            .card-title {
+                color: #00d4ff;
 
-        }
+                font-size: 18px;
 
-        h1{
+                font-weight: bold;
 
-            color:#00D4FF;
+                margin-bottom: 15px;
+            }
 
-            font-size:30px;
+            .info {
+                margin: 8px 0;
+            }
 
-            margin-top:0;
+            .info strong {
+                color: white;
+            }
 
-            margin-bottom:25px;
+            .button {
+                display: inline-block;
 
-        }
+                background: linear-gradient(135deg, #00d4ff, #b22af0);
 
-        h2{
+                color: white !important;
 
-            color:#00D4FF;
+                padding: 16px 34px;
 
-        }
+                border-radius: 12px;
 
-        .card{
+                font-size: 15px;
 
-            background:#111827;
+                font-weight: bold;
+            }
 
-            border:1px solid rgba(0,212,255,.18);
+            .divider {
+                height: 1px;
 
-            border-left:4px solid #00D4FF;
+                background: #29364e;
 
-            border-radius:14px;
+                margin: 35px 0;
+            }
 
-            padding:22px;
+            .footer {
+                background: #151d2b;
 
-            margin:30px 0;
+                padding: 35px;
 
-        }
+                text-align: center;
+            }
 
-        .card-title{
+            .footer-title {
+                color: #00d4ff;
 
-            color:#00D4FF;
+                font-size: 20px;
 
-            font-size:18px;
+                font-weight: bold;
+            }
 
-            font-weight:bold;
+            .footer-text {
+                color: #c8d1e1;
 
-            margin-bottom:15px;
+                font-size: 14px;
 
-        }
+                line-height: 1.7;
+            }
 
-        .info{
+            .footer-links {
+                margin-top: 20px;
+            }
 
-            margin:8px 0;
+            .footer-links a {
+                color: #00d4ff;
 
-        }
+                margin: 0 10px;
 
-        .info strong{
+                font-size: 14px;
+            }
 
-            color:white;
+            .social {
+                margin-top: 25px;
+            }
 
-        }
+            .social img {
+                width: 28px;
+            }
 
-        .button{
+            @media only screen and (max-width: 700px) {
+                .content {
+                    padding: 30px;
+                }
 
-            display:inline-block;
+                .header {
+                    padding: 30px;
+                }
 
-            background:linear-gradient(
-                135deg,
-                #00D4FF,
-                #B22AF0
-            );
+                .logo {
+                    width: 180px;
+                }
 
-            color:white !important;
+                h1 {
+                    font-size: 24px;
+                }
 
-            padding:16px 34px;
+                .button {
+                    display: block;
 
-            border-radius:12px;
+                    text-align: center;
+                }
+            }
+        </style>
+    </head>
 
-            font-size:15px;
+    <body>
+        <table width="100%" class="wrapper">
+            <tr>
+                <td align="center">
+                    <table class="container">
+                        <!-- HEADER -->
 
-            font-weight:bold;
+                        <tr>
+                            <td class="header">
+                                <img
+                                    src="https://miraihitstudio.com.br/img/logo-horizontal.webp"
+                                    class="logo"
+                                    alt="Mirai Hit Studio"
+                                />
 
-        }
+                                <div class="subtitle">
+                                    Criando hits do futuro.
+                                </div>
+                            </td>
+                        </tr>
 
-        .divider{
+                        <!-- CONTENT -->
 
-            height:1px;
+                        <tr>
+                            <td class="content">
+                                {% block content %} {% endblock %}
+                            </td>
+                        </tr>
 
-            background:#29364E;
+                        <!-- FOOTER -->
 
-            margin:35px 0;
+                        <tr>
+                            <td class="footer">
+                                <div class="footer-title">Mirai Hit Studio</div>
 
-        }
+                                <div class="footer-text">
+                                    Produção musical especializada no universo
+                                    Geek, Anime e Games.
 
-        .footer{
+                                    <br /><br />
 
-            background:#151D2B;
+                                    Transformando criatividade em experiências
+                                    sonoras com identidade, tecnologia e
+                                    precisão.
+                                </div>
 
-            padding:35px;
+                                <div class="divider"></div>
 
-            text-align:center;
+                                <div class="footer-links">
+                                    <a href="https://miraihitstudio.com.br">
+                                        Site
+                                    </a>
 
-        }
+                                    •
 
-        .footer-title{
+                                    <a
+                                        href="https://instagram.com/miraihitstudio"
+                                    >
+                                        Instagram
+                                    </a>
 
-            color:#00D4FF;
+                                    •
 
-            font-size:20px;
+                                    <a href="https://youtube.com"> YouTube </a>
+                                </div>
 
-            font-weight:bold;
+                                <br />
 
-        }
+                                <div class="footer-text">
+                                    © {{ ano }} Mirai Hit Studio
 
-        .footer-text{
+                                    <br />
 
-            color:#C8D1E1;
-
-            font-size:14px;
-
-            line-height:1.7;
-
-        }
-
-        .footer-links{
-
-            margin-top:20px;
-
-        }
-
-        .footer-links a{
-
-            color:#00D4FF;
-
-            margin:0 10px;
-
-            font-size:14px;
-
-        }
-
-        .social{
-
-            margin-top:25px;
-
-        }
-
-        .social img{
-
-            width:28px;
-
-        }
-
-        @media only screen and (max-width:700px){
-
-        .content{
-
-        padding:30px;
-
-        }
-
-        .header{
-
-        padding:30px;
-
-        }
-
-        .logo{
-
-        width:180px;
-
-        }
-
-        h1{
-
-        font-size:24px;
-
-        }
-
-        .button{
-
-        display:block;
-
-        text-align:center;
-
-        }
-
-        }
-    </style>
-
-</head>
-
-<body>
-
-    <table
-    width="100%"
-    class="wrapper">
-
-        <tr>
-
-            <td align="center">
-
-                <table
-                class="container">
-
-                    <!-- HEADER -->
-
-                    <tr>
-
-                        <td class="header">
-
-                            <img
-                            src="https://miraihitstudio.com.br/img/logo-horizontal.webp"
-                            class="logo"
-                            alt="Mirai Hit Studio">
-
-                            <div class="subtitle">
-
-                            Criando hits do futuro.
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                    <!-- CONTENT -->
-
-                    <tr>
-
-                        <td class="content">
-
-                        {% block content %}
-
-                        {% endblock %}
-
-                        </td>
-
-                    </tr>
-
-                    <!-- FOOTER -->
-
-                    <tr>
-
-                        <td class="footer">
-
-                            <div class="footer-title">
-
-                                Mirai Hit Studio
-
-                            </div>
-
-                            <div class="footer-text">
-
-                                Produção musical especializada no universo Geek,
-                                Anime e Games.
-
-                                <br><br>
-
-                                Transformando criatividade em experiências sonoras
-                                com identidade, tecnologia e precisão.
-
-                            </div>
-
-                            <div class="divider"></div>
-
-                            <div class="footer-links">
-
-                                <a href="https://miraihitstudio.com.br">
-
-                                Site
-
-                                </a>
-
-                                •
-
-                                <a href="https://instagram.com/miraihitstudio">
-
-                                Instagram
-
-                                </a>
-
-                                •
-
-                                <a href="https://youtube.com">
-
-                                YouTube
-
-                                </a>
-
-                            </div>
-
-                            <br>
-
-                            <div class="footer-text">
-
-                                © {{ ano }} Mirai Hit Studio
-
-                                <br>
-
-                                Todos os direitos reservados.
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                </table>
-
-            </td>
-
-        </tr>
-
-    </table>
-
-</body>
-
+                                    Todos os direitos reservados.
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
 </html>

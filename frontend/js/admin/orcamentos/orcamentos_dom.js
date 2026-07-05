@@ -11,7 +11,7 @@ export function createDivElement(className = "") {
 export function createButtonElement({
     text = "",
     className = "",
-    type = "button"
+    type = "button",
 } = {}) {
     const button = document.createElement("button");
 
@@ -35,15 +35,11 @@ export function createOrcamentoCardElement() {
     return {
         card,
         info,
-        actions
+        actions,
     };
 }
 
-export function createTextElement(
-    tag = "span",
-    text = "",
-    className = ""
-) {
+export function createTextElement(tag = "span", text = "", className = "") {
     const element = document.createElement(tag);
 
     element.textContent = text ?? "";
@@ -58,7 +54,7 @@ export function createTextElement(
 export function createSelectElement({
     options = [],
     value = "",
-    className = ""
+    className = "",
 } = {}) {
     const select = document.createElement("select");
 
@@ -66,7 +62,7 @@ export function createSelectElement({
         select.className = className;
     }
 
-    options.forEach(item => {
+    options.forEach((item) => {
         const option = document.createElement("option");
 
         option.value = item.value ?? "";

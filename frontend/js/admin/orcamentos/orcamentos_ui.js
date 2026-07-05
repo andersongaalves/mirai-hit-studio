@@ -5,7 +5,7 @@ import {
     createOrcamentoCardElement,
     createButtonElement,
     createTextElement,
-    createSelectElement
+    createSelectElement,
 } from "./orcamentos_dom.js";
 
 import { STATUS_OPTIONS } from "./orcamentos_utils.js";
@@ -14,15 +14,12 @@ const emptyHandlers = {
     onVisualizar: () => {},
     onDeletar: () => {},
     onAlterarStatus: () => {},
-    onAlterarProdutor: () => {}
+    onAlterarProdutor: () => {},
 };
 
 export function renderizarOrcamentos(
     orcamentos = [],
-    {
-        produtores = [],
-        handlers = {}
-    } = {}
+    { produtores = [], handlers = {} } = {},
 ) {
     const container = $("orcamentos-list");
 
@@ -41,38 +38,28 @@ export function renderizarOrcamentos(
 
     const activeHandlers = {
         ...emptyHandlers,
-        ...handlers
+        ...handlers,
     };
 
-    orcamentos.forEach(item => {
+    orcamentos.forEach((item) => {
         container.appendChild(
-            createOrcamentoCard(
-                item,
-                produtores,
-                activeHandlers
-            )
+            createOrcamentoCard(item, produtores, activeHandlers),
         );
     });
 }
 
 function createOrcamentoCard(item, produtores, handlers) {
-    const {
-        card,
-        info,
-        actions
-    } = createOrcamentoCardElement();
+    const { card, info, actions } = createOrcamentoCardElement();
 
     info.append(
         createStatusSelect(item, handlers),
         createProdutorSelect(item, produtores, handlers),
         createTextElement("strong", item.nome_cliente),
         createTextElement("p", item.servico),
-        createTextElement("span", money(item.valor_total))
+        createTextElement("span", money(item.valor_total)),
     );
 
-    actions.append(
-        ...createActions(item, handlers)
-    );
+    actions.append(...createActions(item, handlers));
 
     return card;
 }
@@ -81,14 +68,11 @@ function createStatusSelect(item, handlers) {
     const select = createSelectElement({
         value: item.status,
         className: "status-select",
-        options: STATUS_OPTIONS
+        options: STATUS_OPTIONS,
     });
 
-    select.onchange = e => {
-        handlers.onAlterarStatus(
-            item.id,
-            e.target.value
-        );
+    select.onchange = (e) => {
+        handlers.onAlterarStatus(item.id, e.target.value);
     };
 
     return select;
@@ -98,28 +82,24 @@ function createProdutorSelect(item, produtores, handlers) {
     const options = [
         {
             value: "",
-            label: "👤 Sem produtor"
+            label: "👤 Sem produtor",
         },
-        ...produtores.map(
-            user => ({
-                value: user.id,
-                label: `👤 ${user.username}`
-            })
-        )
+        ...produtores.map((user) => ({
+            value: user.id,
+            label: `👤 ${user.username}`,
+        })),
     ];
 
     const select = createSelectElement({
         value: item.produtor_id ?? "",
         className: "produtor-select",
-        options
+        options,
     });
 
-    select.onchange = e => {
+    select.onchange = (e) => {
         handlers.onAlterarProdutor(
             item.id,
-            e.target.value
-                ? Number(e.target.value)
-                : null
+            e.target.value ? Number(e.target.value) : null,
         );
     };
 
@@ -128,7 +108,7 @@ function createProdutorSelect(item, produtores, handlers) {
 
 function createActions(item, handlers) {
     const btnVer = createButtonElement({
-        text: "Ver"
+        text: "Ver",
     });
 
     btnVer.onclick = () => {
@@ -137,15 +117,12 @@ function createActions(item, handlers) {
 
     const btnExcluir = createButtonElement({
         text: "Excluir",
-        className: "btn-danger"
+        className: "btn-danger",
     });
 
     btnExcluir.onclick = () => {
         handlers.onDeletar(item.id);
     };
 
-    return [
-        btnVer,
-        btnExcluir
-    ];
+    return [btnVer, btnExcluir];
 }

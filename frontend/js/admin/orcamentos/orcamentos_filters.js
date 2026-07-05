@@ -22,8 +22,6 @@ export function filtrarOrcamentos(orcamentos = [], filtro = {}) {
     const status = filtro.status || "todos";
 
     return orcamentos.filter(
-        item =>
-            matchesBusca(item, busca) &&
-            matchesStatus(item, status)
+        (item) => matchesBusca(item, busca) && matchesStatus(item, status),
     );
 }

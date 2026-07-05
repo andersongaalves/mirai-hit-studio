@@ -5,23 +5,15 @@ import { builderState } from "./builder_state.js";
  * ========================================================== */
 
 export function renderPreview() {
-
-    const preview = document.getElementById(
-        "builder-preview-render"
-    );
+    const preview = document.getElementById("builder-preview-render");
 
     if (!preview) return;
 
     preview.innerHTML = [
-
         renderIntro(),
-
         renderSections(),
-
-        renderBenefits()
-
+        renderBenefits(),
     ].join("");
-
 }
 
 /* ============================================================
@@ -29,7 +21,6 @@ export function renderPreview() {
  * ========================================================== */
 
 function renderIntro() {
-
     if (!builderState.intro.trim()) {
         return "";
     }
@@ -43,7 +34,6 @@ function renderIntro() {
         </p>
 
     `;
-
 }
 
 /* ============================================================
@@ -51,17 +41,14 @@ function renderIntro() {
  * ========================================================== */
 
 function renderSections() {
-
     return builderState.sections
 
         .map(renderSection)
 
         .join("");
-
 }
 
 function renderSection(secao) {
-
     return `
 
         <div class="preview-section">
@@ -87,23 +74,22 @@ function renderSection(secao) {
         </div>
 
     `;
-
 }
 
 function renderItems(secao) {
-
     return secao.items
 
-        .filter(item => item.trim())
+        .filter((item) => item.trim())
 
-        .map(item => `
+        .map(
+            (item) => `
 
             <li>${item}</li>
 
-        `)
+        `,
+        )
 
         .join("");
-
 }
 
 /* ============================================================
@@ -111,10 +97,7 @@ function renderItems(secao) {
  * ========================================================== */
 
 function renderBenefits() {
-
-    const benefits = builderState.benefits
-
-        .filter(item => item.trim());
+    const benefits = builderState.benefits.filter((item) => item.trim());
 
     if (benefits.length === 0) {
         return "";
@@ -134,11 +117,13 @@ function renderBenefits() {
 
                 ${benefits
 
-                    .map(item => `
+                    .map(
+                        (item) => `
 
                         <li>${item}</li>
 
-                    `)
+                    `,
+                    )
 
                     .join("")}
 
@@ -147,5 +132,4 @@ function renderBenefits() {
         </div>
 
     `;
-
 }

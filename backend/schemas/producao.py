@@ -1,10 +1,10 @@
 from datetime import datetime
 from pydantic import BaseModel
 
-
 # ===========================
 # BASE
 # ===========================
+
 
 class ProducaoBase(BaseModel):
 
@@ -23,6 +23,7 @@ class ProducaoBase(BaseModel):
 # CREATE
 # ===========================
 
+
 class ProducaoCreate(ProducaoBase):
 
     produtor_id: int | None = None
@@ -34,6 +35,7 @@ class ProducaoCreate(ProducaoBase):
 # UPDATE STATUS
 # ===========================
 
+
 class ProducaoStatusUpdate(BaseModel):
 
     status: str
@@ -42,6 +44,7 @@ class ProducaoStatusUpdate(BaseModel):
 # ===========================
 # RESPONSE
 # ===========================
+
 
 class ProducaoResponse(ProducaoBase):
 
@@ -57,11 +60,7 @@ class ProducaoResponse(ProducaoBase):
 
     updated_at: datetime
 
-    model_config = {
-
-        "from_attributes": True
-
-    }
+    model_config = {"from_attributes": True}
 
     etapas: str
 
@@ -71,8 +70,10 @@ class ProducaoResponse(ProducaoBase):
 
     updated_at: datetime
 
+
 class ProducaoEtapasUpdate(BaseModel):
     etapas: str
+
 
 class ProducaoPrazoUpdate(BaseModel):
     prazo_entrega: datetime

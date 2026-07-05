@@ -47,14 +47,10 @@ export function abrirModalOrcamento(orcamento) {
     setValue("orc_observacoes", orcamento.observacoes);
     setHref("orc_guia", orcamento.link_guia);
 
-    $("modal-orcamento")
-        ?.classList
-        .remove("hidden");
+    $("modal-orcamento")?.classList.remove("hidden");
 }
 
-export function registrarEventosModal({
-    onSalvarObservacoes = () => {}
-} = {}) {
+export function registrarEventosModal({ onSalvarObservacoes = () => {} } = {}) {
     const btn = $("btn-save-observacoes");
 
     if (!btn) return;
@@ -64,17 +60,12 @@ export function registrarEventosModal({
 
         if (!orcamentoAtual || !observacoes) return;
 
-        onSalvarObservacoes(
-            orcamentoAtual.id,
-            observacoes.value
-        );
+        onSalvarObservacoes(orcamentoAtual.id, observacoes.value);
     };
 }
 
 export function fecharModalOrcamento() {
     orcamentoAtual = null;
 
-    $("modal-orcamento")
-        ?.classList
-        .add("hidden");
+    $("modal-orcamento")?.classList.add("hidden");
 }

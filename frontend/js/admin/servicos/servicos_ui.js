@@ -4,18 +4,15 @@ import { money } from "../../utils/format.js";
 import {
     createServicoCardElement,
     createButtonElement,
-    createTextElement
+    createTextElement,
 } from "./servicos_dom.js";
 
 const emptyHandlers = {
     onEditar: () => {},
-    onDeletar: () => {}
+    onDeletar: () => {},
 };
 
-export function renderizarServicos(
-    servicos = [],
-    handlers = {}
-) {
+export function renderizarServicos(servicos = [], handlers = {}) {
     const container = $("lista-servicos");
 
     if (!container) return;
@@ -33,34 +30,28 @@ export function renderizarServicos(
 
     const activeHandlers = {
         ...emptyHandlers,
-        ...handlers
+        ...handlers,
     };
 
-    servicos.forEach(servico => {
-        container.appendChild(
-            createServicoCard(servico, activeHandlers)
-        );
+    servicos.forEach((servico) => {
+        container.appendChild(createServicoCard(servico, activeHandlers));
     });
 }
 
 function createServicoCard(servico, handlers) {
-    const {
-        card,
-        info,
-        actions
-    } = createServicoCardElement();
+    const { card, info, actions } = createServicoCardElement();
 
     info.append(
         createTextElement("strong", servico.nome),
         createTextElement(
             "span",
-            `${servico.categoria} | ${money(servico.valor_base)}`
-        )
+            `${servico.categoria} | ${money(servico.valor_base)}`,
+        ),
     );
 
     actions.append(
         createEditButton(servico, handlers),
-        createDeleteButton(servico, handlers)
+        createDeleteButton(servico, handlers),
     );
 
     return card;
@@ -68,7 +59,7 @@ function createServicoCard(servico, handlers) {
 
 function createEditButton(servico, handlers) {
     const button = createButtonElement({
-        text: "Editar"
+        text: "Editar",
     });
 
     button.onclick = () => {
@@ -81,7 +72,7 @@ function createEditButton(servico, handlers) {
 function createDeleteButton(servico, handlers) {
     const button = createButtonElement({
         text: "Excluir",
-        className: "btn-small btn-danger"
+        className: "btn-small btn-danger",
     });
 
     button.onclick = () => {

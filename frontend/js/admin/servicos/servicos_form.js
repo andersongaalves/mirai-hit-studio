@@ -9,7 +9,7 @@ const formFields = [
     "srv_subtitulo",
     "srv_valor",
     "srv_categoria",
-    "srv_aplica_desconto"
+    "srv_aplica_desconto",
 ];
 
 function setValue(id, value = "") {
@@ -33,9 +33,7 @@ function setEditorTitle(text) {
 }
 
 export function abrirFormularioServico(servico = null) {
-    show(
-        $("editor-servico")
-    );
+    show($("editor-servico"));
 
     if (!servico) {
         setEditorTitle("Criar Serviço");
@@ -49,26 +47,19 @@ export function abrirFormularioServico(servico = null) {
     setValue("srv_subtitulo", servico.subtitulo);
     setValue("srv_valor", servico.valor_base);
     setValue("srv_categoria", servico.categoria);
-    setValue(
-        "srv_aplica_desconto",
-        String(!!servico.aplica_desconto)
-    );
+    setValue("srv_aplica_desconto", String(!!servico.aplica_desconto));
 
-    Builder.carregarBuilder(
-        servico.estrutura_servico
-    );
+    Builder.carregarBuilder(servico.estrutura_servico);
 
     BuilderUI.initBuilder();
 }
 
 export function fecharFormularioServico() {
-    hide(
-        $("editor-servico")
-    );
+    hide($("editor-servico"));
 }
 
 export function limparFormularioServico() {
-    formFields.forEach(id => {
+    formFields.forEach((id) => {
         setValue(id, "");
     });
 
@@ -88,10 +79,9 @@ export function getServicoFormPayload(parametros = []) {
             subtitulo: getValue("srv_subtitulo").trim(),
             valor_base: Number(getValue("srv_valor") || 0),
             categoria: getValue("srv_categoria"),
-            aplica_desconto:
-                getValue("srv_aplica_desconto") === "true",
+            aplica_desconto: getValue("srv_aplica_desconto") === "true",
             parametros: parametros.join(","),
-            estrutura_servico: Builder.gerarJSON()
-        }
+            estrutura_servico: Builder.gerarJSON(),
+        },
     };
 }

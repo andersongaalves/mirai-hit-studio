@@ -3,14 +3,14 @@ const STATUS_LABELS = {
     em_analise: "🔵 Em análise",
     aprovado: "🟢 Aprovado",
     recusado: "🔴 Recusado",
-    arquivado: "⚫ Arquivado"
+    arquivado: "⚫ Arquivado",
 };
 
 export const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(
     ([value, label]) => ({
         value,
-        label
-    })
+        label,
+    }),
 );
 
 export function formatStatus(status) {

@@ -1,15 +1,11 @@
 def listar(db):
 
-    return db.query(
-        ProjetoModel
-    ).all()
+    return db.query(ProjetoModel).all()
 
 
 def criar(db, projeto):
 
-    novo = ProjetoModel(
-        **projeto.model_dump()
-    )
+    novo = ProjetoModel(**projeto.model_dump())
 
     db.add(novo)
 
@@ -20,19 +16,9 @@ def criar(db, projeto):
     return novo
 
 
-def atualizar(
-    db,
-    projeto_id,
-    dados
-):
+def atualizar(db, projeto_id, dados):
 
-    projeto = (
-        db.query(ProjetoModel)
-        .filter(
-            ProjetoModel.id == projeto_id
-        )
-        .first()
-    )
+    projeto = db.query(ProjetoModel).filter(ProjetoModel.id == projeto_id).first()
 
     if not projeto:
 
@@ -49,18 +35,9 @@ def atualizar(
     return projeto
 
 
-def deletar(
-    db,
-    projeto_id
-):
+def deletar(db, projeto_id):
 
-    projeto = (
-        db.query(ProjetoModel)
-        .filter(
-            ProjetoModel.id == projeto_id
-        )
-        .first()
-    )
+    projeto = db.query(ProjetoModel).filter(ProjetoModel.id == projeto_id).first()
 
     if not projeto:
 

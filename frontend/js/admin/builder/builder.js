@@ -9,9 +9,7 @@ function gerarId() {
 }
 
 function obterSecao(id) {
-    return builderState.sections.find(
-        secao => secao.id === id
-    );
+    return builderState.sections.find((secao) => secao.id === id);
 }
 
 function criarSecao(dados = {}) {
@@ -20,7 +18,7 @@ function criarSecao(dados = {}) {
         icon: dados.icon ?? "",
         title: dados.title ?? "",
         open: dados.open ?? true,
-        items: [...(dados.items ?? [""])]
+        items: [...(dados.items ?? [""])],
     };
 }
 
@@ -29,15 +27,12 @@ function criarSecao(dados = {}) {
  * ========================================================== */
 
 export function resetBuilder() {
-
     builderState.intro = "";
     builderState.sections = [];
     builderState.benefits = [];
-
 }
 
 export function carregarBuilder(json) {
-
     resetBuilder();
 
     if (!json) return;
@@ -45,32 +40,18 @@ export function carregarBuilder(json) {
     let dados = json;
 
     if (typeof json === "string") {
-
         try {
-
             dados = JSON.parse(json);
-
-        }
-
-        catch {
-
+        } catch {
             return;
-
         }
-
     }
 
-    builderState.intro =
-        dados.intro ?? "";
+    builderState.intro = dados.intro ?? "";
 
-    builderState.sections =
-        (dados.sections ?? []).map(
-            criarSecao
-        );
+    builderState.sections = (dados.sections ?? []).map(criarSecao);
 
-    builderState.benefits =
-        [...(dados.benefits ?? [])];
-
+    builderState.benefits = [...(dados.benefits ?? [])];
 }
 
 /* ============================================================
@@ -78,9 +59,7 @@ export function carregarBuilder(json) {
  * ========================================================== */
 
 export function atualizarIntro(valor) {
-
     builderState.intro = valor;
-
 }
 
 /* ============================================================
@@ -88,40 +67,29 @@ export function atualizarIntro(valor) {
  * ========================================================== */
 
 export function adicionarSecao() {
-
-    builderState.sections.push(
-        criarSecao()
-    );
-
+    builderState.sections.push(criarSecao());
 }
 
 export function removerSecao(id) {
-
-    builderState.sections =
-        builderState.sections.filter(
-            secao => secao.id !== id
-        );
-
+    builderState.sections = builderState.sections.filter(
+        (secao) => secao.id !== id,
+    );
 }
 
 export function atualizarSecao(id, campo, valor) {
-
     const secao = obterSecao(id);
 
     if (!secao) return;
 
     secao[campo] = valor;
-
 }
 
 export function alternarSecao(id) {
-
     const secao = obterSecao(id);
 
     if (!secao) return;
 
     secao.open = !secao.open;
-
 }
 
 /* ============================================================
@@ -129,33 +97,27 @@ export function alternarSecao(id) {
  * ========================================================== */
 
 export function adicionarItem(idSecao) {
-
     const secao = obterSecao(idSecao);
 
     if (!secao) return;
 
     secao.items.push("");
-
 }
 
 export function atualizarItem(idSecao, index, valor) {
-
     const secao = obterSecao(idSecao);
 
     if (!secao) return;
 
     secao.items[index] = valor;
-
 }
 
 export function removerItem(idSecao, index) {
-
     const secao = obterSecao(idSecao);
 
     if (!secao) return;
 
     secao.items.splice(index, 1);
-
 }
 
 /* ============================================================
@@ -163,21 +125,15 @@ export function removerItem(idSecao, index) {
  * ========================================================== */
 
 export function adicionarBeneficio() {
-
     builderState.benefits.push("");
-
 }
 
 export function atualizarBeneficio(index, valor) {
-
     builderState.benefits[index] = valor;
-
 }
 
 export function removerBeneficio(index) {
-
     builderState.benefits.splice(index, 1);
-
 }
 
 /* ============================================================
@@ -185,45 +141,23 @@ export function removerBeneficio(index) {
  * ========================================================== */
 
 export function gerarObjeto() {
-
     return {
-
         intro: builderState.intro,
 
-        sections: builderState.sections.map(
+        sections: builderState.sections.map((secao) => ({
+            icon: secao.icon,
 
-            secao => ({
+            title: secao.title,
 
-                icon: secao.icon,
+            items: secao.items.filter((item) => item.trim()),
+        })),
 
-                title: secao.title,
-
-                items: secao.items.filter(
-
-                    item => item.trim()
-
-                )
-
-            })
-
-        ),
-
-        benefits: builderState.benefits.filter(
-
-            item => item.trim()
-
-        )
-
+        benefits: builderState.benefits.filter((item) => item.trim()),
     };
-
 }
 
 export function gerarJSON() {
-
-    return JSON.stringify(
-        gerarObjeto()
-    );
-
+    return JSON.stringify(gerarObjeto());
 }
 
 /* ============================================================
@@ -231,7 +165,5 @@ export function gerarJSON() {
  * ========================================================== */
 
 export function obterState() {
-
     return builderState;
-
 }

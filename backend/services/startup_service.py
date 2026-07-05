@@ -23,10 +23,7 @@ def startup_database():
 
         if os.path.exists("backups/servicos_backup.json"):
 
-            with open(
-                "backups/servicos_backup.json",
-                encoding="utf-8"
-            ) as file:
+            with open("backups/servicos_backup.json", encoding="utf-8") as file:
 
                 servicos = json.load(file)
 
@@ -46,10 +43,7 @@ def startup_database():
 
         if os.path.exists("backups/projetos_backup.json"):
 
-            with open(
-                "backups/projetos_backup.json",
-                encoding="utf-8"
-            ) as file:
+            with open("backups/projetos_backup.json", encoding="utf-8") as file:
 
                 projetos = json.load(file)
 

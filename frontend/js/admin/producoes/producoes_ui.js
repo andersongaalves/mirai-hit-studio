@@ -1,39 +1,21 @@
 import {
     createProducaoCardElement,
     createTextElement,
-    createSelectElement
+    createSelectElement,
 } from "./producoes_dom.js";
 
+import { STATUS_PRODUCAO, calcularPrazo } from "./producoes_utils.js";
 
-import {
-    STATUS_PRODUCAO,
-    calcularPrazo
-} from "./producoes_utils.js";
+import { alterarStatus, visualizarProducao } from "./producoes.js";
 
+export function renderizarProducoes(producoes) {
+    const container = document.getElementById("producoes-list");
 
-import {
-    alterarStatus,
-    visualizarProducao
-} from "./producoes.js";
-
-export function renderizarProducoes(
-    producoes
-) {
-
-    const container =
-        document.getElementById(
-            "producoes-list"
-        );
-
-
-    if(!container) return;
-
+    if (!container) return;
 
     container.innerHTML = "";
 
-
-    if(producoes.length === 0){
-
+    if (producoes.length === 0) {
         container.innerHTML = `
             <div class="admin-empty">
                 Nenhuma produção encontrada.
@@ -41,112 +23,59 @@ export function renderizarProducoes(
         `;
 
         return;
-
     }
 
-
-    producoes.forEach(item => {
-
-        container.appendChild(
-
-            criarCardProducao(
-                item
-            )
-
-        );
-
+    producoes.forEach((item) => {
+        container.appendChild(criarCardProducao(item));
     });
-
 }
 
+function criarCardProducao(item) {
+    const { card, info, actions } = createProducaoCardElement();
 
+    const status = createSelectElement({
+        value: item.status,
 
-function criarCardProducao(item){
+        className: "status-select",
 
-    const {
-        card,
-        info,
-        actions
-    } = createProducaoCardElement();
+        options: STATUS_PRODUCAO,
+    });
 
-
-
-    const status =
-        createSelectElement({
-
-            value:item.status,
-
-            className:"status-select",
-
-            options:
-                STATUS_PRODUCAO
-
-        });
-
-
-
-    status.onchange = e => {
-
-
+    status.onchange = (e) => {
         alterarStatus(
-
             item.id,
 
-            e.target.value
-
+            e.target.value,
         );
-
-
     };
 
+    const titulo = createTextElement(
+        "strong",
 
+        item.titulo,
+    );
 
-    const titulo =
-        createTextElement(
+    const cliente = createTextElement(
+        "p",
 
-            "strong",
+        `Cliente: ${item.cliente}`,
+    );
 
-            item.titulo
+    const servico = createTextElement(
+        "span",
 
-        );
+        item.servico,
+    );
 
+    const prazo = createTextElement(
+        "p",
 
-    const cliente =
-        createTextElement(
+        calcularPrazo(item.prazo_entrega),
 
-            "p",
-
-            `Cliente: ${item.cliente}`
-
-        );
-
-
-    const servico =
-        createTextElement(
-
-            "span",
-
-            item.servico
-
-        );
-
-    const prazo =
-        createTextElement(
-
-            "p",
-
-            calcularPrazo(
-                item.prazo_entrega
-            ),
-
-            "producao-prazo"
-
-        );
-
-
+        "producao-prazo",
+    );
 
     info.append(
-
         status,
 
         titulo,
@@ -155,29 +84,18 @@ function criarCardProducao(item){
 
         servico,
 
-        prazo
-
+        prazo,
     );
 
     const btnVer = document.createElement("button");
 
-    btnVer.textContent =
-        "Ver";
-
+    btnVer.textContent = "Ver";
 
     btnVer.onclick = () => {
-
-        visualizarProducao(
-            item.id
-        );
-
+        visualizarProducao(item.id);
     };
 
-
-    actions.append(
-        btnVer
-    );
+    actions.append(btnVer);
 
     return card;
-
 }

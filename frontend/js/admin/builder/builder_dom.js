@@ -3,7 +3,6 @@
  * ========================================================== */
 
 function appendChildren(parent, ...children) {
-
     parent.append(...children);
 }
 
@@ -12,27 +11,22 @@ function appendChildren(parent, ...children) {
  * ========================================================== */
 
 export function createDivElement(className = "") {
-
     const div = document.createElement("div");
 
     div.className = className;
 
     return div;
-
 }
 
 export function createInputElement({
-
     className = "",
 
     value = "",
 
     placeholder = "",
 
-    type = "text"
-
+    type = "text",
 }) {
-
     const input = document.createElement("input");
 
     input.type = type;
@@ -44,19 +38,15 @@ export function createInputElement({
     input.placeholder = placeholder;
 
     return input;
-
 }
 
 export function createButtonElement({
-
     className = "",
 
     text = "",
 
-    type = "button"
-
+    type = "button",
 }) {
-
     const button = document.createElement("button");
 
     button.type = type;
@@ -66,7 +56,6 @@ export function createButtonElement({
     button.textContent = text;
 
     return button;
-
 }
 
 /* ============================================================
@@ -74,12 +63,9 @@ export function createButtonElement({
  * ========================================================== */
 
 export function createSectionCardElement(secao) {
+    const card = createDivElement("builder-card");
 
-    const card =
-        createDivElement("builder-card");
-
-    const bodyDisplay =
-        secao.open ? "block" : "none";
+    const bodyDisplay = secao.open ? "block" : "none";
 
     card.innerHTML = `
 
@@ -133,103 +119,68 @@ export function createSectionCardElement(secao) {
     `;
 
     return card;
-
 }
 
 export function createItemRowElement({
-
     value = "",
 
-    placeholder = "Novo Item"
-
+    placeholder = "Novo Item",
 } = {}) {
+    const row = createDivElement("builder-item-row");
 
-    const row =
-        createDivElement("builder-item-row");
+    const input = createInputElement({
+        className: "builder-item",
 
-    const input =
-        createInputElement({
+        value,
 
-            className: "builder-item",
+        placeholder,
+    });
 
-            value,
+    const button = createButtonElement({
+        className: "btn-small",
 
-            placeholder
+        text: "✕",
+    });
 
-        });
-
-    const button =
-        createButtonElement({
-
-            className: "btn-small",
-
-            text: "✕"
-
-        });
-
-    appendChildren(
-        row,
-        input,
-        button
-    );
+    appendChildren(row, input, button);
 
     return {
-
         row,
 
         input,
 
-        button
-
+        button,
     };
-
 }
 
 export function createBenefitRowElement({
-
     value = "",
 
-    placeholder = "Benefício"
-
+    placeholder = "Benefício",
 } = {}) {
+    const row = createDivElement("builder-benefit-row");
 
-    const row =
-        createDivElement("builder-benefit-row");
+    const input = createInputElement({
+        className: "builder-benefit",
 
-    const input =
-        createInputElement({
+        value,
 
-            className: "builder-benefit",
+        placeholder,
+    });
 
-            value,
+    const button = createButtonElement({
+        className: "btn-small",
 
-            placeholder
+        text: "✕",
+    });
 
-        });
-
-    const button =
-        createButtonElement({
-
-            className: "btn-small",
-
-            text: "✕"
-
-        });
-
-    appendChildren(
-        row,
-        input,
-        button
-    );
+    appendChildren(row, input, button);
 
     return {
-
         row,
 
         input,
 
-        button
-
+        button,
     };
-
 }

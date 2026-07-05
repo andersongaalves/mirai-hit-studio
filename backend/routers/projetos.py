@@ -10,10 +10,7 @@ from schemas.projeto import (
 
 from core.dependencies import get_current_user
 
-router = APIRouter(
-    prefix="/projetos",
-    tags=["Projetos"]
-)
+router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
 
 @router.get("", response_model=list[ProjetoResponse])
@@ -23,14 +20,10 @@ def listar_projetos(db: Session = Depends(get_db)):
 
 @router.post("", response_model=ProjetoResponse)
 def criar_projeto(
-    proj: ProjetoCreate,
-    db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    proj: ProjetoCreate, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
 
-    novo = models.ProjetoModel(
-        **proj.model_dump()
-    )
+    novo = models.ProjetoModel(**proj.model_dump())
 
     db.add(novo)
 
@@ -46,14 +39,10 @@ def atualizar_projeto(
     id: int,
     proj_atualizado: ProjetoCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(get_current_user),
 ):
 
-    projeto = (
-        db.query(models.ProjetoModel)
-        .filter(models.ProjetoModel.id == id)
-        .first()
-    )
+    projeto = db.query(models.ProjetoModel).filter(models.ProjetoModel.id == id).first()
 
     if not projeto:
         raise HTTPException(status_code=404)
@@ -70,16 +59,10 @@ def atualizar_projeto(
 
 @router.delete("/{id}")
 def deletar_projeto(
-    id: int,
-    db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
 
-    projeto = (
-        db.query(models.ProjetoModel)
-        .filter(models.ProjetoModel.id == id)
-        .first()
-    )
+    projeto = db.query(models.ProjetoModel).filter(models.ProjetoModel.id == id).first()
 
     if not projeto:
         raise HTTPException(status_code=404)

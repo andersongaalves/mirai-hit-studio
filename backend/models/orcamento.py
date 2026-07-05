@@ -1,12 +1,4 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    Float,
-    Text,
-    DateTime,
-    ForeignKey
-)
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -25,10 +17,7 @@ class OrcamentoModel(Base):
 
     whatsapp = Column(String(30))
 
-    servico = Column(
-        String(100),
-        nullable=False
-    )
+    servico = Column(String(100), nullable=False)
 
     valor_total = Column(Float)
 
@@ -36,36 +25,16 @@ class OrcamentoModel(Base):
 
     detalhes = Column(Text)
 
-    data_solicitacao = Column(
-        DateTime(timezone=True),
-        server_default=func.now()
-    )
+    data_solicitacao = Column(DateTime(timezone=True), server_default=func.now())
 
-    status = Column(
-        String(20),
-        default="novo",
-        nullable=False
-    )
+    status = Column(String(20), default="novo", nullable=False)
 
-    produtor_id = Column(
-        Integer,
-        ForeignKey("usuarios.id"),
-        nullable=True
-    )
+    produtor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 
-    observacoes = Column(
-        Text,
-        default="",
-        nullable=False
-    )
+    observacoes = Column(Text, default="", nullable=False)
 
     updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    produtor = relationship(
-        "UsuarioModel",
-        foreign_keys=[produtor_id]
-    )
+    produtor = relationship("UsuarioModel", foreign_keys=[produtor_id])

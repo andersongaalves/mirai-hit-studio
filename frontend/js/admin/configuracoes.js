@@ -1,27 +1,16 @@
-import * as API
-from "../api.js";
+import * as API from "../api.js";
 
+import { authFetch } from "./auth.js";
 
-import {
-    authFetch
-} from "./auth.js";
+import * as Notify from "../utils/notifications.js";
 
-
-import * as Notify
-from "../utils/notifications.js";
-
-
-import {
-    $
-} from "../utils/dom.js";
-
+import { $ } from "../utils/dom.js";
 
 // ===========================
 // CAMPOS
 // ===========================
 
 const CONFIG_FIELDS = [
-
     "cfg_desconto",
 
     "val_extra_duracao",
@@ -44,184 +33,79 @@ const CONFIG_FIELDS = [
 
     "val_prazo_express",
 
-    "val_lease_desconto"
-
+    "val_lease_desconto",
 ];
-
 
 // ===========================
 // LOAD
 // ===========================
 
 export async function carregarConfiguracoes() {
-
-
     try {
+        const config = await API.getAPI("config");
 
-
-        const config =
-            await API.getAPI(
-                "config"
-            );
-
-
-        preencherFormulario(
-            config
-        );
-
-
-    }
-
-
-    catch(error){
-
-
+        preencherFormulario(config);
+    } catch (error) {
         console.error(error);
 
-
-        Notify.error(
-            "Erro ao carregar configurações."
-        );
-
-
+        Notify.error("Erro ao carregar configurações.");
     }
-
 }
-
 
 // ===========================
 // FORM
 // ===========================
 
-function preencherFormulario(
-    config
-) {
+function preencherFormulario(config) {
+    Object.entries(config).forEach(([campo, valor]) => {
+        const input = $(campo);
 
+        if (!input) {
+            return;
+        }
 
-    Object
-        .entries(config)
-        .forEach(([campo, valor]) => {
-
-
-            const input =
-                $(campo);
-
-
-            if (!input) {
-
-                return;
-
-            }
-
-
-            input.value =
-                valor ?? "";
-
-
-        });
-
+        input.value = valor ?? "";
+    });
 }
-
 
 // ===========================
 // PAYLOAD
 // ===========================
 
 function gerarPayload() {
-
-
     const payload = {};
 
-
-    CONFIG_FIELDS
-        .forEach(campo => {
-
-
-            payload[campo] =
-
-                parseFloat(
-                    $(campo)?.value
-                )
-
-                ||
-
-                0;
-
-
-        });
-
+    CONFIG_FIELDS.forEach((campo) => {
+        payload[campo] = parseFloat($(campo)?.value) || 0;
+    });
 
     return payload;
-
 }
-
 
 // ===========================
 // SAVE
 // ===========================
 
 export async function salvarConfiguracoesExtras() {
-
-
     try {
+        const response = await authFetch(
+            "/config",
 
+            {
+                method: "PUT",
 
-        const response =
-            await authFetch(
-
-                "/config",
-
-                {
-
-                    method: "PUT",
-
-                    body: JSON.stringify(
-
-                        gerarPayload()
-
-                    )
-
-                }
-
-            );
-
+                body: JSON.stringify(gerarPayload()),
+            },
+        );
 
         if (!response.ok) {
-
-
-            throw new Error(
-                "Erro ao salvar configurações"
-            );
-
-
+            throw new Error("Erro ao salvar configurações");
         }
 
-
-        Notify.success(
-
-            "Configurações atualizadas."
-
-        );
-
-
-    }
-
-
-    catch(error){
-
-
+        Notify.success("Configurações atualizadas.");
+    } catch (error) {
         console.error(error);
 
-
-        Notify.error(
-
-            error.message ||
-
-            "Erro ao salvar."
-
-        );
-
-
+        Notify.error(error.message || "Erro ao salvar.");
     }
-
 }

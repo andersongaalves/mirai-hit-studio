@@ -3,5 +3,5 @@ export const state = {
     servicosDB: [],
     servicoSelecionadoOBJ: null,
     valorTotalCalculado: 0,
-    todosProjetos: []
+    todosProjetos: [],
 };

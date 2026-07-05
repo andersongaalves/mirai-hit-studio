@@ -8,90 +8,49 @@ import { refresh } from "./builder_ui.js";
  * ========================================================== */
 
 export function renderBenefits() {
-
-    const container = document.getElementById(
-        "builder-benefits"
-    );
+    const container = document.getElementById("builder-benefits");
 
     if (!container) return;
 
     container.innerHTML = "";
 
-    builderState.benefits.forEach(
-
-        (beneficio, index) => {
-
-            container.appendChild(
-
-                createBenefitComponent(
-                    beneficio,
-                    index
-                )
-
-            );
-
-        }
-
-    );
-
+    builderState.benefits.forEach((beneficio, index) => {
+        container.appendChild(createBenefitComponent(beneficio, index));
+    });
 }
 
 /* ============================================================
  * Componentes
  * ========================================================== */
 
-function createBenefitComponent(
-    beneficio,
-    index
-) {
+function createBenefitComponent(beneficio, index) {
+    const ui = createBenefitRowElement({
+        value: beneficio,
+    });
 
-    const ui =
-        createBenefitRowElement({
-
-            value: beneficio
-
-        });
-
-    bindBenefitEvents(
-        ui,
-        index
-    );
+    bindBenefitEvents(ui, index);
 
     return ui.row;
-
 }
 
 /* ============================================================
  * Eventos
  * ========================================================== */
 
-function bindBenefitEvents(
-    ui,
-    index
-) {
-
+function bindBenefitEvents(ui, index) {
     ui.input.oninput = (e) => {
-
         Builder.atualizarBeneficio(
-
             index,
 
-            e.target.value
-
+            e.target.value,
         );
 
         refresh("preview");
-
     };
 
     ui.button.onclick = () => {
-
-        Builder.removerBeneficio(
-            index
-        );
+        Builder.removerBeneficio(index);
 
         refresh("benefits");
-
     };
-
 }

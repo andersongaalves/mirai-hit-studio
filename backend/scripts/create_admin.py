@@ -1,9 +1,7 @@
 import sys
 from pathlib import Path
 
-sys.path.append(
-    str(Path(__file__).resolve().parent.parent)
-)
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import argparse
 
@@ -25,11 +23,7 @@ db = SessionLocal()
 try:
 
     existe = (
-        db.query(UsuarioModel)
-        .filter(
-            UsuarioModel.username == args.username
-        )
-        .first()
+        db.query(UsuarioModel).filter(UsuarioModel.username == args.username).first()
     )
 
     if existe:
@@ -39,13 +33,9 @@ try:
     else:
 
         admin = UsuarioModel(
-
             username=args.username,
-
             password_hash=get_password_hash(args.password),
-
-            is_admin=True
-
+            is_admin=True,
         )
 
         db.add(admin)

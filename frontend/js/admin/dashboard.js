@@ -1,70 +1,45 @@
 import {
     carregarServicos,
-    inicializarParametros
+    inicializarParametros,
 } from "./servicos/servicos.js";
 
-import {
-    carregarPortfolio
-} from "./projetos.js";
+import { carregarPortfolio } from "./projetos.js";
 
-import {
-    initOrcamentos
-} from "./orcamentos/orcamentos.js";
+import { initOrcamentos } from "./orcamentos/orcamentos.js";
 
-import {
-    carregarConfiguracoes
-} from "./configuracoes.js";
+import { carregarConfiguracoes } from "./configuracoes.js";
 
-import {
-    initProducoes
-} from "./producoes/producoes.js";
+import { initProducoes } from "./producoes/producoes.js";
 
-import {
-    $,
-    $$$,
-    show,
-    hide
-} from "../utils/dom.js";
+import { $, $$$, show, hide } from "../utils/dom.js";
 
 const loaders = [
     carregarServicos,
     carregarPortfolio,
     initOrcamentos,
     carregarConfiguracoes,
-    initProducoes
+    initProducoes,
 ];
 
 export async function inicializarDashboard() {
     mostrarDashboard();
     inicializarParametros();
 
-    await Promise.all(
-        loaders.map(loader => loader())
-    );
+    await Promise.all(loaders.map((loader) => loader()));
 }
 
 export function mostrarDashboard() {
-    $$$(".admin-section").forEach(
-        section => hide(section)
-    );
+    $$$(".admin-section").forEach((section) => hide(section));
 
-    show(
-        $("dashboard-menu")
-    );
+    show($("dashboard-menu"));
 }
 
 export function mostrarSecao(id) {
-    hide(
-        $("dashboard-menu")
-    );
+    hide($("dashboard-menu"));
 
-    $$$(".admin-section").forEach(
-        section => hide(section)
-    );
+    $$$(".admin-section").forEach((section) => hide(section));
 
-    show(
-        $(id)
-    );
+    show($(id));
 }
 
 export function voltarDashboard() {
@@ -72,22 +47,15 @@ export function voltarDashboard() {
 }
 
 export function atualizarTudo() {
-    Promise.all(
-        loaders.map(loader => loader())
-    )
-    .catch(error => {
+    Promise.all(loaders.map((loader) => loader())).catch((error) => {
         console.error(error);
     });
 }
 
 export function abrirModal(id) {
-    show(
-        $(id)
-    );
+    show($(id));
 }
 
 export function fecharModal(id) {
-    hide(
-        $(id)
-    );
+    hide($(id));
 }

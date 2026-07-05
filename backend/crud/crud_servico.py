@@ -1,15 +1,11 @@
 def listar(db):
 
-    return db.query(
-        ServicoModel
-    ).all()
+    return db.query(ServicoModel).all()
 
 
 def criar(db, servico):
 
-    novo = ServicoModel(
-        **servico.model_dump()
-    )
+    novo = ServicoModel(**servico.model_dump())
 
     db.add(novo)
 
@@ -20,19 +16,9 @@ def criar(db, servico):
     return novo
 
 
-def atualizar(
-    db,
-    servico_id,
-    dados
-):
+def atualizar(db, servico_id, dados):
 
-    servico = (
-        db.query(ServicoModel)
-        .filter(
-            ServicoModel.id == servico_id
-        )
-        .first()
-    )
+    servico = db.query(ServicoModel).filter(ServicoModel.id == servico_id).first()
 
     if not servico:
 
@@ -49,18 +35,9 @@ def atualizar(
     return servico
 
 
-def deletar(
-    db,
-    servico_id
-):
+def deletar(db, servico_id):
 
-    servico = (
-        db.query(ServicoModel)
-        .filter(
-            ServicoModel.id == servico_id
-        )
-        .first()
-    )
+    servico = db.query(ServicoModel).filter(ServicoModel.id == servico_id).first()
 
     if not servico:
 

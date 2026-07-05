@@ -3,28 +3,11 @@ from sqlalchemy.orm import Session
 from models.usuario import UsuarioModel
 
 
-def buscar_por_username(
-    db: Session,
-    username: str
-):
+def buscar_por_username(db: Session, username: str):
 
-    return (
+    return db.query(UsuarioModel).filter(UsuarioModel.username == username).first()
 
-        db.query(UsuarioModel)
 
-        .filter(
-            UsuarioModel.username == username
-        )
+def listar_usuarios(db: Session):
 
-        .first()
-
-    )
-
-def listar_usuarios(
-    db: Session
-):
-
-    return (
-        db.query(UsuarioModel)
-        .all()
-    )
+    return db.query(UsuarioModel).all()

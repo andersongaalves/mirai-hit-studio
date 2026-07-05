@@ -14,9 +14,7 @@ def get_current_user(token=Depends(security)):
 
     try:
         payload = jwt.decode(
-            token.credentials,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            token.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
 
         print("PAYLOAD:", payload)
@@ -29,7 +27,4 @@ def get_current_user(token=Depends(security)):
         print("SECRET:", settings.SECRET_KEY)
         print("ALGORITHM:", settings.ALGORITHM)
 
-        raise HTTPException(
-            status_code=401,
-            detail="Token inválido"
-        )
+        raise HTTPException(status_code=401, detail="Token inválido")

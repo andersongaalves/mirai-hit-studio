@@ -1,344 +1,149 @@
-import * as Notify
-from "../utils/notifications.js";
+import * as Notify from "../utils/notifications.js";
 
-
-import {
-
-    $,
-    show,
-    hide,
-    text
-
-} from "../utils/dom.js";
-
+import { $, show, hide, text } from "../utils/dom.js";
 
 // ===========================
 // MODAL
 // ===========================
 
-export function abrirModal(
-    id
-) {
-
-    show(
-        $(id)
-    );
-
+export function abrirModal(id) {
+    show($(id));
 }
 
-
-
-export function fecharModal(
-    id
-) {
-
-    hide(
-        $(id)
-    );
-
+export function fecharModal(id) {
+    hide($(id));
 }
 
-
-
-export function toggleModal(
-    id
-) {
-
-    $(id)
-        ?.classList
-        .toggle("hidden");
-
+export function toggleModal(id) {
+    $(id)?.classList.toggle("hidden");
 }
-
 
 // ===========================
 // LOADING
 // ===========================
 
 export function mostrarLoading() {
-
-    show(
-        $("loading")
-    );
-
+    show($("loading"));
 }
-
-
 
 export function esconderLoading() {
-
-    hide(
-        $("loading")
-    );
-
+    hide($("loading"));
 }
-
 
 // ===========================
 // MENSAGENS
 // ===========================
 
-export function mostrarErro(
-    mensagem
-) {
-
-
-    const box =
-        $("error-message");
-
+export function mostrarErro(mensagem) {
+    const box = $("error-message");
 
     if (!box) {
-
-
-        Notify.error(
-            mensagem
-        );
-
+        Notify.error(mensagem);
 
         return;
-
     }
-
 
     text(
         box,
 
-        mensagem
+        mensagem,
     );
 
-
-    show(
-        box
-    );
-
+    show(box);
 }
-
-
 
 export function limparErro() {
+    const box = $("error-message");
 
+    text(box, "");
 
-    const box =
-        $("error-message");
-
-
-    text(
-        box,
-        ""
-    );
-
-
-    hide(
-        box
-    );
-
+    hide(box);
 }
 
-
-
-export function mostrarSucesso(
-    mensagem
-) {
-
-
-    const box =
-        $("success-message");
-
+export function mostrarSucesso(mensagem) {
+    const box = $("success-message");
 
     if (!box) {
-
-
-        Notify.success(
-            mensagem
-        );
-
+        Notify.success(mensagem);
 
         return;
-
     }
-
 
     text(
         box,
 
-        mensagem
+        mensagem,
     );
 
+    show(box);
 
-    show(
-        box
-    );
-
-
-    setTimeout(
-        () => hide(box),
-        3000
-    );
-
+    setTimeout(() => hide(box), 3000);
 }
-
 
 // ===========================
 // CONFIRM
 // ===========================
 
-export function confirmar(
-    mensagem
-) {
-
-    return confirm(
-        mensagem
-    );
-
+export function confirmar(mensagem) {
+    return confirm(mensagem);
 }
-
 
 // ===========================
 // FORM
 // ===========================
 
-export function limparFormulario(
-    formId
-) {
-
-
-    $(formId)
-        ?.reset();
-
+export function limparFormulario(formId) {
+    $(formId)?.reset();
 }
 
-
-
-export function preencherFormulario(
-    formId,
-    dados
-) {
-
-
-    const form =
-        $(formId);
-
+export function preencherFormulario(formId, dados) {
+    const form = $(formId);
 
     if (!form) return;
 
+    Object.entries(dados).forEach(([campo, valor]) => {
+        const elemento = form.querySelector(`[name="${campo}"]`);
 
+        if (!elemento) {
+            return;
+        }
 
-    Object
-        .entries(dados)
-        .forEach(([campo, valor]) => {
-
-
-            const elemento =
-                form.querySelector(
-
-                    `[name="${campo}"]`
-
-                );
-
-
-            if (!elemento) {
-
-                return;
-
-            }
-
-
-
-            if (
-
-                elemento.type ===
-                "checkbox"
-
-            ) {
-
-
-                elemento.checked =
-                    Boolean(valor);
-
-
-            }
-
-
-            else {
-
-
-                elemento.value =
-                    valor ?? "";
-
-
-            }
-
-
-        });
-
+        if (elemento.type === "checkbox") {
+            elemento.checked = Boolean(valor);
+        } else {
+            elemento.value = valor ?? "";
+        }
+    });
 }
-
 
 // ===========================
 // BUTTON
 // ===========================
 
 export function bloquearBotao(
-
     id,
 
-    texto = "Salvando..."
-
+    texto = "Salvando...",
 ) {
-
-
-    const btn =
-        $(id);
-
+    const btn = $(id);
 
     if (!btn) return;
-
-
 
     if (!btn.dataset.original) {
-
-
-        btn.dataset.original =
-            btn.innerText;
-
-
+        btn.dataset.original = btn.innerText;
     }
 
+    btn.innerText = texto;
 
-
-    btn.innerText =
-        texto;
-
-
-    btn.disabled =
-        true;
-
+    btn.disabled = true;
 }
 
-
-
-export function desbloquearBotao(
-    id
-) {
-
-
-    const btn =
-        $(id);
-
+export function desbloquearBotao(id) {
+    const btn = $(id);
 
     if (!btn) return;
 
+    btn.innerText = btn.dataset.original || "Salvar";
 
-
-    btn.innerText =
-
-        btn.dataset.original ||
-
-        "Salvar";
-
-
-
-    btn.disabled =
-        false;
-
+    btn.disabled = false;
 }

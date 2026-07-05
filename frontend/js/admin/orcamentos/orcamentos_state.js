@@ -3,6 +3,6 @@ export const orcamentosState = {
     produtores: [],
     filtro: {
         busca: "",
-        status: "todos"
-    }
+        status: "todos",
+    },
 };

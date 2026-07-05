@@ -9,7 +9,7 @@ export const DICIONARIO_PARAMETROS = {
     revisoes: "Revisões",
     prazo: "Prazo",
     descricao: "Caixa de Descrição",
-    guia: "Link para Guia"
+    guia: "Link para Guia",
 };
 
 export function getParametroLabel(parametro) {

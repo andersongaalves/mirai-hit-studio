@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -14,6 +15,4 @@ class UsuarioResponse(BaseModel):
     is_admin: bool
     created_at: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}

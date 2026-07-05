@@ -1,148 +1,82 @@
-{% extends "email_base.html" %}
+{% extends "email_base.html" %} {% block content %}
 
-{% block content %}
+<h1>Novo orçamento recebido</h1>
 
-<h1>
-Novo orçamento recebido
-</h1>
-
-<p>
-
-Um novo cliente enviou uma solicitação de orçamento pelo site.
-
-</p>
+<p>Um novo cliente enviou uma solicitação de orçamento pelo site.</p>
 
 <div class="card">
+    <div class="card-title">📄 Protocolo</div>
 
-<div class="card-title">
-
-📄 Protocolo
-
-</div>
-
-<div class="info">
-
-<strong>{{ protocolo }}</strong>
-
-</div>
-
+    <div class="info">
+        <strong>{{ protocolo }}</strong>
+    </div>
 </div>
 
 <div class="card">
+    <div class="card-title">👤 Dados do Cliente</div>
 
-<div class="card-title">
+    <div class="info">
+        <strong>Nome</strong><br />
 
-👤 Dados do Cliente
+        {{ nome }}
+    </div>
 
-</div>
+    <div class="info">
+        <strong>E-mail</strong><br />
 
-<div class="info">
+        {{ email }}
+    </div>
 
-<strong>Nome</strong><br>
+    <div class="info">
+        <strong>WhatsApp</strong><br />
 
-{{ nome }}
-
-</div>
-
-<div class="info">
-
-<strong>E-mail</strong><br>
-
-{{ email }}
-
-</div>
-
-<div class="info">
-
-<strong>WhatsApp</strong><br>
-
-{{ telefone }}
-
-</div>
-
+        {{ telefone }}
+    </div>
 </div>
 
 <div class="card">
+    <div class="card-title">🎵 Serviço Solicitado</div>
 
-<div class="card-title">
+    <div class="info">
+        <strong>Serviço</strong><br />
 
-🎵 Serviço Solicitado
+        {{ servico }}
+    </div>
 
-</div>
+    <div class="info">
+        <strong>Valor estimado</strong><br />
 
-<div class="info">
+        R$ {{ valor }}
+    </div>
 
-<strong>Serviço</strong><br>
+    <div class="info">
+        <strong>Data</strong><br />
 
-{{ servico }}
-
-</div>
-
-<div class="info">
-
-<strong>Valor estimado</strong><br>
-
-R$ {{ valor }}
-
-</div>
-
-<div class="info">
-
-<strong>Data</strong><br>
-
-{{ data }}
-
-</div>
-
+        {{ data }}
+    </div>
 </div>
 
 {% if observacoes %}
 
 <div class="card">
+    <div class="card-title">📝 Observações</div>
 
-<div class="card-title">
-
-📝 Observações
-
-</div>
-
-<p>
-
-{{ observacoes }}
-
-</p>
-
+    <p>{{ observacoes }}</p>
 </div>
 
 {% endif %}
 
-<div
-style="
-text-align:center;
-margin-top:45px;
-">
-
-<a
-class="button"
-href="https://miraihitstudio.com.br/admin.html">
-
-Abrir Painel Administrativo
-
-</a>
-
+<div style="text-align: center; margin-top: 45px">
+    <a class="button" href="https://miraihitstudio.com.br/admin.html">
+        Abrir Painel Administrativo
+    </a>
 </div>
 
 <div class="divider"></div>
 
-<p
-style="
-font-size:14px;
-color:#A8B3CF;
-">
-
-Este e-mail foi enviado automaticamente pelo sistema da
-<strong>Mirai Hit Studio</strong>.
-
+<p style="font-size: 14px; color: #a8b3cf">
+    Este e-mail foi enviado automaticamente pelo sistema da
+    <strong>Mirai Hit Studio</strong>.
 </p>
 
 {% endblock %}

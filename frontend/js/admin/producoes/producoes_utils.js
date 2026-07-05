@@ -1,82 +1,48 @@
 export const STATUS_PRODUCAO = [
-
     {
         value: "aguardando_inicio",
-        label: "🟡 Aguardando início"
+        label: "🟡 Aguardando início",
     },
 
     {
         value: "em_producao",
-        label: "🔵 Em produção"
+        label: "🔵 Em produção",
     },
 
     {
         value: "revisao",
-        label: "🟣 Revisão"
+        label: "🟣 Revisão",
     },
 
     {
         value: "finalizado",
-        label: "🟢 Finalizado"
+        label: "🟢 Finalizado",
     },
 
     {
         value: "entregue",
-        label: "📦 Entregue"
-    }
-
+        label: "📦 Entregue",
+    },
 ];
 
-export function calcularPrazo(
-    prazo
-) {
-
+export function calcularPrazo(prazo) {
     if (!prazo) {
-
         return "📅 Sem prazo";
-
     }
 
+    const hoje = new Date();
 
-    const hoje =
-        new Date();
+    const entrega = new Date(prazo);
 
-
-    const entrega =
-        new Date(
-            prazo
-        );
-
-
-    const diferenca = Math.ceil(
-
-        (
-            entrega - hoje
-        )
-
-        /
-
-        (
-            1000 * 60 * 60 * 24
-        )
-
-    );
-
+    const diferenca = Math.ceil((entrega - hoje) / (1000 * 60 * 60 * 24));
 
     if (diferenca > 0) {
-
         return `⏳ Faltam ${diferenca} dias`;
-
     }
-
 
     if (diferenca === 0) {
-
         return "🔥 Entrega hoje";
-
     }
 
-
     return `⚠️ Atrasado há ${Math.abs(diferenca)} dias`;
-
 }

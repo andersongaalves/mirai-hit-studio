@@ -1,10 +1,22 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
 body {
     background-color: var(--cor-fundo);
-    background-image: 
-        radial-gradient(circle at 50% 0%, rgba(178, 42, 240, 0.15) 0%, transparent 60%),
-        radial-gradient(circle at 100% 100%, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+    background-image:
+        radial-gradient(
+            circle at 50% 0%,
+            rgba(178, 42, 240, 0.15) 0%,
+            transparent 60%
+        ),
+        radial-gradient(
+            circle at 100% 100%,
+            rgba(0, 212, 255, 0.05) 0%,
+            transparent 50%
+        );
     color: var(--cor-branco);
     font-family: var(--font-texto);
     font-size: 16px;
@@ -12,19 +24,32 @@ body {
     overflow-x: hidden;
 }
 
-h1, h2 { font-family: var(--font-titulos); font-weight: 600; }
+h1,
+h2 {
+    font-family: var(--font-titulos);
+    font-weight: 600;
+}
 
-h3, h4 { font-family: var(--font-subtitulos); font-weight: 400; }
+h3,
+h4 {
+    font-family: var(--font-subtitulos);
+    font-weight: 400;
+}
 
-a { text-decoration: none; color: var(--cor-branco); transition: 0.3s; }
+a {
+    text-decoration: none;
+    color: var(--cor-branco);
+    transition: 0.3s;
+}
 
-.container { 
-    max-width: 1200px; 
-    margin: 0 auto; 
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 60px 20px 80px; /* 60px no topo, 20px nas laterais, 80px no fundo */
 }
 
-h2, .section-title {
+h2,
+.section-title {
     font-size: 2.5rem;
     color: var(--cor-branco);
     text-align: center;
@@ -37,7 +62,7 @@ h2, .section-title {
 
 /* Efeito decorativo abaixo do título */
 h2::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 50%;
@@ -48,7 +73,8 @@ h2::after {
     box-shadow: 0 0 10px var(--cor-ciano);
 }
 
-h3, .category-title {
+h3,
+.category-title {
     font-size: 2rem;
     color: var(--cor-branco);
     text-align: left;
@@ -61,14 +87,17 @@ h3, .category-title {
 }
 
 /* Efeito decorativo para os subtítulos (Alinhado à esquerda) */
-h3::after, .category-title::after {
-    content: '';
+h3::after,
+.category-title::after {
+    content: "";
     position: absolute;
     bottom: 0;
     left: 0; /* Alinha a barra à esquerda, já que o texto é text-align: left */
     width: 40px; /* Ligeiramente menor que a barra do título principal */
     height: 3px;
-    background: var(--cor-roxo); /* Usei roxo para dar contraste com o ciano do título principal */
+    background: var(
+        --cor-roxo
+    ); /* Usei roxo para dar contraste com o ciano do título principal */
     box-shadow: 0 0 10px var(--cor-roxo);
 }
 
@@ -88,7 +117,9 @@ h3::after, .category-title::after {
     bottom: -10px; /* Começa fora da tela por baixo */
     border-radius: 50%;
     background: var(--cor-ciano);
-    box-shadow: 0 0 10px var(--cor-ciano), 0 0 20px var(--cor-ciano);
+    box-shadow:
+        0 0 10px var(--cor-ciano),
+        0 0 20px var(--cor-ciano);
     opacity: 0;
     animation: floatUp var(--duration) ease-in infinite;
 }

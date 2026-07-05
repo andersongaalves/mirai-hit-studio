@@ -30,10 +30,7 @@ class Settings(BaseSettings):
     EMAIL_FROM: str
     ADMIN_EMAIL: str
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()

@@ -5,9 +5,7 @@ import * as Projetos from "./projetos.js";
 import * as Orcamentos from "./orcamentos/orcamentos.js";
 import * as Config from "./configuracoes.js";
 
-import {
-    fecharModalProducao
-} from "./producoes/producoes_modal.js";
+import { fecharModalProducao } from "./producoes/producoes_modal.js";
 
 function expose(name, callback) {
     window[name] = callback;
@@ -46,12 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (Auth.restaurarSessao()) {
             await Dashboard.inicializarDashboard();
         }
-    }
-
-    catch(error) {
-        console.error(
-            "Erro ao iniciar admin:",
-            error
-        );
+    } catch (error) {
+        console.error("Erro ao iniciar admin:", error);
     }
 });
