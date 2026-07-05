@@ -1,32 +1,49 @@
 # ======================
 # Python
 # ======================
+
 __pycache__/
+**/__pycache__/
+
 *.py[cod]
 *$py.class
 
+*.egg-info/
+pip-wheel-metadata/
+
+
+# ======================
 # Virtual Environment
+# ======================
+
 .venv/
 venv/
 **/venv/
 
+
 # ======================
 # Environment
 # ======================
+
 .env
 .env.*
+
 !.env.example
+
 
 # ======================
 # Database
 # ======================
+
 *.db
 *.sqlite
 *.sqlite3
 
+
 # ======================
 # Cache / Quality tools
 # ======================
+
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -35,9 +52,11 @@ venv/
 .coverage
 htmlcov/
 
+
 # ======================
 # Node
 # ======================
+
 node_modules/
 **/node_modules/
 
@@ -45,44 +64,82 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+
 # ======================
 # Build
 # ======================
+
 dist/
 build/
+
+
+# ======================
+# Logs
+# ======================
+
+logs/
+*.log
+
 
 # ======================
 # IDE
 # ======================
-.vscode/
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
 .idea/
+
 
 # ======================
 # AI / Agents
 # ======================
+
 .agents/
+.continue/
+
 
 # ======================
 # Generated files
 # ======================
+
 estrutura_projeto.txt
+
 
 # ======================
 # Uploads / Backups
 # ======================
+
 uploads/
 backups/
 **/backups/
 
+
 # ======================
 # OS
 # ======================
+
 .DS_Store
 Thumbs.db
+
 
 # ======================
 # Temporary
 # ======================
+
 *.bak
 *.tmp
 *.temp
+
+# ======================
+# AI cache / Models
+# ======================
+
+# ======================
+# Ollama / Local AI
+# ======================
+
+blobs/
+manifests/
+*.gguf

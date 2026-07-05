@@ -90,6 +90,7 @@ function criarCardProducao(item) {
     const btnVer = document.createElement("button");
 
     btnVer.textContent = "Ver";
+    btnVer.className = "btn-small"
 
     btnVer.onclick = () => {
         visualizarProducao(item.id);

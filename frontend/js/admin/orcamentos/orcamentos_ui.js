@@ -108,8 +108,9 @@ function createProdutorSelect(item, produtores, handlers) {
 
 function createActions(item, handlers) {
     const btnVer = createButtonElement({
-        text: "Ver",
-    });
+            text: "Ver",
+            className: "btn-small"
+        });
 
     btnVer.onclick = () => {
         handlers.onVisualizar(item.id);
@@ -117,7 +118,7 @@ function createActions(item, handlers) {
 
     const btnExcluir = createButtonElement({
         text: "Excluir",
-        className: "btn-danger",
+        className: "btn-small btn-danger",
     });
 
     btnExcluir.onclick = () => {

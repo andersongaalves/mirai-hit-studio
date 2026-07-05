@@ -42,7 +42,7 @@ function createServicoCard(servico, handlers) {
     const { card, info, actions } = createServicoCardElement();
 
     info.append(
-        createTextElement("strong", servico.nome),
+        createTextElement("strong", servico.nome + " "),
         createTextElement(
             "span",
             `${servico.categoria} | ${money(servico.valor_base)}`,
