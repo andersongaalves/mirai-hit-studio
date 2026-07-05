@@ -241,47 +241,47 @@
 }
 
 @media (max-width: 768px) {
-    /* 1. Reduz o tamanho da Hero para caber na tela */
     .hero {
         min-height: 60vh;
         padding: 20px 10px;
     }
 
-    /* 2. Diminui a Logo para não ficar gigante */
     .hero-logo {
-        max-width: 200px;
+        width: auto;
+        height: auto;
+        max-width: 80vw;
         max-height: 30vh;
+        object-fit: contain;
     }
 
-    /* 3. Ajusta o texto da marca para não "estourar" a tela */
     .hero-brand-text {
-        font-size: 2.2rem !important; /* Estava 4rem */
-        flex-direction: column; /* Empilha MIRAI e HIT se necessário */
+        font-size: 2.2rem !important;
+        flex-direction: column;
         gap: 5px;
     }
 
-    /* 4. Ajusta o espaçamento do "Studio" */
     .studio {
         letter-spacing: 0.2rem;
         font-size: 1rem;
     }
 
-    /* 5. Corrige o Menu de Navegação para não amontoar */
     nav {
         padding: 10px 20px;
     }
+
     .nav-menu-wrapper {
         gap: 10px;
     }
+
     .dropbtn {
         font-size: 0.9rem;
     }
+
     .btn-cta {
         padding: 10px 15px;
         font-size: 0.8rem;
     }
 
-    /* 6. Ajusta os cards da Home para não ficarem tão largos */
     .scrolling-wrapper {
         padding: 20px 5%;
     }

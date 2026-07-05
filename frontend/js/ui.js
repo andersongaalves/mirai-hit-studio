@@ -2,6 +2,7 @@ import { getProjetos } from "./api.js"; // <- Movido para o topo!
 import { money } from "./utils/format.js";
 import { $, $$ } from "./utils/dom.js";
 import { renderizarEstrutura } from "./modules/service_renderer.js";
+import { state } from "./state.js";
 
 export const PARAM_TEMPLATES = {
     duracao: {
@@ -61,11 +62,28 @@ export function renderizarBotoes(servicos) {
     boxCombo.innerHTML = "";
 
     servicos.forEach((srv) => {
+        const temDesconto =
+            srv.aplica_desconto &&
+            state.configGlobal.desconto > 0;
+
+        const valorFinal = temDesconto
+            ? srv.valor_base * state.configGlobal.mult_desconto
+            : srv.valor_base;
+
         const subtituloHTML = srv.subtitulo
             ? `
                 <small class="service-subtitle">
                     ${srv.subtitulo}
                 </small>
+            `
+            : "";
+
+        const descontoHTML = temDesconto
+            ? `
+                <span class="service-discount">
+                    -${state.configGlobal.desconto}% OFF
+                </span>
+                <br>
             `
             : "";
 
@@ -79,10 +97,12 @@ export function renderizarBotoes(servicos) {
 
                 <div class="service-price">
 
+                    ${descontoHTML}
+
                     A partir de
 
                     <strong>
-                        ${money(srv.valor_base)}
+                        R$ ${money(valorFinal)}
                     </strong>
 
                 </div>
@@ -105,7 +125,6 @@ export function renderizarBotoes(servicos) {
                     name="servico"
                     id="srv_${srv.id}"
                     value="${srv.id}"
-
                 >
 
                 <label for="srv_${srv.id}">
@@ -116,6 +135,7 @@ export function renderizarBotoes(servicos) {
                     ${subtituloHTML}
                     ${descricaoHTML}
                 </label>
+
             </div>
         `;
 
@@ -126,9 +146,13 @@ export function renderizarBotoes(servicos) {
         }
     });
 
-    if (boxAvulso.innerHTML) $("categoria-avulso").style.display = "block";
+    if (boxAvulso.innerHTML) {
+        $("categoria-avulso").style.display = "block";
+    }
 
-    if (boxCombo.innerHTML) $("categoria-combo").style.display = "block";
+    if (boxCombo.innerHTML) {
+        $("categoria-combo").style.display = "block";
+    }
 }
 
 export function obterCapaInteligente(linkAudio, linkCapa) {
