@@ -3,6 +3,7 @@
     position: relative;
     overflow: hidden;
     padding: 20px;
+    min-height: 100vh;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -20,9 +21,11 @@
     mask-image: radial-gradient(circle at center, black, transparent 80%);
 }
 .hero-logo {
-    max-width: 400px;
-    width: auto;
-    max-height: 40vh;
+    width: clamp(180px, 35vw, 400px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    display: block;
     margin-bottom: 10px;
     position: relative;
     z-index: 1;
@@ -64,7 +67,6 @@
     color: var(--cor-branco);
     font-weight: 300;
     letter-spacing: 0.5rem;
-    font-family: "Ethnocentric", sans-serif;
 }
 .brand-subline {
     display: flex;
@@ -247,11 +249,8 @@
     }
 
     .hero-logo {
-        width: auto;
+        width: min(75vw, 280px);
         height: auto;
-        max-width: 80vw;
-        max-height: 30vh;
-        object-fit: contain;
     }
 
     .hero-brand-text {
