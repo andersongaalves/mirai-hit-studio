@@ -266,11 +266,11 @@ export function initParticles() {
 
 export function renderizarFormularioParametros(parametrosString) {
     const container = $("render-parametros");
-    if (!container || !parametrosString) return;
+    if (!container) return;
 
     let html = "";
     // Separa os parâmetros que vêm da API (ex: "duracao,pessoas,prazo")
-    const params = parametrosString.split(",");
+    const params = (parametrosString || "").split(",");
 
     params.forEach((param) => {
         const paramLimpo = param.trim();

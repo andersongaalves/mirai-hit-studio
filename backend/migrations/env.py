@@ -8,12 +8,31 @@ from alembic import context
 from core.config import settings
 from database import Base
 
+
+# ===========================
+# IMPORT MODELS
+# ===========================
+
+from models.usuario import UsuarioModel
+from models.config import ConfigModel
+from models.newsletter import NewsletterModel
+from models.orcamento import OrcamentoModel
+from models.producao import ProducaoModel
+from models.projeto import ProjetoModel
+from models.servico import ServicoModel
+from models.proposta import PropostaModel
+
+
 config = context.config
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option(
+    "sqlalchemy.url",
+    settings.DATABASE_URL,
+)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
 
 target_metadata = Base.metadata
 

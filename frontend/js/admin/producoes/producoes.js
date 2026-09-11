@@ -41,7 +41,7 @@ export async function alterarStatus(id, status) {
 }
 
 export function initProducoes() {
-    carregarProducoes();
+    return carregarProducoes();
 }
 
 export function visualizarProducao(id) {

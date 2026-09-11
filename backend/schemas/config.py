@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ConfigResponse(BaseModel):
@@ -16,5 +16,4 @@ class ConfigResponse(BaseModel):
     val_prazo_urgente: float
     val_prazo_express: float
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, allow_inf_nan=False)

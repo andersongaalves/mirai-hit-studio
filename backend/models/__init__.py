@@ -5,3 +5,4 @@ from .orcamento import OrcamentoModel
 from .config import ConfigModel
 from .newsletter import NewsletterModel
 from .producao import ProducaoModel
+from .proposta import PropostaModel

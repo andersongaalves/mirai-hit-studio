@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import Base, engine
 from core.config import settings
 
 from routers.auth import router as auth_router
@@ -13,9 +12,6 @@ from services.startup_service import startup_database
 from routers.newsletter import router as newsletter_router
 from routers.usuarios import router as usuarios_router
 from routers.producao import router as producao_router
-
-# Criação das tabelas
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Mirai Hit Studio API", version="1.0.0", docs_url="/docs", redoc_url="/redoc"

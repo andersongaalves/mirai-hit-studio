@@ -11,7 +11,7 @@ import { $ } from "../utils/dom.js";
 // ===========================
 
 const CONFIG_FIELDS = [
-    "cfg_desconto",
+    "desconto",
 
     "val_extra_duracao",
 
@@ -36,6 +36,9 @@ const CONFIG_FIELDS = [
     "val_lease_desconto",
 ];
 
+const CONFIG_INPUT_IDS = { desconto: "cfg_desconto" };
+const configInput = (campo) => $(CONFIG_INPUT_IDS[campo] || campo);
+
 // ===========================
 // LOAD
 // ===========================
@@ -57,14 +60,14 @@ export async function carregarConfiguracoes() {
 // ===========================
 
 function preencherFormulario(config) {
-    Object.entries(config).forEach(([campo, valor]) => {
-        const input = $(campo);
+    CONFIG_FIELDS.forEach((campo) => {
+        const input = configInput(campo);
 
         if (!input) {
             return;
         }
 
-        input.value = valor ?? "";
+        input.value = config[campo] ?? "";
     });
 }
 
@@ -76,7 +79,12 @@ function gerarPayload() {
     const payload = {};
 
     CONFIG_FIELDS.forEach((campo) => {
-        payload[campo] = parseFloat($(campo)?.value) || 0;
+        const input = configInput(campo);
+        const valor = input?.value.trim();
+        if (!valor || !Number.isFinite(Number(valor))) {
+            throw new Error(`Informe um número válido para ${campo}.`);
+        }
+        payload[campo] = Number(valor);
     });
 
     return payload;

@@ -2,6 +2,22 @@ import { state } from "../state.js";
 import * as API from "../api.js";
 import * as Notify from "../utils/notifications.js";
 import { $ } from "../utils/dom.js";
+import { PARAM_TEMPLATES } from "../ui.js";
+
+function obterDetalhes() {
+    const partes = [];
+    const descricao = $("descricao")?.value.trim();
+    if (descricao) partes.push(`Descrição: ${descricao}`);
+    const parametros = state.servicoSelecionadoOBJ.parametros || "";
+    for (const param of new Set(parametros.split(",").map((item) => item.trim()))) {
+        const campo = $(param);
+        const formatar = PARAM_TEMPLATES[param]?.detalhe;
+        if (campo && campo.value !== "" && formatar) {
+            partes.push(formatar(campo.value, $("canais_inst")?.value));
+        }
+    }
+    return partes.join("\n");
+}
 
 export function initOrcamento() {
     const btnSolicitar = $("btn-solicitar");
@@ -31,15 +47,15 @@ export function initOrcamento() {
 
                 link_guia: $("guia")?.value || "",
 
-                detalhes: "",
+                detalhes: obterDetalhes(),
             };
 
             try {
                 await API.postOrcamento(payload);
-                Notify.success("Proposta enviada com sucesso!");
+                Notify.success("Solicitação de orçamento enviada.");
             } catch (error) {
                 console.error(error);
-                Notify.error("Erro ao enviar proposta.");
+                Notify.error("Erro ao enviar solicitação de orçamento.");
             }
         },
     );

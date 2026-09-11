@@ -29,9 +29,10 @@ export function calcular() {
 
     let total = state.servicoSelecionadoOBJ.valor_base;
 
-    state.servicoSelecionadoOBJ.parametros
+    (state.servicoSelecionadoOBJ.parametros || "")
 
         .split(",")
+        .map((param) => param.trim())
 
         .forEach((param) => {
             const el = $(param.trim());

@@ -150,6 +150,7 @@ export function restaurarSessao() {
 
 export function logout() {
     localStorage.removeItem("access_token");
+    document.dispatchEvent(new Event("admin:logout"));
 
     mostrarLogin();
 
