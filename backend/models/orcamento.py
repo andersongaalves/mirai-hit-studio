@@ -33,6 +33,13 @@ class OrcamentoModel(Base):
 
     observacoes = Column(Text, default="", nullable=False)
 
+    proposta = relationship(
+        "PropostaModel",
+        back_populates="orcamento",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
