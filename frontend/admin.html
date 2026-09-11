@@ -764,6 +764,53 @@
                         </div>
                     </div>
                 </div>
+                <div id="modal-proposta" class="modal hidden">
+                    <div class="modal-content proposta-modal-content">
+                        <div class="admin-header">
+                            <h2 id="proposta-title">Editor de Proposta</h2>
+                        </div>
+
+                        <div id="proposta-tabs" class="proposta-tabs"></div>
+                        <div id="proposta-content" class="proposta-content"></div>
+
+                        <div
+                            style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                gap: 10px;
+                                margin-top: 20px;
+                            "
+                        >
+                            <span id="proposta-status">Rascunho local</span>
+                            <div style="display:flex; gap:10px;">
+                                <button
+                                    id="btn-save-proposta"
+                                    class="btn-small"
+                                    type="button"
+                                    disabled
+                                >
+                                    Salvar
+                                </button>
+                                <button
+                                    id="btn-gerar-pdf-proposta"
+                                    class="btn-small"
+                                    type="button"
+                                    disabled
+                                >
+                                    Gerar PDF
+                                </button>
+                            </div>
+                            <button
+                                class="btn-small"
+                                onclick="fecharEditorProposta()"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="modal-producao" class="modal hidden">
                     <div class="modal-content">
                         <h2 id="prod_titulo"></h2>

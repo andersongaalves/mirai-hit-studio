@@ -73,3 +73,27 @@ export async function atualizarObservacoes(id, observacoes) {
 
     return handleResponse(response, "Erro ao atualizar observações.");
 }
+
+export async function analisarOrcamento(id) {
+    return atualizarStatus(id, "em_analise");
+}
+
+export async function enviarProposta(id) {
+    const response = await authFetch(`/orcamentos/${id}/enviar-proposta`, {
+        method: "POST",
+    });
+
+    return handleResponse(response, "Erro ao enviar proposta.");
+}
+
+export async function marcarPropostaEnviada(id) {
+    return atualizarStatus(id, "proposta_enviada");
+}
+
+export async function aprovarOrcamento(id) {
+    return atualizarStatus(id, "aprovado");
+}
+
+export async function arquivarOrcamento(id) {
+    return atualizarStatus(id, "arquivado");
+}

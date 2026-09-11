@@ -8,13 +8,17 @@ import {
     createSelectElement,
 } from "./orcamentos_dom.js";
 
-import { STATUS_OPTIONS } from "./orcamentos_utils.js";
+import { formatStatus } from "./orcamentos_utils.js";
 
 const emptyHandlers = {
     onVisualizar: () => {},
     onDeletar: () => {},
-    onAlterarStatus: () => {},
     onAlterarProdutor: () => {},
+
+    onAnalisar: () => {},
+    onGerarProposta: () => {},
+    onAprovar: () => {},
+    onArquivar: () => {},
 };
 
 export function renderizarOrcamentos(
@@ -52,30 +56,33 @@ function createOrcamentoCard(item, produtores, handlers) {
     const { card, info, actions } = createOrcamentoCardElement();
 
     info.append(
-        createStatusSelect(item, handlers),
         createProdutorSelect(item, produtores, handlers),
-        createTextElement("strong", item.nome_cliente),
-        createTextElement("p", item.servico),
-        createTextElement("span", money(item.valor_total)),
+
+        createTextElement(
+            "strong",
+            item.nome_cliente,
+        ),
+
+        createTextElement(
+            "span",
+            formatStatus(item.status),
+            "orcamento-status"
+        ),
+
+        createTextElement(
+            "p",
+            item.servico,
+        ),
+
+        createTextElement(
+            "span",
+            money(item.valor_total),
+        ),
     );
 
     actions.append(...createActions(item, handlers));
 
     return card;
-}
-
-function createStatusSelect(item, handlers) {
-    const select = createSelectElement({
-        value: item.status,
-        className: "status-select",
-        options: STATUS_OPTIONS,
-    });
-
-    select.onchange = (e) => {
-        handlers.onAlterarStatus(item.id, e.target.value);
-    };
-
-    return select;
 }
 
 function createProdutorSelect(item, produtores, handlers) {
@@ -107,23 +114,85 @@ function createProdutorSelect(item, produtores, handlers) {
 }
 
 function createActions(item, handlers) {
+    const actions = [];
+
     const btnVer = createButtonElement({
-            text: "Ver",
-            className: "btn-small"
+        text: "Ver",
+        className: "btn-small",
+    });
+
+    btnVer.onclick = () => handlers.onVisualizar(item.id);
+
+    actions.push(btnVer);
+
+    switch (item.status) {
+        case "novo": {
+            const btnAnalisar = createButtonElement({
+                text: "Analisar",
+                className: "btn-small",
+            });
+
+            btnAnalisar.onclick = () =>
+                handlers.onAnalisar(item.id);
+
+            actions.push(btnAnalisar);
+
+            break;
+        }
+
+        case "em_analise": {
+            const btnProposta = createButtonElement({
+                text: "Abrir proposta",
+                className: "btn-small",
+            });
+
+            btnProposta.onclick = () =>
+                handlers.onGerarProposta(item.id);
+
+            actions.push(btnProposta);
+
+            break;
+        }
+
+        case "proposta_enviada": {
+            const btnAprovar = createButtonElement({
+                text: "Aprovar",
+                className: "btn-small btn-success",
+            });
+
+            btnAprovar.onclick = () =>
+                handlers.onAprovar(item.id);
+
+            actions.push(btnAprovar);
+
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    if (item.status !== "arquivado") {
+        const btnArquivar = createButtonElement({
+            text: "Arquivar",
+            className: "btn-small",
         });
 
-    btnVer.onclick = () => {
-        handlers.onVisualizar(item.id);
-    };
+        btnArquivar.onclick = () =>
+            handlers.onArquivar(item.id);
+
+        actions.push(btnArquivar);
+    }
 
     const btnExcluir = createButtonElement({
         text: "Excluir",
         className: "btn-small btn-danger",
     });
 
-    btnExcluir.onclick = () => {
+    btnExcluir.onclick = () =>
         handlers.onDeletar(item.id);
-    };
 
-    return [btnVer, btnExcluir];
+    actions.push(btnExcluir);
+
+    return actions;
 }

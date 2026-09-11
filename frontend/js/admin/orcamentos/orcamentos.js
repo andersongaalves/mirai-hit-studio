@@ -4,9 +4,17 @@ import { $ } from "../../utils/dom.js";
 import * as OrcamentosAPI from "./orcamentos_api.js";
 import * as OrcamentosUI from "./orcamentos_ui.js";
 import * as OrcamentosModal from "./orcamentos_modal.js";
+import * as Propostas from "../propostas/propostas.js";
 
 import { orcamentosState } from "./orcamentos_state.js";
 import { filtrarOrcamentos } from "./orcamentos_filters.js";
+
+const STATUS_MESSAGES = {
+    em_analise: "Orçamento colocado em análise.",
+    proposta_enviada: "Proposta enviada.",
+    aprovado: "Orçamento aprovado.",
+    arquivado: "Orçamento arquivado.",
+};
 
 function getUiHandlers() {
     return {
@@ -14,6 +22,11 @@ function getUiHandlers() {
         onDeletar: deletarOrcamento,
         onAlterarStatus: alterarStatus,
         onAlterarProdutor: alterarProdutor,
+
+        onAnalisar: analisarOrcamento,
+        onGerarProposta: gerarProposta,
+        onAprovar: aprovarOrcamento,
+        onArquivar: arquivarOrcamento,
     };
 }
 
@@ -123,16 +136,50 @@ export function initOrcamentos() {
 }
 
 export async function alterarStatus(id, status) {
+    const atual = orcamentosState.lista.find((item) => item.id === id);
+
+    if (!atual || atual.status === status) {
+        return;
+    }
+
     try {
         const atualizado = await OrcamentosAPI.atualizarStatus(id, status);
 
         atualizarState(atualizado);
+
         refresh();
+
+        Notify.success(
+            STATUS_MESSAGES[status] ?? "Status atualizado."
+        );
     } catch (error) {
         console.error(error);
 
         Notify.error("Erro ao atualizar status.");
     }
+}
+
+export async function analisarOrcamento(id) {
+    return alterarStatus(id, "em_analise");
+}
+
+export function gerarProposta(id) {
+    const orcamento = orcamentosState.lista.find((item) => item.id === id);
+
+    if (!orcamento) {
+        Notify.error("Orçamento não encontrado.");
+        return;
+    }
+
+    Propostas.abrirEditorProposta(orcamento);
+}
+
+export async function aprovarOrcamento(id) {
+    return alterarStatus(id, "aprovado");
+}
+
+export async function arquivarOrcamento(id) {
+    return alterarStatus(id, "arquivado");
 }
 
 export async function alterarProdutor(id, produtor_id) {

@@ -1,9 +1,9 @@
 const STATUS_LABELS = {
-    novo: "🟡 Novo",
-    em_analise: "🔵 Em análise",
+    novo: "🆕 Novo",
+    em_analise: "🟡 Em análise",
+    proposta_enviada: "🔵 Proposta enviada",
     aprovado: "🟢 Aprovado",
-    recusado: "🔴 Recusado",
-    arquivado: "⚫ Arquivado",
+    arquivado: "📦 Arquivado",
 };
 
 export const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(

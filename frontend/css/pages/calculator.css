@@ -30,8 +30,13 @@
 /* --- CARDS DE SELEÇÃO DE SERVIÇOS --- */
 .service-selector {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
     gap: 20px;
+    align-items: start;
+}
+
+.radio-card {
+    min-width: 0;
 }
 
 .radio-card input {
@@ -48,7 +53,12 @@
     padding: 24px;
     cursor: pointer;
     transition: 0.35s;
-    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.radio-card label > * {
+    max-width: 100%;
+    min-width: 0;
 }
 
 .radio-card label:hover {
@@ -76,19 +86,12 @@
 }
 
 .service-details {
+    display: none;
     width: 100%;
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
-    transition:
-        max-height 0.45s ease,
-        opacity 0.35s ease,
-        margin-top 0.35s ease;
 }
 
 .radio-card input:checked + label .service-details {
-    max-height: 500px;
-    opacity: 1;
+    display: block;
     margin-top: 22px;
     animation: expandCard 0.35s ease;
 }
@@ -483,6 +486,7 @@
 
 .service-section-title > div {
     display:flex;
+    min-width: 0;
     align-items:center;
     gap:12px;
 }
@@ -494,6 +498,7 @@
 }
 
 .service-icon {
+    flex-shrink: 0;
     width:36px;
     height:36px;
 
@@ -538,6 +543,7 @@
 }
 
 .section-arrow{
+    flex-shrink: 0;
 
     color:var(--cor-ciano);
 

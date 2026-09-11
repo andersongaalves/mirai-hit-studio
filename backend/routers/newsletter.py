@@ -2,11 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 import models
-
 from database import get_db
-
 from schemas.newsletter import NewsletterCreate, NewsletterResponse
-
 from services.email_service import EmailService
 
 router = APIRouter(prefix="/newsletter", tags=["Newsletter"])

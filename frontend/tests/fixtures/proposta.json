@@ -1,0 +1,28 @@
+{
+  "id": 12,
+  "orcamento_id": 42,
+  "numero": "MHS-000012",
+  "versao": 1,
+  "status": "rascunho",
+  "produtor_id": null,
+  "cliente_snapshot": {
+    "cliente": {"nome": "Cliente Teste", "email": "teste@example.com", "whatsapp": null},
+    "orcamento": {"id": 42, "servico": "Mixagem", "detalhes": "Referencia do cliente", "valor_total": "150.00", "link_guia": ""}
+  },
+  "objeto": "Mixagem",
+  "descricao": "Descricao comercial",
+  "itens": [{"descricao": "Mixagem", "quantidade": "1", "valor_unitario": "150.00", "desconto": "0.00"}],
+  "pagamentos": [
+    {"tipo": "integral", "titulo": "Pagamento completo", "url": "https://example.com/integral", "habilitado": true},
+    {"tipo": "parcial_1", "titulo": "Pagamento parcial 1", "url": "https://example.com/entrada", "habilitado": true},
+    {"tipo": "parcial_2", "titulo": "Pagamento parcial 2", "url": "", "habilitado": false}
+  ],
+  "condicoes": "Condicoes comerciais",
+  "totais": {"subtotal": "150.00", "desconto": "0.00", "total": "150.00"},
+  "pdf_path": null,
+  "gerada_em": null,
+  "enviada_em": null,
+  "aprovada_em": null,
+  "created_at": "2026-09-11T12:00:00Z",
+  "updated_at": "2026-09-11T12:00:00Z"
+}

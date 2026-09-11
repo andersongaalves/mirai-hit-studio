@@ -3,10 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 import models
-from schemas.servico import (
-    ServicoCreate,
-    ServicoResponse,
-)
+from schemas.servico import (ServicoCreate, ServicoResponse)
 
 from core.dependencies import get_current_user
 

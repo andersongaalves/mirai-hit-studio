@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -25,13 +25,28 @@ class OrcamentoModel(Base):
 
     detalhes = Column(Text)
 
-    data_solicitacao = Column(DateTime(timezone=True), server_default=func.now())
 
-    status = Column(String(20), default="novo", nullable=False)
+    # ======================
+    # CRM
+    # ======================
 
-    produtor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    status = Column(
+        String(30),
+        default="novo",
+        nullable=False,
+    )
 
-    observacoes = Column(Text, default="", nullable=False)
+    produtor_id = Column(
+        Integer,
+        ForeignKey("usuarios.id"),
+        nullable=True,
+    )
+
+    observacoes = Column(
+        Text,
+        default="",
+        nullable=False,
+    )
 
     proposta = relationship(
         "PropostaModel",
@@ -40,8 +55,50 @@ class OrcamentoModel(Base):
         cascade="all, delete-orphan",
     )
 
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+
+    # ======================
+    # PROPOSTA
+    # ======================
+
+    proposta_codigo = Column(
+        String(30),
+        nullable=True,
     )
 
-    produtor = relationship("UsuarioModel", foreign_keys=[produtor_id])
+    proposta_pdf = Column(
+        String(500),
+        nullable=True,
+    )
+
+    proposta_enviada = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    proposta_enviada_em = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+
+    # ======================
+    # DATAS
+    # ======================
+
+    data_solicitacao = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+    produtor = relationship(
+        "UsuarioModel",
+        foreign_keys=[produtor_id],
+    )

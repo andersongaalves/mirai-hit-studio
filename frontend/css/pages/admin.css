@@ -269,3 +269,111 @@
 .preview-section li {
     color: #ddd;
 }
+
+.proposta-modal-content {
+    max-width: 1100px;
+    width: min(94vw, 1100px);
+}
+
+.proposta-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.proposta-tabs .active {
+    background: var(--cor-ciano);
+    color: #000;
+}
+
+.proposta-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.proposta-form-grid .form-group:last-child {
+    grid-column: 1 / -1;
+}
+
+.proposta-item-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 90px 140px 120px 120px auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.proposta-preview {
+    background: #fff;
+    color: #111;
+    line-height: 1.55;
+}
+
+.proposta-preview h2,
+.proposta-preview h3,
+.proposta-preview p,
+.proposta-preview strong,
+.proposta-preview small {
+    color: #111;
+}
+
+.proposta-preview-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: center;
+    border-bottom: 2px solid #111;
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+}
+
+.proposta-preview-logo {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+}
+
+.proposta-preview section {
+    margin-bottom: 24px;
+}
+
+.proposta-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+}
+
+.proposta-preview-table th,
+.proposta-preview-table td {
+    border: 1px solid #d1d5db;
+    padding: 8px;
+    color: #111;
+    text-align: left;
+}
+
+.proposta-payment-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 18px 0;
+}
+
+.proposta-payment-card {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid #111;
+    padding: 12px;
+}
+
+.proposta-qr-placeholder {
+    display: grid;
+    place-items: center;
+    width: 92px;
+    aspect-ratio: 1;
+    border: 2px dashed #111;
+    color: #111;
+    font-size: 0.8rem;
+    text-align: center;
+}
