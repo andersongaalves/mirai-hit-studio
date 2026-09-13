@@ -49,6 +49,7 @@ const root = path.resolve(__dirname, '..');
                 calls.push(key);
                 let data = [];
                 if (url.pathname === '/auth/login') data = { access_token: 'synthetic-session' };
+                if (url.pathname === '/auth/me') data = { id: 1, username: 'teste', is_admin: true, role: 'admin' };
                 if (url.pathname === '/servicos') data = services;
                 if (url.pathname === '/config') {
                     if (request.method() === 'PUT') {
@@ -153,7 +154,7 @@ const root = path.resolve(__dirname, '..');
         await page.reload();
         await page.waitForFunction(() => document.getElementById('lista-servicos').textContent.includes('Servico teste'));
         await page.waitForTimeout(100);
-        assert.deepEqual(calls.sort(), expected);
+        assert.deepEqual(calls.sort(), ['GET /auth/me', ...expected].sort());
         const registrations = await page.evaluate(() => ({ ...window.testRegistrations }));
         await page.evaluate(() => window.fazerLogout());
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), true);

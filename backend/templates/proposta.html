@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Proposta {{ proposta.numero }}</title>
+<style>
+@page { size: a4; margin: 18mm 16mm; }
+body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; line-height: 1.25; color: #111; background: #fff; letter-spacing: 0; }
+main { width: 178mm; margin: 0 auto; }
+h1 { font-size: 18pt; margin: 6pt 0; }
+h2 { font-size: 11pt; border-bottom: 1px solid #111; padding-bottom: 4pt; margin: 10pt 0 6pt; -pdf-keep-with-next: true; }
+p { margin: 0 0 4pt; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+td, th { padding: 4pt; vertical-align: top; overflow-wrap: anywhere; }
+th { text-align: left; font-size: 8pt; border-bottom: 2px solid #111; }
+.items td { border-bottom: 1px solid #ccc; font-size: 8pt; }
+.number { text-align: right; }
+.logo { width: 45pt; height: 45pt; }
+.muted { color: #444; font-size: 9pt; }
+.total { font-size: 14pt; font-weight: bold; }
+.payment { margin: 0 0 12pt; }
+.qr { width: 85pt; height: 85pt; }
+a { color: #111; text-decoration: underline; overflow-wrap: anywhere; }
+.footer { margin-top: 24pt; border-top: 1px solid #111; padding-top: 8pt; font-size: 8pt; }
+</style>
+</head>
+<body><main>
+<img class="logo" src="{{ logo }}" alt="Mirai Hit Studio">
+<h1>Proposta Comercial</h1>
+<p><strong>Mirai Hit Studio</strong></p>
+<p>N&uacute;mero {{ proposta.numero }} &middot; Vers&atilde;o {{ proposta.versao }} &middot; Data {{ proposta.created_at.strftime('%d/%m/%Y') if proposta.created_at else '-' }}</p>
+<h2>Cliente</h2>
+{% for line in cliente.nome|linhas %}<p>{{ line }}</p>{% endfor %}
+{% for line in cliente.email|linhas %}<p>{{ line }}</p>{% endfor %}
+{% if cliente.whatsapp %}<p>WhatsApp: {{ cliente.whatsapp }}</p>{% endif %}
+<p>Produtor respons&aacute;vel: {{ produtor }}</p>
+<h2>Objeto e descri&ccedil;&atilde;o</h2>
+{% for line in proposta.objeto|linhas %}<p><strong>{{ line }}</strong></p>{% endfor %}
+{% for line in proposta.descricao|linhas %}<p>{{ line }}</p>{% endfor %}
+<h2>Servi&ccedil;os e valores</h2>
+<table class="items" repeat="1">
+<thead><tr><th width="38%">Descri&ccedil;&atilde;o</th><th width="8%">Qtd.</th><th width="18%">Unit&aacute;rio</th><th width="18%">Desconto</th><th width="18%">Subtotal</th></tr></thead>
+<tbody>{% for row in itens %}{% for parte in row.partes %}
+<tr><td>{% for line in parte|linhas(35) %}{{ line }}<br>{% endfor %}</td><td>{{ row.item.quantidade if loop.first else '' }}</td><td class="number">{{ row.item.valor_unitario|moeda if loop.first else '' }}</td><td class="number">{{ row.total.desconto|moeda if loop.first else '' }}</td><td class="number">{{ row.total.total|moeda if loop.first else '' }}</td></tr>
+{% endfor %}{% endfor %}</tbody></table>
+<p class="number">Subtotal: {{ totais.subtotal|moeda }}</p>
+<p class="number">Desconto: {{ totais.desconto|moeda }}</p>
+<p class="number total">Total: {{ totais.total|moeda }}</p>
+<h2>Condi&ccedil;&otilde;es comerciais</h2>
+{% for line in proposta.condicoes|linhas %}<p>{{ line }}</p>{% endfor %}
+<p class="muted">Prazo, validade e observa&ccedil;&otilde;es: conforme condi&ccedil;&otilde;es comerciais acima, quando informados.</p>
+{% if pagamentos %}<h2>Pagamento</h2>{% endif %}
+{% for payment in pagamentos %}
+<table class="payment"><tr><td width="28%"><img class="qr" src="{{ payment.qr }}" alt="QR Code {{ payment.titulo }}"></td><td width="72%"><p><strong>{{ payment.titulo }}</strong></p>
+{% for line in payment.url|linhas(55) %}<p><a href="{{ payment.url }}">{{ line }}</a></p>{% endfor %}
+</td></tr></table>
+{% endfor %}
+<h2>Aceite</h2>
+<p>Nome: ____________________________________________________</p>
+<p>Assinatura: ___________________________________ Data: ____/____/________</p>
+<p class="footer">Mirai Hit Studio &middot; Proposta {{ proposta.numero }} &middot; Vers&atilde;o {{ proposta.versao }}</p>
+</main></body>
+</html>

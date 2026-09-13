@@ -22,12 +22,15 @@ function obterDetalhes() {
 export function initOrcamento() {
     const btnSolicitar = $("btn-solicitar");
 
-    if (!btnSolicitar) return;
+    if (!btnSolicitar || btnSolicitar.dataset.initialized) return;
+    btnSolicitar.dataset.initialized = "true";
+    let enviando = false;
 
     btnSolicitar.addEventListener(
         "click",
 
         async () => {
+            if (enviando) return;
             if (!state.servicoSelecionadoOBJ) {
                 Notify.error("Selecione um serviço.");
 
@@ -51,11 +54,16 @@ export function initOrcamento() {
             };
 
             try {
+                enviando = true;
+                btnSolicitar.disabled = true;
                 await API.postOrcamento(payload);
                 Notify.success("Solicitação de orçamento enviada.");
             } catch (error) {
                 console.error(error);
                 Notify.error("Erro ao enviar solicitação de orçamento.");
+            } finally {
+                enviando = false;
+                btnSolicitar.disabled = false;
             }
         },
     );

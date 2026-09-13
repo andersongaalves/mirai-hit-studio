@@ -1,3 +1,4 @@
+import { escapeHtml, serviceStructure } from "../utils/security.js";
 export function renderizarEstrutura(estrutura) {
 
     if (!estrutura) return "";
@@ -17,13 +18,15 @@ export function renderizarEstrutura(estrutura) {
 
         catch {
 
-            return "";
+            return '<p class="service-intro">Descrição indisponível.</p>';
 
         }
 
     }
 
 
+    dados = serviceStructure(dados);
+    if (!dados) return '<p class="service-intro">Descrição indisponível.</p>';
     let html = "";
 
 
@@ -35,7 +38,7 @@ export function renderizarEstrutura(estrutura) {
 
         html += `
             <p class="service-intro">
-                ${dados.intro}
+                ${escapeHtml(dados.intro)}
             </p>
         `;
 
@@ -56,18 +59,18 @@ export function renderizarEstrutura(estrutura) {
 
                 <div 
                     class="service-section-title"
-                    onclick="toggleServiceSection(this)"
+                    data-service-toggle
                 >
 
                     <div>
 
                         <span class="service-icon">
-                            ${secao.icon ?? ""}
+                            ${escapeHtml(secao.icon)}
                         </span>
 
 
                         <span>
-                            ${secao.title ?? ""}
+                            ${escapeHtml(secao.title)}
                         </span>
 
                     </div>
@@ -93,7 +96,7 @@ export function renderizarEstrutura(estrutura) {
             html += `
 
                 <li>
-                    ${item}
+                    ${escapeHtml(item)}
                 </li>
 
             `;
@@ -137,7 +140,7 @@ export function renderizarEstrutura(estrutura) {
 
                 <div class="service-benefit">
 
-                    ✓ ${item}
+                    ✓ ${escapeHtml(item)}
 
                 </div>
 
@@ -208,3 +211,8 @@ window.toggleServiceSection = function(header) {
     );
 
 };
+
+document.addEventListener("click", event => {
+    const header = event.target.closest("[data-service-toggle]");
+    if (header) window.toggleServiceSection(header);
+});

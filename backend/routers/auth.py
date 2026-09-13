@@ -5,8 +5,15 @@ from database import get_db
 from crud import crud_usuario
 from schemas.usuario import LoginRequest
 from core.security import verify_password, create_access_token
+from core.dependencies import get_current_user
+from schemas.usuario import UsuarioResponse
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
+
+
+@router.get("/me", response_model=UsuarioResponse)
+def current_user(user=Depends(get_current_user)):
+    return user
 
 
 @router.post("/login")

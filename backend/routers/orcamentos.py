@@ -14,6 +14,7 @@ from schemas.orcamento import (
 )
 
 from services.email_service import EmailService
+from models import UsuarioModel
 
 import crud.crud_orcamento as crud_orcamento
 
@@ -102,11 +103,11 @@ def atualizar_status(
     user=Depends(get_current_user),
 ):
 
-    orcamento = crud_orcamento.atualizar_status(
-        db,
-        orcamento_id,
-        dados.status,
-    )
+    try:
+        orcamento = crud_orcamento.atualizar_status(db, orcamento_id, dados.status)
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error)) from None
 
     if not orcamento:
         raise HTTPException(
@@ -127,42 +128,7 @@ def enviar_proposta(
     user=Depends(get_current_user),
 ):
 
-    orcamento = crud_orcamento.buscar_por_id(
-        db,
-        orcamento_id,
-    )
-
-    if not orcamento:
-        raise HTTPException(
-            status_code=404,
-            detail="Orçamento não encontrado",
-        )
-
-    codigo = (
-        f"MH-"
-        f"{orcamento.data_solicitacao:%Y}-"
-        f"{orcamento.id:04d}"
-    )
-
-    # temporário até criar pdf_service
-    arquivo = (
-        f"propostas/{codigo}.pdf"
-    )
-
-    atualizado = (
-        crud_orcamento.marcar_proposta_enviada(
-            db,
-            orcamento_id,
-            codigo,
-            arquivo,
-        )
-    )
-
-    # depois entra aqui:
-    # PDFService.gerar()
-    # EmailService.enviar_proposta()
-
-    return atualizado
+    raise HTTPException(status_code=409, detail="Use o envio real pelo editor de propostas.")
 
 @router.patch(
     "/{orcamento_id}/produtor",
@@ -175,6 +141,8 @@ def alterar_produtor(
     user=Depends(get_current_user),
 ):
 
+    if dados.produtor_id is not None and db.get(UsuarioModel, dados.produtor_id) is None:
+        raise HTTPException(status_code=422, detail="Produtor nao encontrado.")
     orcamento = crud_orcamento.atualizar_produtor(
         db,
         orcamento_id,

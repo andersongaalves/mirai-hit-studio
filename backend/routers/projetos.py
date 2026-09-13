@@ -8,7 +8,7 @@ from schemas.projeto import (
     ProjetoResponse,
 )
 
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
@@ -20,7 +20,7 @@ def listar_projetos(db: Session = Depends(get_db)):
 
 @router.post("", response_model=ProjetoResponse)
 def criar_projeto(
-    proj: ProjetoCreate, db: Session = Depends(get_db), user=Depends(get_current_user)
+    proj: ProjetoCreate, db: Session = Depends(get_db), user=Depends(require_admin)
 ):
 
     novo = models.ProjetoModel(**proj.model_dump())
@@ -39,7 +39,7 @@ def atualizar_projeto(
     id: int,
     proj_atualizado: ProjetoCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     projeto = db.query(models.ProjetoModel).filter(models.ProjetoModel.id == id).first()
@@ -59,7 +59,7 @@ def atualizar_projeto(
 
 @router.delete("/{id}")
 def deletar_projeto(
-    id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
+    id: int, db: Session = Depends(get_db), user=Depends(require_admin)
 ):
 
     projeto = db.query(models.ProjetoModel).filter(models.ProjetoModel.id == id).first()

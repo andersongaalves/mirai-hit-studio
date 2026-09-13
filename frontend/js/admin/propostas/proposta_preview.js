@@ -1,125 +1,56 @@
 import { $ } from "../../utils/dom.js";
-import { money } from "../../utils/format.js";
+import { buscarPreview, baixarDocumento } from "./proposta_api.js";
 
-import {
-    calcularSubtotalItem,
-    escapeHtml,
-    PROPOSTA_LOGO_SRC
-} from "./proposta_utils.js";
+let documentoUrl = null;
+let revisao = 0;
 
-import {
-    getTotalItens
-} from "./proposta_state.js";
-
-function renderizarPagamentoCard({
-    titulo,
-    link,
-    descricao = "",
-    oculto = false
-}) {
-    if (oculto) return "";
-
-    return `
-        <div class="proposta-payment-card">
-            <div>
-                <strong>${escapeHtml(titulo)}</strong>
-                <p>${escapeHtml(descricao)}</p>
-                <small>${link ? escapeHtml(link) : "Link ainda não informado"}</small>
-            </div>
-            <div class="proposta-qr-placeholder">
-                QR Code
-            </div>
-        </div>
-    `;
+export function limparPreview() {
+    revisao++;
+    if (documentoUrl) URL.revokeObjectURL(documentoUrl);
+    documentoUrl = null;
 }
 
-export function renderizarPreview(proposta, orcamento) {
+export async function renderizarPreview(proposta, dirty = false) {
+    limparPreview();
+    const atual = revisao;
     const container = $("proposta-content");
-
     if (!container || !proposta) return;
-
-    const itens = proposta.itens ?? [];
-    const pagamento = proposta.pagamento ?? {};
-
-    container.innerHTML = `
-        <div class="admin-info proposta-preview">
-            <header class="proposta-preview-header">
-                <img
-                    src="${PROPOSTA_LOGO_SRC}"
-                    alt="Mirai Hit Studio"
-                    class="proposta-preview-logo"
-                >
-                <div>
-                    <h2>Proposta Comercial</h2>
-                    <p>${escapeHtml(proposta.numero || "Número gerado ao salvar")}</p>
-                </div>
-            </header>
-
-            <section>
-                <h3>Cliente</h3>
-                <p><strong>Nome:</strong> ${escapeHtml(orcamento?.nome_cliente)}</p>
-                <p><strong>Email:</strong> ${escapeHtml(orcamento?.email)}</p>
-                <p><strong>WhatsApp:</strong> ${escapeHtml(orcamento?.whatsapp)}</p>
-            </section>
-
-            <section>
-                <h3>Objeto</h3>
-                <p><strong>Data:</strong> ${escapeHtml(proposta.data)}</p>
-                <p><strong>Prestador:</strong> ${escapeHtml(proposta.prestador)}</p>
-                <p><strong>ID do produtor responsável:</strong> ${escapeHtml(proposta.produtor_id)}</p>
-                <p><strong>Objeto:</strong> ${escapeHtml(proposta.objeto)}</p>
-                <p>${escapeHtml(proposta.descricao).replaceAll("\n", "<br>")}</p>
-            </section>
-
-            <section>
-                <h3>Itens da Proposta</h3>
-                <table class="proposta-preview-table">
-                    <thead>
-                        <tr>
-                            <th>Descrição</th>
-                            <th>Qtd.</th>
-                            <th>Unitário</th>
-                            <th>Desconto</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itens.map(item => `
-                            <tr>
-                                <td>${escapeHtml(item.descricao)}</td>
-                                <td>${item.quantidade ?? 0}</td>
-                                <td>${money(item.valor_unitario ?? 0)}</td>
-                                <td>${money(item.desconto ?? 0)}</td>
-                                <td>${money(calcularSubtotalItem(item))}</td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
-                <p><strong>Total:</strong> ${money(getTotalItens())}</p>
-            </section>
-
-            <section>
-                <h3>Condições Comerciais</h3>
-                <p>${escapeHtml(proposta.condicoes).replaceAll("\n", "<br>")}</p>
-            </section>
-
-            <section>
-                <h3>Pagamento</h3>
-                <p><strong>Entrada / Parcial 1:</strong> ${money(pagamento.entrada ?? 0)}</p>
-                <p><strong>Restante:</strong> ${money(pagamento.restante ?? 0)}</p>
-                <p><strong>Prazo:</strong> ${escapeHtml(pagamento.prazo)}</p>
-                <p><strong>Validade:</strong> ${escapeHtml(pagamento.validade)}</p>
-
-                <div class="proposta-payment-grid">
-                    ${(proposta.pagamentos ?? []).map(item => renderizarPagamentoCard({
-                        titulo: item.titulo, link: item.url, oculto: !item.habilitado
-                    })).join("")}
-                </div>
-
-                <p><strong>PIX:</strong> ${escapeHtml(pagamento.pix)}</p>
-                <p><strong>Mercado Pago:</strong> ${escapeHtml(pagamento.mercado_pago)}</p>
-                <p>${escapeHtml(pagamento.observacoes).replaceAll("\n", "<br>")}</p>
-            </section>
-        </div>
-    `;
+    const message = document.createElement("p");
+    message.textContent = dirty ? "Salve as alterações antes de gerar o PDF." : "Carregando documento...";
+    const frame = document.createElement("iframe");
+    frame.className = "proposta-document-frame";
+    frame.title = "Prévia da proposta salva";
+    frame.setAttribute("sandbox", "");
+    container.replaceChildren(message, frame);
+    const ativo = () => atual === revisao && frame.isConnected;
+    try {
+        const html = await buscarPreview(proposta.id);
+        if (!ativo()) return;
+        frame.srcdoc = html;
+        message.textContent = dirty ? "Salve as alterações antes de gerar o PDF."
+            : proposta.pagamentos.some(item => item.habilitado) ? ""
+            : "QR Code será gerado após informar um link válido.";
+    } catch (error) {
+        if (ativo()) message.textContent = error.message;
+        return;
+    }
+    if (!proposta.pdf_path || dirty) return;
+    try {
+        const blob = await baixarDocumento(proposta.id);
+        if (!ativo()) return;
+        documentoUrl = URL.createObjectURL(blob);
+        const toolbar = document.createElement("div");
+        toolbar.className = "proposta-document-actions";
+        for (const download of [false, true]) {
+            const link = document.createElement("a");
+            link.href = documentoUrl;
+            link.textContent = download ? "Baixar PDF" : "Visualizar PDF";
+            if (download) link.download = `proposta-${proposta.id}-v${proposta.versao}.pdf`;
+            else { link.target = "_blank"; link.rel = "noopener noreferrer"; }
+            toolbar.append(link);
+        }
+        container.insertBefore(toolbar, frame);
+    } catch (error) {
+        if (ativo()) message.textContent = error.message;
+    }
 }

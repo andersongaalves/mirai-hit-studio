@@ -16,6 +16,8 @@ const STATUS_MESSAGES = {
     arquivado: "Orçamento arquivado.",
 };
 
+document.addEventListener("proposta:comercial-atualizada", carregarOrcamentos);
+
 function getUiHandlers() {
     return {
         onVisualizar: visualizarOrcamento,
@@ -136,6 +138,10 @@ export function initOrcamentos() {
 }
 
 export async function alterarStatus(id, status) {
+    if (["proposta_enviada", "aprovado"].includes(status)) {
+        refresh();
+        return gerarProposta(id);
+    }
     const atual = orcamentosState.lista.find((item) => item.id === id);
 
     if (!atual || atual.status === status) {
@@ -171,11 +177,11 @@ export function gerarProposta(id) {
         return;
     }
 
-    Propostas.abrirEditorProposta(orcamento);
+    return Propostas.abrirEditorProposta(orcamento);
 }
 
 export async function aprovarOrcamento(id) {
-    return alterarStatus(id, "aprovado");
+    return gerarProposta(id);
 }
 
 export async function arquivarOrcamento(id) {

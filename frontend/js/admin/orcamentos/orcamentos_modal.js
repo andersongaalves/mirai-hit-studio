@@ -1,6 +1,7 @@
 import { $ } from "../../utils/dom.js";
 import { money } from "../../utils/format.js";
 import { formatStatus } from "./orcamentos_utils.js";
+import { safeURL } from "../../utils/security.js";
 
 let orcamentoAtual = null;
 
@@ -21,6 +22,7 @@ function setValue(id, value = "") {
 }
 
 function setHref(id, value = "") {
+    value = safeURL(value);
     const element = $(id);
 
     if (!element) return;

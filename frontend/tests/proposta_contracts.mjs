@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { buildPropostaPayload, mapResponseToState } from '../js/admin/propostas/proposta_api.js';
+import { buildPropostaPayload, mapResponseToState } from '../js/admin/propostas/proposta_mapper.js';
 import { propostaState, setProposta, atualizarCampoProposta, atualizarItem,
     atualizarPagamento, getPropostaPayload, getEditorProposta, resetPropostaState } from '../js/admin/propostas/proposta_state.js';
 
@@ -11,6 +11,14 @@ assert.equal(mapped.orcamento.nome_cliente, 'Cliente Teste');
 assert.equal(mapped.orcamento.detalhes, 'Referencia do cliente');
 setProposta(response);
 assert.equal(propostaState.dirty, false);
+atualizarCampoProposta('descricao', 'Changed');
+assert.equal(propostaState.dirty, true);
+atualizarCampoProposta('descricao', response.descricao);
+assert.equal(propostaState.dirty, false);
+propostaState.salvando = true;
+atualizarCampoProposta('descricao', 'Must not overwrite inflight payload');
+assert.equal(propostaState.proposta.descricao, response.descricao);
+propostaState.salvando = false;
 assert.equal(getEditorProposta().data, '2026-09-11');
 assert.equal(getEditorProposta().pagamento.valor_total, 150);
 assert.equal(propostaState.proposta.pagamento, undefined);
@@ -31,7 +39,7 @@ assert.deepEqual(propostaState.proposta.totais, response.totais);
 atualizarCampoProposta('produtor_id', '3');
 assert.equal(getPropostaPayload().produtor_id, 3);
 atualizarPagamento('entrada', 50);
-assert.equal(getEditorProposta().pagamento.restante, 125);
+assert.equal(getEditorProposta().pagamento.restante, 175); // Local-only fields cannot pretend to persist.
 atualizarPagamento('pagamento_parcial_2_url', 'https://example.com/final');
 assert.equal(getPropostaPayload().pagamentos[2].habilitado, false);
 atualizarPagamento('parcial_2_disponivel', true);

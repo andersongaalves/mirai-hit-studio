@@ -15,8 +15,8 @@ async function handleResponse(response, message) {
     return text ? JSON.parse(text) : null;
 }
 
-export function buscarServicos() {
-    return API.getAPI("servicos");
+export async function buscarServicos() {
+    return handleResponse(await authFetch("/servicos"), "Erro ao carregar serviços.");
 }
 
 export async function salvarServicoRequest(id, payload) {

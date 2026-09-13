@@ -5,7 +5,7 @@ from database import get_db
 import models
 from schemas.servico import (ServicoCreate, ServicoResponse)
 
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 
 router = APIRouter(prefix="/servicos", tags=["Serviços"])
 
@@ -19,7 +19,7 @@ def listar_servicos(db: Session = Depends(get_db)):
 def criar_servico(
     servico: ServicoCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     novo = models.ServicoModel(**servico.model_dump())
@@ -36,7 +36,7 @@ def atualizar_servico(
     servico_id: int,
     srv_atualizado: ServicoCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     servico = (
@@ -60,7 +60,7 @@ def atualizar_servico(
 
 @router.delete("/{servico_id}")
 def deletar_servico(
-    servico_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
+    servico_id: int, db: Session = Depends(get_db), user=Depends(require_admin)
 ):
 
     servico = (

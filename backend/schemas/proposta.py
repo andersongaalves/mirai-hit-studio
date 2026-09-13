@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter, field_validator
 from models.enums.proposta import PropostaStatus
+from schemas.validation import http_url
 
 Money = Annotated[Decimal, Field(ge=0, allow_inf_nan=False)]
 Quantity = Annotated[Decimal, Field(gt=0, allow_inf_nan=False)]
@@ -15,23 +16,23 @@ class Contract(BaseModel):
 
 
 class PropostaItem(Contract):
-    descricao: str
+    descricao: str = Field(max_length=10000)
     quantidade: Quantity
     valor_unitario: Money
     desconto: Money = Decimal("0")  # Absolute discount per line, as in the editor.
 
 
 class PropostaPagamento(Contract):
-    tipo: str = Field(min_length=1)
-    titulo: str = Field(min_length=1)
-    url: str = ""
+    tipo: str = Field(min_length=1, max_length=40)
+    titulo: str = Field(min_length=1, max_length=200)
+    url: str = Field(default="", max_length=2000)
     habilitado: bool = False
 
     @field_validator("url")
     @classmethod
     def http_url(cls, value):
         if value:
-            TypeAdapter(HttpUrl).validate_python(value)
+            http_url(value)
         return value
 
     @field_validator("habilitado")
@@ -74,10 +75,10 @@ class PropostaCreate(Contract):
 class PropostaUpdate(Contract):
     produtor_id: PositiveId | None = None
     objeto: str | None = Field(default=None, max_length=200)
-    descricao: str | None = None
-    itens: list[PropostaItem] | None = None
-    pagamentos: list[PropostaPagamento] | None = None
-    condicoes: str | None = None
+    descricao: str | None = Field(default=None, max_length=50000)
+    itens: list[PropostaItem] | None = Field(default=None, max_length=200)
+    pagamentos: list[PropostaPagamento] | None = Field(default=None, max_length=20)
+    condicoes: str | None = Field(default=None, max_length=50000)
 
     @field_validator("objeto", "descricao", "itens", "pagamentos", "condicoes")
     @classmethod

@@ -34,7 +34,7 @@ function renderizarParametros() {
 }
 
 function setParametrosFromServico(servico) {
-    servicosState.parametros = servico?.parametros
+    servicosState.parametros = typeof servico?.parametros === "string"
         ? servico.parametros.split(",").filter(Boolean)
         : [];
 }
@@ -43,7 +43,7 @@ export async function carregarServicos() {
     try {
         const servicos = await ServicosAPI.buscarServicos();
 
-        servicosState.lista = Array.isArray(servicos) ? servicos : [];
+        servicosState.lista = Array.isArray(servicos) ? servicos.filter(item => item && Number.isInteger(item.id)) : [];
 
         renderizarServicos();
     } catch (error) {

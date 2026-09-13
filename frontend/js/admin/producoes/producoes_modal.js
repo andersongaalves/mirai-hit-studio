@@ -78,5 +78,6 @@ export function abrirModalProducao(producao) {
 }
 
 export function fecharModalProducao() {
-    $("modal-producao").classList.add("hidden");
+    producaoAtual = null;
+    $("modal-producao")?.classList.add("hidden");
 }

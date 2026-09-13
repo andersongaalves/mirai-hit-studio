@@ -13,7 +13,7 @@ import {
     escapeHtml
 } from "./proposta_utils.js";
 
-export function renderizarItens(proposta, onRefresh = () => {}) {
+export function renderizarItens(proposta, onRefresh = () => {}, onChange = () => {}) {
     const container = $("proposta-content");
 
     if (!container || !proposta) return;
@@ -26,7 +26,7 @@ export function renderizarItens(proposta, onRefresh = () => {}) {
             <button id="btn-add-proposta-item" class="btn-small" type="button">
                 + Adicionar item
             </button>
-            <p><strong>Total:</strong> ${money(getTotalItens())}</p>
+            <p><strong>Total:</strong> <span id="proposta-itens-total">${money(getTotalItens())}</span></p>
         </div>
     `;
 
@@ -43,29 +43,29 @@ export function renderizarItens(proposta, onRefresh = () => {}) {
             </div>
             <div class="form-group">
                 <label>Qtd.</label>
-                <input data-campo="quantidade" type="number" min="0" step="1" value="${item.quantidade ?? 0}">
+                <input data-campo="quantidade" type="number" min="0" step="any" value="${escapeHtml(item.quantidade ?? 0)}">
             </div>
             <div class="form-group">
                 <label>Valor unitário</label>
-                <input data-campo="valor_unitario" type="number" min="0" step="0.01" value="${item.valor_unitario ?? 0}">
+                <input data-campo="valor_unitario" type="number" min="0" step="0.01" value="${escapeHtml(item.valor_unitario ?? 0)}">
             </div>
             <div class="form-group">
                 <label>Desconto</label>
-                <input data-campo="desconto" type="number" min="0" step="0.01" value="${item.desconto ?? 0}">
+                <input data-campo="desconto" type="number" min="0" step="0.01" value="${escapeHtml(item.desconto ?? 0)}">
             </div>
-            <span>${money(calcularSubtotalItem(item))}</span>
+            <span data-subtotal>${money(calcularSubtotalItem(item))}</span>
             <button class="btn-small btn-danger" type="button">Remover</button>
         `;
 
         row.querySelectorAll("input").forEach(input => {
             input.oninput = e => {
                 const campo = e.target.dataset.campo;
-                const value = campo === "descricao"
-                    ? e.target.value
-                    : Number(e.target.value || 0);
+                const value = e.target.value;
 
                 atualizarItem(index, campo, value);
-                onRefresh();
+                row.querySelector("[data-subtotal]").textContent = money(calcularSubtotalItem(item));
+                $("proposta-itens-total").textContent = money(getTotalItens());
+                onChange();
             };
         });
 

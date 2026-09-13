@@ -1,3 +1,4 @@
+import { escapeHtml } from "../../utils/security.js";
 /* ============================================================
  * Helpers
  * ========================================================== */
@@ -80,13 +81,13 @@ export function createSectionCardElement(secao) {
 
             <input
                 class="builder-icon"
-                value="${secao.icon}"
+                value="${escapeHtml(secao.icon)}"
                 placeholder="🎹"
             >
 
             <input
                 class="builder-title"
-                value="${secao.title}"
+                value="${escapeHtml(secao.title)}"
                 placeholder="Título"
             >
 

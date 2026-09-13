@@ -5,6 +5,7 @@ import models
 from database import get_db
 from schemas.newsletter import NewsletterCreate, NewsletterResponse
 from services.email_service import EmailService
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/newsletter", tags=["Newsletter"])
 
@@ -20,12 +21,19 @@ def criar_newsletter(newsletter: NewsletterCreate, db: Session = Depends(get_db)
 
     if existe:
 
-        raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado.")
+        return existe
 
     novo = models.NewsletterModel(email=newsletter.email)
 
     db.add(novo)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing = db.query(models.NewsletterModel).filter(models.NewsletterModel.email == newsletter.email).first()
+        if existing:
+            return existing
+        raise
     db.refresh(novo)
 
     EmailService.enviar_boas_vindas(novo.email)

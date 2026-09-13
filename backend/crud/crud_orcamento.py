@@ -2,7 +2,6 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from models.orcamento import OrcamentoModel
-from crud import crud_producao
 from core.enums import OrcamentoStatus
 
 
@@ -49,24 +48,17 @@ def atualizar_status(
     status: OrcamentoStatus,
 ):
 
-    orcamento = buscar_por_id(
-        db,
-        orcamento_id,
-    )
+    orcamento = db.query(OrcamentoModel).filter(OrcamentoModel.id == orcamento_id).with_for_update().populate_existing().first()
 
     if not orcamento:
         return None
 
 
+    if status in (OrcamentoStatus.PROPOSTA_ENVIADA, OrcamentoStatus.APROVADO):
+        raise ValueError("Envie ou aprove pelo editor de propostas.")
+    if orcamento.proposta and orcamento.proposta.status not in ("rascunho", "pronta"):
+        raise ValueError("Orcamento vinculado a proposta comercial finalizada; status protegido.")
     orcamento.status = status.value
-
-
-    if status == OrcamentoStatus.APROVADO:
-
-        crud_producao.criar_por_orcamento(
-            db,
-            orcamento,
-        )
 
 
     db.commit()

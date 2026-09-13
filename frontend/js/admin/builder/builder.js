@@ -1,4 +1,5 @@
 import { builderState } from "./builder_state.js";
+import { serviceStructure } from "../../utils/security.js";
 
 /* ============================================================
  * Helpers privados
@@ -47,6 +48,8 @@ export function carregarBuilder(json) {
         }
     }
 
+    dados = serviceStructure(dados);
+    if (!dados) return;
     builderState.intro = dados.intro ?? "";
 
     builderState.sections = (dados.sections ?? []).map(criarSecao);

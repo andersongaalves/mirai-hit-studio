@@ -5,7 +5,7 @@ from database import get_db
 import models
 from schemas.config import ConfigResponse
 
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 
 router = APIRouter(prefix="/config", tags=["Configurações"])
 
@@ -19,7 +19,7 @@ def get_config(db: Session = Depends(get_db)):
 def update_config(
     novo_config: ConfigResponse,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     config = db.query(models.ConfigModel).filter(models.ConfigModel.id == 1).first()

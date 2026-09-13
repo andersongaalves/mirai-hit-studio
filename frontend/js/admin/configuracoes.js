@@ -45,7 +45,9 @@ const configInput = (campo) => $(CONFIG_INPUT_IDS[campo] || campo);
 
 export async function carregarConfiguracoes() {
     try {
-        const config = await API.getAPI("config");
+        const response = await authFetch("/config");
+        if (!response.ok) throw new Error("Erro ao carregar configurações.");
+        const config = await response.json();
 
         preencherFormulario(config);
     } catch (error) {

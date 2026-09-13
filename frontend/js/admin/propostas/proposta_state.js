@@ -20,6 +20,8 @@ export const propostaState = {
     dirty: false,
     carregando: false,
     salvando: false,
+    gerando: false,
+    processando: false,
     // Editor-only fields have no storage contract in the current model.
     ui: { locais: criarCamposLocais(), totaisVisuais: {} }
 };
@@ -42,7 +44,11 @@ function normalizarItem(item = {}) {
 }
 
 function marcarAlterado() {
-    propostaState.dirty = true;
+    propostaState.dirty = JSON.stringify(getPropostaPayload()) !== propostaState.ui.payloadSalvo;
+}
+
+export function podeEditar() {
+    return propostaState.proposta?.status === "rascunho" && !propostaState.carregando && !propostaState.salvando && !propostaState.gerando && !propostaState.processando;
 }
 
 export function resetPropostaState() {
@@ -52,32 +58,33 @@ export function resetPropostaState() {
     propostaState.dirty = false;
     propostaState.carregando = false;
     propostaState.salvando = false;
+    propostaState.gerando = false;
+    propostaState.processando = false;
     propostaState.ui = { locais: criarCamposLocais(), totaisVisuais: {} };
 }
 
 export function setProposta(proposta) {
     const mapped = mapResponseToState(proposta);
     propostaState.proposta = mapped.proposta;
-    if (mapped.orcamento) propostaState.orcamento = mapped.orcamento;
+    propostaState.orcamento = mapped.orcamento;
     propostaState.ui = { locais: criarCamposLocais(), totaisVisuais: {} };
-    sincronizarTotais();
     propostaState.dirty = false;
+    propostaState.ui.payloadSalvo = JSON.stringify(getPropostaPayload());
+    sincronizarTotais();
 }
 
 export function atualizarCampoProposta(campo, valor) {
-    if (!propostaState.proposta) return;
+    if (!podeEditar()) return;
 
     if (["produtor_id", "objeto", "descricao", "condicoes"].includes(campo)) {
         propostaState.proposta[campo] = campo === "produtor_id"
             ? (valor === "" ? null : Number(valor)) : valor;
-    } else if (campo === "prestador") {
-        propostaState.ui.locais.prestador = valor;
     } else return;
     marcarAlterado();
 }
 
 export function atualizarPagamento(campo, valor) {
-    if (!propostaState.proposta) return;
+    if (!podeEditar()) return;
 
     const tipo = links[campo] || (campo === "parcial_2_disponivel" ? "parcial_2" : null);
     if (tipo) {
@@ -92,32 +99,24 @@ export function atualizarPagamento(campo, valor) {
             pagamento.url = valor;
             if (tipo !== "parcial_2") pagamento.habilitado = Boolean(valor);
         }
-    } else if (Object.hasOwn(propostaState.ui.locais, campo)) {
-        propostaState.ui.locais[campo] = campo === "entrada" ? toNumber(valor) : valor;
     } else return;
-
-    if (campo === "entrada") {
-        sincronizarTotais();
-    }
 
     marcarAlterado();
 }
 
 export function atualizarItem(index, campo, valor) {
+    if (!podeEditar()) return;
     if (!propostaState.proposta?.itens[index]) return;
     if (!["descricao", "quantidade", "valor_unitario", "desconto"].includes(campo)) return;
 
-    propostaState.proposta.itens[index][campo] =
-        campo === "descricao"
-            ? valor
-            : toNumber(valor);
+    propostaState.proposta.itens[index][campo] = valor;
 
-    sincronizarTotais();
     marcarAlterado();
+    sincronizarTotais();
 }
 
 export function adicionarItem() {
-    if (!propostaState.proposta) return;
+    if (!podeEditar()) return;
 
     propostaState.proposta.itens.push(
         normalizarItem({
@@ -125,16 +124,16 @@ export function adicionarItem() {
         })
     );
 
-    sincronizarTotais();
     marcarAlterado();
+    sincronizarTotais();
 }
 
 export function removerItem(index) {
-    if (!propostaState.proposta) return;
+    if (!podeEditar()) return;
 
     propostaState.proposta.itens.splice(index, 1);
-    sincronizarTotais();
     marcarAlterado();
+    sincronizarTotais();
 }
 
 export function getItens() {
@@ -142,6 +141,9 @@ export function getItens() {
 }
 
 export function getTotalItens() {
+    if (!propostaState.dirty && propostaState.proposta?.totais?.total != null) {
+        return Number(propostaState.proposta.totais.total);
+    }
     return calcularTotalItens(
         getItens()
     );

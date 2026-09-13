@@ -11,6 +11,7 @@ import { $, show, hide, clear } from "../utils/dom.js";
 // ===========================
 
 let projetos = [];
+document.addEventListener("admin:logout", () => { projetos = []; });
 
 // ===========================
 // LOAD
@@ -18,7 +19,9 @@ let projetos = [];
 
 export async function carregarPortfolio() {
     try {
-        projetos = await API.getAPI("projetos");
+        const response = await authFetch("/projetos");
+        if (!response.ok) throw new Error("Erro ao carregar projetos.");
+        projetos = await response.json();
 
         renderizarProjetos();
     } catch (error) {

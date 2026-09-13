@@ -7,6 +7,10 @@ import * as Propostas from "./propostas/propostas.js";
 import * as Config from "./configuracoes.js";
 
 import { fecharModalProducao } from "./producoes/producoes_modal.js";
+import { orcamentosState } from "./orcamentos/orcamentos_state.js";
+import { producoesState } from "./producoes/producoes_state.js";
+import { servicosState } from "./servicos/servicos_state.js";
+import { resetBuilder } from "./builder/builder.js";
 
 function expose(name, callback) {
     window[name] = callback;
@@ -42,7 +46,31 @@ function fazerLogin() {
     return loginEmAndamento;
 }
 
-document.addEventListener("admin:logout", () => { sessaoInicializada = null; });
+document.addEventListener("admin:logout", () => {
+    sessaoInicializada = null;
+    orcamentosState.lista = [];
+    orcamentosState.produtores = [];
+    producoesState.lista = [];
+    servicosState.lista = [];
+    servicosState.parametros = [];
+    for (const state of [orcamentosState, producoesState]) state.filtro = { busca: "", status: "todos" };
+    resetBuilder();
+    Orcamentos.fecharModalOrcamento();
+    fecharModalProducao();
+    document.querySelectorAll(".modal, #editor-servico").forEach(element => element.classList.add("hidden"));
+    document.querySelectorAll(".admin-container input, .admin-container textarea").forEach(input => {
+        input.value = "";
+        if (input.type === "checkbox") input.checked = false;
+    });
+    for (const id of ["orcamentos-list", "producoes-list", "lista-servicos", "portfolio-list", "builder-preview-render", "builder-sections", "builder-benefits", "param_list_render", "prod_etapas"]) {
+        document.getElementById(id)?.replaceChildren();
+    }
+    document.querySelectorAll("#modal-orcamento span, #modal-producao span, #modal-orcamento h2, #modal-producao h2").forEach(el => { el.textContent = ""; });
+    document.getElementById("orc_guia")?.removeAttribute("href");
+    const proposalTitle = document.getElementById("proposta-title");
+    if (proposalTitle) proposalTitle.textContent = "";
+    document.querySelectorAll(".notification").forEach(el => el.remove());
+});
 expose("fazerLogin", fazerLogin);
 expose("fazerLogout", Auth.logout);
 
@@ -75,7 +103,7 @@ expose("salvarConfiguracoesExtras", Config.salvarConfiguracoesExtras);
 
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        if (Auth.restaurarSessao()) {
+        if (await Auth.restaurarSessao()) {
             await initializeAdmin();
         }
     } catch (error) {

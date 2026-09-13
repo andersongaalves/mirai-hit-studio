@@ -8,6 +8,10 @@ import * as Notify from "../../utils/notifications.js";
 
 import * as ProducoesModal from "./producoes_modal.js";
 
+document.addEventListener("proposta:comercial-atualizada", event => {
+    if (event.detail?.proposta?.status === "aceita") carregarProducoes();
+});
+
 export async function carregarProducoes() {
     try {
         producoesState.lista = await ProducoesAPI.buscarProducoes();

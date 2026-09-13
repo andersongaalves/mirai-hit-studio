@@ -3,11 +3,11 @@ import { atualizarPagamento } from "./proposta_state.js";
 import { escapeHtml } from "./proposta_utils.js";
 
 const camposValores = [
-    ["entrada", "Entrada / Parcial 1 (local)", "number"],
+    ["entrada", "Entrada / Parcial 1 (local)", "number", true],
     ["restante", "Restante", "number", true],
     ["valor_total", "Valor total", "number", true],
-    ["prazo", "Prazo (local)", "text"],
-    ["validade", "Validade (local)", "date"]
+    ["prazo", "Prazo (local)", "text", true],
+    ["validade", "Validade (local)", "date", true]
 ];
 
 const camposLinks = [
@@ -72,6 +72,7 @@ export function renderizarPagamento(
                 <label>PIX (local)</label>
                 <input
                     id="proposta_pagamento_pix"
+                    readonly
                     value="${escapeHtml(pagamento.pix)}"
                 >
             </div>
@@ -80,13 +81,14 @@ export function renderizarPagamento(
                 <label>Mercado Pago (local)</label>
                 <input
                     id="proposta_pagamento_mercado_pago"
+                    readonly
                     value="${escapeHtml(pagamento.mercado_pago)}"
                 >
             </div>
 
             <div class="form-group">
                 <label>Observações (local)</label>
-                <textarea id="proposta_pagamento_observacoes" rows="6">${escapeHtml(pagamento.observacoes)}</textarea>
+                <textarea id="proposta_pagamento_observacoes" readonly rows="6">${escapeHtml(pagamento.observacoes)}</textarea>
             </div>
         </div>
     `;
@@ -129,7 +131,7 @@ function registrarCamposTexto(onChange) {
     ].forEach(id => {
         const input = $(`proposta_pagamento_${id}`);
 
-        if (!input) return;
+        if (!input || input.readOnly) return;
 
         input.oninput = e => {
             atualizarPagamento(

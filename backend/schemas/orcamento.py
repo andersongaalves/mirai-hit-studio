@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from schemas.validation import http_url
 
 from core.enums import OrcamentoStatus
 
@@ -27,7 +28,22 @@ class OrcamentoBase(BaseModel):
 
 
 class OrcamentoCreate(OrcamentoBase):
-    pass
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    nome_cliente: str = Field(min_length=1, max_length=120)
+    email: EmailStr = Field(max_length=150)
+    whatsapp: str | None = Field(default=None, max_length=30)
+    servico: str = Field(min_length=1, max_length=100)
+    valor_total: float = Field(ge=0)
+    link_guia: str | None = Field(default=None, max_length=500)
+    detalhes: str | None = Field(default=None, max_length=20000)
+    _url = field_validator("link_guia")(http_url)
+
+    @field_validator("nome_cliente", "servico")
+    @classmethod
+    def nonempty(cls, value):
+        if not value.strip():
+            raise ValueError("field_required")
+        return value.strip()
 
 
 # ===========================
@@ -40,11 +56,11 @@ class OrcamentoStatusUpdate(BaseModel):
 
 
 class OrcamentoProdutorUpdate(BaseModel):
-    produtor_id: int | None = None
+    produtor_id: int | None = Field(default=None, gt=0, strict=True)
 
 
 class OrcamentoObservacoesUpdate(BaseModel):
-    observacoes: str
+    observacoes: str = Field(max_length=20000)
 
 
 # ===========================

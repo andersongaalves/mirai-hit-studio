@@ -1,5 +1,7 @@
 from pathlib import Path
 from datetime import datetime
+import base64
+import logging
 
 import resend
 
@@ -8,6 +10,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from core.config import settings
 
 resend.api_key = settings.RESEND_API_KEY
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -18,6 +21,19 @@ templates = Environment(
 
 
 class EmailService:
+
+    @classmethod
+    def enviar_proposta(cls, proposta, pdf, valor):
+        cliente = proposta.cliente_snapshot.cliente
+        html = cls.render("email_proposta.html", nome=cliente.nome, numero=proposta.numero,
+                          resumo=proposta.objeto or proposta.descricao[:300], valor=valor)
+        return resend.Emails.send({
+            "from": settings.EMAIL_FROM, "to": cliente.email,
+            "subject": f"Proposta comercial {proposta.numero} - Mirai Hit Studio",
+            "html": html,
+            "attachments": [{"filename": f"proposta-{proposta.id}-v{proposta.versao}.pdf",
+                             "content": base64.b64encode(pdf).decode("ascii")}],
+        }, {"idempotency_key": f"proposal/{proposta.id}/v{proposta.versao}/{proposta.created_at.isoformat()}"})
 
     @staticmethod
     def render(template_name: str, **context):
@@ -41,9 +57,9 @@ class EmailService:
                 }
             )
 
-        except Exception as e:
+        except Exception:
 
-            print(f"Erro ao enviar e-mail: {e}")
+            logger.error("email_send_failed")
 
             return None
 

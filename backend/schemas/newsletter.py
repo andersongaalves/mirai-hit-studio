@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class NewsletterCreate(BaseModel):
-    email: EmailStr
+    model_config = ConfigDict(extra="forbid")
+    email: EmailStr = Field(max_length=150)
 
 
 class NewsletterResponse(BaseModel):

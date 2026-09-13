@@ -272,7 +272,22 @@
 
 .proposta-modal-content {
     max-width: 1100px;
-    width: min(94vw, 1100px);
+    width: 100%;
+    min-width: 0;
+}
+.proposta-modal-content #proposta-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+.proposta-modal-content > div:last-child {
+    flex-wrap: wrap;
+}
+.proposta-modal-content > div:last-child > div {
+    flex-wrap: wrap;
+}
+#proposta-status {
+    overflow-wrap: anywhere;
 }
 
 .proposta-tabs {
@@ -304,76 +319,15 @@
     align-items: end;
 }
 
-.proposta-preview {
-    background: #fff;
-    color: #111;
-    line-height: 1.55;
-}
-
-.proposta-preview h2,
-.proposta-preview h3,
-.proposta-preview p,
-.proposta-preview strong,
-.proposta-preview small {
-    color: #111;
-}
-
-.proposta-preview-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
-    align-items: center;
-    border-bottom: 2px solid #111;
-    padding-bottom: 18px;
-    margin-bottom: 24px;
-}
-
-.proposta-preview-logo {
-    width: 120px;
-    height: 120px;
-    object-fit: contain;
-}
-
-.proposta-preview section {
-    margin-bottom: 24px;
-}
-
-.proposta-preview-table {
+.proposta-document-frame {
     width: 100%;
-    border-collapse: collapse;
-    margin: 12px 0;
+    height: 70vh;
+    min-height: 360px;
+    border: 1px solid #ccc;
+    background: #fff;
 }
-
-.proposta-preview-table th,
-.proposta-preview-table td {
-    border: 1px solid #d1d5db;
-    padding: 8px;
-    color: #111;
-    text-align: left;
-}
-
-.proposta-payment-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-    margin: 18px 0;
-}
-
-.proposta-payment-card {
+.proposta-document-actions {
     display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    border: 1px solid #111;
-    padding: 12px;
-}
-
-.proposta-qr-placeholder {
-    display: grid;
-    place-items: center;
-    width: 92px;
-    aspect-ratio: 1;
-    border: 2px dashed #111;
-    color: #111;
-    font-size: 0.8rem;
-    text-align: center;
+    gap: 16px;
+    margin: 8px 0;
 }

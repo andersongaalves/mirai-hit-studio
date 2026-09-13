@@ -3,6 +3,17 @@ from sqlalchemy.orm import Session
 from models.producao import ProducaoModel
 
 
+def buscar_por_orcamento(db, orcamento_id):
+    return db.query(ProducaoModel).filter(ProducaoModel.orcamento_id == orcamento_id).first()
+
+
+def criar_sem_commit(db, dados):
+    producao = ProducaoModel(**dados)
+    db.add(producao)
+    db.flush()
+    return producao
+
+
 def criar(db: Session, dados: dict):
 
     producao = ProducaoModel(**dados)

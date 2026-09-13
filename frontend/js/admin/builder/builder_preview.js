@@ -1,3 +1,4 @@
+import { escapeHtml } from "../../utils/security.js";
 import { builderState } from "./builder_state.js";
 
 /* ============================================================
@@ -29,7 +30,7 @@ function renderIntro() {
 
         <p class="preview-intro">
 
-            ${builderState.intro}
+            ${escapeHtml(builderState.intro)}
 
         </p>
 
@@ -57,11 +58,11 @@ function renderSection(secao) {
 
                 <span class="preview-icon">
 
-                    ${secao.icon}
+                    ${escapeHtml(secao.icon)}
 
                 </span>
 
-                ${secao.title}
+                ${escapeHtml(secao.title)}
 
             </h4>
 
@@ -84,7 +85,7 @@ function renderItems(secao) {
         .map(
             (item) => `
 
-            <li>${item}</li>
+            <li>${escapeHtml(item)}</li>
 
         `,
         )
@@ -120,7 +121,7 @@ function renderBenefits() {
                     .map(
                         (item) => `
 
-                        <li>${item}</li>
+                        <li>${escapeHtml(item)}</li>
 
                     `,
                     )

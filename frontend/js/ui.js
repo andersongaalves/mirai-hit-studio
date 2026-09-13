@@ -1,3 +1,4 @@
+import { escapeHtml, safeURL } from "./utils/security.js";
 import { getProjetos } from "./api.js"; // <- Movido para o topo!
 import { money } from "./utils/format.js";
 import { $, $$ } from "./utils/dom.js";
@@ -53,6 +54,7 @@ export const PARAM_TEMPLATES = {
 };
 
 export function renderizarBotoes(servicos) {
+    servicos = Array.isArray(servicos) ? servicos.filter(s => s && Number.isInteger(s.id)) : [];
     const boxAvulso = $("render-avulsos");
     const boxCombo = $("render-combos");
 
@@ -73,7 +75,7 @@ export function renderizarBotoes(servicos) {
         const subtituloHTML = srv.subtitulo
             ? `
                 <small class="service-subtitle">
-                    ${srv.subtitulo}
+                    ${escapeHtml(srv.subtitulo)}
                 </small>
             `
             : "";
@@ -81,7 +83,7 @@ export function renderizarBotoes(servicos) {
         const descontoHTML = temDesconto
             ? `
                 <span id="badge-desconto" class="service-discount ">
-                    -${state.configGlobal.desconto}% OFF
+                    -${escapeHtml(state.configGlobal.desconto)}% OFF
                 </span>
                 <br>
             `
@@ -122,13 +124,13 @@ export function renderizarBotoes(servicos) {
                 <input
                     type="radio"
                     name="servico"
-                    id="srv_${srv.id}"
-                    value="${srv.id}"
+                    id="srv_${escapeHtml(srv.id)}"
+                    value="${escapeHtml(srv.id)}"
                 >
 
-                <label for="srv_${srv.id}">
+                <label for="srv_${escapeHtml(srv.id)}">
                     <span class="service-title">
-                        ${srv.nome}
+                        ${escapeHtml(srv.nome)}
                     </span>
 
                     ${subtituloHTML}
@@ -155,10 +157,10 @@ export function renderizarBotoes(servicos) {
 }
 
 export function obterCapaInteligente(linkAudio, linkCapa) {
-    if (linkCapa && linkCapa.trim() !== "") return linkCapa;
+    if (safeURL(linkCapa)) return safeURL(linkCapa);
     const ytRegex =
         /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-    const match = linkAudio.match(ytRegex);
+    const match = safeURL(linkAudio).match(ytRegex);
     if (match && match[1])
         return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
     return "img/logo-principal.png";
@@ -170,7 +172,7 @@ export async function renderizarPortfolio() {
     if (!track) return; // Se não estiver na home, não faz nada
 
     const lista = await getProjetos();
-    const listaHits = lista.filter((p) => p.destaque === true);
+    const listaHits = Array.isArray(lista) ? lista.filter((p) => p?.destaque === true) : [];
 
     if (listaHits.length === 0) {
         track.innerHTML =
@@ -183,12 +185,12 @@ export async function renderizarPortfolio() {
     listaHits.forEach((p) => {
         const capa = obterCapaInteligente(p.link_audio, p.link_capa);
         htmlLote += `
-            <a href="${p.link_audio}" target="_blank" class="scrolling-card glass-card">
-                <img src="${capa}" alt="${p.titulo}" style="background-color: #0b0f19;">
+            <a href="${escapeHtml(safeURL(p.link_audio))}" target="_blank" rel="noopener noreferrer" class="scrolling-card glass-card">
+                <img src="${escapeHtml(capa)}" alt="${escapeHtml(p.titulo)}" style="background-color: #0b0f19;">
                 <div class="scrolling-info">
-                    <span class="tag" style="background: var(--cor-roxo); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">${p.categoria}</span>
-                    <h3 style="color: var(--cor-ciano); margin: 10px 0 5px 0;">${p.titulo}</h3>
-                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">${p.artista}</p>
+                    <span class="tag" style="background: var(--cor-roxo); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">${escapeHtml(p.categoria)}</span>
+                    <h3 style="color: var(--cor-ciano); margin: 10px 0 5px 0;">${escapeHtml(p.titulo)}</h3>
+                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">${escapeHtml(p.artista)}</p>
                     <p style="color: #fff; text-decoration: none; font-weight: bold;">▶ Ouvir Faixa</p>
                 </div>
             </a>`;
@@ -220,7 +222,10 @@ export async function carregarComponente(id, arquivo) {
     if (!elemento) return;
 
     try {
+        const url = new URL(arquivo, location.href);
+        if (url.origin !== location.origin) throw new Error("Componente externo bloqueado.");
         const response = await fetch(arquivo);
+        if (!response.ok) throw new Error("Componente indisponível.");
         elemento.innerHTML = await response.text();
     } catch (err) {
         console.error(err);
@@ -270,12 +275,12 @@ export function renderizarFormularioParametros(parametrosString) {
 
     let html = "";
     // Separa os parâmetros que vêm da API (ex: "duracao,pessoas,prazo")
-    const params = (parametrosString || "").split(",");
+    const params = (typeof parametrosString === "string" ? parametrosString : "").split(",");
 
     params.forEach((param) => {
         const paramLimpo = param.trim();
         // Se existir um template para esse parâmetro, adiciona ao HTML
-        if (PARAM_TEMPLATES[paramLimpo]) {
+        if (Object.hasOwn(PARAM_TEMPLATES, paramLimpo)) {
             html += PARAM_TEMPLATES[paramLimpo].html;
         }
     });

@@ -8,7 +8,7 @@ const campos = [
         label: "Número da proposta",
         type: "text",
         readonly: true,
-        placeholder: "Gerado automaticamente ao salvar"
+        placeholder: ""
     },
     {
         id: "data",
@@ -19,7 +19,8 @@ const campos = [
     {
         id: "prestador",
         label: "Prestador (local)",
-        type: "text"
+        type: "text",
+        readonly: true
     },
     {
         id: "produtor_id",
