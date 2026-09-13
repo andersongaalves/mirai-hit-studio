@@ -11,6 +11,8 @@ import { orcamentosState } from "./orcamentos/orcamentos_state.js";
 import { producoesState } from "./producoes/producoes_state.js";
 import { servicosState } from "./servicos/servicos_state.js";
 import { resetBuilder } from "./builder/builder.js";
+import { initializeAdminShell, resetAdminShell } from "./admin_shell.js";
+import { closeAllAdminModals } from "./admin_modal.js";
 
 function expose(name, callback) {
     window[name] = callback;
@@ -56,9 +58,11 @@ document.addEventListener("admin:logout", () => {
     orcamentosState.filtro = { busca: "", status: "todos" };
     producoesState.filtro = { busca: "", status: "todos", prazo: "todos" };
     resetBuilder();
+    resetAdminShell();
     Orcamentos.fecharModalOrcamento();
     fecharModalProducao();
-    document.querySelectorAll(".modal, #editor-servico").forEach(element => element.classList.add("hidden"));
+    closeAllAdminModals({ restoreFocus: false });
+    document.querySelectorAll("#editor-servico").forEach(element => element.classList.add("hidden"));
     document.querySelectorAll(".admin-container input, .admin-container textarea").forEach(input => {
         input.value = "";
         if (input.type === "checkbox") input.checked = false;
@@ -104,6 +108,11 @@ expose("salvarConfiguracoesExtras", Config.salvarConfiguracoesExtras);
 
 document.addEventListener("DOMContentLoaded", async () => {
     try {
+        initializeAdminShell({
+            onNavigate: (id) => id === "dashboard-menu"
+                ? Dashboard.mostrarDashboard()
+                : Dashboard.mostrarSecao(id),
+        });
         if (await Auth.restaurarSessao()) {
             await initializeAdmin();
         }

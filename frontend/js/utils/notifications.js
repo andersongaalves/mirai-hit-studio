@@ -27,6 +27,8 @@ function getContainer() {
         container = document.createElement("div");
 
         container.className = "notification-container";
+        container.setAttribute("aria-live", "polite");
+        container.setAttribute("aria-atomic", "false");
 
         document.body.appendChild(container);
     }
@@ -44,6 +46,7 @@ function notify(type, title, message) {
     const card = document.createElement("div");
 
     card.className = `notification ${type}`;
+    card.setAttribute("role", type === "error" ? "alert" : "status");
 
     const icon = document.createElement("div");
 

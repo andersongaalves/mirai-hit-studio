@@ -47,166 +47,112 @@
                     </p>
                 </div>
 
-                <div id="admin-area" class="hidden">
-                    <div
-                        style="
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                            padding-bottom: 15px;
-                            margin-bottom: 30px;
-                        "
+                <div id="admin-area" class="admin-shell hidden">
+                    <aside
+                        id="admin-navigation"
+                        class="admin-sidebar"
+                        aria-label="Navegação administrativa"
                     >
-                        <h2
-                            class="section-title"
-                            style="
-                                color: var(--cor-ciano);
-                                margin: 0;
-                                font-size: 1.5rem;
-                            "
-                        >
-                            Painel de Controle
-                        </h2>
-                        <button
-                            class="btn-small"
-                            style="border-color: #ef4444; color: #ef4444"
-                            onclick="fazerLogout()"
-                        >
+                        <div class="admin-sidebar__brand">
+                            <span class="admin-sidebar__eyebrow">Mirai Hit Studio</span>
+                            <strong>Admin</strong>
+                        </div>
+                        <nav class="admin-nav" aria-label="Módulos">
+                            <button type="button" class="admin-nav__item" data-admin-target="dashboard-menu">
+                                Visão geral
+                            </button>
+                            <button type="button" class="admin-nav__item" data-admin-target="section-servicos">
+                                Serviços
+                            </button>
+                            <button type="button" class="admin-nav__item" data-admin-target="section-portfolio">
+                                Portfólio
+                            </button>
+                            <button type="button" class="admin-nav__item" data-admin-target="section-custos">
+                                Custos extras
+                            </button>
+                            <button type="button" class="admin-nav__item" data-admin-target="section-orcamentos">
+                                Orçamentos
+                            </button>
+                            <button type="button" class="admin-nav__item" data-admin-target="section-producoes">
+                                Produções
+                            </button>
+                        </nav>
+                        <button type="button" class="btn-small btn-danger admin-sidebar__logout" onclick="fazerLogout()">
                             Sair
                         </button>
-                    </div>
+                    </aside>
 
+                    <div class="admin-shell__workspace">
+                        <header class="admin-mobile-header">
+                            <button
+                                id="admin-nav-toggle"
+                                type="button"
+                                class="btn-small admin-nav-toggle"
+                                aria-expanded="false"
+                                aria-controls="admin-navigation"
+                            >
+                                Menu
+                            </button>
+                            <strong>Mirai Admin</strong>
+                        </header>
+
+                        <div id="admin-page-content" class="admin-page-content">
                     <div id="dashboard-menu">
-                        <p
-                            style="
-                                text-align: center;
-                                margin-bottom: 30px;
-                                color: #aaa;
-                            "
-                        >
-                            Selecione o módulo que deseja gerenciar:
-                        </p>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Visão geral</span>
+                                <h1>Painel de Controle</h1>
+                                <p>Selecione o módulo que deseja gerenciar.</p>
+                            </div>
+                        </header>
 
-                        <div
-                            style="
-                                display: grid;
-                                grid-template-columns: repeat(
-                                    auto-fit,
-                                    minmax(250px, 1fr)
-                                );
-                                gap: 20px;
-                            "
-                        >
-                            <div
-                                class="dashboard-card"
-                                onclick="mostrarSecao('section-servicos')"
-                            >
-                                <div
-                                    style="
-                                        font-size: 2.5rem;
-                                        margin-bottom: 10px;
-                                    "
-                                >
-                                    🛠️
-                                </div>
-                                <h3>Serviços</h3>
-                                <p>Pacotes, valores e formulários dinâmicos.</p>
-                            </div>
-
-                            <div
-                                class="dashboard-card"
-                                onclick="mostrarSecao('section-portfolio')"
-                            >
-                                <div
-                                    style="
-                                        font-size: 2.5rem;
-                                        margin-bottom: 10px;
-                                    "
-                                >
-                                    🎵
-                                </div>
-                                <h3>Portfólio</h3>
-                                <p>
-                                    Projetos concluídos e Hits da Tela Inicial.
-                                </p>
-                            </div>
-
-                            <div
-                                class="dashboard-card"
-                                onclick="mostrarSecao('section-custos')"
-                            >
-                                <div
-                                    style="
-                                        font-size: 2.5rem;
-                                        margin-bottom: 10px;
-                                    "
-                                >
-                                    💲
-                                </div>
-                                <h3>Custos Extras</h3>
-                                <p>
-                                    Tabela global de multiplicadores
-                                    matemáticos.
-                                </p>
-                            </div>
-
-                            <div
-                                class="dashboard-card"
-                                onclick="mostrarSecao('section-orcamentos')"
-                            >
-                                <div
-                                    style="
-                                        font-size: 2.5rem;
-                                        margin-bottom: 10px;
-                                    "
-                                >
-                                    📥
-                                </div>
-                                <h3>Orçamentos</h3>
-                                <p>Solicitações recebidas dos clientes.</p>
-                            </div>
-                            <div
-                                class="dashboard-card"
-                                onclick="mostrarSecao('section-producoes')"
-                            >
-                                <div
-                                    style="
-                                        font-size: 2.5rem;
-                                        margin-bottom: 10px;
-                                    "
-                                >
-                                    🎼
-                                </div>
-                                <h3>Produções</h3>
-                                <p>Produções em andamento.</p>
-                            </div>
+                        <div class="admin-dashboard-grid">
+                            <button type="button" class="dashboard-card" data-admin-target="section-servicos">
+                                <span class="dashboard-card__icon" aria-hidden="true">🛠️</span>
+                                <span class="dashboard-card__title">Serviços</span>
+                                <span class="dashboard-card__description">Pacotes, valores e formulários dinâmicos.</span>
+                            </button>
+                            <button type="button" class="dashboard-card" data-admin-target="section-portfolio">
+                                <span class="dashboard-card__icon" aria-hidden="true">🎵</span>
+                                <span class="dashboard-card__title">Portfólio</span>
+                                <span class="dashboard-card__description">Projetos concluídos e Hits da Tela Inicial.</span>
+                            </button>
+                            <button type="button" class="dashboard-card" data-admin-target="section-custos">
+                                <span class="dashboard-card__icon" aria-hidden="true">💲</span>
+                                <span class="dashboard-card__title">Custos Extras</span>
+                                <span class="dashboard-card__description">Tabela global de multiplicadores matemáticos.</span>
+                            </button>
+                            <button type="button" class="dashboard-card" data-admin-target="section-orcamentos">
+                                <span class="dashboard-card__icon" aria-hidden="true">📥</span>
+                                <span class="dashboard-card__title">Orçamentos</span>
+                                <span class="dashboard-card__description">Solicitações recebidas dos clientes.</span>
+                            </button>
+                            <button type="button" class="dashboard-card" data-admin-target="section-producoes">
+                                <span class="dashboard-card__icon" aria-hidden="true">🎼</span>
+                                <span class="dashboard-card__title">Produções</span>
+                                <span class="dashboard-card__description">Produções em andamento.</span>
+                            </button>
                         </div>
                     </div>
 
                     <div id="section-servicos" class="admin-section hidden">
-                        <button
-                            class="btn-small"
-                            style="margin-bottom: 20px"
-                            onclick="mostrarDashboard()"
-                        >
-                            ⬅ Voltar ao Menu
-                        </button>
-                        <div class="admin-header">
-                            <h2>Gerenciador de Serviços</h2>
-                        </div>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Catálogo</span>
+                                <h1>Serviços</h1>
+                                <p>Gerencie pacotes, valores e formulários dinâmicos.</p>
+                            </div>
+                            <div class="admin-page-header__actions">
+                                <button type="button" class="btn-cta" onclick="abrirEditorServico()">
+                                    Criar serviço
+                                </button>
+                            </div>
+                        </header>
 
                         <div
                             id="lista-servicos"
                             class="admin-list-container"
                         ></div>
-                        <button
-                            class="btn-cta btn-submit"
-                            style="background: var(--cor-ciano)"
-                            onclick="abrirEditorServico()"
-                        >
-                            + CRIAR NOVO SERVIÇO
-                        </button>
 
                         <div id="editor-servico" class="editor-panel hidden">
                             <h3
@@ -396,24 +342,18 @@
                     </div>
 
                     <div id="section-portfolio" class="admin-section hidden">
-                        <button
-                            class="btn-small"
-                            style="margin-bottom: 20px"
-                            onclick="mostrarDashboard()"
-                        >
-                            ⬅ Voltar ao Menu
-                        </button>
-                        <div class="admin-header">
-                            <h2>Gerenciador de Portfólio</h2>
-                        </div>
-
-                        <button
-                            class="btn-cta btn-submit"
-                            style="background: var(--cor-ciano)"
-                            onclick="novoProjeto()"
-                        >
-                            + NOVO PROJETO
-                        </button>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Conteúdo público</span>
+                                <h1>Portfólio</h1>
+                                <p>Gerencie projetos publicados e destaques.</p>
+                            </div>
+                            <div class="admin-page-header__actions">
+                                <button type="button" class="btn-cta" onclick="novoProjeto()">
+                                    Novo projeto
+                                </button>
+                            </div>
+                        </header>
 
                         <div
                             id="portfolio-list"
@@ -423,16 +363,13 @@
                     </div>
 
                     <div id="section-custos" class="admin-section hidden">
-                        <button
-                            class="btn-small"
-                            style="margin-bottom: 20px"
-                            onclick="mostrarDashboard()"
-                        >
-                            ⬅ Voltar ao Menu
-                        </button>
-                        <div class="admin-header">
-                            <h2>Tabela de Custos Extras</h2>
-                        </div>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Configurações</span>
+                                <h1>Custos Extras</h1>
+                                <p>Ajuste os multiplicadores usados pela calculadora.</p>
+                            </div>
+                        </header>
 
                         <div class="form-group">
                             <label>Desconto Global para Combos (%)</label
@@ -516,34 +453,35 @@
                     </div>
 
                     <div id="section-orcamentos" class="admin-section hidden">
-                        <button
-                            class="btn-small"
-                            style="margin-bottom: 20px"
-                            onclick="mostrarDashboard()"
-                        >
-                            ⬅ Voltar ao Menu
-                        </button>
-                        <div class="admin-header">
-                            <h2>Orçamentos Recebidos</h2>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Comercial</span>
+                                <h1>Orçamentos</h1>
+                                <p>Acompanhe solicitações recebidas dos clientes.</p>
+                            </div>
+                        </header>
+                        <div class="admin-filter-bar" aria-label="Filtros de orçamentos">
+                            <label class="admin-filter-field admin-filter-field--search">
+                                <span>Buscar</span>
+                                <input
+                                    id="orcamentos-search"
+                                    class="admin-search"
+                                    type="search"
+                                    placeholder="Cliente ou serviço"
+                                />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Status</span>
+                                <select id="orcamentos-status-filter">
+                                    <option value="todos">Todos</option>
+                                    <option value="novo">Novo</option>
+                                    <option value="em_analise">Em análise</option>
+                                    <option value="aprovado">Aprovado</option>
+                                    <option value="recusado">Recusado</option>
+                                    <option value="arquivado">Arquivado</option>
+                                </select>
+                            </label>
                         </div>
-                        <input
-                            id="orcamentos-search"
-                            class="admin-search"
-                            placeholder="🔍 Buscar orçamento..."
-                        />
-                        <select id="orcamentos-status-filter">
-                            <option value="todos">Todos</option>
-
-                            <option value="novo">🟡 Novo</option>
-
-                            <option value="em_analise">🔵 Em análise</option>
-
-                            <option value="aprovado">🟢 Aprovado</option>
-
-                            <option value="recusado">🔴 Recusado</option>
-
-                            <option value="arquivado">⚫ Arquivado</option>
-                        </select>
                         <div
                             id="orcamentos-list"
                             class="admin-list-container"
@@ -551,36 +489,43 @@
                     </div>
 
                     <div id="section-producoes" class="admin-section hidden">
-                        <button
-                            class="btn-small"
-                            style="margin-bottom: 20px"
-                            onclick="mostrarDashboard()"
-                        >
-                            ⬅ Voltar ao Menu
-                        </button>
-                        <h2>Produções</h2>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Operação</span>
+                                <h1>Produções</h1>
+                                <p>Acompanhe os serviços contratados em execução.</p>
+                            </div>
+                        </header>
 
-                        <div class="producoes-toolbar" aria-label="Filtros de produções">
-                            <input
-                                id="producoes-search"
-                                type="search"
-                                placeholder="Buscar cliente, serviço ou proposta"
-                                aria-label="Buscar produções"
-                            />
-                            <select id="producoes-status-filter" aria-label="Filtrar por status">
-                                <option value="todos">Todos os status</option>
-                                <option value="aguardando_inicio">Aguardando início</option>
-                                <option value="em_producao">Em produção</option>
-                                <option value="revisao">Revisão</option>
-                                <option value="finalizado">Finalizado</option>
-                                <option value="entregue">Entregue</option>
-                            </select>
-                            <select id="producoes-prazo-filter" aria-label="Filtrar por prazo">
-                                <option value="todos">Todos os prazos</option>
-                                <option value="atrasado">Atrasadas</option>
-                                <option value="proximo">Próximas do prazo</option>
-                                <option value="sem_prazo">Sem prazo</option>
-                            </select>
+                        <div class="admin-filter-bar producoes-toolbar" aria-label="Filtros de produções">
+                            <label class="admin-filter-field admin-filter-field--search">
+                                <span>Buscar</span>
+                                <input
+                                    id="producoes-search"
+                                    type="search"
+                                    placeholder="Cliente, serviço ou proposta"
+                                />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Status</span>
+                                <select id="producoes-status-filter">
+                                    <option value="todos">Todos os status</option>
+                                    <option value="aguardando_inicio">Aguardando início</option>
+                                    <option value="em_producao">Em produção</option>
+                                    <option value="revisao">Revisão</option>
+                                    <option value="finalizado">Finalizado</option>
+                                    <option value="entregue">Entregue</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Prazo</span>
+                                <select id="producoes-prazo-filter">
+                                    <option value="todos">Todos os prazos</option>
+                                    <option value="atrasado">Atrasadas</option>
+                                    <option value="proximo">Próximas do prazo</option>
+                                    <option value="sem_prazo">Sem prazo</option>
+                                </select>
+                            </label>
                         </div>
 
                         <div
@@ -590,11 +535,20 @@
                         ></div>
                     </div>
                 </div>
+                    </div>
+                </div>
 
-                <div id="modal-projeto" class="modal hidden">
+                <div
+                    id="modal-projeto"
+                    class="modal hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="modal-projeto-title"
+                >
                     <div class="modal-content">
                         <div class="admin-header">
-                            <h2>Projeto do Portfólio</h2>
+                            <h2 id="modal-projeto-title">Projeto do Portfólio</h2>
                         </div>
                         <div class="admin-info">
                             <input type="hidden" id="proj_id" />
@@ -712,10 +666,17 @@
                     </div>
                 </div>
 
-                <div id="modal-orcamento" class="modal hidden">
+                <div
+                    id="modal-orcamento"
+                    class="modal hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="modal-orcamento-title"
+                >
                     <div class="modal-content">
                         <div class="admin-header">
-                            <h2>Detalhes do Orçamento</h2>
+                            <h2 id="modal-orcamento-title">Detalhes do Orçamento</h2>
                         </div>
                         <div class="admin-info">
                             <p>
@@ -791,7 +752,14 @@
                         </div>
                     </div>
                 </div>
-                <div id="modal-proposta" class="modal hidden">
+                <div
+                    id="modal-proposta"
+                    class="modal hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="proposta-title"
+                >
                     <div class="modal-content proposta-modal-content">
                         <div class="admin-header">
                             <h2 id="proposta-title">Editor de Proposta</h2>
@@ -840,7 +808,14 @@
                     </div>
                 </div>
 
-                <div id="modal-producao" class="modal hidden">
+                <div
+                    id="modal-producao"
+                    class="modal hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="prod_titulo"
+                >
                     <div class="modal-content producao-modal-content">
                         <div class="producao-modal-header">
                             <div>

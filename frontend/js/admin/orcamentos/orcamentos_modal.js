@@ -2,6 +2,7 @@ import { $ } from "../../utils/dom.js";
 import { money } from "../../utils/format.js";
 import { formatStatus } from "./orcamentos_utils.js";
 import { safeURL } from "../../utils/security.js";
+import { closeAdminModal, openAdminModal } from "../admin_modal.js";
 
 let orcamentoAtual = null;
 
@@ -52,7 +53,9 @@ export function abrirModalOrcamento(orcamento) {
     setValue("orc_observacoes", orcamento.observacoes);
     setHref("orc_guia", orcamento.link_guia);
 
-    $("modal-orcamento")?.classList.remove("hidden");
+    openAdminModal("modal-orcamento", {
+        onRequestClose: fecharModalOrcamento,
+    });
 }
 
 export function registrarEventosModal({ onSalvarObservacoes = () => {} } = {}) {
@@ -72,5 +75,5 @@ export function registrarEventosModal({ onSalvarObservacoes = () => {} } = {}) {
 export function fecharModalOrcamento() {
     orcamentoAtual = null;
 
-    $("modal-orcamento")?.classList.add("hidden");
+    closeAdminModal("modal-orcamento");
 }

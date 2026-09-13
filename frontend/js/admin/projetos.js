@@ -4,7 +4,8 @@ import { authFetch } from "./auth.js";
 
 import * as Notify from "../utils/notifications.js";
 
-import { $, show, hide, clear } from "../utils/dom.js";
+import { $, clear } from "../utils/dom.js";
+import { closeAdminModal, openAdminModal } from "./admin_modal.js";
 
 // ===========================
 // STATE
@@ -108,7 +109,7 @@ function renderizarProjetos() {
 export function novoProjeto() {
     limparFormulario();
 
-    show($("modal-projeto"));
+    openAdminModal("modal-projeto", { onRequestClose: fecharModal });
 }
 
 export function editarProjeto(id) {
@@ -132,11 +133,11 @@ export function editarProjeto(id) {
 
     $("proj_destaque").checked = projeto.destaque;
 
-    show($("modal-projeto"));
+    openAdminModal("modal-projeto", { onRequestClose: fecharModal });
 }
 
 export function fecharModal() {
-    hide($("modal-projeto"));
+    closeAdminModal("modal-projeto");
 }
 
 // ===========================

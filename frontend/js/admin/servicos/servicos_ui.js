@@ -1,5 +1,6 @@
 import { $ } from "../../utils/dom.js";
 import { money } from "../../utils/format.js";
+import { renderAdminState } from "../ui.js";
 
 import {
     createServicoCardElement,
@@ -17,14 +18,10 @@ export function renderizarServicos(servicos = [], handlers = {}) {
 
     if (!container) return;
 
-    container.innerHTML = "";
+    container.replaceChildren();
 
     if (!servicos.length) {
-        container.innerHTML = `
-            <div class="admin-empty">
-                Nenhum serviço cadastrado.
-            </div>
-        `;
+        renderAdminState(container, "empty", "Nenhum serviço cadastrado.");
         return;
     }
 

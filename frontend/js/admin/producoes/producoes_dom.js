@@ -45,7 +45,7 @@ export function createButtonElement(text, className = "btn-small") {
 }
 
 export function createProducaoCardElement() {
-    const card = createDivElement("admin-list-item producao-card");
+    const card = createDivElement("admin-list-item admin-entity-card producao-card");
     const info = createDivElement("producao-info");
     const actions = createDivElement("producao-actions");
     card.append(info, actions);

@@ -12,6 +12,7 @@ import { carregarConfiguracoes } from "./configuracoes.js";
 import { initProducoes } from "./producoes/producoes.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
+import { setActiveSection } from "./admin_shell.js";
 
 const loaders = [
     carregarServicos,
@@ -20,6 +21,13 @@ const loaders = [
     carregarConfiguracoes,
     initProducoes,
 ];
+
+function focusHeading(container) {
+    const heading = container?.querySelector("h1, h2");
+    if (!heading) return;
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+}
 
 export async function inicializarDashboard() {
     mostrarDashboard();
@@ -31,7 +39,10 @@ export async function inicializarDashboard() {
 export function mostrarDashboard() {
     $$$(".admin-section").forEach((section) => hide(section));
 
-    show($("dashboard-menu"));
+    const dashboard = $("dashboard-menu");
+    show(dashboard);
+    setActiveSection("dashboard-menu");
+    focusHeading(dashboard);
 }
 
 export function mostrarSecao(id) {
@@ -40,6 +51,9 @@ export function mostrarSecao(id) {
     $$$(".admin-section").forEach((section) => hide(section));
 
     show($(id));
+    setActiveSection(id);
+
+    focusHeading($(id));
 }
 
 export function voltarDashboard() {

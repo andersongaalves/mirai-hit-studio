@@ -1,7 +1,8 @@
 import { $ } from "../../utils/dom.js";
 import { getTituloProposta } from "./proposta_utils.js";
+import { closeAdminModal, openAdminModal } from "../admin_modal.js";
 
-export function abrirModalProposta(orcamento) {
+export function abrirModalProposta(orcamento, { onRequestClose } = {}) {
     const modal = $("modal-proposta");
     const title = $("proposta-title");
 
@@ -9,13 +10,11 @@ export function abrirModalProposta(orcamento) {
         title.textContent = getTituloProposta(orcamento);
     }
 
-    modal
-        ?.classList
-        .remove("hidden");
+    openAdminModal(modal, {
+        onRequestClose,
+    });
 }
 
 export function fecharModalProposta() {
-    $("modal-proposta")
-        ?.classList
-        .add("hidden");
+    closeAdminModal("modal-proposta");
 }

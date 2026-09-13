@@ -12,25 +12,22 @@ import {
     formatarPrazo,
     obterStatusLabel,
 } from "./producoes_utils.js";
+import { renderAdminState } from "../ui.js";
 
 export function renderizarLoading() {
     const container = document.getElementById("producoes-list");
     if (!container) return;
-    container.replaceChildren(
-        createTextElement("div", "Carregando produções...", "admin-loading"),
-    );
+    renderAdminState(container, "loading", "Carregando produções...");
 }
 
 export function renderizarErro(message) {
     const container = document.getElementById("producoes-list");
     if (!container) return;
-    const box = createTextElement(
-        "div",
+    renderAdminState(
+        container,
+        "error",
         message || "Não foi possível carregar as produções.",
-        "admin-error",
     );
-    box.setAttribute("role", "alert");
-    container.replaceChildren(box);
 }
 
 export function renderizarProducoes(producoes, handlers = {}) {
@@ -39,9 +36,7 @@ export function renderizarProducoes(producoes, handlers = {}) {
     container.replaceChildren();
 
     if (!producoes.length) {
-        container.appendChild(
-            createTextElement("div", "Nenhuma produção encontrada.", "admin-empty"),
-        );
+        renderAdminState(container, "empty", "Nenhuma produção encontrada.");
         return;
     }
 
@@ -70,7 +65,7 @@ function criarCardProducao(item, handlers) {
     const tituloRow = createDivElement("producao-title-row");
     tituloRow.append(
         createTextElement("strong", item.titulo || `Produção #${item.id}`),
-        createTextElement("span", `#${item.id}`, "badge"),
+        createTextElement("span", `#${item.id}`, "badge badge-neutral"),
     );
 
     const metadata = createDivElement("producao-metadata");

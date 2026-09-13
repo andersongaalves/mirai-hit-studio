@@ -1,5 +1,6 @@
 import { $ } from "../../utils/dom.js";
 import { money } from "../../utils/format.js";
+import { renderAdminState } from "../ui.js";
 
 import {
     createOrcamentoCardElement,
@@ -21,6 +22,15 @@ const emptyHandlers = {
     onArquivar: () => {},
 };
 
+const STATUS_VARIANTS = {
+    novo: "warning",
+    em_analise: "info",
+    proposta_enviada: "info",
+    aprovado: "success",
+    recusado: "danger",
+    arquivado: "neutral",
+};
+
 export function renderizarOrcamentos(
     orcamentos = [],
     { produtores = [], handlers = {} } = {},
@@ -29,14 +39,10 @@ export function renderizarOrcamentos(
 
     if (!container) return;
 
-    container.innerHTML = "";
+    container.replaceChildren();
 
     if (!orcamentos.length) {
-        container.innerHTML = `
-            <div class="admin-empty">
-                Nenhum orçamento encontrado.
-            </div>
-        `;
+        renderAdminState(container, "empty", "Nenhum orçamento encontrado.");
         return;
     }
 
@@ -66,7 +72,7 @@ function createOrcamentoCard(item, produtores, handlers) {
         createTextElement(
             "span",
             formatStatus(item.status),
-            "orcamento-status"
+            `orcamento-status badge badge-${STATUS_VARIANTS[item.status] || "neutral"}`,
         ),
 
         createTextElement(

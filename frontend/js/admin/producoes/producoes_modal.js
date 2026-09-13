@@ -1,5 +1,6 @@
 import { $ } from "../../utils/dom.js";
 import { createButtonElement } from "./producoes_dom.js";
+import { closeAdminModal, openAdminModal } from "../admin_modal.js";
 import {
     STATUS_PRODUCAO,
     classificarPrazo,
@@ -211,7 +212,9 @@ export function abrirModalProducao(producao, handlers = {}) {
     handlersAtuais = handlers;
     renderizarResumo();
     registrarAcoes();
-    $("modal-producao")?.classList.remove("hidden");
+    openAdminModal("modal-producao", {
+        onRequestClose: fecharModalProducao,
+    });
 }
 
 export function atualizarModalProducao(producao) {
@@ -224,5 +227,5 @@ export function atualizarModalProducao(producao) {
 export function fecharModalProducao() {
     producaoAtual = null;
     handlersAtuais = {};
-    $("modal-producao")?.classList.add("hidden");
+    closeAdminModal("modal-producao");
 }

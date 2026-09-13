@@ -156,7 +156,9 @@ export async function abrirEditorProposta(orcamento) {
     orcamentoCarregando = orcamento.id;
     if ($("proposta-content")) $("proposta-content").textContent = "Carregando proposta...";
     if ($("proposta-tabs")) $("proposta-tabs").replaceChildren();
-    PropostaModal.abrirModalProposta(null);
+    PropostaModal.abrirModalProposta(null, {
+        onRequestClose: fecharEditorProposta,
+    });
     atualizarStatusLocal();
     try {
         let proposta;
@@ -170,7 +172,9 @@ export async function abrirEditorProposta(orcamento) {
         if (atual !== contexto) return;
         setProposta(proposta);
         propostaState.carregando = false;
-        PropostaModal.abrirModalProposta(propostaState.orcamento);
+        PropostaModal.abrirModalProposta(propostaState.orcamento, {
+            onRequestClose: fecharEditorProposta,
+        });
         renderizarAbaAtiva();
     } catch (error) {
         if (atual !== contexto) return;

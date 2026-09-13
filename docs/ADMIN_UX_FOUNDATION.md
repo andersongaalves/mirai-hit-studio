@@ -4,6 +4,15 @@
 
 O Admin deve ser rapido, previsivel, legivel, responsivo e acessivel para operacao diaria. Produtividade vem antes de decoracao. Esta fundacao orienta J0.2, J0.3 e novos modulos, sem criar framework ou CRUD generico.
 
+## Foundation Implementada em J0.2
+
+- Shell compartilhado com sidebar desktop, navegacao ativa e menu mobile recolhivel.
+- Navegacao por botoes reais, foco do titulo ao trocar de modulo e inicializacao idempotente.
+- Classes compartilhadas para page header, filter bar, badges semanticos, estados, tabela desktop, card mobile e formularios.
+- Helper pequeno de modal com semantica de dialogo, trap de foco, Escape e retorno ao elemento de abertura.
+- Toast existente preservado e complementado com regioes `aria-live` e mensagens seguras.
+- Producoes, Orcamentos, Servicos, Portfolio e Propostas receberam somente a integracao minima necessaria; J0.3 continua responsavel pelo refinamento profundo de Producoes.
+
 ## Diagnostico Atual
 
 ### Shell
@@ -132,12 +141,11 @@ Verificar estruturalmente 320, 375/390, 414, 768, 1024 e 1440 px. O foco visivel
 
 ### J0.2 - Shell + Componentes Administrativos
 
-- Criar o shell sem mudar regras de dominio: sidebar, mobile header, navegacao acessivel e area principal.
-- Introduzir `AdminPageHeader`, `AdminFilterBar`, `StatusBadge`, estados de conteudo, `AdminTable`/`MobileEntityCard` e `ModalFoundation` em CSS/helpers pequenos.
-- Migrar a navegacao atual de handlers inline para eventos registrados pelo admin quando isso for necessario ao shell e ao teclado.
-- Consolidar apenas CSS compartilhado e tokens ja existentes; nao redesenhar Servicos, Orcamentos ou Propostas.
+- Implementado: shell, mobile header, navegacao acessivel, page header, filter bar, badges, estados, tabela/card e modal foundation.
+- Implementado sem mover regras de dominio ou duplicar listeners/requests de inicializacao.
+- Adocao completa por tela permanece incremental; Servicos, Orcamentos e Propostas nao foram redesenhados.
 
-Arquivos provaveis: `frontend/admin.html`, `frontend/css/pages/admin.css`, `frontend/css/components.css`, `frontend/js/admin/index.js`, `frontend/js/admin/ui.js` e, se justificar, um helper visual pequeno em `frontend/js/admin/`.
+Arquivos centrais: `frontend/admin.html`, `frontend/css/pages/admin.css`, `frontend/css/components.css`, `frontend/js/admin/index.js`, `frontend/js/admin/ui.js`, `frontend/js/admin/admin_shell.js` e `frontend/js/admin/admin_modal.js`.
 
 ### J0.3 - Aplicacao Inicial em Producoes
 

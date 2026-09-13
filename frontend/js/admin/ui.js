@@ -1,21 +1,58 @@
 import * as Notify from "../utils/notifications.js";
 
 import { $, show, hide, text } from "../utils/dom.js";
+import { closeAdminModal, openAdminModal } from "./admin_modal.js";
 
 // ===========================
 // MODAL
 // ===========================
 
 export function abrirModal(id) {
-    show($(id));
+    openAdminModal(id);
 }
 
 export function fecharModal(id) {
-    hide($(id));
+    closeAdminModal(id);
 }
 
 export function toggleModal(id) {
-    $(id)?.classList.toggle("hidden");
+    const modal = $(id);
+    if (!modal) return;
+    if (modal.classList.contains("hidden")) openAdminModal(modal);
+    else closeAdminModal(modal);
+}
+
+export function createAdminState(type, message, options = {}) {
+    const state = document.createElement("div");
+    const normalized = ["loading", "empty", "error", "success"].includes(type)
+        ? type
+        : "empty";
+    state.className = `admin-state admin-${normalized}`;
+    state.textContent = message || "";
+
+    if (normalized === "loading") {
+        state.setAttribute("role", "status");
+        state.setAttribute("aria-live", "polite");
+    } else if (normalized === "error") {
+        state.setAttribute("role", "alert");
+    }
+
+    if (typeof options.onRetry === "function") {
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "btn-small";
+        retry.textContent = options.retryLabel || "Tentar novamente";
+        retry.addEventListener("click", options.onRetry);
+        state.appendChild(retry);
+    }
+    return state;
+}
+
+export function renderAdminState(container, type, message, options = {}) {
+    if (!container) return null;
+    const state = createAdminState(type, message, options);
+    container.replaceChildren(state);
+    return state;
 }
 
 // ===========================
