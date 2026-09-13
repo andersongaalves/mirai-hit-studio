@@ -197,6 +197,9 @@
 .btn-cta:hover {
     box-shadow: 0 0 15px var(--cor-ciano);
 }
+.btn-cta:active {
+    transform: translateY(1px);
+}
 .btn-outline {
     background: transparent;
     border: 2px solid var(--cor-roxo);
@@ -205,6 +208,16 @@
     border-radius: 4px;
     text-transform: uppercase;
     cursor: pointer;
+}
+.btn-outline:hover {
+    border-color: var(--cor-ciano);
+    color: var(--cor-ciano);
+}
+.btn-cta:focus-visible,
+.btn-outline:focus-visible,
+.btn-small:focus-visible {
+    outline: 2px solid var(--cor-branco);
+    outline-offset: 3px;
 }
 
 .btn-small {
@@ -241,6 +254,41 @@
 .btn-small.btn-danger:hover {
     background: rgba(239, 68, 68, 0.1);
     border-color: #ef4444;
+}
+
+/* Aliases para novos modulos; classes legadas permanecem intactas. */
+.card {
+    background: var(--color-surface);
+    border: var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px var(--space-2);
+    border: var(--border-subtle);
+    border-radius: 999px;
+    color: var(--color-text-primary);
+    font-family: var(--font-subtitulos);
+    font-size: var(--font-size-caption);
+    line-height: 1;
+}
+
+.badge-success { border-color: var(--color-success); color: var(--color-success); }
+.badge-warning { border-color: var(--color-warning); color: var(--color-warning); }
+.badge-danger { border-color: var(--color-danger); color: var(--color-danger); }
+
+.input,
+.textarea,
+.select {
+    width: 100%;
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font: inherit;
 }
 
 @media (max-width: 768px) {

@@ -2,13 +2,15 @@
 
 ## Status
 
-Fase atual: F0.3 concluida.
+Fase atual: F0 concluida - CP-F0 pendente de envio.
 
 Ultimo checkpoint enviado: E / estado atual de `origin/main`.
 
-Proximo checkpoint: CP-F0.
+Checkpoint atual: CP-F0.
 
-Proximo push: apos F0.4.
+Proximo checkpoint: CP-F1.
+
+Proximo push: apos F.3.
 
 Ultimo commit local: `feat: adiciona fundacao de analytics e consentimento`.
 
@@ -28,8 +30,8 @@ F0 - Fundacao Mirai 2.0
 - F0.1 Posicionamento, publicos e ofertas. Concluida.
 - F0.2 Taxonomia comercial e impacto tecnico/CRM. Concluida.
 - F0.3 Analytics, funil e consentimento. Concluida.
-- F0.4 Design system minimo e plano de provas sociais.
-- CP-F0 + push.
+- F0.4 Design system minimo e plano de provas sociais. Concluida.
+- CP-F0 pendente de push.
 
 F - Admin/CRM
 
@@ -88,8 +90,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F0.3 concluida
+F0 concluida - CP-F0 pendente de envio
 
 ## Proxima subfase
 
-F0.4 - Design system minimo + plano de provas sociais
+F.1 - Producoes

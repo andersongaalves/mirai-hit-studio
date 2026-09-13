@@ -4,11 +4,11 @@
     bottom: 16px;
     z-index: 1000;
     width: min(440px, calc(100vw - 32px));
-    padding: 20px;
+    padding: var(--space-5);
     border: 1px solid rgba(0, 212, 255, 0.45);
-    border-radius: 8px;
-    background: #111827;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-elevated);
+    box-shadow: var(--shadow-md);
 }
 
 .analytics-consent h2 {

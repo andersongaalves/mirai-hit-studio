@@ -5,6 +5,26 @@
     --cor-ciano: #00d4ff;
     --cor-roxo: #b22af0;
     --cor-branco: #f9fafb;
+    --cor-sucesso: #4ade80;
+    --cor-aviso: #fbbf24;
+    --cor-perigo: #ef4444;
+    --cor-texto-secundario: #aab3c2;
+    --cor-borda-sutil: rgba(255, 255, 255, 0.1);
+    --cor-superficie: rgba(17, 24, 39, 0.8);
+    --cor-superficie-elevada: #111827;
+
+    /* Aliases semanticos para componentes novos, preservando a API visual atual. */
+    --color-background: var(--cor-fundo);
+    --color-surface: var(--cor-superficie);
+    --color-surface-elevated: var(--cor-superficie-elevada);
+    --color-accent: var(--cor-ciano);
+    --color-accent-secondary: var(--cor-roxo);
+    --color-text-primary: var(--cor-branco);
+    --color-text-secondary: var(--cor-texto-secundario);
+    --color-border: var(--cor-borda-sutil);
+    --color-success: var(--cor-sucesso);
+    --color-warning: var(--cor-aviso);
+    --color-danger: var(--cor-perigo);
     --font-logo: "Impact", sans-serif;
     --font-titulos: "Oxanium", sans-serif;
     --font-subtitulos: "Rajdhani", sans-serif;
@@ -13,6 +33,31 @@
     --spacing-sm: 16px;
     --spacing-md: 32px;
     --spacing-lg: 64px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-8: 48px;
+    --space-10: 64px;
+
+    --font-size-display: clamp(2.5rem, 6vw, 4rem);
+    --font-size-h1: clamp(2rem, 4vw, 3rem);
+    --font-size-h2: clamp(1.65rem, 3vw, 2.5rem);
+    --font-size-h3: 1.5rem;
+    --font-size-body: 1rem;
+    --font-size-small: 0.875rem;
+    --font-size-caption: 0.75rem;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --border-subtle: 1px solid var(--cor-borda-sutil);
+    --border-accent: 1px solid var(--cor-ciano);
+    --shadow-sm: 0 8px 16px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.42);
+    --shadow-glow: 0 0 16px rgba(0, 212, 255, 0.32);
 }
 
 @font-face {

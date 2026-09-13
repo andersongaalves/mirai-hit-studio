@@ -85,6 +85,8 @@ Geek Music e especialidade transversal, nao limitacao da marca.
 
 Direcao visual: music-tech, premium e futurista. Evitar neon gratuito, glitch excessivo e estetica gamer generica. Manter `#111827`, `#00D4FF`, `#B22AF0`, `#F9FAFB`, identidade futurista e referencias japonesas/geek como assinatura secundaria.
 
+Design: tokens CSS semanticos complementam as variaveis legadas; foco visivel e reduced motion sao obrigatorios para componentes novos. Provas sociais devem ser verificaveis e rotuladas como case, demo, concept project ou study.
+
 ## IA planejada
 
 Canais: chat proprio do site e e-mail. Nao havera WhatsApp.

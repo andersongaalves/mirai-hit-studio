@@ -19,7 +19,7 @@ body {
         );
     color: var(--cor-branco);
     font-family: var(--font-texto);
-    font-size: 16px;
+    font-size: var(--font-size-body);
     line-height: 1.6;
     overflow-x: hidden;
 }
@@ -40,6 +40,18 @@ a {
     text-decoration: none;
     color: var(--cor-branco);
     transition: 0.3s;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+}
+
+button:disabled,
+button.disabled,
+[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
 .container {
@@ -145,4 +157,15 @@ h3::after,
 /* Utilitário global para ocultar elementos */
 .hidden {
     display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }

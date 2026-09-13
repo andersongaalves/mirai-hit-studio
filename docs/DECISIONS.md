@@ -91,3 +91,19 @@ Decisao: GA4 e fornecedores equivalentes so carregam apos aceite explicito; recu
 ## ADR-022 - Atribuicao pertence ao lead
 
 Decisao: UTM, referrer e landing page pertencem a atribuicao do orcamento/lead, nao ao catalogo de servicos ou Cliente. Persistencia aguarda contrato de F0.3/F.2.
+
+## ADR-023 - Tokens visuais compativeis
+
+Decisao: tokens semanticos centralizados complementam, sem substituir, as variaveis CSS atuais. Componentes novos devem reutiliza-los.
+
+## ADR-024 - Direcao visual music-tech premium
+
+Decisao: Mirai 2.0 prioriza audio, estudio e tecnologia musical; referencias geek/japonesas sao assinatura secundaria e efeitos visuais nao podem prejudicar leitura.
+
+## ADR-025 - Prova social verificavel
+
+Decisao: cases, depoimentos e metricas exigem evidencia e autorizacao. `demo`, `concept_project` e `study` sao categorias distintas de `client_case`.
+
+## ADR-026 - Portfolio compartilha taxonomia comercial
+
+Decisao: portfolio futuro usa vertical, segmentos e tipo de case; nao criar relacao direta servico-case antes de necessidade curatorial comprovada.
