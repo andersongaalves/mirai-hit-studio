@@ -11,6 +11,7 @@ import { carregarConfiguracoes } from "./configuracoes.js";
 
 import { initProducoes } from "./producoes/producoes.js";
 import { initClientes } from "./clientes/clientes.js";
+import { carregarDashboard } from "./dashboard/dashboard.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
@@ -32,19 +33,20 @@ function focusHeading(container) {
 }
 
 export async function inicializarDashboard() {
-    mostrarDashboard();
+    mostrarDashboard({ carregar: false });
     inicializarParametros();
 
-    await Promise.all(loaders.map((loader) => loader()));
+    await Promise.all([carregarDashboard().catch(() => null), ...loaders.map((loader) => loader())]);
 }
 
-export function mostrarDashboard() {
+export function mostrarDashboard({ carregar = true } = {}) {
     $$$(".admin-section").forEach((section) => hide(section));
 
     const dashboard = $("dashboard-menu");
     show(dashboard);
     setActiveSection("dashboard-menu");
     focusHeading(dashboard);
+    if (carregar) carregarDashboard().catch(() => {});
 }
 
 export function mostrarSecao(id) {
@@ -63,7 +65,7 @@ export function voltarDashboard() {
 }
 
 export function atualizarTudo() {
-    Promise.all(loaders.map((loader) => loader())).catch((error) => {
+    Promise.all([carregarDashboard(), ...loaders.map((loader) => loader())]).catch((error) => {
         console.error(error);
     });
 }

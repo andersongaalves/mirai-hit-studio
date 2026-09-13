@@ -127,3 +127,7 @@ Decisao: modal acessivel e o padrao para foco em edicao ou detalhe. Drawer perma
 ## ADR-031 - Identidade de Cliente conservadora
 
 Decisao: Cliente e a identidade comercial viva e Orcamento mantem snapshot historico com vinculo nullable. Matching automatico usa email normalizado e telefone; nome isolado nunca une cadastros e identificadores conflitantes exigem revisao sem merge automatico.
+
+## ADR-032 - Dashboard operacional consolidado
+
+Decisao: o Dashboard administrativo recebe um resumo autenticado e agregado pelo backend. KPIs usam somente estados e timestamps persistidos; nao ha receita presumida, event store ou dados pessoais desnecessarios na atividade recente.

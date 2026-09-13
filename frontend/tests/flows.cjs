@@ -50,6 +50,12 @@ const root = path.resolve(__dirname, '..');
                 let data = [];
                 if (url.pathname === '/auth/login') data = { access_token: 'synthetic-session' };
                 if (url.pathname === '/auth/me') data = { id: 1, username: 'teste', is_admin: true, role: 'admin' };
+                if (url.pathname === '/dashboard') data = {
+                    metrics: { clientes_ativos: 0, orcamentos_abertos: 0, propostas_aguardando_decisao: 0, producoes_ativas: 0, producoes_atrasadas: 0 },
+                    pipeline: { orcamentos_abertos: 0, propostas_enviadas: 0, propostas_aprovadas: 0, producoes_ativas: 0 },
+                    attention: { producoes_atrasadas: 0, propostas_aguardando_decisao: 0 },
+                    recent_activity: [],
+                };
                 if (url.pathname === '/servicos') data = services;
                 if (url.pathname === '/config') {
                     if (request.method() === 'PUT') {
@@ -133,7 +139,7 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => Promise.all([window.fazerLogin(), window.fazerLogin()]));
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /clientes', 'GET /config', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios'];
+        const expected = ['GET /clientes', 'GET /config', 'GET /dashboard', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios'];
         assert.deepEqual(calls.filter(call => call.startsWith('GET')).sort(), expected);
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));

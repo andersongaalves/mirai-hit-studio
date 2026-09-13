@@ -104,42 +104,27 @@
                         <header class="admin-page-header">
                             <div class="admin-page-header__content">
                                 <span class="admin-page-header__eyebrow">Visão geral</span>
-                                <h1>Painel de Controle</h1>
-                                <p>Selecione o módulo que deseja gerenciar.</p>
+                                <h1>Dashboard</h1>
+                                <p>Visao geral da operacao da Mirai Hit Studio.</p>
                             </div>
                         </header>
-
-                        <div class="admin-dashboard-grid">
-                            <button type="button" class="dashboard-card" data-admin-target="section-servicos">
-                                <span class="dashboard-card__icon" aria-hidden="true">🛠️</span>
-                                <span class="dashboard-card__title">Serviços</span>
-                                <span class="dashboard-card__description">Pacotes, valores e formulários dinâmicos.</span>
-                            </button>
-                            <button type="button" class="dashboard-card" data-admin-target="section-portfolio">
-                                <span class="dashboard-card__icon" aria-hidden="true">🎵</span>
-                                <span class="dashboard-card__title">Portfólio</span>
-                                <span class="dashboard-card__description">Projetos concluídos e Hits da Tela Inicial.</span>
-                            </button>
-                            <button type="button" class="dashboard-card" data-admin-target="section-custos">
-                                <span class="dashboard-card__icon" aria-hidden="true">💲</span>
-                                <span class="dashboard-card__title">Custos Extras</span>
-                                <span class="dashboard-card__description">Tabela global de multiplicadores matemáticos.</span>
-                            </button>
-                            <button type="button" class="dashboard-card" data-admin-target="section-orcamentos">
-                                <span class="dashboard-card__icon" aria-hidden="true">📥</span>
-                                <span class="dashboard-card__title">Orçamentos</span>
-                                <span class="dashboard-card__description">Solicitações recebidas dos clientes.</span>
-                            </button>
-                            <button type="button" class="dashboard-card" data-admin-target="section-clientes">
-                                <span class="dashboard-card__icon" aria-hidden="true">CRM</span>
-                                <span class="dashboard-card__title">Clientes</span>
-                                <span class="dashboard-card__description">Contatos e histórico comercial.</span>
-                            </button>
-                            <button type="button" class="dashboard-card" data-admin-target="section-producoes">
-                                <span class="dashboard-card__icon" aria-hidden="true">🎼</span>
-                                <span class="dashboard-card__title">Produções</span>
-                                <span class="dashboard-card__description">Produções em andamento.</span>
-                            </button>
+                        <div id="dashboard-content" aria-live="polite">
+                            <section aria-labelledby="dashboard-metrics-title">
+                                <h2 id="dashboard-metrics-title" class="admin-visually-hidden">Indicadores operacionais</h2>
+                                <div id="dashboard-metrics" class="dashboard-kpi-grid"></div>
+                            </section>
+                            <section class="dashboard-section" aria-labelledby="dashboard-pipeline-title">
+                                <h2 id="dashboard-pipeline-title">Pipeline comercial</h2>
+                                <ol id="dashboard-pipeline" class="dashboard-pipeline"></ol>
+                            </section>
+                            <section class="dashboard-section" aria-labelledby="dashboard-attention-title">
+                                <h2 id="dashboard-attention-title">Requer atencao</h2>
+                                <div id="dashboard-attention"></div>
+                            </section>
+                            <section class="dashboard-section" aria-labelledby="dashboard-activity-title">
+                                <h2 id="dashboard-activity-title">Atividade recente</h2>
+                                <div id="dashboard-activity"></div>
+                            </section>
                         </div>
                     </div>
 

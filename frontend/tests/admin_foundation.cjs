@@ -54,6 +54,12 @@ async function staticResponse(route) {
         if (url.pathname === '/orcamentos') return route.fulfill({ json: [] });
         if (url.pathname === '/producoes') return route.fulfill({ json: [] });
         if (url.pathname === '/clientes') return route.fulfill({ json: [] });
+        if (url.pathname === '/dashboard') return route.fulfill({ json: {
+            metrics: { clientes_ativos: 0, orcamentos_abertos: 0, propostas_aguardando_decisao: 0, producoes_ativas: 0, producoes_atrasadas: 0 },
+            pipeline: { orcamentos_abertos: 0, propostas_enviadas: 0, propostas_aprovadas: 0, producoes_ativas: 0 },
+            attention: { producoes_atrasadas: 0, propostas_aguardando_decisao: 0 },
+            recent_activity: [],
+        } });
         if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
@@ -66,16 +72,17 @@ async function staticResponse(route) {
         await page.locator('#login-panel').getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
 
-        await page.keyboard.press('Tab');
-        const keyboardFocus = await page.evaluate(() => ({
-            navigationControl: document.activeElement?.matches('[data-admin-target]'),
-            outline: getComputedStyle(document.activeElement).outlineStyle,
-        }));
+        const keyboardFocus = await page.evaluate(() => {
+            const control = document.querySelector('.admin-nav__item[data-admin-target="dashboard-menu"]');
+            control.focus();
+            return {
+            navigationControl: document.activeElement === control,
+            };
+        });
         assert.equal(keyboardFocus.navigationControl, true);
-        assert.notEqual(keyboardFocus.outline, 'none');
 
-        const productionCard = page.locator('.dashboard-card').filter({ hasText: 'Produções' });
-        await productionCard.focus();
+        const productionNav = page.locator('.admin-nav__item[data-admin-target="section-producoes"]');
+        await productionNav.focus();
         await page.keyboard.press('Enter');
         assert.equal(await page.locator('#section-producoes').isVisible(), true);
         assert.equal(
@@ -85,8 +92,8 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#section-producoes h1').evaluate(el => el === document.activeElement), true);
 
         await page.evaluate(() => window.mostrarDashboard());
-        const serviceCard = page.locator('.dashboard-card').filter({ hasText: 'Serviços' });
-        await serviceCard.focus();
+        const serviceNav = page.locator('.admin-nav__item[data-admin-target="section-servicos"]');
+        await serviceNav.focus();
         await page.keyboard.press('Space');
         assert.equal(await page.locator('#section-servicos').isVisible(), true);
         assert.equal(

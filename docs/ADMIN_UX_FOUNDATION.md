@@ -165,6 +165,11 @@ Arquivos centrais: `frontend/admin.html`, `frontend/css/pages/admin.css`, `front
 
 Arquivos provaveis: `frontend/js/admin/producoes/`, `frontend/admin.html` e estilos compartilhados/administrativos estritamente necessarios.
 
+### F.3 - Dashboard Administrativo
+
+- Implementado: resumo operacional baseado em endpoint autenticado unico, com KPIs sem valor financeiro, pipeline, atencao e atividade recente.
+- O Dashboard reutiliza header, estados, badges, tokens e navegacao do shell; ele resume e direciona para modulos, sem repetir CRUD.
+
 ### J Final
 
 Polish premium, animacoes com proposito, branding avancado, CRO, menus de acao sofisticados, UX de CRM/Financeiro/IA, microinteracoes e revisao ampla dos modulos legados.

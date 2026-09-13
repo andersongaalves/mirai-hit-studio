@@ -100,6 +100,8 @@ Design: tokens CSS semanticos complementam as variaveis legadas; foco visivel e 
 
 Admin UX: J0 define shell compartilhado, header, filtros, badges, estados e modal acessivel como fundacao vanilla. Componentes visuais nao absorvem regras de dominio; J0.3 aplica a fundacao primeiro em Producoes.
 
+Dashboard: `/dashboard` e autenticado, agrega indicadores operacionais no backend e nao representa receita ou analytics publico.
+
 ## IA planejada
 
 Canais: chat proprio do site e e-mail. Nao havera WhatsApp.
