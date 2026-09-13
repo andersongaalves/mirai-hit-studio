@@ -41,6 +41,12 @@ Decisoes importantes dessas fases estao preservadas nos documentos `propostas-fa
 - A aprovacao nao cria Projeto.
 - Campos legados so devem ser removidos quando nao houver referencias.
 
+## Producoes
+
+- Etapas sao uma lista flexivel de nome/feito; nao existe fluxo rigido por vertical.
+- Prazo proximo significa ate 3 dias. Producoes `finalizado` ou `entregue` nunca aparecem como atrasadas.
+- Cliente e origem comercial sao derivados dos dados atuais; a entidade Cliente permanece reservada para F.2.
+
 ## Banco e migrations
 
 - Alembic e responsavel pelo schema.

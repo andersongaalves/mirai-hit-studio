@@ -53,7 +53,8 @@ document.addEventListener("admin:logout", () => {
     producoesState.lista = [];
     servicosState.lista = [];
     servicosState.parametros = [];
-    for (const state of [orcamentosState, producoesState]) state.filtro = { busca: "", status: "todos" };
+    orcamentosState.filtro = { busca: "", status: "todos" };
+    producoesState.filtro = { busca: "", status: "todos", prazo: "todos" };
     resetBuilder();
     Orcamentos.fecharModalOrcamento();
     fecharModalProducao();

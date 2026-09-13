@@ -331,3 +331,189 @@
     gap: 16px;
     margin: 8px 0;
 }
+
+.producoes-toolbar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(160px, auto));
+    gap: var(--space-3);
+    margin: var(--space-5) 0;
+}
+
+.producoes-toolbar :where(input, select),
+.producao-modal-content :where(input, select, textarea) {
+    min-width: 0;
+    padding: var(--space-3);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-elevated);
+    color: var(--color-text-primary);
+    font: inherit;
+}
+
+.producao-card {
+    align-items: stretch;
+    gap: var(--space-4);
+    border: var(--border-subtle);
+    border-left: 3px solid var(--color-accent);
+}
+
+.producao-info {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.producao-title-row,
+.producao-metadata,
+.producao-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.producao-title-row strong,
+.producao-metadata span {
+    overflow-wrap: anywhere;
+}
+
+.producao-metadata,
+.producao-progress {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+.producao-actions { justify-content: flex-end; }
+
+.prazo-atrasado { color: var(--color-danger); border-color: var(--color-danger); }
+.prazo-proximo { color: var(--color-warning); border-color: var(--color-warning); }
+.prazo-normal { color: var(--color-accent); }
+.prazo-finalizado { color: var(--color-success); border-color: var(--color-success); }
+
+.admin-loading,
+.admin-empty,
+.admin-error {
+    padding: var(--space-5);
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.admin-error { color: var(--color-danger); }
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: grid;
+    place-items: center;
+    padding: var(--space-4);
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.modal-content {
+    width: min(680px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: var(--space-5);
+    border: var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-elevated);
+    box-shadow: var(--shadow-md);
+}
+
+.producao-modal-content {
+    width: min(760px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.producao-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+.producao-modal-header h2 {
+    margin: var(--space-2) 0 0;
+    overflow-wrap: anywhere;
+}
+
+.producao-detail-block {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: var(--border-subtle);
+}
+
+.producao-detail-block h3 {
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    font-size: var(--font-size-h3);
+}
+
+.producao-detail-block h3::after { display: none; }
+
+.producao-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+
+.producao-detail-grid :where(p, label) {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.producao-detail-grid span { overflow-wrap: anywhere; }
+
+.producao-modal-content textarea {
+    display: block;
+    width: 100%;
+    min-height: 130px;
+    margin: var(--space-2) 0 var(--space-3);
+    resize: vertical;
+}
+
+.producao-etapas {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.producao-etapa-row,
+.producao-etapa-row label,
+.producao-add-etapa {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.producao-etapa-row {
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.producao-add-etapa { margin-top: var(--space-3); }
+.producao-add-etapa input { flex: 1; }
+
+@media (max-width: 768px) {
+    .producoes-toolbar,
+    .producao-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .producao-card,
+    .producao-actions,
+    .producao-add-etapa {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .producao-actions :where(select, button) { width: 100%; }
+}

@@ -560,7 +560,34 @@
                         </button>
                         <h2>Produções</h2>
 
-                        <div id="producoes-list"></div>
+                        <div class="producoes-toolbar" aria-label="Filtros de produções">
+                            <input
+                                id="producoes-search"
+                                type="search"
+                                placeholder="Buscar cliente, serviço ou proposta"
+                                aria-label="Buscar produções"
+                            />
+                            <select id="producoes-status-filter" aria-label="Filtrar por status">
+                                <option value="todos">Todos os status</option>
+                                <option value="aguardando_inicio">Aguardando início</option>
+                                <option value="em_producao">Em produção</option>
+                                <option value="revisao">Revisão</option>
+                                <option value="finalizado">Finalizado</option>
+                                <option value="entregue">Entregue</option>
+                            </select>
+                            <select id="producoes-prazo-filter" aria-label="Filtrar por prazo">
+                                <option value="todos">Todos os prazos</option>
+                                <option value="atrasado">Atrasadas</option>
+                                <option value="proximo">Próximas do prazo</option>
+                                <option value="sem_prazo">Sem prazo</option>
+                            </select>
+                        </div>
+
+                        <div
+                            id="producoes-list"
+                            class="admin-list-container"
+                            aria-live="polite"
+                        ></div>
                     </div>
                 </div>
 
@@ -814,46 +841,68 @@
                 </div>
 
                 <div id="modal-producao" class="modal hidden">
-                    <div class="modal-content">
-                        <h2 id="prod_titulo"></h2>
-
-                        <p>Cliente: <span id="prod_cliente"></span></p>
-                        <p>Serviço: <span id="prod_servico"></span></p>
-                        <p>Status: <span id="prod_status"></span></p>
-                        <p>Criado em: <span id="prod_data"></span></p>
-
-                        <label> Observações </label>
-
-                        <br />
-                        <textarea
-                            id="prod_observacoes"
-                            placeholder="observações..."
-                        ></textarea>
-                        <br />
-
-                        <h3>Etapas</h3>
-                        <div id="prod_etapas"></div>
-
-                        <label> Prazo de entrega </label>
-
-                        <input type="datetime-local" id="prod_prazo" />
-
-                        <button id="btn-save-prazo">Salvar prazo</button>
-
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: flex-end;
-                                margin-top: 20px;
-                            "
-                        >
+                    <div class="modal-content producao-modal-content">
+                        <div class="producao-modal-header">
+                            <div>
+                                <span id="prod_id" class="badge"></span>
+                                <h2 id="prod_titulo"></h2>
+                            </div>
                             <button
                                 class="btn-small"
                                 onclick="fecharModalProducao()"
+                                aria-label="Fechar detalhes da produção"
                             >
                                 Fechar
                             </button>
                         </div>
+
+                        <section class="producao-detail-block">
+                            <h3>Resumo</h3>
+                            <div class="producao-detail-grid">
+                                <p><strong>Cliente</strong><span id="prod_cliente"></span></p>
+                                <p><strong>E-mail</strong><span id="prod_email"></span></p>
+                                <p><strong>Serviço</strong><span id="prod_servico"></span></p>
+                                <p><strong>Criada em</strong><span id="prod_data"></span></p>
+                            </div>
+                        </section>
+
+                        <section class="producao-detail-block">
+                            <h3>Produção</h3>
+                            <div class="producao-detail-grid">
+                                <label>Status<select id="prod_status"></select></label>
+                                <p><strong>Responsável</strong><span id="prod_produtor"></span></p>
+                                <label>Prazo de entrega<input type="datetime-local" id="prod_prazo" /></label>
+                                <p><strong>Situação do prazo</strong><span id="prod_prazo_status"></span></p>
+                            </div>
+                            <button id="btn-save-prazo" class="btn-small">Salvar prazo</button>
+                        </section>
+
+                        <section class="producao-detail-block">
+                            <h3>Origem</h3>
+                            <div class="producao-detail-grid">
+                                <p><strong>Orçamento</strong><span id="prod_orcamento"></span></p>
+                                <p><strong>Proposta</strong><span id="prod_proposta"></span></p>
+                            </div>
+                        </section>
+
+                        <section class="producao-detail-block">
+                            <h3>Etapas</h3>
+                            <div id="prod_etapas" class="producao-etapas"></div>
+                            <div class="producao-add-etapa">
+                                <input id="prod_nova_etapa" maxlength="120" placeholder="Nome da nova etapa" />
+                                <button id="btn-add-etapa" class="btn-small">Adicionar etapa</button>
+                            </div>
+                        </section>
+
+                        <section class="producao-detail-block">
+                            <label for="prod_observacoes"><strong>Observações</strong></label>
+                            <textarea
+                                id="prod_observacoes"
+                                maxlength="20000"
+                                placeholder="Notas internas da produção"
+                            ></textarea>
+                            <button id="btn-save-observacoes" class="btn-small">Salvar observações</button>
+                        </section>
                     </div>
                 </div>
             </div>
