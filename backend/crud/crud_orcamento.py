@@ -18,13 +18,17 @@ def buscar_por_id(
     )
 
 
+def criar_sem_commit(db: Session, dados: dict):
+    novo = OrcamentoModel(**dados)
+    db.add(novo)
+    db.flush()
+    return novo
+
+
 def criar(db: Session, orcamento):
 
-    novo = OrcamentoModel(
-        **orcamento.model_dump()
-    )
+    novo = criar_sem_commit(db, orcamento.model_dump())
 
-    db.add(novo)
     db.commit()
     db.refresh(novo)
 

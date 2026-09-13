@@ -21,6 +21,7 @@ O Admin deve ser rapido, previsivel, legivel, responsivo e acessivel para operac
 - Status e prazo usam badges semanticos compartilhados, mantendo sempre o texto legivel. Progresso reutiliza o calculo existente e combina texto com indicador nativo.
 - O modal de Producoes usa integralmente o helper compartilhado para dialog, foco inicial, trap, Escape e retorno ao acionador; os blocos e formularios permanecem sob responsabilidade do modulo.
 - O comando de limpar filtros atua apenas no estado local, sem nova requisicao, e o empty state diferencia ausencia geral de ausencia causada pelos filtros.
+- Clientes/CRM e o segundo modulo construido diretamente sobre a foundation, reutilizando tabela desktop, entity cards mobile, filtros, estados, formulario e modal acessivel sem compartilhar regras de dominio com Producoes.
 
 ## Diagnostico Atual
 

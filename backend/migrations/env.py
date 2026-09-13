@@ -16,6 +16,7 @@ from database import Base
 from models.usuario import UsuarioModel
 from models.config import ConfigModel
 from models.newsletter import NewsletterModel
+from models.cliente import ClienteModel
 from models.orcamento import OrcamentoModel
 from models.producao import ProducaoModel
 from models.projeto import ProjetoModel

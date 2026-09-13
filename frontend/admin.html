@@ -73,6 +73,9 @@
                             <button type="button" class="admin-nav__item" data-admin-target="section-orcamentos">
                                 Orçamentos
                             </button>
+                            <button type="button" class="admin-nav__item" data-admin-target="section-clientes">
+                                Clientes
+                            </button>
                             <button type="button" class="admin-nav__item" data-admin-target="section-producoes">
                                 Produções
                             </button>
@@ -126,6 +129,11 @@
                                 <span class="dashboard-card__icon" aria-hidden="true">📥</span>
                                 <span class="dashboard-card__title">Orçamentos</span>
                                 <span class="dashboard-card__description">Solicitações recebidas dos clientes.</span>
+                            </button>
+                            <button type="button" class="dashboard-card" data-admin-target="section-clientes">
+                                <span class="dashboard-card__icon" aria-hidden="true">CRM</span>
+                                <span class="dashboard-card__title">Clientes</span>
+                                <span class="dashboard-card__description">Contatos e histórico comercial.</span>
                             </button>
                             <button type="button" class="dashboard-card" data-admin-target="section-producoes">
                                 <span class="dashboard-card__icon" aria-hidden="true">🎼</span>
@@ -488,6 +496,44 @@
                         ></div>
                     </div>
 
+                    <div id="section-clientes" class="admin-section hidden">
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">CRM</span>
+                                <h1>Clientes</h1>
+                                <p>Gerencie clientes e acompanhe o histórico comercial.</p>
+                            </div>
+                            <div class="admin-page-header__actions">
+                                <button type="button" class="btn-cta" onclick="novoCliente()">
+                                    Novo cliente
+                                </button>
+                            </div>
+                        </header>
+
+                        <div class="admin-filter-bar" aria-label="Filtros de clientes">
+                            <label class="admin-filter-field admin-filter-field--search">
+                                <span>Buscar</span>
+                                <input id="clientes-search" type="search" placeholder="Nome, e-mail ou telefone" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Status</span>
+                                <select id="clientes-status-filter">
+                                    <option value="todos">Todos</option>
+                                    <option value="ativo">Ativos</option>
+                                    <option value="inativo">Inativos</option>
+                                </select>
+                            </label>
+                            <div class="admin-filter-bar__actions">
+                                <button id="clientes-clear-filters" type="button" class="btn-small hidden">
+                                    Limpar filtros
+                                </button>
+                            </div>
+                        </div>
+
+                        <p id="clientes-summary" class="clientes-summary" aria-live="polite"></p>
+                        <div id="clientes-list" class="admin-list-container" aria-live="polite"></div>
+                    </div>
+
                     <div id="section-producoes" class="admin-section hidden">
                         <header class="admin-page-header">
                             <div class="admin-page-header__content">
@@ -814,6 +860,53 @@
                             >
                                 Fechar
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="modal-cliente"
+                    class="modal hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="cliente-modal-title"
+                >
+                    <div class="modal-content cliente-modal-content admin-form">
+                        <div class="cliente-modal-header">
+                            <div>
+                                <span class="badge badge-info">CRM</span>
+                                <h2 id="cliente-modal-title">Cliente</h2>
+                            </div>
+                            <button type="button" class="btn-small" onclick="fecharModalCliente()" aria-label="Fechar cliente">
+                                Fechar
+                            </button>
+                        </div>
+
+                        <section class="cliente-detail-block">
+                            <h3>Contato</h3>
+                            <div class="cliente-form-grid">
+                                <label class="admin-form-field">Nome<input id="cliente-nome" maxlength="120" required /></label>
+                                <label class="admin-form-field">E-mail<input id="cliente-email" type="email" maxlength="150" /></label>
+                                <label class="admin-form-field">Telefone<input id="cliente-telefone" maxlength="30" /></label>
+                                <label class="cliente-active-field"><input id="cliente-ativo" type="checkbox" /> Cliente ativo</label>
+                            </div>
+                        </section>
+
+                        <section class="cliente-detail-block">
+                            <label class="admin-form-field" for="cliente-observacoes">
+                                <strong>Observações</strong>
+                                <textarea id="cliente-observacoes" maxlength="20000"></textarea>
+                            </label>
+                        </section>
+
+                        <section id="cliente-history-block" class="cliente-detail-block hidden">
+                            <h3>Histórico comercial</h3>
+                            <div id="cliente-historico"></div>
+                        </section>
+
+                        <div class="admin-form-actions cliente-modal-actions">
+                            <button id="cliente-save" type="button" class="btn-cta">Salvar cliente</button>
                         </div>
                     </div>
                 </div>

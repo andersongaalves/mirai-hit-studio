@@ -62,9 +62,9 @@ CTA padrao derivado: `fixed` -> contratar/comecar projeto; `starting_at` -> soli
 
 ## 6. CRM, cliente e lead
 
-Hoje `OrcamentoModel` e o lead/oportunidade: armazena contato, pedido original, status, observacoes, valor e responsavel. Proposta guarda snapshot; Producao copia nome e servico. Nao existe `ClienteModel`.
+Implementado em F.2: `ClienteModel` e a identidade comercial viva, com nome, email, telefone, observacoes e estado ativo. `OrcamentoModel` continua sendo o lead/oportunidade e possui `cliente_id` nullable, mantendo nome, email e WhatsApp originais como snapshot do pedido. Propostas permanecem independentes.
 
-Cliente deve virar entidade propria em F.2, quando houver necessidade de historico entre varios orcamentos e producoes. A mudanca deve ser aditiva: `orcamentos.cliente_id` nullable, mantendo nome, e-mail e WhatsApp originais como snapshot do pedido. Propostas existentes continuam independentes.
+O matching automatico usa email normalizado e telefone quando nao houver conflito. Nome isolado nunca identifica ou une clientes. Identificadores conflitantes preservam o novo orcamento com vinculo nulo para revisao, sem criar merge ambiguo.
 
 | Campo CRM | Classificacao | Local recomendado |
 |---|---|---|

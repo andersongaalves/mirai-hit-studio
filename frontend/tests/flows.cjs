@@ -133,11 +133,11 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => Promise.all([window.fazerLogin(), window.fazerLogin()]));
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /config', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios'];
+        const expected = ['GET /clientes', 'GET /config', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios'];
         assert.deepEqual(calls.filter(call => call.startsWith('GET')).sort(), expected);
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));
-        assert.equal(calls.filter(call => call.startsWith('GET')).length, 6);
+        assert.equal(calls.filter(call => call.startsWith('GET')).length, expected.length);
         assert.equal(await page.locator('#cfg_desconto').inputValue(), '10');
         for (const value of ['0', '15', '-1', '101']) {
             await page.locator('#cfg_desconto').evaluate((el, value) => { el.value = value; }, value);

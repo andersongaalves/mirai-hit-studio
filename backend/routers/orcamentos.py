@@ -3,8 +3,6 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from core.dependencies import get_current_user
-from core.enums import OrcamentoStatus
-
 from schemas.orcamento import (
     OrcamentoCreate,
     OrcamentoResponse,
@@ -17,6 +15,7 @@ from services.email_service import EmailService
 from models import UsuarioModel
 
 import crud.crud_orcamento as crud_orcamento
+from services import orcamento_service
 
 router = APIRouter(
     prefix="/orcamentos",
@@ -32,10 +31,7 @@ def criar_orcamento(
     db: Session = Depends(get_db),
 ):
 
-    novo = crud_orcamento.criar(
-        db,
-        orcamento,
-    )
+    novo = orcamento_service.criar(db, orcamento)
 
     protocolo = (
         f"MHS-"

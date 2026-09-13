@@ -25,6 +25,7 @@ const root = path.resolve(__dirname, '..');
                 if (url.pathname === '/orcamentos') return route.fulfill({ json: [budget] });
                 if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
                 if (url.pathname === '/producoes') return route.fulfill({ json: productions });
+                if (url.pathname === '/clientes') return route.fulfill({ json: [] });
                 if (url.pathname.endsWith('/preview')) return route.fulfill({ contentType: 'text/html', body: '<p>Documento salvo</p>' });
                 const action = url.pathname.split('/').pop();
                 if (['enviar', 'aprovar'].includes(action)) {
@@ -113,6 +114,7 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => window.fecharEditorProposta());
         assert.equal(calls.filter(call => call === 'GET /orcamentos').length, 2);
         assert.equal(calls.filter(call => call === 'GET /producoes').length, 1);
+        assert.equal(calls.filter(call => call === 'GET /clientes').length, 2);
         assert.ok(!calls.some(call => /\/status$|enviar-proposta/.test(call)));
         assert.deepEqual(errors, []);
         console.log('PASS: send/approve guards, dirty, confirmations, failures, double-submit, state, CRM reload and production availability.');

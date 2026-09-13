@@ -17,6 +17,7 @@ from routers.newsletter import router as newsletter_router
 from routers.usuarios import router as usuarios_router
 from routers.producao import router as producao_router
 from routers.propostas import router as propostas_router
+from routers.clientes import router as clientes_router
 
 app = FastAPI(
     title="Mirai Hit Studio API", version="1.0.0", docs_url="/docs", redoc_url="/redoc"
@@ -54,6 +55,7 @@ app.include_router(newsletter_router)
 app.include_router(usuarios_router)
 app.include_router(producao_router)
 app.include_router(propostas_router)
+app.include_router(clientes_router)
 
 
 @app.get("/")

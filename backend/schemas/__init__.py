@@ -21,3 +21,10 @@ from .usuario import (
     LoginRequest,
     UsuarioResponse,
 )
+
+from .cliente import (
+    ClienteCreate,
+    ClienteUpdate,
+    ClienteResponse,
+    ClienteDetail,
+)

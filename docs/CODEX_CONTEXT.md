@@ -45,7 +45,12 @@ Decisoes importantes dessas fases estao preservadas nos documentos `propostas-fa
 
 - Etapas sao uma lista flexivel de nome/feito; nao existe fluxo rigido por vertical.
 - Prazo proximo significa ate 3 dias. Producoes `finalizado` ou `entregue` nunca aparecem como atrasadas.
-- Cliente e origem comercial sao derivados dos dados atuais; a entidade Cliente permanece reservada para F.2.
+- Cliente e origem comercial continuam derivaveis dos snapshots para registros legados.
+
+## Clientes / CRM
+
+- Cliente existe como entidade comercial viva; `orcamento.cliente_id` e nullable e registros legados continuam validos.
+- Orcamentos e propostas preservam seus snapshots. Matching automatico e conservador por email/telefone e nunca usa apenas o nome.
 
 ## Banco e migrations
 

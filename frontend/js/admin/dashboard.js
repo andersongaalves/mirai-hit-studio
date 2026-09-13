@@ -10,6 +10,7 @@ import { initOrcamentos } from "./orcamentos/orcamentos.js";
 import { carregarConfiguracoes } from "./configuracoes.js";
 
 import { initProducoes } from "./producoes/producoes.js";
+import { initClientes } from "./clientes/clientes.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
@@ -20,6 +21,7 @@ const loaders = [
     initOrcamentos,
     carregarConfiguracoes,
     initProducoes,
+    initClientes,
 ];
 
 function focusHeading(container) {

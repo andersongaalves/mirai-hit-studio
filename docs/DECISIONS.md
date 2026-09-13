@@ -123,3 +123,7 @@ Decisao: listagens densas usam tabela em desktop e card de entidade em mobile qu
 ## ADR-030 - Modal antes de drawer
 
 Decisao: modal acessivel e o padrao para foco em edicao ou detalhe. Drawer permanece adiado ate haver necessidade real de consulta contextual paralela.
+
+## ADR-031 - Identidade de Cliente conservadora
+
+Decisao: Cliente e a identidade comercial viva e Orcamento mantem snapshot historico com vinculo nullable. Matching automatico usa email normalizado e telefone; nome isolado nunca une cadastros e identificadores conflitantes exigem revisao sem merge automatico.

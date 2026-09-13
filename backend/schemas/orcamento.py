@@ -70,6 +70,7 @@ class OrcamentoObservacoesUpdate(BaseModel):
 
 class OrcamentoResponse(OrcamentoBase):
     id: int
+    cliente_id: int | None
 
     # CRM
     status: OrcamentoStatus

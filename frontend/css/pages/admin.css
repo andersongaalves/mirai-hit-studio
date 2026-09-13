@@ -647,6 +647,122 @@
 
 .producao-prazo { width: fit-content; }
 
+.clientes-summary {
+    min-height: 1.25rem;
+    margin: 0 0 var(--space-3);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+.clientes-mobile-view {
+    display: none;
+}
+
+.clientes-table td:first-child {
+    min-width: 180px;
+}
+
+.cliente-card,
+.cliente-card .admin-entity-card__meta {
+    flex-direction: column;
+}
+
+.clientes-table td:first-child {
+    display: table-cell;
+}
+
+.clientes-table td:first-child strong,
+.clientes-table td:first-child span {
+    display: block;
+}
+
+.cliente-secondary,
+.cliente-card .admin-entity-card__meta {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+.cliente-modal-content {
+    width: min(720px, 100%);
+}
+
+.cliente-modal-header,
+.cliente-form-grid,
+.cliente-active-field,
+.cliente-history-list li {
+    display: flex;
+}
+
+.cliente-modal-header {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.cliente-modal-header h2 {
+    margin: var(--space-2) 0 0;
+}
+
+.cliente-detail-block {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: var(--border-subtle);
+}
+
+.cliente-detail-block h3 {
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    font-size: var(--font-size-h3);
+}
+
+.cliente-detail-block h3::after { display: none; }
+
+.cliente-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--space-4);
+}
+
+.cliente-active-field {
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+}
+
+.cliente-modal-content textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.cliente-modal-actions {
+    justify-content: flex-end;
+    margin-top: var(--space-5);
+}
+
+.cliente-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cliente-history-list li {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.cliente-history-list time {
+    flex: 0 0 auto;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
 .admin-state,
 .admin-loading,
 .admin-empty,
@@ -770,6 +886,16 @@
 .producao-add-etapa input { flex: 1; }
 
 @media (max-width: 768px) {
+    .clientes-table-view {
+        display: none;
+    }
+
+    .clientes-mobile-view {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
     .producoes-table-view {
         display: none;
     }
@@ -781,6 +907,10 @@
     }
 
     .producao-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cliente-form-grid {
         grid-template-columns: 1fr;
     }
 
@@ -889,7 +1019,9 @@
 
     .producao-modal-header,
     .producao-etapa-row,
-    .producao-etapa-row label {
+    .producao-etapa-row label,
+    .cliente-modal-header,
+    .cliente-history-list li {
         align-items: stretch;
         flex-direction: column;
     }
@@ -898,6 +1030,12 @@
     .producao-etapa-row > button,
     .producao-modal-content .admin-form-actions,
     .producao-modal-content .admin-form-actions button {
+        width: 100%;
+    }
+
+    .cliente-modal-header > button,
+    .cliente-modal-actions,
+    .cliente-modal-actions button {
         width: 100%;
     }
 }

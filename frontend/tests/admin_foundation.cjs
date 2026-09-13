@@ -53,6 +53,7 @@ async function staticResponse(route) {
         if (url.pathname === '/projetos') return route.fulfill({ json: [] });
         if (url.pathname === '/orcamentos') return route.fulfill({ json: [] });
         if (url.pathname === '/producoes') return route.fulfill({ json: [] });
+        if (url.pathname === '/clientes') return route.fulfill({ json: [] });
         if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });

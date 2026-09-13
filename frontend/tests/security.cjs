@@ -64,11 +64,13 @@ const root = path.resolve(__dirname, '..');
             const auth = await import('/js/admin/auth.js');
             const { orcamentosState } = await import('/js/admin/orcamentos/orcamentos_state.js');
             const { propostaState } = await import('/js/admin/propostas/proposta_state.js');
+            const { clientesState } = await import('/js/admin/clientes/clientes_state.js');
             const { builderState } = await import('/js/admin/builder/builder_state.js');
             let logoutEvents = 0;
             document.addEventListener('admin:logout', () => logoutEvents++);
             localStorage.setItem('access_token', 'old');
             orcamentosState.lista = [{nome_cliente:'private'}];
+            clientesState.lista = [{nome:'private'}];
             propostaState.proposta = {id:1};
             document.getElementById('lista-servicos').textContent = 'private';
             document.getElementById('proposta-title').textContent = 'private';
@@ -94,7 +96,7 @@ const root = path.resolve(__dirname, '..');
             window.fetch = async () => { calls++; return new Response('{}'); };
             await auth.authFetch('/after').catch(() => {});
             return {staleRejected,newSessionPreserved,bodyRejected,logoutOnce:logoutEvents-before === 1,calls,
-                cleared:orcamentosState.lista.length === 0 && propostaState.proposta === null && builderState.intro === '',
+                cleared:orcamentosState.lista.length === 0 && clientesState.lista.length === 0 && propostaState.proposta === null && builderState.intro === '',
                 dom:document.getElementById('lista-servicos').textContent === '' && document.getElementById('proposta-title').textContent === '',
                 token:auth.getToken(), modal:document.getElementById('modal-proposta').classList.contains('hidden')};
         });

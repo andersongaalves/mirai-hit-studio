@@ -48,6 +48,13 @@ class OrcamentoModel(Base):
         nullable=False,
     )
 
+    cliente_id = Column(
+        Integer,
+        ForeignKey("clientes.id", name="fk_orcamentos_cliente_id_clientes"),
+        nullable=True,
+        index=True,
+    )
+
     proposta = relationship(
         "PropostaModel",
         back_populates="orcamento",
@@ -101,4 +108,9 @@ class OrcamentoModel(Base):
     produtor = relationship(
         "UsuarioModel",
         foreign_keys=[produtor_id],
+    )
+
+    cliente = relationship(
+        "ClienteModel",
+        back_populates="orcamentos",
     )

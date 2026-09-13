@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: J0 concluida.
+Fase atual: F.2 concluida.
 
 Ultimo checkpoint enviado: CP-F0 em `76c3b57`.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-F1.
 
 Proximo push: apos F.3.
 
-Ultimo commit local: `refactor: aplica foundation de UX em producoes`.
+Ultimo commit local: `feat: adiciona clientes e CRM administrativo`.
 
 ## Concluido
 
@@ -36,7 +36,7 @@ F0 - Fundacao Mirai 2.0
 F - Admin/CRM
 
 - F.1 Producoes. Concluida.
-- F.2 Clientes/CRM.
+- F.2 Clientes/CRM. Concluida.
 - F.3 Dashboard.
 - CP-F1.
 - F.4 Usuarios.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-J0.3 concluida
+F.2 concluida
 
 ## Proxima subfase
 
-F.2 - Clientes / CRM
+F.3 - Dashboard

@@ -47,7 +47,7 @@ def reject_ddl(connection, cursor, statement, parameters, context, many):
             head = bootstrap(engine)
             assert head == ScriptDirectory.from_config(migration_config()).get_current_head()
             assert set(inspect(engine).get_table_names()) == {
-                'usuarios', 'servicos', 'orcamentos', 'propostas', 'producoes',
+                'usuarios', 'servicos', 'clientes', 'orcamentos', 'propostas', 'producoes',
                 'projetos', 'configuracoes', 'newsletter', 'alembic_version'}
             with engine.connect() as connection:
                 assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').all() == [(head,)]
