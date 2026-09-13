@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: F.1 concluida.
+Fase atual: J0.1 concluida.
 
 Ultimo checkpoint enviado: CP-F0 em `76c3b57`.
 
@@ -43,6 +43,13 @@ F - Admin/CRM
 - F.5 Newsletter e comunicacao.
 - F.6 Logs, auditoria e backup/restore.
 - CP-F2.
+
+J0 - Fundacao UX do Admin
+
+- J0.1 Auditoria UX e especificacao de padroes reutilizaveis. Concluida.
+- J0.2 Shell e componentes administrativos.
+- J0.3 Aplicacao inicial da fundacao em Producoes.
+- J0 permanece em andamento.
 
 F3 - Pagamentos/Financeiro
 
@@ -90,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F.1 concluida
+J0.1 concluida
 
 ## Proxima subfase
 
-F.2 - Clientes / CRM
+J0.2 - Shell + componentes administrativos

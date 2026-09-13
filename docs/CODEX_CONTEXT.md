@@ -93,6 +93,8 @@ Direcao visual: music-tech, premium e futurista. Evitar neon gratuito, glitch ex
 
 Design: tokens CSS semanticos complementam as variaveis legadas; foco visivel e reduced motion sao obrigatorios para componentes novos. Provas sociais devem ser verificaveis e rotuladas como case, demo, concept project ou study.
 
+Admin UX: J0 define shell compartilhado, header, filtros, badges, estados e modal acessivel como fundacao vanilla. Componentes visuais nao absorvem regras de dominio; J0.3 aplica a fundacao primeiro em Producoes.
+
 ## IA planejada
 
 Canais: chat proprio do site e e-mail. Nao havera WhatsApp.

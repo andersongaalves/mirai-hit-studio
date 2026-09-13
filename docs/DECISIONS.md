@@ -107,3 +107,19 @@ Decisao: cases, depoimentos e metricas exigem evidencia e autorizacao. `demo`, `
 ## ADR-026 - Portfolio compartilha taxonomia comercial
 
 Decisao: portfolio futuro usa vertical, segmentos e tipo de case; nao criar relacao direta servico-case antes de necessidade curatorial comprovada.
+
+## ADR-027 - Shell administrativo compartilhado
+
+Decisao: o Admin evolui para um shell vanilla compartilhado, com navegacao acessivel, contexto de pagina e area principal comum, sem introduzir framework de componentes.
+
+## ADR-028 - Fundacao visual sem abstrair dominio
+
+Decisao: headers, filtros, badges, estados, tabelas/cards responsivos e modais podem ser reutilizados; regras de status, prazo, etapas e persistencia permanecem nos modulos de dominio.
+
+## ADR-029 - Lista responsiva por contexto
+
+Decisao: listagens densas usam tabela em desktop e card de entidade em mobile quando a compactacao de colunas comprometer leitura ou toque.
+
+## ADR-030 - Modal antes de drawer
+
+Decisao: modal acessivel e o padrao para foco em edicao ou detalhe. Drawer permanece adiado ate haver necessidade real de consulta contextual paralela.
