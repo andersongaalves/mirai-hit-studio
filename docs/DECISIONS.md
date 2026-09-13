@@ -55,3 +55,19 @@ Decisao: vertical organiza a necessidade comercial; segmento descreve o contexto
 ## ADR-013 - Tres modalidades de preco
 
 Decisao: usar `fixed`, `starting_at` e `custom` como modalidades comerciais, mantendo preco publicado e negociado como conceitos distintos quando necessario.
+
+## ADR-014 - Taxonomia de servico flexivel e validada
+
+Decisao: vertical, modalidade e nivel usam strings validadas pela aplicacao; segmentos usam lista JSON tipada. Nao criar enums nativos ou tabelas de taxonomia inicialmente.
+
+## ADR-015 - Cliente normalizado sem apagar snapshots
+
+Decisao: criar Cliente somente em F.2, com vinculo nullable ao Orcamento. Dados originais do pedido e snapshots de proposta permanecem historicos.
+
+## ADR-016 - Snapshot comercial na conversao
+
+Decisao: Orcamento guarda vertical/segmento do momento da conversao e Proposta os incorpora ao snapshot; mudancas no catalogo nao reclassificam documentos antigos.
+
+## ADR-017 - Portfolio taxonomico antes de relacao explicita
+
+Decisao: Projeto recebe vertical, segmentos e tipo de case. Servico e case serao relacionados por taxonomia; N:N somente se curadoria explicita se tornar necessaria.
