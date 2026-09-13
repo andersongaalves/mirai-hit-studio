@@ -43,3 +43,15 @@ Decisao: instrumentar o funil antes das fases avancadas de UX/CRO.
 ## ADR-010 - Git por checkpoints
 
 Decisao: manter commits locais frequentes e fazer push somente nos checkpoints definidos no roadmap.
+
+## ADR-011 - Quatro niveis comerciais
+
+Decisao: usar `entry`, `launch`, `premium` e `custom` como niveis comerciais conceituais, sem impor precos.
+
+## ADR-012 - Vertical e segmento sao distintos
+
+Decisao: vertical organiza a necessidade comercial; segmento descreve o contexto ou especialidade. As verticais canonicas sao `artists`, `creators` e `media_games`.
+
+## ADR-013 - Tres modalidades de preco
+
+Decisao: usar `fixed`, `starting_at` e `custom` como modalidades comerciais, mantendo preco publicado e negociado como conceitos distintos quando necessario.

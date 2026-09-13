@@ -2,13 +2,15 @@
 
 ## Status
 
-Fase atual: F0.0
+Fase atual: F0.1 concluida.
 
 Ultimo checkpoint enviado: E / estado atual de `origin/main`.
 
 Proximo checkpoint: CP-F0.
 
 Proximo push: apos F0.4.
+
+Ultimo commit local: `docs: define arquitetura comercial da Mirai 2.0`.
 
 ## Concluido
 
@@ -23,7 +25,7 @@ Proximo push: apos F0.4.
 F0 - Fundacao Mirai 2.0
 
 - F0.0 Contexto Codex, roadmap e decisoes.
-- F0.1 Posicionamento, publicos e ofertas.
+- F0.1 Posicionamento, publicos e ofertas. Concluida.
 - F0.2 Taxonomia comercial e impacto tecnico/CRM.
 - F0.3 Analytics, funil e consentimento.
 - F0.4 Design system minimo e plano de provas sociais.
@@ -86,8 +88,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F0.0
+F0.1 concluida
 
 ## Proxima subfase
 
-F0.1
+F0.2 - Taxonomia comercial + impacto tecnico/CRM
