@@ -13,6 +13,15 @@ O Admin deve ser rapido, previsivel, legivel, responsivo e acessivel para operac
 - Toast existente preservado e complementado com regioes `aria-live` e mensagens seguras.
 - Producoes, Orcamentos, Servicos, Portfolio e Propostas receberam somente a integracao minima necessaria; J0.3 continua responsavel pelo refinamento profundo de Producoes.
 
+## Referencia Implementada em J0.3
+
+- Producoes e o primeiro modulo de listagem inteiramente alinhado a foundation: page header, filter bar, resumo, estados compartilhados, tabela desktop e entity cards mobile.
+- Tabela e cards sao projecoes da mesma lista filtrada e ordenada; nenhuma regra de dominio ou estado paralelo foi criado.
+- A partir de 769 px, a tabela concentra cliente/servico, responsavel, status, progresso, prazo e uma acao principal. Ate 768 px, somente os cards equivalentes ficam visiveis.
+- Status e prazo usam badges semanticos compartilhados, mantendo sempre o texto legivel. Progresso reutiliza o calculo existente e combina texto com indicador nativo.
+- O modal de Producoes usa integralmente o helper compartilhado para dialog, foco inicial, trap, Escape e retorno ao acionador; os blocos e formularios permanecem sob responsabilidade do modulo.
+- O comando de limpar filtros atua apenas no estado local, sem nova requisicao, e o empty state diferencia ausencia geral de ausencia causada pelos filtros.
+
 ## Diagnostico Atual
 
 ### Shell
@@ -149,9 +158,9 @@ Arquivos centrais: `frontend/admin.html`, `frontend/css/pages/admin.css`, `front
 
 ### J0.3 - Aplicacao Inicial em Producoes
 
-- Aplicar o header, filtros, lista responsiva, badges, estados e modal acessivel somente em Producoes.
-- Validar teclado, foco, Escape, erro de API, loading e larguras de referencia.
-- Preservar API, state, ordenacao, regras de prazo e etapas da F.1.
+- Implementado: header, filtros, resumo, lista responsiva, badges, estados e modal acessivel somente em Producoes.
+- Validado: teclado, foco, Escape, retorno ao acionador, erro de API, loading e larguras de 320 a 1440 px.
+- Preservados: API, state, ordenacao, regras de prazo, status, etapas e atualizacoes da F.1.
 
 Arquivos provaveis: `frontend/js/admin/producoes/`, `frontend/admin.html` e estilos compartilhados/administrativos estritamente necessarios.
 

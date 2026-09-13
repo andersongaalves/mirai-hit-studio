@@ -40,6 +40,7 @@ function registrarEventos() {
     const busca = $("producoes-search");
     const status = $("producoes-status-filter");
     const prazo = $("producoes-prazo-filter");
+    const limpar = $("producoes-clear-filters");
 
     if (busca) {
         busca.value = producoesState.filtro.busca;
@@ -62,23 +63,54 @@ function registrarEventos() {
             refresh();
         };
     }
+    if (limpar) {
+        limpar.onclick = () => {
+            producoesState.filtro = { busca: "", status: "todos", prazo: "todos" };
+            if (busca) busca.value = "";
+            if (status) status.value = "todos";
+            if (prazo) prazo.value = "todos";
+            refresh();
+            busca?.focus();
+        };
+    }
+}
+
+function temFiltrosAtivos() {
+    const { busca, status, prazo } = producoesState.filtro;
+    return Boolean(busca.trim()) || status !== "todos" || prazo !== "todos";
+}
+
+function atualizarControles(filtrosAtivos) {
+    const limpar = $("producoes-clear-filters");
+    limpar?.classList.toggle("hidden", !filtrosAtivos);
 }
 
 export function refresh() {
     if (producoesState.loading) {
+        ProducoesUI.renderizarResumo();
         ProducoesUI.renderizarLoading();
         return;
     }
     if (producoesState.error) {
+        ProducoesUI.renderizarResumo();
         ProducoesUI.renderizarErro(producoesState.error);
         return;
     }
+    const filtrosAtivos = temFiltrosAtivos();
+    const producoes = filtrarOrdenarProducoes(
+        producoesState.lista,
+        producoesState.filtro,
+    );
+    atualizarControles(filtrosAtivos);
+    ProducoesUI.renderizarResumo(
+        producoesState.lista.length,
+        producoes.length,
+        filtrosAtivos,
+    );
     ProducoesUI.renderizarProducoes(
-        filtrarOrdenarProducoes(
-            producoesState.lista,
-            producoesState.filtro,
-        ),
+        producoes,
         handlers(),
+        { filtrosAtivos },
     );
 }
 

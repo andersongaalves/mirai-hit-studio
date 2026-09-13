@@ -6,6 +6,7 @@ import {
     classificarPrazo,
     formatarData,
     formatarPrazo,
+    obterPrazoVariant,
     parseEtapas,
     paraDatetimeLocal,
 } from "./producoes_utils.js";
@@ -149,10 +150,11 @@ function renderizarResumo() {
 
     const prazoStatus = $("prod_prazo_status");
     if (prazoStatus) {
-        prazoStatus.className = `prazo-${classificarPrazo(
+        const prazoTipo = classificarPrazo(
             producaoAtual.prazo_entrega,
             producaoAtual.status,
-        ).tipo}`;
+        ).tipo;
+        prazoStatus.className = `badge badge-${obterPrazoVariant(prazoTipo)}`;
     }
 
     const observacoes = $("prod_observacoes");
@@ -214,6 +216,7 @@ export function abrirModalProducao(producao, handlers = {}) {
     registrarAcoes();
     openAdminModal("modal-producao", {
         onRequestClose: fecharModalProducao,
+        initialFocus: ".producao-modal-header button",
     });
 }
 

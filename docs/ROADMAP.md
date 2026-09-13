@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: J0.2 concluida.
+Fase atual: J0 concluida.
 
 Ultimo checkpoint enviado: CP-F0 em `76c3b57`.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-F1.
 
 Proximo push: apos F.3.
 
-Ultimo commit local: `feat: implementa fundacao compartilhada do admin`.
+Ultimo commit local: `refactor: aplica foundation de UX em producoes`.
 
 ## Concluido
 
@@ -48,8 +48,8 @@ J0 - Fundacao UX do Admin
 
 - J0.1 Auditoria UX e especificacao de padroes reutilizaveis. Concluida.
 - J0.2 Shell e componentes administrativos. Concluida.
-- J0.3 Aplicacao inicial da fundacao em Producoes.
-- J0 permanece em andamento.
+- J0.3 Aplicacao inicial da fundacao em Producoes. Concluida.
+- J0 concluida.
 
 F3 - Pagamentos/Financeiro
 
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-J0.2 concluida
+J0.3 concluida
 
 ## Proxima subfase
 
-J0.3 - Aplicar foundation em Producoes + responsividade
+F.2 - Clientes / CRM

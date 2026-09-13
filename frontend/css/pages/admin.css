@@ -599,46 +599,53 @@
 }
 
 .producao-card {
-    align-items: stretch;
-    gap: var(--space-4);
+    flex-direction: column;
     border: var(--border-subtle);
     border-left: 3px solid var(--color-accent);
 }
 
-.producao-info {
+.producoes-summary {
+    min-height: 1.25rem;
+    margin: 0 0 var(--space-3);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+.producoes-mobile-view {
+    display: none;
+}
+
+.producao-primary,
+.producao-card__content,
+.producao-progress {
     display: flex;
     min-width: 0;
-    flex: 1;
     flex-direction: column;
     gap: var(--space-2);
 }
 
-.producao-title-row,
-.producao-metadata,
-.producao-actions {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-}
-
-.producao-title-row strong,
-.producao-metadata span {
+.producao-primary strong,
+.producao-secondary,
+.producao-card__content span {
     overflow-wrap: anywhere;
 }
 
-.producao-metadata,
+.producao-secondary,
 .producao-progress {
     color: var(--color-text-secondary);
     font-size: var(--font-size-small);
 }
 
-.producao-actions { justify-content: flex-end; }
+.producao-progress progress {
+    width: min(180px, 100%);
+    height: var(--space-2);
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-sm);
+    accent-color: var(--color-accent);
+}
 
-.prazo-atrasado { color: var(--color-danger); border-color: var(--color-danger); }
-.prazo-proximo { color: var(--color-warning); border-color: var(--color-warning); }
-.prazo-normal { color: var(--color-accent); }
-.prazo-finalizado { color: var(--color-success); border-color: var(--color-success); }
+.producao-prazo { width: fit-content; }
 
 .admin-state,
 .admin-loading,
@@ -763,18 +770,26 @@
 .producao-add-etapa input { flex: 1; }
 
 @media (max-width: 768px) {
+    .producoes-table-view {
+        display: none;
+    }
+
+    .producoes-mobile-view {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
     .producao-detail-grid {
         grid-template-columns: 1fr;
     }
 
-    .producao-card,
-    .producao-actions,
     .producao-add-etapa {
         align-items: stretch;
         flex-direction: column;
     }
 
-    .producao-actions :where(select, button) { width: 100%; }
+    .producao-add-etapa button { width: 100%; }
 }
 
 @media (max-width: 900px) {
@@ -870,5 +885,19 @@
     .modal-content {
         max-height: calc(100vh - var(--space-4));
         padding: var(--space-4);
+    }
+
+    .producao-modal-header,
+    .producao-etapa-row,
+    .producao-etapa-row label {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .producao-modal-header > button,
+    .producao-etapa-row > button,
+    .producao-modal-content .admin-form-actions,
+    .producao-modal-content .admin-form-actions button {
+        width: 100%;
     }
 }

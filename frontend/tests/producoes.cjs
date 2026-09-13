@@ -23,9 +23,10 @@ async function staticResponse(route) {
 }
 
 const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/main.css"></head><body>
-<input id="producoes-search"><select id="producoes-status-filter"><option value="todos">Todos</option><option value="aguardando_inicio">Aguardando</option><option value="em_producao">Produção</option><option value="revisao">Revisão</option><option value="finalizado">Finalizado</option><option value="entregue">Entregue</option></select><select id="producoes-prazo-filter"><option value="todos">Todos</option><option value="atrasado">Atrasado</option><option value="proximo">Próximo</option><option value="sem_prazo">Sem prazo</option></select>
+<input id="producoes-search"><select id="producoes-status-filter"><option value="todos">Todos</option><option value="aguardando_inicio">Aguardando</option><option value="em_producao">Produção</option><option value="revisao">Revisão</option><option value="finalizado">Finalizado</option><option value="entregue">Entregue</option></select><select id="producoes-prazo-filter"><option value="todos">Todos</option><option value="atrasado">Atrasado</option><option value="proximo">Próximo</option><option value="sem_prazo">Sem prazo</option></select><button id="producoes-clear-filters" class="hidden">Limpar filtros</button>
+<p id="producoes-summary"></p>
 <div id="producoes-list"></div>
-<div id="modal-producao" class="hidden"><span id="prod_id"></span><h2 id="prod_titulo"></h2><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div>
+<div id="modal-producao" class="hidden" aria-labelledby="prod_titulo"><div class="modal-content producao-modal-content"><div class="producao-modal-header"><div><span id="prod_id"></span><h2 id="prod_titulo"></h2></div><button aria-label="Fechar detalhes">Fechar</button></div><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><div class="producao-add-etapa"><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button></div><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div></div>
 <script type="module">localStorage.setItem('access_token','test-token'); const module = await import('/js/admin/producoes/producoes.js'); window.productionModule = module; await module.initProducoes();</script>
 </body></html>`;
 
@@ -81,32 +82,76 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
 
     try {
         await page.goto('http://localhost:4173/production-test.html');
-        await page.waitForSelector('.producao-card');
+        await page.waitForSelector('.producoes-table tbody tr');
         assert.equal(await page.locator('#producoes-list img').count(), 0);
-        assert.match(await page.locator('.producao-card').first().textContent(), /<img src=x/);
+        assert.equal(await page.locator('.producoes-table tbody tr').count(), 3);
+        assert.equal(await page.locator('.producao-card').count(), 3);
+        assert.equal(await page.locator('#producoes-summary').textContent(), '3 produções');
+        assert.match(await page.locator('.producoes-table tbody tr').first().textContent(), /<script>cliente/);
+        assert.match(await page.locator('.producao-card').first().textContent(), /<script>cliente/);
         assert.equal(await page.locator('.producao-card').first().getAttribute('data-prazo'), 'atrasado');
         assert.match(await page.locator('.producao-card').nth(1).textContent(), /1\/2 etapas \(50%\)/);
+        assert.ok((await page.locator('.producoes-table tbody tr').first().locator('.badge-danger').textContent()).includes('Atrasada'));
+        assert.ok((await page.locator('.producoes-table tbody tr').nth(2).locator('.badge-success').allTextContents()).some((text) => text.includes('Finalizado')));
+
+        for (const width of [320, 375, 390, 414, 768, 1024, 1440]) {
+            await page.setViewportSize({ width, height: 900 });
+            const mobile = width <= 768;
+            assert.equal(await page.locator('.producoes-mobile-view').isVisible(), mobile, `cards em ${width}px`);
+            assert.equal(await page.locator('.producoes-table-view').isVisible(), !mobile, `tabela em ${width}px`);
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `overflow em ${width}px`);
+        }
+        await page.setViewportSize({ width: 1024, height: 900 });
 
         await page.locator('#producoes-prazo-filter').selectOption('atrasado');
         assert.equal(await page.locator('.producao-card').count(), 1);
-        await page.locator('#producoes-prazo-filter').selectOption('todos');
+        assert.equal(await page.locator('#producoes-summary').textContent(), '1 de 3 produções');
+        assert.equal(await page.locator('#producoes-clear-filters').isVisible(), true);
+        const listCallsBeforeClear = calls.filter((call) => call === 'GET /producoes').length;
+        await page.locator('#producoes-clear-filters').click();
+        assert.equal(await page.locator('#producoes-prazo-filter').inputValue(), 'todos');
+        assert.equal(await page.locator('#producoes-summary').textContent(), '3 produções');
+        assert.equal(calls.filter((call) => call === 'GET /producoes').length, listCallsBeforeClear);
         await page.locator('#producoes-search').fill('PROP-20');
         assert.equal(await page.locator('.producao-card').count(), 1);
         await page.locator('#producoes-search').fill('sem resultado');
-        assert.equal(await page.locator('.admin-empty').textContent(), 'Nenhuma produção encontrada.');
-        await page.locator('#producoes-search').fill('');
+        assert.equal(await page.locator('.admin-empty').textContent(), 'Nenhuma produção corresponde aos filtros.');
+        await page.locator('#producoes-clear-filters').click();
 
-        await page.locator('.producao-card').first().getByRole('button', { name: 'Detalhes' }).click();
+        const desktopOpener = page.locator('.producoes-table tbody tr').first().getByRole('button', { name: 'Ver detalhes' });
+        await desktopOpener.click();
         await page.waitForFunction(() => !document.getElementById('modal-producao').classList.contains('hidden'));
         assert.equal(await page.locator('#modal-producao').evaluate((element) => getComputedStyle(element).position), 'fixed');
+        assert.equal(await page.locator('#modal-producao').getAttribute('role'), 'dialog');
+        assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Fechar detalhes');
         assert.equal(await page.locator('#modal-producao img').count(), 0);
         assert.equal(await page.locator('#prod_cliente').textContent(), '<script>cliente</script>');
         assert.equal(await page.locator('#prod_proposta').textContent(), 'PROP-20 (#20)');
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => document.getElementById('modal-producao').classList.contains('hidden'));
+        assert.equal(await desktopOpener.evaluate((element) => element === document.activeElement), true);
+
+        await page.setViewportSize({ width: 320, height: 700 });
+        const mobileOpener = page.locator('.producao-card').first().getByRole('button', { name: 'Ver detalhes' });
+        await mobileOpener.click();
+        await page.waitForFunction(() => !document.getElementById('modal-producao').classList.contains('hidden'));
+        const modalBounds = await page.locator('.producao-modal-content').boundingBox();
+        assert.ok(modalBounds.x >= 0 && modalBounds.x + modalBounds.width <= 320);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
 
         await page.locator('#prod_nova_etapa').fill('<b>Briefing</b>');
         await page.locator('#btn-add-etapa').click();
         await page.waitForFunction(() => document.querySelector('#prod_etapas')?.textContent.includes('<b>Briefing</b>'));
         assert.equal(await page.locator('#prod_etapas b').count(), 0);
+        await page.locator('#prod_etapas input[type="checkbox"]').check();
+        await page.waitForFunction(() => {
+            const checkbox = document.querySelector('#prod_etapas input[type="checkbox"]');
+            return checkbox?.checked && !checkbox.disabled;
+        });
+        assert.equal(JSON.parse(productions[0].etapas)[0].feito, true);
+        await page.getByRole('button', { name: 'Remover etapa <b>Briefing</b>' }).click();
+        await page.waitForFunction(() => document.querySelector('#prod_etapas')?.textContent.includes('Nenhuma etapa definida.'));
+        assert.deepEqual(JSON.parse(productions[0].etapas), []);
 
         await page.locator('#prod_observacoes').fill('<img src=x onerror=alert(1)>');
         await page.locator('#btn-save-observacoes').click();
@@ -115,7 +160,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
 
         failStatus = true;
         await page.locator('#prod_status').selectOption('revisao');
-        await page.waitForTimeout(50);
+        await page.waitForFunction(() => document.getElementById('prod_status').value === 'aguardando_inicio');
         assert.equal(await page.locator('#prod_status').inputValue(), 'aguardando_inicio');
         assert.equal(productions[0].status, 'aguardando_inicio');
 

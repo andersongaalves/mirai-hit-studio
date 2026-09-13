@@ -8,6 +8,22 @@ export const STATUS_PRODUCAO = [
 
 export const PRAZO_PROXIMO_DIAS = 3;
 
+const STATUS_VARIANTS = {
+    aguardando_inicio: "neutral",
+    em_producao: "info",
+    revisao: "warning",
+    finalizado: "success",
+    entregue: "success",
+};
+
+const PRAZO_VARIANTS = {
+    atrasado: "danger",
+    proximo: "warning",
+    normal: "info",
+    finalizado: "success",
+    sem_prazo: "neutral",
+};
+
 const STATUS_FINAL = new Set(["finalizado", "entregue"]);
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -19,6 +35,14 @@ export function obterStatusLabel(status) {
     return STATUS_PRODUCAO.find((item) => item.value === status)?.label
         || status
         || "Não informado";
+}
+
+export function obterStatusVariant(status) {
+    return STATUS_VARIANTS[status] || "neutral";
+}
+
+export function obterPrazoVariant(tipo) {
+    return PRAZO_VARIANTS[tipo] || "neutral";
 }
 
 export function parseEtapas(value) {

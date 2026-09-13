@@ -526,8 +526,18 @@
                                     <option value="sem_prazo">Sem prazo</option>
                                 </select>
                             </label>
+                            <div class="admin-filter-bar__actions">
+                                <button
+                                    id="producoes-clear-filters"
+                                    type="button"
+                                    class="btn-small hidden"
+                                >
+                                    Limpar filtros
+                                </button>
+                            </div>
                         </div>
 
+                        <p id="producoes-summary" class="producoes-summary" aria-live="polite"></p>
                         <div
                             id="producoes-list"
                             class="admin-list-container"
@@ -816,7 +826,7 @@
                     aria-hidden="true"
                     aria-labelledby="prod_titulo"
                 >
-                    <div class="modal-content producao-modal-content">
+                    <div class="modal-content producao-modal-content admin-form">
                         <div class="producao-modal-header">
                             <div>
                                 <span id="prod_id" class="badge"></span>
@@ -844,12 +854,14 @@
                         <section class="producao-detail-block">
                             <h3>Produção</h3>
                             <div class="producao-detail-grid">
-                                <label>Status<select id="prod_status"></select></label>
+                                <label class="admin-form-field">Status<select id="prod_status"></select></label>
                                 <p><strong>Responsável</strong><span id="prod_produtor"></span></p>
-                                <label>Prazo de entrega<input type="datetime-local" id="prod_prazo" /></label>
+                                <label class="admin-form-field">Prazo de entrega<input type="datetime-local" id="prod_prazo" /></label>
                                 <p><strong>Situação do prazo</strong><span id="prod_prazo_status"></span></p>
                             </div>
-                            <button id="btn-save-prazo" class="btn-small">Salvar prazo</button>
+                            <div class="admin-form-actions">
+                                <button id="btn-save-prazo" class="btn-small">Salvar prazo</button>
+                            </div>
                         </section>
 
                         <section class="producao-detail-block">
@@ -870,13 +882,17 @@
                         </section>
 
                         <section class="producao-detail-block">
-                            <label for="prod_observacoes"><strong>Observações</strong></label>
-                            <textarea
-                                id="prod_observacoes"
-                                maxlength="20000"
-                                placeholder="Notas internas da produção"
-                            ></textarea>
-                            <button id="btn-save-observacoes" class="btn-small">Salvar observações</button>
+                            <label class="admin-form-field" for="prod_observacoes">
+                                <strong>Observações</strong>
+                                <textarea
+                                    id="prod_observacoes"
+                                    maxlength="20000"
+                                    placeholder="Notas internas da produção"
+                                ></textarea>
+                            </label>
+                            <div class="admin-form-actions">
+                                <button id="btn-save-observacoes" class="btn-small">Salvar observações</button>
+                            </div>
                         </section>
                     </div>
                 </div>
