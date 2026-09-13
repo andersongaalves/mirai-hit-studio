@@ -1,6 +1,7 @@
 import "./modules/globals.js";
 
 import { initComponents } from "./modules/components.js";
+import { initAnalytics } from "./analytics.js";
 
 import {$} from "./utils/dom.js";
 
@@ -24,6 +25,7 @@ async function loadModule(elementId, path, callback) {
 
 async function initApp() {
     try {
+        initAnalytics();
         await initComponents();
 
         await loadModule(

@@ -62,6 +62,13 @@ Decisoes importantes dessas fases estao preservadas nos documentos `propostas-fa
 - Conteudo vindo de usuario ou API deve ser tratado contra XSS.
 - O backend e a fonte de verdade para regras comerciais e financeiras.
 
+## Analytics
+
+- A camada `frontend/js/analytics.js` centraliza eventos e consentimento.
+- GA4 existente so carrega apos aceite de analytics; eventos nao incluem PII.
+- Conversoes comerciais dependem de confirmacao do backend/webhook.
+- Atribuicao de lead aguarda contrato e persistencia futura em F0.3/F.2.
+
 ## Mirai Hit Studio 2.0
 
 Posicionamento: "Producao musical e audio para artistas, criadores e projetos digitais."

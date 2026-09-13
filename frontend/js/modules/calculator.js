@@ -5,6 +5,7 @@ import { CalculatorLogic } from "../calculator.js";
 import { registerCalcular } from "./globals.js";
 import { money } from "../utils/format.js";
 import {$} from "../utils/dom.js";
+import { track } from "../analytics.js";
 
 export async function initCalculadora() {
     const [config, servicos] = await Promise.all([
@@ -85,6 +86,10 @@ export async function initEventosCalculadora() {
                 state.servicoSelecionadoOBJ = state.servicosDB.find(
                     (s) => s.id == e.target.value,
                 );
+
+                if (state.servicoSelecionadoOBJ) {
+                    track("view_service", { service_id: state.servicoSelecionadoOBJ.id });
+                }
 
                 const btnNext1 = $("btn-next-1");
 

@@ -185,7 +185,7 @@ export async function renderizarPortfolio() {
     listaHits.forEach((p) => {
         const capa = obterCapaInteligente(p.link_audio, p.link_capa);
         htmlLote += `
-            <a href="${escapeHtml(safeURL(p.link_audio))}" target="_blank" rel="noopener noreferrer" class="scrolling-card glass-card">
+            <a href="${escapeHtml(safeURL(p.link_audio))}" target="_blank" rel="noopener noreferrer" class="scrolling-card glass-card" data-analytics-listen data-project-id="${escapeHtml(p.id)}">
                 <img src="${escapeHtml(capa)}" alt="${escapeHtml(p.titulo)}" style="background-color: #0b0f19;">
                 <div class="scrolling-info">
                     <span class="tag" style="background: var(--cor-roxo); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">${escapeHtml(p.categoria)}</span>

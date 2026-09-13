@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: F0.2 concluida.
+Fase atual: F0.3 concluida.
 
 Ultimo checkpoint enviado: E / estado atual de `origin/main`.
 
@@ -10,7 +10,7 @@ Proximo checkpoint: CP-F0.
 
 Proximo push: apos F0.4.
 
-Ultimo commit local: `docs: define taxonomia tecnica da Mirai 2.0`.
+Ultimo commit local: `feat: adiciona fundacao de analytics e consentimento`.
 
 ## Concluido
 
@@ -27,7 +27,7 @@ F0 - Fundacao Mirai 2.0
 - F0.0 Contexto Codex, roadmap e decisoes.
 - F0.1 Posicionamento, publicos e ofertas. Concluida.
 - F0.2 Taxonomia comercial e impacto tecnico/CRM. Concluida.
-- F0.3 Analytics, funil e consentimento.
+- F0.3 Analytics, funil e consentimento. Concluida.
 - F0.4 Design system minimo e plano de provas sociais.
 - CP-F0 + push.
 
@@ -88,8 +88,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F0.2 concluida
+F0.3 concluida
 
 ## Proxima subfase
 
-F0.3 - Analytics + funil + consentimento
+F0.4 - Design system minimo + plano de provas sociais

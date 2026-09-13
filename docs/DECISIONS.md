@@ -71,3 +71,23 @@ Decisao: Orcamento guarda vertical/segmento do momento da conversao e Proposta o
 ## ADR-017 - Portfolio taxonomico antes de relacao explicita
 
 Decisao: Projeto recebe vertical, segmentos e tipo de case. Servico e case serao relacionados por taxonomia; N:N somente se curadoria explicita se tornar necessaria.
+
+## ADR-018 - Analytics por camada frontend
+
+Decisao: modulos chamam uma camada unica de analytics; fornecedor nao e acessado diretamente fora dela.
+
+## ADR-019 - PII fora de analytics
+
+Decisao: eventos aceitam apenas nomes semanticos e propriedades em allowlist; PII, tokens, texto livre e erros brutos sao descartados.
+
+## ADR-020 - Conversoes comerciais confirmadas pelo backend
+
+Decisao: `generate_lead` ocorre somente apos resposta bem-sucedida do backend. Proposta, compra e producao dependem futuramente de fontes comerciais autoritativas.
+
+## ADR-021 - Consentimento antes de tracking opcional
+
+Decisao: GA4 e fornecedores equivalentes so carregam apos aceite explicito; recusa nao bloqueia funcionamento essencial.
+
+## ADR-022 - Atribuicao pertence ao lead
+
+Decisao: UTM, referrer e landing page pertencem a atribuicao do orcamento/lead, nao ao catalogo de servicos ou Cliente. Persistencia aguarda contrato de F0.3/F.2.

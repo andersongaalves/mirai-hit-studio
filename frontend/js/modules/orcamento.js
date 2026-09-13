@@ -3,6 +3,7 @@ import * as API from "../api.js";
 import * as Notify from "../utils/notifications.js";
 import { $ } from "../utils/dom.js";
 import { PARAM_TEMPLATES } from "../ui.js";
+import { track } from "../analytics.js";
 
 function obterDetalhes() {
     const partes = [];
@@ -57,6 +58,7 @@ export function initOrcamento() {
                 enviando = true;
                 btnSolicitar.disabled = true;
                 await API.postOrcamento(payload);
+                track("generate_lead", { service_id: state.servicoSelecionadoOBJ.id });
                 Notify.success("Solicitação de orçamento enviada.");
             } catch (error) {
                 console.error(error);

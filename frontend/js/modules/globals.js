@@ -1,4 +1,6 @@
 import { $ } from "../utils/dom.js";
+import { state } from "../state.js";
+import { trackOnce } from "../analytics.js";
 
 let calcular = () => {};
 let filtrar = () => {};
@@ -45,6 +47,10 @@ window.avancarPasso = function (passo) {
 
     if (passo === 3) {
         calcular();
+    }
+
+    if (passo === 2 && state.servicoSelecionadoOBJ) {
+        trackOnce("begin_briefing", { service_id: state.servicoSelecionadoOBJ.id });
     }
 };
 

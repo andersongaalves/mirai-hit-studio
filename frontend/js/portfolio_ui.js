@@ -32,7 +32,7 @@ export function renderizarProjetos(lista) {
 
         // Adiciona ao texto acumulado (sem mexer na tela ainda)
         htmlAcumulado += `
-            <a href="${escapeHtml(safeURL(p.link_audio))}" target="_blank" rel="noopener noreferrer" class="portfolio-card glass-card" style="position:relative;">
+            <a href="${escapeHtml(safeURL(p.link_audio))}" target="_blank" rel="noopener noreferrer" class="portfolio-card glass-card" style="position:relative;" data-analytics-listen data-project-id="${escapeHtml(p.id)}">
                 ${badgeHit}
                 <img src="${escapeHtml(capaFinal)}" alt="${escapeHtml(p.titulo)}" style="background-color: #0b0f19;">
                 <div class="portfolio-info">
