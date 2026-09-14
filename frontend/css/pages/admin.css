@@ -26,6 +26,7 @@
 .admin-sidebar {
     display: flex;
     min-width: 0;
+    align-self: start;
     flex-direction: column;
     gap: var(--space-5);
     padding-right: var(--space-5);
@@ -51,13 +52,15 @@
 
 .admin-nav {
     display: flex;
-    flex: 1;
+    flex: none;
     flex-direction: column;
+    justify-content: flex-start;
     gap: var(--space-2);
 }
 
 .admin-nav__item {
     width: 100%;
+    flex: 0 0 auto;
     padding: var(--space-3) var(--space-4);
     border: 1px solid transparent;
     border-radius: var(--radius-md);
@@ -81,6 +84,7 @@
 
 .admin-sidebar__logout {
     width: 100%;
+    margin-top: var(--space-5);
 }
 
 .admin-shell__workspace,
