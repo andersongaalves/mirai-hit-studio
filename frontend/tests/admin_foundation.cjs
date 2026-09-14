@@ -62,6 +62,8 @@ async function staticResponse(route) {
         } });
         if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
         if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
+        if (url.pathname === '/newsletter/subscribers') return route.fulfill({ json: [] });
+        if (url.pathname === '/newsletter/campaigns') return route.fulfill({ json: [] });
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
 

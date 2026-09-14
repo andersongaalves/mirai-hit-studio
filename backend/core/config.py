@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str
     EMAIL_FROM: str
     ADMIN_EMAIL: str
+    PUBLIC_API_URL: str = "http://localhost:8000"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

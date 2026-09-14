@@ -53,6 +53,7 @@ async function staticResponse(route) {
             recent_activity: [],
         } });
         if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: users.filter(user => user.ativo) });
+        if (url.pathname === '/newsletter/subscribers' || url.pathname === '/newsletter/campaigns') return route.fulfill({ json: [] });
         if (url.pathname === '/usuarios' && request.method() === 'GET') {
             return route.fulfill(listFailure ? { status: 500, json: { detail: 'Falha' } } : { json: users });
         }

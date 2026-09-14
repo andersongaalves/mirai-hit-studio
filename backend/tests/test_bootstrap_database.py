@@ -48,7 +48,8 @@ def reject_ddl(connection, cursor, statement, parameters, context, many):
             assert head == ScriptDirectory.from_config(migration_config()).get_current_head()
             assert set(inspect(engine).get_table_names()) == {
                 'usuarios', 'servicos', 'clientes', 'orcamentos', 'propostas', 'producoes',
-                'projetos', 'configuracoes', 'newsletter', 'alembic_version'}
+                'projetos', 'configuracoes', 'newsletter', 'newsletter_campaigns',
+                'newsletter_deliveries', 'alembic_version'}
             with engine.connect() as connection:
                 assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').all() == [(head,)]
             configure_mappers()

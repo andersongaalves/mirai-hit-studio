@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: F.4 concluida.
+Fase atual: F.5 concluida.
 
 Ultimo checkpoint enviado: CP-F1 em `55e78a8`.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-F2.
 
 Proximo push: apos F.6.
 
-Ultimo commit local: `feat: adiciona gestao administrativa de usuarios`.
+Ultimo commit local: `feat: adiciona newsletter e comunicacao administrativa`.
 
 ## Concluido
 
@@ -40,7 +40,7 @@ F - Admin/CRM
 - F.3 Dashboard. Concluida.
 - CP-F1 enviado.
 - F.4 Usuarios. Concluida.
-- F.5 Newsletter e comunicacao.
+- F.5 Newsletter e comunicacao. Concluida.
 - F.6 Logs, auditoria e backup/restore.
 - CP-F2.
 
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F.4 concluida
+F.5 concluida
 
 ## Proxima subfase
 
-F.5 - Newsletter e comunicacao
+F.6 - Logs, auditoria e backup/restore

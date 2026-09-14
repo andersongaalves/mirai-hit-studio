@@ -140,7 +140,7 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => Promise.all([window.fazerLogin(), window.fazerLogin()]));
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /clientes', 'GET /config', 'GET /dashboard', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores'];
+        const expected = ['GET /clientes', 'GET /config', 'GET /dashboard', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores'];
         assert.deepEqual(calls.filter(call => call.startsWith('GET')).sort(), expected);
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));

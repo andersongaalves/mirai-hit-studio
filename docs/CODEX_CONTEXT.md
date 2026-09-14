@@ -104,6 +104,8 @@ Dashboard: `/dashboard` e autenticado, agrega indicadores operacionais no backen
 
 Usuarios internos: gerenciamento exclusivo de administradores, papeis `admin`/`produtor` e desativacao sem exclusao para preservar historico. Contas inativas nao autenticam nem permanecem validas em sessoes existentes.
 
+Newsletter: inscricao publica exige opt-in explicito e permanece separada de e-mail transacional. Cancelamento usa token opaco, campanhas sao manuais e exclusivas de administradores, e entregas registram apenas o resultado sanitizado do provedor.
+
 ## IA planejada
 
 Canais: chat proprio do site e e-mail. Nao havera WhatsApp.

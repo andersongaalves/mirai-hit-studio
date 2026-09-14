@@ -82,6 +82,9 @@
                             <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-usuarios">
                                 Usuários
                             </button>
+                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-newsletter">
+                                Newsletter
+                            </button>
                         </nav>
                         <button type="button" class="btn-small btn-danger admin-sidebar__logout" onclick="fazerLogout()">
                             Sair
@@ -619,6 +622,48 @@
                         <p id="usuarios-summary" class="usuarios-summary" aria-live="polite"></p>
                         <div id="usuarios-list" class="admin-list-container" aria-live="polite"></div>
                     </div>
+
+                    <div id="section-newsletter" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Comunicação</span>
+                                <h1>Newsletter</h1>
+                                <p>Campanhas manuais e inscritos com consentimento explícito.</p>
+                            </div>
+                            <div class="admin-page-header__actions">
+                                <button id="newsletter-new-campaign" type="button" class="btn-cta">Nova campanha</button>
+                            </div>
+                        </header>
+                        <div class="newsletter-tabs" role="tablist" aria-label="Newsletter">
+                            <button id="newsletter-tab-campaigns" type="button" role="tab" aria-selected="true" aria-controls="newsletter-campaigns-panel">Campanhas</button>
+                            <button id="newsletter-tab-subscribers" type="button" role="tab" aria-selected="false" aria-controls="newsletter-subscribers-panel">Inscritos</button>
+                        </div>
+                        <section id="newsletter-campaigns-panel" role="tabpanel" aria-labelledby="newsletter-tab-campaigns">
+                            <p id="newsletter-campaigns-summary" class="newsletter-summary" aria-live="polite"></p>
+                            <div id="newsletter-campaigns-list" class="admin-list-container" aria-live="polite"></div>
+                        </section>
+                        <section id="newsletter-subscribers-panel" class="hidden" role="tabpanel" aria-labelledby="newsletter-tab-subscribers">
+                            <div class="admin-filter-bar" aria-label="Filtros de inscritos">
+                                <label class="admin-filter-field admin-filter-field--search">
+                                    <span>Buscar</span>
+                                    <input id="newsletter-subscribers-search" type="search" placeholder="E-mail" />
+                                </label>
+                                <label class="admin-filter-field">
+                                    <span>Status</span>
+                                    <select id="newsletter-subscribers-status">
+                                        <option value="todos">Todos</option>
+                                        <option value="ativo">Ativos</option>
+                                        <option value="inativo">Cancelados</option>
+                                    </select>
+                                </label>
+                                <div class="admin-filter-bar__actions">
+                                    <button id="newsletter-subscribers-clear" type="button" class="btn-small hidden">Limpar filtros</button>
+                                </div>
+                            </div>
+                            <p id="newsletter-subscribers-summary" class="newsletter-summary" aria-live="polite"></p>
+                            <div id="newsletter-subscribers-list" class="admin-list-container" aria-live="polite"></div>
+                        </section>
+                    </div>
                 </div>
                     </div>
                 </div>
@@ -942,6 +987,40 @@
                         </section>
                         <div class="admin-form-actions usuario-modal-actions">
                             <button id="usuario-save" type="button" class="btn-cta">Salvar usuário</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="modal-newsletter-campaign"
+                    class="modal hidden admin-access-hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="newsletter-campaign-title"
+                    data-admin-only
+                >
+                    <div class="modal-content newsletter-campaign-modal admin-form">
+                        <div class="newsletter-campaign-header">
+                            <div>
+                                <span class="badge badge-info">Newsletter</span>
+                                <h2 id="newsletter-campaign-title">Campanha</h2>
+                            </div>
+                            <button id="newsletter-campaign-close" type="button" class="btn-small" aria-label="Fechar campanha">Fechar</button>
+                        </div>
+                        <section class="newsletter-campaign-fields">
+                            <label class="admin-form-field">Título interno<input id="newsletter-campaign-name" maxlength="120" required /></label>
+                            <label class="admin-form-field">Assunto<input id="newsletter-campaign-subject" maxlength="160" required /></label>
+                            <label class="admin-form-field">Preview text<input id="newsletter-campaign-preview" maxlength="200" /></label>
+                            <label class="admin-form-field">Conteúdo
+                                <textarea id="newsletter-campaign-body" maxlength="30000" required></textarea>
+                                <span class="admin-field-help">O conteúdo é enviado como texto formatado, sem scripts ou HTML executável.</span>
+                            </label>
+                        </section>
+                        <section id="newsletter-campaign-result" class="newsletter-campaign-result hidden" aria-live="polite"></section>
+                        <div class="admin-form-actions newsletter-campaign-actions">
+                            <button id="newsletter-campaign-send" type="button" class="btn-small btn-danger hidden">Enviar campanha</button>
+                            <button id="newsletter-campaign-save" type="button" class="btn-cta">Salvar rascunho</button>
                         </div>
                     </div>
                 </div>

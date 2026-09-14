@@ -135,3 +135,7 @@ Decisao: o Dashboard administrativo recebe um resumo autenticado e agregado pelo
 ## ADR-033 - Contas internas preservam historico
 
 Decisao: usuarios internos usam apenas os papeis `admin` e `produtor`; o gerenciamento e exclusivo de administradores. Contas sao desativadas, nao excluidas, para preservar autoria e vinculos historicos. A lista operacional de responsaveis permanece disponivel para usuarios autenticados e retorna somente contas ativas.
+
+## ADR-034 - Newsletter por opt-in e campanha manual
+
+Decisao: Newsletter e comunicacao transacional sao dominios separados. A newsletter exige inscricao voluntaria, usa token opaco para cancelamento e nao cria Cliente automaticamente. Campanhas sao rascunhos enviados manualmente por administradores; cada entrega registra resultado individual e endereco de destino como snapshot historico.

@@ -2,14 +2,15 @@ import * as API from "../api.js";
 import * as Notify from "../utils/notifications.js";
 import * as Validation from "../utils/validation.js";
 import { $ } from "../utils/dom.js";
+import { track } from "../analytics.js";
 
 export function initNewsletter() {
-    const btnNewsletter = $("btn-newsletter");
+    const form = $("newsletter-form");
 
-    if (!btnNewsletter) return;
+    if (!form) return;
 
-    btnNewsletter.addEventListener(
-        "click",
+    form.addEventListener(
+        "submit",
 
         async (event) => {
             event.preventDefault();
@@ -31,16 +32,24 @@ export function initNewsletter() {
             }
 
             try {
+                const button = $("btn-newsletter");
+                if (button?.disabled) return;
+                if (button) button.disabled = true;
                 await API.postNewsletter({
                     email,
+                    source: "site_footer",
                 });
 
-                Notify.success("Cadastro realizado com sucesso!");
+                track("newsletter_subscribe");
+                Notify.success("Inscrição realizada com sucesso!");
                 inputEmail.value = "";
             } catch (error) {
                 console.error(error);
 
-                Notify.error("Erro ao cadastrar e-mail.");
+                Notify.error("Não foi possível concluir a inscrição.");
+            } finally {
+                const button = $("btn-newsletter");
+                if (button) button.disabled = false;
             }
         },
     );

@@ -2,18 +2,21 @@
     <div class="container">
         <!-- 1. Newsletter -->
         <div class="newsletter-section">
-            <h3>Entraremos em contato com você!</h3>
-            <div class="input-group">
+            <h3>Novidades da Mirai</h3>
+            <p class="newsletter-copy">Receba lançamentos, bastidores e novidades do estúdio.</p>
+            <form id="newsletter-form" class="input-group" aria-label="Inscrição na newsletter">
                 <input
                     id="newsletter-email"
+                    name="email"
                     type="email"
                     placeholder="Seu melhor e-mail"
+                    autocomplete="email"
                     required
                 />
-                <button id="btn-newsletter" class="btn-cta">
+                <button id="btn-newsletter" type="submit" class="btn-cta">
                     Inscrever-se
                 </button>
-            </div>
+            </form>
         </div>
 
         <!-- 2. Bio -->

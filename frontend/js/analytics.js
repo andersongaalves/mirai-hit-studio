@@ -6,6 +6,7 @@ const EVENT_PROPERTIES = {
     begin_briefing: ["service_id"],
     generate_lead: ["service_id"],
     listen_portfolio: ["project_id"],
+    newsletter_subscribe: [],
 };
 
 let memoryConsent = "unknown";

@@ -43,6 +43,7 @@ O GA4 ja existia no site. Seu Measurement ID existente foi preservado em meta ta
 | `begin_briefing` | Primeiro avanco real para o briefing | `service_id` | Dados do formulario |
 | `generate_lead` | `POST /orcamentos` confirmado | `service_id` | Nome, e-mail, WhatsApp, detalhes, erro da API |
 | `listen_portfolio` | Link real de ouvir faixa | `project_id` | URL de audio, artista, dados de contato |
+| `newsletter_subscribe` | Inscricao confirmada pelo backend | Nenhum | E-mail, nome, token, origem ou erro |
 
 Eventos usam `snake_case`. Eventos genericos como `button_click` e `click_cta` nao devem ser introduzidos quando houver um evento semantico.
 

@@ -72,7 +72,7 @@ export function postOrcamento(payload) {
 
 export function postNewsletter(payload) {
     return postAPI(
-        "newsletter",
+        "newsletter/subscribe",
 
         payload,
     );

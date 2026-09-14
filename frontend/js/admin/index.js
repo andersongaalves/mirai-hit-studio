@@ -7,6 +7,7 @@ import * as Propostas from "./propostas/propostas.js";
 import * as Config from "./configuracoes.js";
 import * as Clientes from "./clientes/clientes.js";
 import * as Usuarios from "./usuarios/usuarios.js";
+import * as Newsletter from "./newsletter/newsletter.js";
 
 import { fecharModalProducao } from "./producoes/producoes_modal.js";
 import { orcamentosState } from "./orcamentos/orcamentos_state.js";
@@ -15,6 +16,7 @@ import { servicosState } from "./servicos/servicos_state.js";
 import { resetClientesState } from "./clientes/clientes_state.js";
 import { resetDashboardState } from "./dashboard/dashboard_state.js";
 import { resetUsuariosState } from "./usuarios/usuarios_state.js";
+import { resetNewsletterState } from "./newsletter/newsletter_state.js";
 import { resetBuilder } from "./builder/builder.js";
 import { initializeAdminShell, resetAdminShell } from "./admin_shell.js";
 import { closeAllAdminModals } from "./admin_modal.js";
@@ -63,6 +65,7 @@ document.addEventListener("admin:logout", () => {
     resetClientesState();
     resetDashboardState();
     resetUsuariosState();
+    resetNewsletterState();
     orcamentosState.filtro = { busca: "", status: "todos" };
     producoesState.filtro = { busca: "", status: "todos", prazo: "todos" };
     resetBuilder();
@@ -71,13 +74,14 @@ document.addEventListener("admin:logout", () => {
     fecharModalProducao();
     Clientes.closeClienteModal();
     Usuarios.closeUsuarioModal();
+    Newsletter.closeCampaignModal();
     closeAllAdminModals({ restoreFocus: false });
     document.querySelectorAll("#editor-servico").forEach(element => element.classList.add("hidden"));
     document.querySelectorAll(".admin-container input, .admin-container textarea").forEach(input => {
         input.value = "";
         if (input.type === "checkbox") input.checked = false;
     });
-    for (const id of ["dashboard-content", "orcamentos-list", "producoes-list", "clientes-list", "cliente-historico", "usuarios-list", "lista-servicos", "portfolio-list", "builder-preview-render", "builder-sections", "builder-benefits", "param_list_render", "prod_etapas"]) {
+    for (const id of ["dashboard-content", "orcamentos-list", "producoes-list", "clientes-list", "cliente-historico", "usuarios-list", "newsletter-campaigns-list", "newsletter-subscribers-list", "lista-servicos", "portfolio-list", "builder-preview-render", "builder-sections", "builder-benefits", "param_list_render", "prod_etapas"]) {
         document.getElementById(id)?.replaceChildren();
     }
     document.querySelectorAll("#modal-orcamento span, #modal-producao span, #modal-orcamento h2, #modal-producao h2").forEach(el => { el.textContent = ""; });

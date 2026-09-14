@@ -3,7 +3,12 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from core.rate_limit import allow_request
 
-LIMITS = {"/auth/login": (10, 60), "/orcamentos": (5, 600), "/newsletter": (5, 600)}
+LIMITS = {
+    "/auth/login": (10, 60),
+    "/orcamentos": (5, 600),
+    "/newsletter": (5, 600),
+    "/newsletter/subscribe": (5, 600),
+}
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
