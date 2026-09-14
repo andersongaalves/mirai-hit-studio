@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, true
 from sqlalchemy.sql import func
 
 from database import Base
@@ -15,6 +15,8 @@ class UsuarioModel(Base):
     password_hash = Column(String(255), nullable=False)
 
     is_admin = Column(Boolean, default=True)
+
+    ativo = Column(Boolean, default=True, server_default=true(), nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

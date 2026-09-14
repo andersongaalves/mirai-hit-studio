@@ -25,7 +25,7 @@ export async function buscarOrcamentos() {
 }
 
 export async function buscarProdutores() {
-    const response = await authFetch("/usuarios");
+    const response = await authFetch("/usuarios/produtores");
 
     return handleResponse(response, "Erro ao buscar produtores.");
 }

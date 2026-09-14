@@ -4,6 +4,14 @@ import { $ } from "../utils/dom.js";
 let sessionVersion = 0;
 let verifiedToken = null;
 let expiryTimer = null;
+let currentUser = null;
+
+function setCurrentUser(user) {
+    currentUser = user && Number.isInteger(user.id) ? user : null;
+    document.querySelectorAll("[data-admin-only]").forEach((element) => {
+        element.classList.toggle("admin-access-hidden", !isAdmin());
+    });
+}
 
 function watchExpiry(token) {
     clearTimeout(expiryTimer);
@@ -81,6 +89,7 @@ export async function fazerLogin() {
 
         mostrarAdmin();
         verifiedToken = data.access_token;
+        setCurrentUser(data.user);
         watchExpiry(verifiedToken);
         if ($("password")) $("password").value = "";
 
@@ -108,6 +117,14 @@ export function getToken() {
 
 export function isAuthenticated() {
     return !!getToken();
+}
+
+export function getCurrentUser() {
+    return currentUser;
+}
+
+export function isAdmin() {
+    return currentUser?.is_admin === true && currentUser?.role === "admin";
 }
 
 // ===========================
@@ -185,6 +202,7 @@ export async function restaurarSessao() {
         const user = await response.json();
         if (!response.ok || !user?.id) throw new Error("Sessão inválida.");
         verifiedToken = getToken();
+        setCurrentUser(user);
         watchExpiry(verifiedToken);
         mostrarAdmin();
         return true;
@@ -201,6 +219,7 @@ export async function restaurarSessao() {
 export function logout() {
     sessionVersion++;
     verifiedToken = null;
+    setCurrentUser(null);
     clearTimeout(expiryTimer);
     expiryTimer = null;
     localStorage.removeItem("access_token");

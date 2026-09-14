@@ -102,6 +102,8 @@ Admin UX: J0 define shell compartilhado, header, filtros, badges, estados e moda
 
 Dashboard: `/dashboard` e autenticado, agrega indicadores operacionais no backend e nao representa receita ou analytics publico.
 
+Usuarios internos: gerenciamento exclusivo de administradores, papeis `admin`/`produtor` e desativacao sem exclusao para preservar historico. Contas inativas nao autenticam nem permanecem validas em sessoes existentes.
+
 ## IA planejada
 
 Canais: chat proprio do site e e-mail. Nao havera WhatsApp.

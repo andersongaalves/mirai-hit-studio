@@ -17,7 +17,7 @@ def get_current_user(token=Depends(security), db=Depends(get_db)):
     try:
         payload = decode_token(token.credentials) if token else {}
         user = buscar_por_username(db, payload["sub"]) if payload else None
-        if user is None:
+        if user is None or not user.ativo:
             raise JWTError()
         return user
 

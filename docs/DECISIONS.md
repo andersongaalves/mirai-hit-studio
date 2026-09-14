@@ -131,3 +131,7 @@ Decisao: Cliente e a identidade comercial viva e Orcamento mantem snapshot histo
 ## ADR-032 - Dashboard operacional consolidado
 
 Decisao: o Dashboard administrativo recebe um resumo autenticado e agregado pelo backend. KPIs usam somente estados e timestamps persistidos; nao ha receita presumida, event store ou dados pessoais desnecessarios na atividade recente.
+
+## ADR-033 - Contas internas preservam historico
+
+Decisao: usuarios internos usam apenas os papeis `admin` e `produtor`; o gerenciamento e exclusivo de administradores. Contas sao desativadas, nao excluidas, para preservar autoria e vinculos historicos. A lista operacional de responsaveis permanece disponivel para usuarios autenticados e retorna somente contas ativas.

@@ -37,13 +37,14 @@ async function staticResponse(route) {
         const url = new URL(request.url());
         if (url.origin === 'http://localhost:4173') return staticResponse(route);
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 404 });
-        if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'dashboard-token' } });
+        if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'dashboard-token', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } } });
         if (url.pathname === '/dashboard') return route.fulfill(dashboardFailure
             ? { status: 500, json: { detail: 'Falha controlada' } }
             : { json: dashboard });
         if (['/config', '/servicos', '/projetos', '/orcamentos', '/producoes', '/clientes', '/usuarios'].includes(url.pathname)) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
+        if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
     try {

@@ -79,6 +79,9 @@
                             <button type="button" class="admin-nav__item" data-admin-target="section-producoes">
                                 Produções
                             </button>
+                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-usuarios">
+                                Usuários
+                            </button>
                         </nav>
                         <button type="button" class="btn-small btn-danger admin-sidebar__logout" onclick="fazerLogout()">
                             Sair
@@ -575,6 +578,47 @@
                             aria-live="polite"
                         ></div>
                     </div>
+
+                    <div id="section-usuarios" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Acesso interno</span>
+                                <h1>Usuários</h1>
+                                <p>Gerencie as contas internas com acesso à Mirai.</p>
+                            </div>
+                            <div class="admin-page-header__actions">
+                                <button id="usuario-new" type="button" class="btn-cta">Novo usuário</button>
+                            </div>
+                        </header>
+
+                        <div class="admin-filter-bar" aria-label="Filtros de usuários">
+                            <label class="admin-filter-field admin-filter-field--search">
+                                <span>Buscar</span>
+                                <input id="usuarios-search" type="search" placeholder="Nome de usuário" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Status</span>
+                                <select id="usuarios-status-filter">
+                                    <option value="todos">Todos</option>
+                                    <option value="ativo">Ativos</option>
+                                    <option value="inativo">Inativos</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Papel</span>
+                                <select id="usuarios-role-filter">
+                                    <option value="todos">Todos</option>
+                                    <option value="admin">Administrador</option>
+                                    <option value="produtor">Produtor</option>
+                                </select>
+                            </label>
+                            <div class="admin-filter-bar__actions">
+                                <button id="usuarios-clear-filters" type="button" class="btn-small hidden">Limpar filtros</button>
+                            </div>
+                        </div>
+                        <p id="usuarios-summary" class="usuarios-summary" aria-live="polite"></p>
+                        <div id="usuarios-list" class="admin-list-container" aria-live="polite"></div>
+                    </div>
                 </div>
                     </div>
                 </div>
@@ -845,6 +889,59 @@
                             >
                                 Fechar
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="modal-usuario"
+                    class="modal hidden admin-access-hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="usuario-modal-title"
+                    data-admin-only
+                >
+                    <div class="modal-content usuario-modal-content admin-form">
+                        <div class="usuario-modal-header">
+                            <div>
+                                <span class="badge badge-info">Acesso interno</span>
+                                <h2 id="usuario-modal-title">Usuário</h2>
+                            </div>
+                            <button id="usuario-close" type="button" class="btn-small" aria-label="Fechar usuário">Fechar</button>
+                        </div>
+                        <section class="usuario-detail-block">
+                            <h3>Conta</h3>
+                            <div class="usuario-form-grid">
+                                <label class="admin-form-field">Nome de usuário<input id="usuario-username" maxlength="50" required /></label>
+                                <label class="admin-form-field">Papel
+                                    <select id="usuario-role" required>
+                                        <option value="produtor">Produtor</option>
+                                        <option value="admin">Administrador</option>
+                                    </select>
+                                </label>
+                                <label id="usuario-active-field" class="usuario-active-field">
+                                    <input id="usuario-ativo" type="checkbox" /> Usuário ativo
+                                </label>
+                            </div>
+                            <p id="usuario-self-help" class="admin-field-help hidden">Sua própria conta não pode ter acesso, papel ou nome alterados por esta tela.</p>
+                        </section>
+                        <section id="usuario-create-password" class="usuario-detail-block">
+                            <label class="admin-form-field">Senha inicial
+                                <input id="usuario-password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required />
+                                <span class="admin-field-help">Use de 8 a 72 caracteres; o limite técnico do bcrypt é 72 bytes.</span>
+                            </label>
+                        </section>
+                        <section id="usuario-reset-password" class="usuario-detail-block hidden">
+                            <h3>Redefinir senha</h3>
+                            <label class="admin-form-field">Nova senha
+                                <input id="usuario-new-password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required />
+                                <span class="admin-field-help">A senha atual nunca é exibida.</span>
+                            </label>
+                            <button id="usuario-password-reset" type="button" class="btn-small">Redefinir senha</button>
+                        </section>
+                        <div class="admin-form-actions usuario-modal-actions">
+                            <button id="usuario-save" type="button" class="btn-cta">Salvar usuário</button>
                         </div>
                     </div>
                 </div>

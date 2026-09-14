@@ -24,6 +24,7 @@ const root = path.resolve(__dirname, '..');
                 calls.push(`${request.method()} ${url.pathname}`);
                 if (url.pathname === '/orcamentos') return route.fulfill({ json: [budget] });
                 if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
+                if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
                 if (url.pathname === '/producoes') return route.fulfill({ json: productions });
                 if (url.pathname === '/clientes') return route.fulfill({ json: [] });
                 if (url.pathname.endsWith('/preview')) return route.fulfill({ contentType: 'text/html', body: '<p>Documento salvo</p>' });

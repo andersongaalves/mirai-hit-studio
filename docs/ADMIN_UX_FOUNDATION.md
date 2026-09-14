@@ -170,6 +170,11 @@ Arquivos provaveis: `frontend/js/admin/producoes/`, `frontend/admin.html` e esti
 - Implementado: resumo operacional baseado em endpoint autenticado unico, com KPIs sem valor financeiro, pipeline, atencao e atividade recente.
 - O Dashboard reutiliza header, estados, badges, tokens e navegacao do shell; ele resume e direciona para modulos, sem repetir CRUD.
 
+### F.4 - Usuarios
+
+- Implementado: listagem responsiva, busca, filtros, modal acessivel, criacao, edicao, desativacao e redefinicao explicita de senha.
+- A tela reutiliza shell, page header, filter bar, tabela/card, badges, estados, modal e feedback compartilhados; permissoes e protecoes de conta permanecem no backend.
+
 ### J Final
 
 Polish premium, animacoes com proposito, branding avancado, CRO, menus de acao sofisticados, UX de CRM/Financeiro/IA, microinteracoes e revisao ampla dos modulos legados.

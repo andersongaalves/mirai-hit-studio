@@ -46,7 +46,7 @@ async function staticResponse(route) {
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 200, body: '' });
 
         if (url.pathname === '/auth/login') {
-            return route.fulfill({ json: { access_token: 'synthetic-admin-session' } });
+            return route.fulfill({ json: { access_token: 'synthetic-admin-session', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } } });
         }
         if (url.pathname === '/config') return route.fulfill({ json: {} });
         if (url.pathname === '/servicos') return route.fulfill({ json: [] });
@@ -61,6 +61,7 @@ async function staticResponse(route) {
             recent_activity: [],
         } });
         if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
+        if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
 

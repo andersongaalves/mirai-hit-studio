@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F.3 concluida.
+Fase atual: F.4 concluida.
 
-Ultimo checkpoint enviado: CP-F0 em `76c3b57`.
+Ultimo checkpoint enviado: CP-F1 em `55e78a8`.
 
-Checkpoint atual: CP-F1 em andamento.
+Checkpoint atual: CP-F2 em andamento.
 
-Proximo checkpoint: CP-F1.
+Proximo checkpoint: CP-F2.
 
-Proximo push: apos F.3.
+Proximo push: apos F.6.
 
-Ultimo commit local: `feat: adiciona dashboard administrativo real`.
+Ultimo commit local: `feat: adiciona gestao administrativa de usuarios`.
 
 ## Concluido
 
@@ -38,8 +38,8 @@ F - Admin/CRM
 - F.1 Producoes. Concluida.
 - F.2 Clientes/CRM. Concluida.
 - F.3 Dashboard. Concluida.
-- CP-F1 pronto para validacao.
-- F.4 Usuarios.
+- CP-F1 enviado.
+- F.4 Usuarios. Concluida.
 - F.5 Newsletter e comunicacao.
 - F.6 Logs, auditoria e backup/restore.
 - CP-F2.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F.3 concluida
+F.4 concluida
 
 ## Proxima subfase
 
-F.4 - Usuarios
+F.5 - Newsletter e comunicacao
