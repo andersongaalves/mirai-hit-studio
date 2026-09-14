@@ -7,6 +7,7 @@ from crud import crud_newsletter
 from models.newsletter import NewsletterCampaignModel, NewsletterModel
 from schemas.newsletter import NewsletterCampaignCreate, NewsletterCampaignUpdate, NewsletterSubscribe
 from services.email_service import EmailService
+from services import audit_service
 
 
 class NewsletterNaoEncontrada(Exception):
@@ -116,11 +117,19 @@ def listar_subscribers(db: Session, busca: str = "", ativo: bool | None = None):
     return crud_newsletter.listar_subscribers(db, busca, ativo)
 
 
-def cancelar_por_admin(db: Session, subscriber_id: int):
+def cancelar_por_admin(db: Session, subscriber_id: int, actor=None, request_id=None):
     subscriber = _subscriber(db, subscriber_id)
     if subscriber.ativo:
         subscriber.ativo = False
         subscriber.unsubscribed_at = _now()
+        audit_service.record(
+            db,
+            actor=actor,
+            action="newsletter.subscriber_admin_unsubscribed",
+            entity_type="newsletter_subscriber",
+            entity_id=subscriber.id,
+            request_id=request_id,
+        )
         db.commit()
         db.refresh(subscriber)
     return subscriber
@@ -162,7 +171,7 @@ def atualizar_campanha(db: Session, campaign_id: int, dados: NewsletterCampaignU
     return _campaign_response(db, campaign)
 
 
-def enviar_campanha(db: Session, campaign_id: int):
+def enviar_campanha(db: Session, campaign_id: int, actor=None, request_id=None):
     campaign = _campaign(db, campaign_id, lock=True)
     if campaign.status != "draft":
         raise NewsletterConflito("Esta campanha ja foi enviada ou esta em processamento.")
@@ -193,6 +202,19 @@ def enviar_campanha(db: Session, campaign_id: int):
     deliveries = crud_newsletter.entregas_da_campanha(db, campaign.id)
     campaign.status = "sent" if any(delivery.status == "sent" for delivery in deliveries) else "failed"
     campaign.sent_at = _now()
+    audit_service.record(
+        db,
+        actor=actor,
+        action="newsletter.campaign_sent",
+        entity_type="newsletter_campaign",
+        entity_id=campaign.id,
+        metadata={
+            "total_sent": sum(delivery.status == "sent" for delivery in deliveries),
+            "total_failed": sum(delivery.status == "failed" for delivery in deliveries),
+            "total_skipped": sum(delivery.status == "skipped" for delivery in deliveries),
+        },
+        request_id=request_id,
+    )
     db.commit()
     db.refresh(campaign)
     return _campaign_response(db, campaign, with_deliveries=True)

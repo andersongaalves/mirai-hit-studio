@@ -14,6 +14,7 @@ from services import proposta_service as service, proposta_documento_service as 
 from services.documento_storage import LocalDocumentoStorage
 from services.email_service import EmailService
 from services.pdf_service import moeda
+from services import audit_service
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ def _pdf_atual(db, model):
     return documentos.gerar_sem_commit(db, model)
 
 
-def enviar(db, proposta_id):
+def enviar(db, proposta_id, actor=None, request_id=None):
     aceito_pelo_provedor = False
     try:
         model, budget = _carregar(db, proposta_id)
@@ -56,6 +57,7 @@ def enviar(db, proposta_id):
             return response
         if model.status not in (Status.RASCUNHO.value, Status.PRONTA.value):
             raise service.PropostaConflito("Esta proposta nao permite envio.")
+        old_status = model.status
         if budget.status not in (OrcamentoStatus.NOVO.value, OrcamentoStatus.EM_ANALISE.value):
             raise service.PropostaConflito("Status do orcamento incompativel com o envio.")
         response = service._resposta(model)
@@ -75,6 +77,15 @@ def enviar(db, proposta_id):
         model.status = Status.ENVIADA.value
         budget.status = OrcamentoStatus.PROPOSTA_ENVIADA.value
         db.flush()
+        audit_service.record(
+            db,
+            actor=actor,
+            action="proposal.sent",
+            entity_type="proposal",
+            entity_id=model.id,
+            metadata={"old_status": old_status, "new_status": model.status},
+            request_id=request_id,
+        )
         response = service._resposta(model)
         db.commit()
         logger.info("proposal_sent")
@@ -102,7 +113,7 @@ def _dados_producao(proposta):
             "observacoes": notes, "status": "aguardando_inicio", "etapas": "[]"}
 
 
-def aprovar(db, proposta_id):
+def aprovar(db, proposta_id, actor=None, request_id=None):
     try:
         model, budget = _carregar(db, proposta_id)
         if model.status == Status.ACEITA.value:
@@ -122,6 +133,15 @@ def aprovar(db, proposta_id):
         model.aprovada_em = datetime.now(timezone.utc)
         budget.status = OrcamentoStatus.APROVADO.value
         db.flush()
+        audit_service.record(
+            db,
+            actor=actor,
+            action="proposal.approved",
+            entity_type="proposal",
+            entity_id=model.id,
+            metadata={"old_status": Status.ENVIADA.value, "new_status": model.status},
+            request_id=request_id,
+        )
         response = service._resposta(model)
         db.commit()
         logger.info("proposal_approved")

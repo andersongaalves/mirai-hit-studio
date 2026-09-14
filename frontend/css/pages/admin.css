@@ -772,6 +772,25 @@
     margin-top: var(--space-5);
 }
 
+.audit-filter-bar { align-items: end; }
+
+.audit-summary-cell {
+    color: var(--color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.audit-mobile-view { display: none; }
+
+.audit-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+}
+
+.audit-card { flex-direction: column; }
+
 .usuarios-mobile-view { display: none; }
 
 .usuario-card,
@@ -1057,6 +1076,14 @@
 .producao-add-etapa input { flex: 1; }
 
 @media (max-width: 768px) {
+    .audit-table-view { display: none; }
+
+    .audit-mobile-view {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
     .newsletter-table-view { display: none; }
 
     .newsletter-mobile-view {

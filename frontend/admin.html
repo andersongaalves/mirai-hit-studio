@@ -85,6 +85,9 @@
                             <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-newsletter">
                                 Newsletter
                             </button>
+                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-auditoria">
+                                Auditoria
+                            </button>
                         </nav>
                         <button type="button" class="btn-small btn-danger admin-sidebar__logout" onclick="fazerLogout()">
                             Sair
@@ -663,6 +666,72 @@
                             <p id="newsletter-subscribers-summary" class="newsletter-summary" aria-live="polite"></p>
                             <div id="newsletter-subscribers-list" class="admin-list-container" aria-live="polite"></div>
                         </section>
+                    </div>
+
+                    <div id="section-auditoria" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Segurança e operação</span>
+                                <h1>Auditoria</h1>
+                                <p>Histórico administrativo estruturado e somente leitura.</p>
+                            </div>
+                        </header>
+                        <div class="admin-filter-bar audit-filter-bar" aria-label="Filtros de auditoria">
+                            <label class="admin-filter-field">
+                                <span>Ação</span>
+                                <select id="audit-action-filter">
+                                    <option value="">Todas</option>
+                                    <option value="user.created">Usuário criado</option>
+                                    <option value="user.updated">Usuário atualizado</option>
+                                    <option value="user.deactivated">Usuário desativado</option>
+                                    <option value="user.reactivated">Usuário reativado</option>
+                                    <option value="user.password_reset">Senha redefinida</option>
+                                    <option value="proposal.sent">Proposta enviada</option>
+                                    <option value="proposal.approved">Proposta aprovada</option>
+                                    <option value="production.status_changed">Status da produção</option>
+                                    <option value="newsletter.campaign_sent">Campanha enviada</option>
+                                    <option value="newsletter.subscriber_admin_unsubscribed">Inscrição cancelada</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Entidade</span>
+                                <select id="audit-entity-filter">
+                                    <option value="">Todas</option>
+                                    <option value="user">Usuário</option>
+                                    <option value="proposal">Proposta</option>
+                                    <option value="production">Produção</option>
+                                    <option value="newsletter_campaign">Campanha</option>
+                                    <option value="newsletter_subscriber">Inscrito</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>ID da entidade</span>
+                                <input id="audit-entity-id-filter" type="text" maxlength="64" inputmode="numeric" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>ID do ator</span>
+                                <input id="audit-actor-filter" type="number" min="1" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Desde</span>
+                                <input id="audit-date-from-filter" type="datetime-local" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Até</span>
+                                <input id="audit-date-to-filter" type="datetime-local" />
+                            </label>
+                            <div class="admin-filter-bar__actions">
+                                <button id="audit-apply-filters" type="button" class="btn-small">Aplicar</button>
+                                <button id="audit-clear-filters" type="button" class="btn-small">Limpar</button>
+                            </div>
+                        </div>
+                        <p id="audit-summary" class="newsletter-summary" aria-live="polite"></p>
+                        <div id="audit-list" class="admin-list-container" aria-live="polite"></div>
+                        <nav id="audit-pagination" class="audit-pagination hidden" aria-label="Paginação da auditoria">
+                            <button id="audit-previous-page" type="button" class="btn-small">Anterior</button>
+                            <span id="audit-page-label"></span>
+                            <button id="audit-next-page" type="button" class="btn-small">Próxima</button>
+                        </nav>
                     </div>
                 </div>
                     </div>

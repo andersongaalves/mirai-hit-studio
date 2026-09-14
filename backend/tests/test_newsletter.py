@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from core.security import create_access_token, get_password_hash
 from database import get_db
-from models import ClienteModel, NewsletterModel, UsuarioModel
+from models import AuditLogModel, ClienteModel, NewsletterModel, UsuarioModel
 from routers.auth import router as auth_router
 from routers.newsletter import router as newsletter_router
 
@@ -110,6 +110,15 @@ async def check():
         failed_campaign = await client.post('/newsletter/campaigns', json={**payload, 'titulo_interno':'Falha'}, headers=bearer('admin'))
         failed = await client.post(f"/newsletter/campaigns/{failed_campaign.json()['id']}/send", headers=bearer('admin'))
         assert failed.status_code == 200 and failed.json()['status'] == 'failed' and failed.json()['total_failed'] == 2
+        with Session(engine) as db:
+            events = db.query(AuditLogModel).order_by(AuditLogModel.id).all()
+            assert [event.action for event in events] == [
+                'newsletter.subscriber_admin_unsubscribed',
+                'newsletter.campaign_sent',
+                'newsletter.campaign_sent',
+            ]
+            assert all(event.actor_user_id == 1 for event in events)
+            assert all('body' not in str(event.metadata_json) and '@' not in str(event.metadata_json) for event in events)
         rendered = EmailService.render('email_campaign.html', preview_text='x', body_html=EmailService._texto_para_html('<script>x</script>'), unsubscribe_url='http://test/newsletter/unsubscribe?token=opaque')
         assert '&lt;script&gt;x&lt;/script&gt;' in rendered and '<script>x</script>' not in rendered
         assert 'Cancelar inscrição' in rendered and 'first@example.com' not in rendered
@@ -120,7 +129,7 @@ asyncio.run(check())
         isolated.BootstrapTests().run_case(r'''
 from alembic import command
 config = migration_config()
-assert bootstrap(engine) == 'f5b82e1a7c4d'
+assert bootstrap(engine) == 'b7d3e9a1c5f2'
 command.downgrade(config, 'c8f4e2d91a7b')
 assert 'newsletter_campaigns' not in inspect(engine).get_table_names()
 command.upgrade(config, 'head')

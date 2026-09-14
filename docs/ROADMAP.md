@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F.5 concluida.
+Fase atual: F.6 concluida.
 
-Ultimo checkpoint enviado: CP-F1 em `55e78a8`.
+Ultimo checkpoint enviado: CP-F2.
 
-Checkpoint atual: CP-F2 em andamento.
+Checkpoint atual: CP-F2 concluido.
 
-Proximo checkpoint: CP-F2.
+Proximo checkpoint: CP-PAG apos F3.5.
 
-Proximo push: apos F.6.
+Proximo push: apos F3.5.
 
-Ultimo commit local: `feat: adiciona newsletter e comunicacao administrativa`.
+Ultimo commit local: `feat: adiciona auditoria e estrategia de backup`.
 
 ## Concluido
 
@@ -41,8 +41,8 @@ F - Admin/CRM
 - CP-F1 enviado.
 - F.4 Usuarios. Concluida.
 - F.5 Newsletter e comunicacao. Concluida.
-- F.6 Logs, auditoria e backup/restore.
-- CP-F2.
+- F.6 Logs, auditoria e backup/restore. Concluida.
+- CP-F2 enviado.
 
 J0 - Fundacao UX do Admin
 
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F.5 concluida
+F.6 concluida
 
 ## Proxima subfase
 
-F.6 - Logs, auditoria e backup/restore
+F3.1 - Modelo financeiro

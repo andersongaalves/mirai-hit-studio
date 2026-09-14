@@ -1,4 +1,6 @@
 import sqlite3
+import re
+import uuid
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from core.rate_limit import allow_request
@@ -10,9 +12,18 @@ LIMITS = {
     "/newsletter/subscribe": (5, 600),
 }
 
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
+
 
 class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        supplied_request_id = request.headers.get("X-Request-ID", "")
+        request_id = (
+            supplied_request_id
+            if REQUEST_ID_PATTERN.fullmatch(supplied_request_id)
+            else uuid.uuid4().hex
+        )
+        request.state.request_id = request_id
         response = None
         path = request.url.path.rstrip("/")
         if request.method == "POST" and path in LIMITS:
@@ -30,6 +41,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Request-ID"] = request_id
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         return response

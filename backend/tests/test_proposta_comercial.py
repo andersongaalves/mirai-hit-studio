@@ -7,6 +7,7 @@ SETUP = DOCUMENT_SETUP + '''
 from services import proposta_comercial_service as commercial
 from services.email_service import EmailService
 from crud import crud_producao
+from models import AuditLogModel, UsuarioModel
 import resend
 from datetime import datetime
 def normalized(value):
@@ -23,6 +24,7 @@ class ComercialTests(unittest.TestCase):
         self.run_case('''
 with Session(engine) as db:
     p = service.criar_por_orcamento(db, 1)
+    actor = db.get(UsuarioModel, 1)
     p = service.atualizar(db, p.id, PropostaUpdate(objeto='Masterizacao revisada', descricao='Escopo comercial',
         itens=[{'descricao':'Master', 'quantidade':2, 'valor_unitario':'625.00'}]))
     budget = db.get(OrcamentoModel, 1)
@@ -32,7 +34,7 @@ with Session(engine) as db:
     budget.observacoes = 'NAO USAR LEGADO'
     db.commit()
     with patch.object(resend.Emails, 'send', return_value={'id':'synthetic-message'}) as send:
-        sent = commercial.enviar(db, p.id)
+        sent = commercial.enviar(db, p.id, actor, 'proposal-request-001')
         assert sent.status == 'enviada' and sent.enviada_em and sent.pdf_path and sent.gerada_em
         assert sent.versao == p.versao
         assert db.get(OrcamentoModel, 1).status == 'proposta_enviada'
@@ -42,9 +44,9 @@ with Session(engine) as db:
         data = base64.b64decode(payload['attachments'][0]['content'])
         assert data.startswith(b'%PDF-') and len(PdfReader(BytesIO(data)).pages)
         assert options['idempotency_key'].startswith(f'proposal/{p.id}/v{p.versao}/')
-        assert normalized(commercial.enviar(db, p.id)) == normalized(sent)
+        assert normalized(commercial.enviar(db, p.id, actor, 'proposal-request-001')) == normalized(sent)
         assert send.call_count == 1
-    approved = commercial.aprovar(db, p.id)
+    approved = commercial.aprovar(db, p.id, actor, 'proposal-request-002')
     assert approved.status == 'aceita' and approved.aprovada_em
     assert approved.versao == p.versao and approved.pdf_path == sent.pdf_path
     assert db.get(OrcamentoModel, 1).status == 'aprovado'
@@ -53,9 +55,12 @@ with Session(engine) as db:
     assert production.titulo == 'Masterizacao revisada'
     assert 'R$ 1.250,00' in production.observacoes and 'NAO USAR' not in production.observacoes
     assert production.status == 'aguardando_inicio'
-    assert normalized(commercial.aprovar(db, p.id)) == normalized(approved)
+    assert normalized(commercial.aprovar(db, p.id, actor, 'proposal-request-002')) == normalized(approved)
     assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
     assert db.get(OrcamentoModel, 1).proposta_enviada is False
+    events = db.query(AuditLogModel).order_by(AuditLogModel.id).all()
+    assert [event.action for event in events] == ['proposal.sent', 'proposal.approved']
+    assert all(event.actor_user_id == actor.id for event in events)
 ''')
 
     def test_email_failure_and_commit_failure_rollback(self):

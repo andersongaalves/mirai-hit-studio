@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from core.security import get_password_hash
 from crud import crud_usuario
 from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioUpdate
+from services import audit_service
 
 
 class UsuarioNaoEncontrado(Exception):
@@ -29,7 +30,7 @@ def buscar(db: Session, usuario_id: int):
     return _buscar(db, usuario_id)
 
 
-def criar(db: Session, dados: UsuarioCreate):
+def criar(db: Session, dados: UsuarioCreate, ator, request_id: str | None = None):
     payload = dados.model_dump()
     username = payload["username"]
     if crud_usuario.username_em_uso(db, username):
@@ -44,6 +45,15 @@ def criar(db: Session, dados: UsuarioCreate):
             "is_admin": role == "admin",
             "ativo": True,
         })
+        audit_service.record(
+            db,
+            actor=ator,
+            action="user.created",
+            entity_type="user",
+            entity_id=usuario.id,
+            metadata={"new_role": role, "new_active": True},
+            request_id=request_id,
+        )
         db.commit()
         db.refresh(usuario)
         return usuario
@@ -55,8 +65,10 @@ def criar(db: Session, dados: UsuarioCreate):
         raise
 
 
-def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator):
+def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_id: str | None = None):
     usuario = _buscar(db, usuario_id)
+    old_role = usuario.role
+    old_active = usuario.ativo
     payload = dados.model_dump(exclude_unset=True)
     if "username" in payload and crud_usuario.username_em_uso(db, payload["username"], usuario.id):
         raise UsuarioConflito("Nome de usuario ja cadastrado.")
@@ -76,6 +88,25 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator):
         payload["is_admin"] = proximo_role == "admin"
     try:
         crud_usuario.atualizar_sem_commit(db, usuario, payload)
+        action = "user.updated"
+        if old_active and not usuario.ativo:
+            action = "user.deactivated"
+        elif not old_active and usuario.ativo:
+            action = "user.reactivated"
+        audit_service.record(
+            db,
+            actor=ator,
+            action=action,
+            entity_type="user",
+            entity_id=usuario.id,
+            metadata={
+                "old_role": old_role,
+                "new_role": usuario.role,
+                "old_active": old_active,
+                "new_active": usuario.ativo,
+            },
+            request_id=request_id,
+        )
         db.commit()
         db.refresh(usuario)
         return usuario
@@ -87,10 +118,24 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator):
         raise
 
 
-def redefinir_senha(db: Session, usuario_id: int, dados: UsuarioPasswordUpdate):
+def redefinir_senha(
+    db: Session,
+    usuario_id: int,
+    dados: UsuarioPasswordUpdate,
+    ator,
+    request_id: str | None = None,
+):
     usuario = _buscar(db, usuario_id)
     try:
         usuario.password_hash = get_password_hash(dados.nova_senha)
+        audit_service.record(
+            db,
+            actor=ator,
+            action="user.password_reset",
+            entity_type="user",
+            entity_id=usuario.id,
+            request_id=request_id,
+        )
         db.commit()
         db.refresh(usuario)
         return usuario

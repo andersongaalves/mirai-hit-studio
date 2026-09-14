@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -19,6 +21,10 @@ from routers.producao import router as producao_router
 from routers.propostas import router as propostas_router
 from routers.clientes import router as clientes_router
 from routers.dashboard import router as dashboard_router
+from routers.audit_logs import router as audit_logs_router
+
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Mirai Hit Studio API", version="1.0.0", docs_url="/docs", redoc_url="/redoc"
@@ -31,7 +37,8 @@ app.add_middleware(
     allow_origins=cors_origins(settings.ALLOWED_ORIGINS),
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
 
 
@@ -44,6 +51,7 @@ async def invalid_request(request, error):
 
 @app.exception_handler(SQLAlchemyError)
 async def database_error(request, error):
+    logger.error("database_error request_id=%s", getattr(request.state, "request_id", None))
     return JSONResponse({"detail": "Persistencia temporariamente indisponivel."}, status_code=503)
 
 # Rotas
@@ -58,6 +66,7 @@ app.include_router(producao_router)
 app.include_router(propostas_router)
 app.include_router(clientes_router)
 app.include_router(dashboard_router)
+app.include_router(audit_logs_router)
 
 
 @app.get("/")

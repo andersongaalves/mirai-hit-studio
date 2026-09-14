@@ -106,6 +106,10 @@ Usuarios internos: gerenciamento exclusivo de administradores, papeis `admin`/`p
 
 Newsletter: inscricao publica exige opt-in explicito e permanece separada de e-mail transacional. Cancelamento usa token opaco, campanhas sao manuais e exclusivas de administradores, e entregas registram apenas o resultado sanitizado do provedor.
 
+Auditoria: acoes administrativas criticas geram `AuditLog` estruturado, imutavel pela API e separado de logs tecnicos. Metadata usa allowlist e nunca armazena credenciais ou payload completo.
+
+Backup/restore: operacao exclusiva de infraestrutura por `pg_dump`/`pg_restore`, fora do frontend. Restore de producao exige confirmacao e opt-in explicitos; dumps e storage de arquivos possuem politicas separadas.
+
 ## IA planejada
 
 Canais: chat proprio do site e e-mail. Nao havera WhatsApp.

@@ -1,6 +1,6 @@
 from html import escape
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
@@ -85,11 +85,14 @@ def listar_subscribers(
 def cancelar_subscriber(
     subscriber_id: int,
     dados: NewsletterSubscriberDeactivate,
+    request: Request,
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
     try:
-        return newsletter_service.cancelar_por_admin(db, subscriber_id)
+        return newsletter_service.cancelar_por_admin(
+            db, subscriber_id, user, getattr(request.state, "request_id", None)
+        )
     except Exception as error:
         _erro(error)
 
@@ -130,8 +133,15 @@ def atualizar_campanha(
 
 
 @router.post("/campaigns/{campaign_id}/send", response_model=NewsletterCampaignResponse)
-def enviar_campanha(campaign_id: int, db: Session = Depends(get_db), user=Depends(require_admin)):
+def enviar_campanha(
+    campaign_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
     try:
-        return newsletter_service.enviar_campanha(db, campaign_id)
+        return newsletter_service.enviar_campanha(
+            db, campaign_id, user, getattr(request.state, "request_id", None)
+        )
     except Exception as error:
         _erro(error)

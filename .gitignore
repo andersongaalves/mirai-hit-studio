@@ -114,6 +114,7 @@ estrutura_projeto.txt
 uploads/
 backups/
 **/backups/
+*.dump
 
 
 # ======================

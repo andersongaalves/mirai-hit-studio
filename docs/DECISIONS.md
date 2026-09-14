@@ -139,3 +139,11 @@ Decisao: usuarios internos usam apenas os papeis `admin` e `produtor`; o gerenci
 ## ADR-034 - Newsletter por opt-in e campanha manual
 
 Decisao: Newsletter e comunicacao transacional sao dominios separados. A newsletter exige inscricao voluntaria, usa token opaco para cancelamento e nao cria Cliente automaticamente. Campanhas sao rascunhos enviados manualmente por administradores; cada entrega registra resultado individual e endereco de destino como snapshot historico.
+
+## ADR-035 - Auditoria estruturada e transacional
+
+Decisao: acoes administrativas criticas geram registros imutaveis com ator, acao, entidade, request ID e metadata em allowlist. Auditoria acompanha a transacao da mutacao quando possivel e permanece separada de logging tecnico e analytics.
+
+## ADR-036 - Backup e restore fora da aplicacao
+
+Decisao: backup/restore PostgreSQL usa ferramentas oficiais por scripts operacionais, nunca endpoints web. Restore e destrutivo, exige confirmacao explicita e protecao adicional para producao; dumps nao substituem backup de object storage.

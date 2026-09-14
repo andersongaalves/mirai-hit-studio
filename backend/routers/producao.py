@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -18,7 +18,9 @@ from schemas.producao import (
 
 from crud import crud_producao
 from models.orcamento import OrcamentoModel
+from models.producao import ProducaoModel
 from models.usuario import UsuarioModel
+from services import audit_service
 
 router = APIRouter(prefix="/producoes", tags=["Produções"])
 
@@ -86,15 +88,30 @@ def obter_producao(
 def atualizar_status(
     producao_id: int,
     dados: ProducaoStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
 
-    producao = crud_producao.atualizar_status(db, producao_id, dados.status)
+    atual = db.get(ProducaoModel, producao_id)
+    old_status = atual.status if atual else None
+    producao = crud_producao.atualizar_status_sem_commit(db, producao_id, dados.status)
 
     if not producao:
 
         raise HTTPException(status_code=404, detail="Produção não encontrada")
+
+    if old_status != producao.status:
+        audit_service.record(
+            db,
+            actor=user,
+            action="production.status_changed",
+            entity_type="production",
+            entity_id=producao.id,
+            metadata={"old_status": old_status, "new_status": producao.status},
+            request_id=getattr(request.state, "request_id", None),
+        )
+    db.commit()
 
     return crud_producao.buscar(db, producao_id)
 

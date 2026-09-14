@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -75,10 +75,22 @@ def documento(proposta_id: IdPath, db: Db):
 
 
 @router.post("/propostas/{proposta_id}/enviar", response_model=PropostaResponse)
-def enviar(proposta_id: IdPath, db: Db):
-    return _responder(comercial.enviar, db, proposta_id)
+def enviar(proposta_id: IdPath, request: Request, db: Db, user=Depends(get_current_user)):
+    return _responder(
+        comercial.enviar,
+        db,
+        proposta_id,
+        user,
+        getattr(request.state, "request_id", None),
+    )
 
 
 @router.post("/propostas/{proposta_id}/aprovar", response_model=PropostaResponse)
-def aprovar(proposta_id: IdPath, db: Db):
-    return _responder(comercial.aprovar, db, proposta_id)
+def aprovar(proposta_id: IdPath, request: Request, db: Db, user=Depends(get_current_user)):
+    return _responder(
+        comercial.aprovar,
+        db,
+        proposta_id,
+        user,
+        getattr(request.state, "request_id", None),
+    )

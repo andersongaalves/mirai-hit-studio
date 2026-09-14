@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -51,11 +51,12 @@ def obter_usuario(
 @router.post("", response_model=UsuarioResponse, status_code=201)
 def criar_usuario(
     dados: UsuarioCreate,
+    request: Request,
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
     try:
-        return usuario_service.criar(db, dados)
+        return usuario_service.criar(db, dados, user, getattr(request.state, "request_id", None))
     except Exception as error:
         _erro(error)
 
@@ -64,11 +65,14 @@ def criar_usuario(
 def atualizar_usuario(
     usuario_id: int,
     dados: UsuarioUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
     try:
-        return usuario_service.atualizar(db, usuario_id, dados, user)
+        return usuario_service.atualizar(
+            db, usuario_id, dados, user, getattr(request.state, "request_id", None)
+        )
     except Exception as error:
         _erro(error)
 
@@ -77,10 +81,13 @@ def atualizar_usuario(
 def redefinir_senha(
     usuario_id: int,
     dados: UsuarioPasswordUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
     try:
-        return usuario_service.redefinir_senha(db, usuario_id, dados)
+        return usuario_service.redefinir_senha(
+            db, usuario_id, dados, user, getattr(request.state, "request_id", None)
+        )
     except Exception as error:
         _erro(error)

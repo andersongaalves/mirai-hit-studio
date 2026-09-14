@@ -165,6 +165,15 @@ def atualizar_prazo(db, producao_id, prazo):
     return producao
 
 
+def atualizar_status_sem_commit(db: Session, producao_id: int, status: str):
+    producao = db.get(ProducaoModel, producao_id)
+    if not producao:
+        return None
+    producao.status = status
+    db.flush()
+    return producao
+
+
 def atualizar_observacoes(db: Session, producao_id: int, observacoes: str):
     producao = db.get(ProducaoModel, producao_id)
     if not producao:

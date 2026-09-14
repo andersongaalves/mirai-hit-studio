@@ -22,6 +22,7 @@ from models.producao import ProducaoModel
 from models.projeto import ProjetoModel
 from models.servico import ServicoModel
 from models.proposta import PropostaModel
+from models.audit_log import AuditLogModel
 
 
 config = context.config
