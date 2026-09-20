@@ -1,3 +1,6 @@
+from models import ProjetoModel
+
+
 def listar(db):
 
     return db.query(ProjetoModel).all()
