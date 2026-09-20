@@ -12,6 +12,13 @@ LIMITS = {
     "/newsletter/subscribe": (5, 600),
 }
 
+CHECKOUT_PAYMENT_PATH = re.compile(
+    r"^/checkout/[0-9a-fA-F-]{36}/(?:pix|card)$"
+)
+CHECKOUT_RESUME_PATH = re.compile(
+    r"^/checkout/[0-9a-fA-F-]{36}/pending-payment$"
+)
+
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 
 
@@ -26,9 +33,18 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         response = None
         path = request.url.path.rstrip("/")
-        if request.method == "POST" and path in LIMITS:
+        limit_key = path
+        limit = LIMITS.get(path) if request.method == "POST" else None
+        if request.method == "POST" and CHECKOUT_PAYMENT_PATH.fullmatch(path):
+            limit_key, limit = "/checkout/payment", (8, 300)
+        elif request.method == "GET" and CHECKOUT_RESUME_PATH.fullmatch(path):
+            limit_key, limit = "/checkout/pending-payment", (12, 60)
+        if limit:
             try:
-                allowed, retry = allow_request(f"{path}:{request.client.host if request.client else 'unknown'}", *LIMITS[path])
+                allowed, retry = allow_request(
+                    f"{limit_key}:{request.client.host if request.client else 'unknown'}",
+                    *limit,
+                )
             except (sqlite3.Error, OSError):
                 response = JSONResponse({"detail": "Protecao temporariamente indisponivel."}, status_code=503)
                 allowed, retry = True, 0

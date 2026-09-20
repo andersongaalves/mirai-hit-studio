@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     EMAIL_FROM: str
     ADMIN_EMAIL: str
     PUBLIC_API_URL: str = "http://localhost:8000"
+    PUBLIC_FRONTEND_URL: str = "http://localhost:4173"
 
     MERCADO_PAGO_ACCESS_TOKEN: str | None = None
     MERCADO_PAGO_PUBLIC_KEY: str | None = None

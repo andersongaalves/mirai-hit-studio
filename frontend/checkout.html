@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="theme-color" content="#111827">
+    <title>Checkout | Mirai Hit Studio</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/pages/checkout.css">
+</head>
+<body class="checkout-page">
+    <main class="checkout-shell">
+        <header class="checkout-brand">
+            <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="280" height="78">
+            <p>Pagamento da sua proposta</p>
+        </header>
+
+        <section id="checkout-loading" class="checkout-state" role="status">
+            <p>Carregando checkout...</p>
+        </section>
+
+        <section id="checkout-error" class="checkout-state checkout-state--error hidden" role="alert">
+            <h1>Checkout indisponível</h1>
+            <p id="checkout-error-message">Não foi possível carregar este pagamento.</p>
+            <button id="checkout-retry" class="btn-outline" type="button">Tentar novamente</button>
+        </section>
+
+        <div id="checkout-content" class="checkout-layout hidden">
+            <section class="checkout-summary card" aria-labelledby="summary-title">
+                <div class="checkout-eyebrow" id="proposal-number"></div>
+                <h1 id="summary-title">Resumo</h1>
+                <dl class="checkout-totals">
+                    <div><dt>Projeto</dt><dd id="project-description"></dd></div>
+                    <div><dt>Valor contratado</dt><dd id="total-value"></dd></div>
+                    <div id="paid-row" class="hidden"><dt>Valor confirmado</dt><dd id="paid-value"></dd></div>
+                    <div><dt>Saldo atual</dt><dd id="balance-value"></dd></div>
+                </dl>
+                <p class="checkout-provider-note">Pagamento processado pelo Mercado Pago.</p>
+            </section>
+
+            <section class="checkout-payment card" aria-labelledby="payment-title">
+                <div id="checkout-terminal" class="checkout-terminal hidden" role="status" aria-live="polite"></div>
+                <div id="checkout-form">
+                    <h2 id="payment-title">Escolha como pagar</h2>
+                    <fieldset id="payment-options" class="checkout-options">
+                        <legend>Pagamento comercial</legend>
+                    </fieldset>
+                    <div class="checkout-methods" aria-label="Forma de pagamento">
+                        <button id="method-pix" class="checkout-method is-active" type="button" aria-pressed="true">Pix</button>
+                        <button id="method-card" class="checkout-method" type="button" aria-pressed="false">Cartão</button>
+                    </div>
+
+                    <div id="pix-panel" class="checkout-panel">
+                        <p>O Pix será gerado com o valor da opção selecionada.</p>
+                        <button id="generate-pix" class="btn-cta checkout-submit" type="button">Gerar Pix</button>
+                    </div>
+
+                    <div id="card-panel" class="checkout-panel hidden">
+                        <p id="card-help">Os dados do cartão são tokenizados pelo Mercado Pago e não passam pelos servidores da Mirai.</p>
+                        <div id="card-loading" class="checkout-inline-status hidden" role="status">Carregando formulário seguro...</div>
+                        <div id="card-payment-brick"></div>
+                        <div id="card-error" class="checkout-inline-error hidden" role="alert"></div>
+                    </div>
+                </div>
+
+                <div id="payment-result" class="checkout-result hidden" aria-live="polite"></div>
+                <div id="pix-result" class="checkout-pix hidden">
+                    <img id="pix-qr" alt="QR Code Pix" width="260" height="260">
+                    <label for="pix-code">Código Pix copia e cola</label>
+                    <textarea id="pix-code" rows="4" readonly></textarea>
+                    <button id="copy-pix" class="btn-outline" type="button">Copiar código Pix</button>
+                    <a id="pix-ticket" class="checkout-ticket hidden" target="_blank" rel="noopener noreferrer">Abrir pagamento Pix</a>
+                    <p id="pix-expiration" class="checkout-muted"></p>
+                </div>
+                <div id="challenge-container" class="checkout-challenge hidden">
+                    <p>Confirme a compra com seu banco para continuar.</p>
+                    <iframe id="challenge-frame" title="Autenticação do cartão" referrerpolicy="no-referrer"></iframe>
+                </div>
+            </section>
+        </div>
+    </main>
+    <script type="module" src="/js/checkout.js"></script>
+</body>
+</html>

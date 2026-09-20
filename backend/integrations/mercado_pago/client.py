@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, DecimalException
+from urllib.parse import urlsplit
 
 import requests
 
@@ -120,6 +121,7 @@ class ProviderPaymentResult:
     amount: Decimal
     approved_at: datetime | None
     pix: PixPaymentData | None = None
+    challenge_url: str | None = None
 
 
 def map_provider_status(status, status_detail=None) -> PagamentoStatus:
@@ -234,6 +236,7 @@ class MercadoPagoClient:
             idempotency_key=idempotency_key,
             payer=payer,
             payment=payment,
+            transaction_security=True,
         )
 
     def get_order(self, provider_id: str) -> ProviderPaymentResult:
@@ -242,7 +245,16 @@ class MercadoPagoClient:
         data = self._request("GET", f"/v1/orders/{provider_id}")
         return self._parse_result(data)
 
-    def _create_order(self, *, amount, external_reference, idempotency_key, payer, payment):
+    def _create_order(
+        self,
+        *,
+        amount,
+        external_reference,
+        idempotency_key,
+        payer,
+        payment,
+        transaction_security=False,
+    ):
         if not SAFE_ID_PATTERN.fullmatch(external_reference or ""):
             raise MercadoPagoValidationError()
         if not isinstance(idempotency_key, str) or not 1 <= len(idempotency_key) <= 128:
@@ -256,6 +268,15 @@ class MercadoPagoClient:
             "payer": payer.payload(),
             "transactions": {"payments": [payment]},
         }
+        if transaction_security:
+            payload["config"] = {
+                "online": {
+                    "transaction_security": {
+                        "validation": "on_fraud_risk",
+                        "liability_shift": "required",
+                    }
+                }
+            }
         data = self._request(
             "POST",
             "/v1/orders",
@@ -362,6 +383,20 @@ class MercadoPagoClient:
                 ticket_url=method_data.get("ticket_url"),
                 expiration_time=payment.get("expiration_time") or payment.get("date_of_expiration"),
             )
+        challenge_url = None
+        security = method_data.get("transaction_security") or {}
+        candidate_url = security.get("url") if isinstance(security, dict) else None
+        if isinstance(candidate_url, str):
+            parts = urlsplit(candidate_url)
+            hostname = (parts.hostname or "").lower()
+            if (
+                parts.scheme == "https"
+                and parts.netloc
+                and not parts.username
+                and (hostname == "mercadopago.com" or hostname.startswith("www.mercadopago.")
+                     or ".mercadopago." in hostname)
+            ):
+                challenge_url = candidate_url
         return ProviderPaymentResult(
             provider_id=provider_id,
             external_reference=str(data.get("external_reference"))[:64]
@@ -390,4 +425,5 @@ class MercadoPagoClient:
             if normalized_status == PagamentoStatus.APROVADO
             else None,
             pix=pix,
+            challenge_url=challenge_url,
         )

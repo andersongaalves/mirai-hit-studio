@@ -159,3 +159,7 @@ Decisao: Mercado Pago e o primeiro provider e usa a Orders API por HTTP direto. 
 ## ADR-039 - Webhook apenas sinaliza; Order consultada e autoritativa
 
 Decisao: notificacoes Mercado Pago exigem HMAC oficial e nunca determinam status financeiro pelo corpo recebido. O backend consulta a Order, valida identidade, valor e moeda e aplica transicoes conservadoras sob lock curto. Entregas possuem deduplicacao tecnica; refund parcial, chargeback e divergencias ficam como conflito explicito.
+
+## ADR-040 - Checkout guest por referencia opaca
+
+Decisao: o checkout nao exige conta e usa a UUID publica da cobranca como credencial compartilhavel. O backend determina valores e estados; PAN/CVV permanecem no Mercado Pago, parcela comercial nao se confunde com parcelas do cartao e webhook/reconciliacao continuam autoritativos. O checkout nao entrega arquivos nem altera producao.

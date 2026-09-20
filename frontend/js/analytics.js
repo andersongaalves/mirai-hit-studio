@@ -7,6 +7,9 @@ const EVENT_PROPERTIES = {
     generate_lead: ["service_id"],
     listen_portfolio: ["project_id"],
     newsletter_subscribe: [],
+    begin_checkout: [],
+    payment_method_selected: ["payment_method"],
+    payment_attempt: ["payment_method", "payment_option", "outcome"],
 };
 
 let memoryConsent = "unknown";
@@ -64,6 +67,9 @@ function sanitizeProperties(eventName, properties = {}) {
             output[property] = Number(value);
         }
         if (property === "page_path") output[property] = location.pathname.slice(0, 500) || "/";
+        if (property === "payment_method" && ["pix", "card"].includes(value)) output[property] = value;
+        if (property === "payment_option" && ["integral", "entrada", "saldo"].includes(value)) output[property] = value;
+        if (property === "outcome" && ["approved", "pending", "rejected", "action_required"].includes(value)) output[property] = value;
     }
     return output;
 }

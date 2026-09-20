@@ -59,6 +59,19 @@ async function staticResponse(route) {
         await page.evaluate(async () => (await import('/js/analytics.js')).track('view_service', { service_id: 7, email: 'blocked@example.com', whatsapp: '000', briefing: 'private' }));
         const serviceEvent = await page.evaluate(() => window.dataLayer.find(item => item[0] === 'event' && item[1] === 'view_service'));
         assert.deepEqual(serviceEvent[2], { service_id: 7 });
+        const checkoutAnalytics = await page.evaluate(async () => {
+            const analytics = await import('/js/analytics.js');
+            analytics.track('payment_attempt', {
+                payment_method: 'card', payment_option: 'entrada', outcome: 'pending',
+                email: 'blocked@example.com', card_token: 'blocked-token', provider_id: 'blocked-id',
+            });
+            return {
+                event: window.dataLayer.find(item => item[0] === 'event' && item[1] === 'payment_attempt'),
+                purchaseAccepted: analytics.track('purchase', { value: 100 }),
+            };
+        });
+        assert.deepEqual(checkoutAnalytics.event[2], { payment_method: 'card', payment_option: 'entrada', outcome: 'pending' });
+        assert.equal(checkoutAnalytics.purchaseAccepted, false);
 
         await page.waitForSelector('#srv_7', { state: 'attached', timeout: 5000 });
         await page.evaluate(async () => {

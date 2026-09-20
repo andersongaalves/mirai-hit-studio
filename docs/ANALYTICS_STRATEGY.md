@@ -24,7 +24,7 @@
 | `generate_lead` | Frontend apos backend | Criacao confirmada do orcamento |
 | `qualify_lead` | Futuro comercial | CRM/backend |
 | `proposal_created`, `proposal_sent`, `proposal_accepted` | Futuro comercial | Backend de propostas |
-| `begin_checkout` | Futuro | Checkout |
+| `begin_checkout` | Publico/frontend | Checkout carregado com sucesso |
 | `purchase` | Backend/comercial | Webhook/verificacao Mercado Pago |
 | `production_started`, `production_completed` | Futuro comercial | Backend de producao |
 
@@ -44,6 +44,9 @@ O GA4 ja existia no site. Seu Measurement ID existente foi preservado em meta ta
 | `generate_lead` | `POST /orcamentos` confirmado | `service_id` | Nome, e-mail, WhatsApp, detalhes, erro da API |
 | `listen_portfolio` | Link real de ouvir faixa | `project_id` | URL de audio, artista, dados de contato |
 | `newsletter_subscribe` | Inscricao confirmada pelo backend | Nenhum | E-mail, nome, token, origem ou erro |
+| `begin_checkout` | Checkout valido carregado | Nenhum | Referencia, proposta, cliente, valor |
+| `payment_method_selected` | Selecao de Pix/cartao | `payment_method` | Dados do pagador ou cartao |
+| `payment_attempt` | Resposta normalizada da tentativa | `payment_method`, `payment_option`, `outcome` | Token, documento, provider ID, codigo Pix |
 
 Eventos usam `snake_case`. Eventos genericos como `button_click` e `click_cta` nao devem ser introduzidos quando houver um evento semantico.
 
@@ -89,7 +92,7 @@ Se a preferencia for revogada depois do aceite, novos eventos sao bloqueados e a
 
 ## 7. Eventos planejados
 
-`view_vertical` aguarda navegacao real por vertical. `qualify_lead` aguarda CRM. Eventos de proposta, checkout, compra e producao devem ser emitidos pelo backend ou webhook correspondente, nunca simulados no navegador.
+`view_vertical` aguarda navegacao real por vertical. `qualify_lead` aguarda CRM. Eventos de proposta, compra e producao devem ser emitidos pelo backend ou webhook correspondente, nunca simulados no navegador. `purchase` permanece exclusivamente backend-authoritative; `payment_attempt` nao equivale a compra.
 
 ## 8. Decisao de persistencia
 

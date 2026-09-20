@@ -34,6 +34,7 @@ class ReconciliationResult:
     current_status: str
     changed: bool
     outcome: str
+    provider_result: ProviderPaymentResult
 
 
 class ReconciliationRequired(Exception):
@@ -379,6 +380,7 @@ def _apply_reconciliation(
         current_status=next_status,
         changed=changed,
         outcome=outcome,
+        provider_result=result,
     )
 
 
