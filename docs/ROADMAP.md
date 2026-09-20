@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F.6 concluida.
+Fase atual: F3.1 concluida.
 
 Ultimo checkpoint enviado: CP-F2.
 
-Checkpoint atual: CP-F2 concluido.
+Checkpoint atual: CP-PAG em andamento.
 
 Proximo checkpoint: CP-PAG apos F3.5.
 
 Proximo push: apos F3.5.
 
-Ultimo commit local: `feat: adiciona auditoria e estrategia de backup`.
+Ultimo commit local: `feat: adiciona modelo financeiro`.
 
 ## Concluido
 
@@ -53,7 +53,7 @@ J0 - Fundacao UX do Admin
 
 F3 - Pagamentos/Financeiro
 
-- F3.1 Modelo financeiro.
+- F3.1 Modelo financeiro. Concluida.
 - F3.2 Mercado Pago backend.
 - F3.3 Webhooks, idempotencia e reconciliacao.
 - F3.4 Checkout.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F.6 concluida
+F3.1 concluida
 
 ## Proxima subfase
 
-F3.1 - Modelo financeiro
+F3.2 - Mercado Pago backend

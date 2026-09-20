@@ -23,6 +23,7 @@ from models.projeto import ProjetoModel
 from models.servico import ServicoModel
 from models.proposta import PropostaModel
 from models.audit_log import AuditLogModel
+from models.financeiro import CobrancaModel, PagamentoModel
 
 
 config = context.config

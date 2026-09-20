@@ -15,6 +15,7 @@ from services.documento_storage import LocalDocumentoStorage
 from services.email_service import EmailService
 from services.pdf_service import moeda
 from services import audit_service
+from services import financial_service
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +129,18 @@ def aprovar(db, proposta_id, actor=None, request_id=None):
             raise service.PropostaConflito("Status do orcamento incompativel com a aprovacao.")
         if crud_producao.buscar_por_orcamento(db, model.orcamento_id):
             raise service.PropostaConflito("Ja existe producao para este orcamento; requer conciliacao.")
-        crud_producao.criar_sem_commit(db, _dados_producao(service._resposta(model)))
+        resposta_atual = service._resposta(model)
+        crud_producao.criar_sem_commit(db, _dados_producao(resposta_atual))
+        try:
+            financial_service.criar_para_proposta(
+                db,
+                model,
+                cliente_id=budget.cliente_id,
+            )
+        except financial_service.FinanceiroInvalido as error:
+            raise service.PropostaInvalida(str(error)) from None
+        except financial_service.FinanceiroConflito as error:
+            raise service.PropostaConflito(str(error)) from None
         model.status = Status.ACEITA.value
         model.aprovada_em = datetime.now(timezone.utc)
         budget.status = OrcamentoStatus.APROVADO.value

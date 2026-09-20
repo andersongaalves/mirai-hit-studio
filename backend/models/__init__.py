@@ -8,3 +8,4 @@ from .newsletter import NewsletterCampaignModel, NewsletterDeliveryModel, Newsle
 from .producao import ProducaoModel
 from .proposta import PropostaModel
 from .audit_log import AuditLogModel
+from .financeiro import CobrancaModel, PagamentoModel

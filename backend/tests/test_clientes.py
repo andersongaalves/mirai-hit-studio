@@ -219,7 +219,7 @@ from alembic.script import ScriptDirectory
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'b7d3e9a1c5f2'
+assert head == 'c4f8a2d19e73'
 command.downgrade(config, 'e7a42c6b913f')
 inspector = inspect(engine)
 assert 'clientes' not in inspector.get_table_names()

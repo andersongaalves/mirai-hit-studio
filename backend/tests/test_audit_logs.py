@@ -104,7 +104,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 
 config = migration_config()
-assert bootstrap(engine) == 'b7d3e9a1c5f2'
+assert bootstrap(engine) == 'c4f8a2d19e73'
 command.downgrade(config, 'f5b82e1a7c4d')
 assert 'audit_logs' not in inspect(engine).get_table_names()
 command.upgrade(config, 'head')

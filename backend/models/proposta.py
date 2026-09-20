@@ -125,3 +125,10 @@ class PropostaModel(Base):
         "UsuarioModel",
         foreign_keys=[produtor_id],
     )
+
+    cobranca = relationship(
+        "CobrancaModel",
+        back_populates="proposta",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

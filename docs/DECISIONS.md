@@ -147,3 +147,7 @@ Decisao: acoes administrativas criticas geram registros imutaveis com ator, acao
 ## ADR-036 - Backup e restore fora da aplicacao
 
 Decisao: backup/restore PostgreSQL usa ferramentas oficiais por scripts operacionais, nunca endpoints web. Restore e destrutivo, exige confirmacao explicita e protecao adicional para producao; dumps nao substituem backup de object storage.
+
+## ADR-037 - Cobranca e pagamento sao dominios distintos
+
+Decisao: uma proposta aprovada cria uma cobranca idempotente com valor em `Decimal`/`Numeric(12, 2)`. Pagamentos sao movimentos separados; somente os aprovados determinam o status financeiro. Provider e checkout permanecem externos ao nucleo do dominio.

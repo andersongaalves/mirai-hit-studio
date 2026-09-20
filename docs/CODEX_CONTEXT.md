@@ -126,7 +126,7 @@ Mercado Pago sera o gateway inicial.
 
 Fluxo: proposta/contratacao -> cobranca -> Mercado Pago -> webhook -> backend -> atualizacao financeira -> producao.
 
-O futuro modelo deve suportar pagamento integral, parcial 1, parcial 2, Pix e cartao. O backend e o webhook/provedor serao a fonte de verdade.
+O modelo financeiro separa `Cobranca` de `Pagamento`, usa `Decimal`/`Numeric(12, 2)` e cria uma cobranca por proposta aprovada na mesma transacao da producao. Integral, entrada e saldo sao movimentos; somente pagamentos aprovados compoem o valor pago. O backend e o webhook/provedor serao a fonte de verdade.
 
 ## Politica de desenvolvimento
 
