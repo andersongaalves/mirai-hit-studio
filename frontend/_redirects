@@ -1,1 +1,6 @@
 /checkout/* /checkout.html 200
+/artists /artists.html 200
+/creators /creators.html 200
+/media-games /media-games.html 200
+/portfolio /portfolio.html 200
+/orcamento /calculadora.html 200

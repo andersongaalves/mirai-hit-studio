@@ -2,6 +2,7 @@ const CONSENT_KEY = "mirai.analytics_consent.v1";
 const CONSENT_VALUES = new Set(["unknown", "accepted", "rejected"]);
 const EVENT_PROPERTIES = {
     page_view: ["page_path"],
+    view_vertical: ["vertical"],
     view_service: ["service_id"],
     begin_briefing: ["service_id"],
     generate_lead: ["service_id"],
@@ -67,6 +68,7 @@ function sanitizeProperties(eventName, properties = {}) {
             output[property] = Number(value);
         }
         if (property === "page_path") output[property] = location.pathname.slice(0, 500) || "/";
+        if (property === "vertical" && ["artists", "creators", "media_games"].includes(value)) output[property] = value;
         if (property === "payment_method" && ["pix", "card"].includes(value)) output[property] = value;
         if (property === "payment_option" && ["integral", "entrada", "saldo"].includes(value)) output[property] = value;
         if (property === "outcome" && ["approved", "pending", "rejected", "action_required"].includes(value)) output[property] = value;
@@ -145,6 +147,8 @@ export function setAnalyticsConsent(value) {
             pageViewSent = true;
             track("page_view", { page_path: location.pathname });
         }
+        const vertical = document.body?.dataset.analyticsVertical;
+        if (vertical) trackOnce("view_vertical", { vertical });
     }
     if (value === "rejected" && providerLoaded) {
         window.gtag?.("consent", "update", { analytics_storage: "denied" });

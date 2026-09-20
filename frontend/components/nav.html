@@ -1,9 +1,9 @@
-<nav>
-    <a href="index.html" class="logo">
+<nav class="site-nav" aria-label="Navegação principal">
+    <a href="/" class="logo" aria-label="Mirai Hit Studio - Início">
         <div class="logo-nav-container">
-            <h1 class="main-brand">
+            <span class="main-brand">
                 <span class="mirai">MIRAI </span><span class="hit">HIT</span>
-            </h1>
+            </span>
             <div class="brand-subline">
                 <span class="line-deco"></span>
                 <span class="studio">STUDIO</span>
@@ -11,14 +11,21 @@
             </div>
         </div>
     </a>
-    <div class="nav-menu-wrapper">
-        <div class="dropdown">
-            <button class="dropbtn">Menu ▾</button>
-            <div class="dropdown-content">
-                <h4><a href="index.html">Início</a></h4>
-                <h4><a href="portfolio.html">Portfólio</a></h4>
-                <h4><a href="calculadora.html">Iniciar Projeto</a></h4>
-            </div>
-        </div>
+    <button
+        id="site-nav-toggle"
+        class="site-nav__toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="site-nav-links"
+    >
+        Menu
+    </button>
+    <div id="site-nav-links" class="site-nav__links">
+        <a href="/" data-public-path="/">Início</a>
+        <a href="/artists" data-public-path="/artists">Artistas</a>
+        <a href="/creators" data-public-path="/creators">Criadores</a>
+        <a href="/media-games" data-public-path="/media-games">Media &amp; Games</a>
+        <a href="/portfolio" data-public-path="/portfolio">Portfólio</a>
+        <a href="/orcamento" class="btn-cta site-nav__cta" data-public-path="/orcamento">Solicitar orçamento</a>
     </div>
 </nav>

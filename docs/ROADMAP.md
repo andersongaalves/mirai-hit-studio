@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: G.0 concluida.
+Fase atual: G.1 concluida.
 
 Ultimo checkpoint enviado: CP-PAG.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-G1 apos G.2.
 
 Proximo push: apos G.2.
 
-Ultimo commit local: `docs: organiza inventario de conteudo publico`.
+Ultimo commit local: `refactor: reorganiza arquitetura publica da Mirai`.
 
 ## Concluido
 
@@ -63,7 +63,7 @@ F3 - Pagamentos/Financeiro
 G - Site publico
 
 - G.0 Provas sociais. Concluida.
-- G.1 Arquitetura publica.
+- G.1 Arquitetura publica. Concluida.
 - G.2 Home e Artists.
 - CP-G1.
 - G.3 Creators.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G.0 concluida
+G.1 concluida
 
 ## Proxima subfase
 
-G.1 - Arquitetura publica
+G.2 - Home e Artists

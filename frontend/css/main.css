@@ -7,6 +7,7 @@
 /*ficheiros específicos de cada página */
 @import url("pages/calculator.css");
 @import url("pages/portfolio.css");
+@import url("pages/public.css");
 @import url("notifications.css");
 @import url("consent.css");
 @import url("pages/admin.css");
