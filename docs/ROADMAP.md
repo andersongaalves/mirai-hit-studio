@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: G.2 concluida.
+Fase atual: G.3 concluida.
 
-Ultimo checkpoint enviado: CP-PAG.
+Ultimo checkpoint enviado: CP-G1.
 
-Checkpoint atual: CP-G1 pronto para validacao.
+Checkpoint atual: CP-G2 em andamento.
 
-Proximo checkpoint: CP-G1 apos G.2.
+Proximo checkpoint: CP-G2 apos G.7.
 
-Proximo push: apos G.2.
+Proximo push: apos G.7.
 
-Ultimo commit local: `feat: adiciona home e vertical para artistas`.
+Ultimo commit local: `feat: adiciona vertical para criadores`.
 
 ## Concluido
 
@@ -65,8 +65,8 @@ G - Site publico
 - G.0 Provas sociais. Concluida.
 - G.1 Arquitetura publica. Concluida.
 - G.2 Home e Artists. Concluida.
-- CP-G1.
-- G.3 Creators.
+- CP-G1 enviado.
+- G.3 Creators. Concluida.
 - G.4 Media & Games.
 - G.5 Portfolio/cases.
 - G.6 Orcamento/contratacao.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G.2 concluida
+G.3 concluida
 
 ## Proxima subfase
 
-CP-G1 - regressao e envio
+G.4 - Media & Games

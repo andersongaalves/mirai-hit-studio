@@ -78,6 +78,7 @@
 
 .home-hero { background-image: url("../../img/mirai-studio-hero.webp"); }
 .artists-hero { background-image: url("../../img/mirai-artists-hero.webp"); }
+.creators-hero { background-image: url("../../img/mirai-creators-hero.webp"); }
 
 .public-hero__shade {
     position: absolute;
@@ -303,6 +304,16 @@
     align-items: start;
 }
 
+.creators-value {
+    display: grid;
+    grid-template-columns: 0.55fr 1.25fr 0.8fr;
+    gap: var(--space-8);
+    align-items: start;
+}
+
+.creators-value h2 { font-size: 2rem; }
+.creators-value > p:last-child { color: var(--color-text-secondary); }
+
 .artists-intro > p:last-child { max-width: 720px; font-size: 1.25rem; }
 
 .service-capabilities {
@@ -321,6 +332,29 @@
 }
 
 .service-capabilities article:nth-child(4) { grid-column: 2 / span 2; }
+.creator-capabilities article,
+.creator-capabilities article:nth-child(4),
+.creator-capabilities article:last-child { grid-column: span 2; }
+
+.application-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-8);
+}
+
+.application-grid article {
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-accent);
+}
+
+.application-grid h3 {
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    font-size: 1.35rem;
+}
+
+.application-grid p { color: var(--color-text-secondary); }
 
 .artist-process li {
     display: grid;
@@ -344,6 +378,9 @@
     .service-capabilities article,
     .service-capabilities article:nth-child(4) { grid-column: auto; }
     .service-capabilities article:last-child { grid-column: 1 / -1; }
+    .creator-capabilities article,
+    .creator-capabilities article:nth-child(4),
+    .creator-capabilities article:last-child { grid-column: auto; }
 }
 
 @media (max-width: 700px) {
@@ -361,7 +398,9 @@
     .value-strip,
     .vertical-grid,
     .process-list,
-    .artists-intro { grid-template-columns: 1fr; }
+    .artists-intro,
+    .creators-value,
+    .application-grid { grid-template-columns: 1fr; }
     .vertical-card { min-height: 260px; }
     .public-section__heading,
     .proof-callout__inner { align-items: flex-start; flex-direction: column; }
