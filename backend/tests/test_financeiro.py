@@ -158,7 +158,7 @@ from alembic.script import ScriptDirectory
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'c4f8a2d19e73'
+assert head == 'd9e4b7a1c2f6'
 command.downgrade(config, 'b7d3e9a1c5f2')
 assert 'cobrancas' not in inspect(engine).get_table_names()
 assert 'pagamentos' not in inspect(engine).get_table_names()

@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str
     PUBLIC_API_URL: str = "http://localhost:8000"
 
+    MERCADO_PAGO_ACCESS_TOKEN: str | None = None
+    MERCADO_PAGO_PUBLIC_KEY: str | None = None
+    MERCADO_PAGO_TIMEOUT_SECONDS: float = 10.0
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

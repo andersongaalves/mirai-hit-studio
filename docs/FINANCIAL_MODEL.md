@@ -15,7 +15,7 @@ Proposta aceita, link de checkout e pagamento confirmado nao sao equivalentes.
 
 `Cobranca` possui uma relacao 1:1 com a proposta, cliente opcional, valor contratado, moeda BRL, status, vencimento opcional e referencia UUID opaca. O orcamento e derivado pela proposta; nao ha FK redundante.
 
-`Pagamento` pertence a uma cobranca e registra tipo (`integral`, `entrada`, `saldo`), valor, status, metodo, provider e identificadores externos. `provider_payment_id` e unico quando informado e prepara a idempotencia do gateway.
+`Pagamento` pertence a uma cobranca e registra tipo (`integral`, `entrada`, `saldo`), valor, status, metodo, provider e identificadores externos. `provider_payment_id` identifica a order externa e `provider_idempotency_key` preserva a identidade unica e reutilizavel da tentativa.
 
 ## Dinheiro e status
 
@@ -46,7 +46,7 @@ Propostas aprovadas antes da F3.1 permanecem validas e podem nao possuir cobranc
 
 ## Regras adiadas
 
-- Mercado Pago, Pix, cartao e checkout: F3.2/F3.4.
+- Checkout e tokenizacao frontend: F3.4. A integracao backend Mercado Pago foi definida em F3.2.
 - Webhooks, mudancas de status, refund e chargeback completos: F3.3.
 - Gates de inicio/entrega da producao: fase posterior, apos validacao operacional.
 - CRUD e interface administrativa financeira: F3.5.

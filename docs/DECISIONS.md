@@ -151,3 +151,7 @@ Decisao: backup/restore PostgreSQL usa ferramentas oficiais por scripts operacio
 ## ADR-037 - Cobranca e pagamento sao dominios distintos
 
 Decisao: uma proposta aprovada cria uma cobranca idempotente com valor em `Decimal`/`Numeric(12, 2)`. Pagamentos sao movimentos separados; somente os aprovados determinam o status financeiro. Provider e checkout permanecem externos ao nucleo do dominio.
+
+## ADR-038 - Mercado Pago via Orders API
+
+Decisao: Mercado Pago e o primeiro provider e usa a Orders API por HTTP direto. O backend controla valores e Access Token; cartoes chegam somente como token temporario. Cada tentativa persiste uma chave de idempotencia estavel antes da chamada, timeout permanece pendente e respostas externas sao normalizadas antes de atingir o dominio.

@@ -51,6 +51,36 @@ def valor_pago(cobranca: CobrancaModel) -> Decimal:
     )
 
 
+def saldo_pendente(cobranca: CobrancaModel) -> Decimal:
+    saldo = normalizar_valor(cobranca.valor_total) - valor_pago(cobranca)
+    if saldo < 0:
+        raise FinanceiroConflito("Pagamento acima do valor contratado requer conciliacao.")
+    return saldo
+
+
+def valor_para_pagamento(cobranca: CobrancaModel, tipo: PagamentoTipo | str) -> Decimal:
+    try:
+        tipo_value = PagamentoTipo(tipo)
+    except ValueError:
+        raise FinanceiroInvalido("Tipo de pagamento invalido.") from None
+    total = normalizar_valor(cobranca.valor_total)
+    pago = valor_pago(cobranca)
+    saldo = total - pago
+    if saldo <= 0:
+        raise FinanceiroConflito("Cobranca sem saldo pendente.")
+    if tipo_value == PagamentoTipo.INTEGRAL:
+        if pago:
+            raise FinanceiroConflito("Pagamento integral indisponivel apos pagamento parcial.")
+        return total
+    if tipo_value == PagamentoTipo.ENTRADA:
+        if pago:
+            raise FinanceiroConflito("Entrada indisponivel apos pagamento aprovado.")
+        return dividir_50_50(total)[0]
+    if pago == 0:
+        raise FinanceiroConflito("Saldo disponivel somente apos pagamento parcial.")
+    return saldo
+
+
 def status_calculado(cobranca: CobrancaModel) -> CobrancaStatus:
     if cobranca.status == CobrancaStatus.CANCELADA.value:
         return CobrancaStatus.CANCELADA

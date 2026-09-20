@@ -79,6 +79,10 @@ class PagamentoModel(Base):
             name="ck_pagamentos_status_valido",
         ),
         UniqueConstraint("provider_payment_id", name="uq_pagamentos_provider_payment_id"),
+        UniqueConstraint(
+            "provider_idempotency_key",
+            name="uq_pagamentos_provider_idempotency_key",
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -100,6 +104,7 @@ class PagamentoModel(Base):
     provider = Column(String(50), nullable=True)
     provider_payment_id = Column(String(200), nullable=True)
     provider_reference = Column(String(200), nullable=True)
+    provider_idempotency_key = Column(String(128), nullable=True)
     aprovado_em = Column(DateTime(timezone=True), nullable=True)
     reembolsado_em = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
