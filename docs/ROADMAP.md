@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F3.5 concluida.
+Fase atual: G.0 concluida.
 
-Ultimo checkpoint enviado: CP-F2.
+Ultimo checkpoint enviado: CP-PAG.
 
-Checkpoint atual: CP-PAG pronto para validacao.
+Checkpoint atual: CP-G1 em andamento.
 
-Proximo checkpoint: CP-PAG apos F3.5.
+Proximo checkpoint: CP-G1 apos G.2.
 
-Proximo push: apos F3.5.
+Proximo push: apos G.2.
 
-Ultimo commit local: `feat: adiciona financeiro administrativo`.
+Ultimo commit local: `docs: organiza inventario de conteudo publico`.
 
 ## Concluido
 
@@ -58,11 +58,11 @@ F3 - Pagamentos/Financeiro
 - F3.3 Webhooks, idempotencia e reconciliacao. Concluida.
 - F3.4 Checkout. Concluida.
 - F3.5 Financeiro admin. Concluida.
-- CP-PAG.
+- CP-PAG enviado.
 
 G - Site publico
 
-- G.0 Provas sociais.
+- G.0 Provas sociais. Concluida.
 - G.1 Arquitetura publica.
 - G.2 Home e Artists.
 - CP-G1.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F3.5 concluida
+G.0 concluida
 
 ## Proxima subfase
 
-G.0 - Inventario de conteudo e prova social
+G.1 - Arquitetura publica
