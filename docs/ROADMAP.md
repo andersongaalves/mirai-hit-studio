@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: G.3 concluida.
+Fase atual: G.4 concluida.
 
 Ultimo checkpoint enviado: CP-G1.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-G2 apos G.7.
 
 Proximo push: apos G.7.
 
-Ultimo commit local: `feat: adiciona vertical para criadores`.
+Ultimo commit local: `feat: adiciona vertical para media e games`.
 
 ## Concluido
 
@@ -67,7 +67,7 @@ G - Site publico
 - G.2 Home e Artists. Concluida.
 - CP-G1 enviado.
 - G.3 Creators. Concluida.
-- G.4 Media & Games.
+- G.4 Media & Games. Concluida.
 - G.5 Portfolio/cases.
 - G.6 Orcamento/contratacao.
 - G.7 Acessibilidade/responsividade.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G.3 concluida
+G.4 concluida
 
 ## Proxima subfase
 
-G.4 - Media & Games
+G.5 - Portfolio e cases

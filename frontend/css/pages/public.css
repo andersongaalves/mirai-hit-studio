@@ -79,6 +79,7 @@
 .home-hero { background-image: url("../../img/mirai-studio-hero.webp"); }
 .artists-hero { background-image: url("../../img/mirai-artists-hero.webp"); }
 .creators-hero { background-image: url("../../img/mirai-creators-hero.webp"); }
+.media-games-hero { background-image: url("../../img/mirai-studio-hero.webp"); background-position: 42% center; }
 
 .public-hero__shade {
     position: absolute;
@@ -296,6 +297,8 @@
 .public-cta { text-align: center; }
 .public-cta h2 { margin-inline: auto; text-align: center; }
 .public-cta .btn-cta { margin-top: var(--space-6); }
+.public-actions--center { justify-content: center; }
+.public-cta .public-actions--center .btn-cta { margin-top: 0; }
 
 .artists-intro {
     display: grid;
@@ -335,6 +338,11 @@
 .creator-capabilities article,
 .creator-capabilities article:nth-child(4),
 .creator-capabilities article:last-child { grid-column: span 2; }
+
+.media-capabilities { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.media-capabilities article,
+.media-capabilities article:nth-child(4),
+.media-capabilities article:last-child { grid-column: auto; }
 
 .application-grid {
     display: grid;
@@ -381,6 +389,7 @@
     .creator-capabilities article,
     .creator-capabilities article:nth-child(4),
     .creator-capabilities article:last-child { grid-column: auto; }
+    .media-capabilities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 700px) {
@@ -405,6 +414,7 @@
     .public-section__heading,
     .proof-callout__inner { align-items: flex-start; flex-direction: column; }
     .service-capabilities { grid-template-columns: 1fr; }
+    .media-capabilities { grid-template-columns: 1fr; }
     .service-capabilities article:last-child { grid-column: auto; }
     .carousel-btn { display: none; }
     .public-page .scrolling-wrapper { padding-inline: 16px; }
