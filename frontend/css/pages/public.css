@@ -192,6 +192,9 @@
 }
 
 .vertical-card a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     align-self: flex-start;
     margin-top: auto;
     padding-top: var(--space-5);
@@ -251,6 +254,9 @@
 }
 
 .text-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     color: var(--color-accent);
     font-family: var(--font-titulos);
     font-size: var(--font-size-small);

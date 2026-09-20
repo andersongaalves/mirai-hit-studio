@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: G.6 concluida.
+Fase atual: G.7 concluida.
 
 Ultimo checkpoint enviado: CP-G1.
 
-Checkpoint atual: CP-G2 em andamento.
+Checkpoint atual: CP-G2 pronto para validacao.
 
 Proximo checkpoint: CP-G2 apos G.7.
 
 Proximo push: apos G.7.
 
-Ultimo commit local: `feat: consolida fluxo publico de contratacao`.
+Ultimo commit local: `fix: consolida acessibilidade e responsividade publica`.
 
 ## Concluido
 
@@ -70,7 +70,7 @@ G - Site publico
 - G.4 Media & Games. Concluida.
 - G.5 Portfolio/cases. Concluida.
 - G.6 Orcamento/contratacao. Concluida.
-- G.7 Acessibilidade/responsividade.
+- G.7 Acessibilidade/responsividade. Concluida.
 - CP-G2.
 
 F2 - IA
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G.6 concluida
+G.7 concluida
 
 ## Proxima subfase
 
-G.7 - Acessibilidade e responsividade publica
+F2.1 - Auditoria/adaptacao do agente da Dark District

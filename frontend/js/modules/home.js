@@ -13,7 +13,9 @@ export async function initHome() {
             const direction = Number(button.dataset.carouselDirection) || 0;
             $("home-portfolio-track")?.scrollBy({
                 left: direction * 320,
-                behavior: "smooth",
+                behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                    ? "auto"
+                    : "smooth",
             });
         });
     });

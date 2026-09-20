@@ -174,7 +174,7 @@
     color: var(--color-text-primary);
 }
 
-.checkout-ticket { color: var(--color-accent); text-decoration: underline; }
+.checkout-ticket { min-height: 44px; display: inline-flex; align-items: center; color: var(--color-accent); text-decoration: underline; }
 .checkout-challenge { margin-top: var(--space-4); }
 .checkout-challenge iframe {
     width: 100%;

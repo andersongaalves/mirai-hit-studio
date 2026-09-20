@@ -172,11 +172,13 @@ export function obterCapaInteligente(linkAudio, linkCapa) {
 export async function renderizarPortfolio() {
     const track = $("home-portfolio-track");
     if (!track) return; // Se não estiver na home, não faz nada
+    const controls = document.querySelectorAll("[data-carousel-direction]");
 
     const lista = await getProjetos();
     const listaHits = Array.isArray(lista) ? lista.filter((p) => p?.destaque === true) : [];
 
     if (listaHits.length === 0) {
+        controls.forEach(button => { button.hidden = true; });
         track.replaceChildren();
         const empty = document.createElement("p");
         empty.className = "public-empty";
@@ -184,6 +186,7 @@ export async function renderizarPortfolio() {
         track.appendChild(empty);
         return;
     }
+    controls.forEach(button => { button.hidden = false; });
 
     let htmlLote = `<div class="carousel-lote" style="display: flex; gap: 20px; flex-shrink: 0;">`;
 
@@ -191,7 +194,7 @@ export async function renderizarPortfolio() {
         const capa = obterCapaInteligente(p.link_audio, p.link_capa);
         htmlLote += `
             <a href="${escapeHtml(safeURL(p.link_audio))}" target="_blank" rel="noopener noreferrer" class="scrolling-card glass-card" data-analytics-listen data-project-id="${escapeHtml(p.id)}">
-                <img src="${escapeHtml(capa)}" alt="${escapeHtml(p.titulo)}" style="background-color: #0b0f19;">
+                <img src="${escapeHtml(capa)}" alt="Capa de ${escapeHtml(p.titulo)}" width="300" height="180" loading="lazy" decoding="async" style="background-color: #0b0f19;">
                 <div class="scrolling-info">
                     <span class="tag" style="background: var(--cor-roxo); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">${escapeHtml(p.categoria)}</span>
                     <h3 style="color: var(--cor-ciano); margin: 10px 0 5px 0;">${escapeHtml(p.titulo)}</h3>

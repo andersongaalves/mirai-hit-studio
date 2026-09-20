@@ -54,6 +54,8 @@ function createProjectCard(project) {
     const cover = element("img", "portfolio-card__cover");
     cover.src = obterCapaInteligente(project.link_audio, project.link_capa);
     cover.alt = project.titulo ? `Capa de ${project.titulo}` : "Capa do projeto";
+    cover.width = 640;
+    cover.height = 400;
     cover.loading = "lazy";
     cover.decoding = "async";
 
@@ -115,6 +117,8 @@ export function renderizarProjetos(projects) {
 
 function createFilterGroup(label, kind, options, selected, onChange) {
     const group = element("div", "portfolio-filter-group");
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", label);
     group.append(element("span", "portfolio-filter-label", label));
     const all = [{ value: "", label: "Todos" }, ...options];
     all.forEach(option => {

@@ -54,7 +54,7 @@
 }
 
 .filter-btn {
-    min-height: 40px;
+    min-height: 44px;
     padding: var(--space-2) var(--space-3);
     border: var(--border-subtle);
     border-radius: var(--radius-sm);

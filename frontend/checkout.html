@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/css/pages/checkout.css">
 </head>
 <body class="checkout-page">
-    <main class="checkout-shell">
+    <main id="main-content" class="checkout-shell">
         <header class="checkout-brand">
             <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="280" height="78">
             <p>Pagamento da sua proposta</p>
@@ -47,7 +47,7 @@
                     <fieldset id="payment-options" class="checkout-options">
                         <legend>Pagamento comercial</legend>
                     </fieldset>
-                    <div class="checkout-methods" aria-label="Forma de pagamento">
+                    <div class="checkout-methods" role="group" aria-label="Forma de pagamento">
                         <button id="method-pix" class="checkout-method is-active" type="button" aria-pressed="true">Pix</button>
                         <button id="method-card" class="checkout-method" type="button" aria-pressed="false">Cartão</button>
                     </div>
