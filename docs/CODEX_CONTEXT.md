@@ -128,6 +128,8 @@ Fluxo: proposta/contratacao -> cobranca -> Mercado Pago -> webhook -> backend ->
 
 O modelo financeiro separa `Cobranca` de `Pagamento`, usa `Decimal`/`Numeric(12, 2)` e cria uma cobranca por proposta aprovada na mesma transacao da producao. Integral, entrada e saldo sao movimentos; somente pagamentos aprovados compoem o valor pago. O backend e o webhook/provedor serao a fonte de verdade.
 
+O Financeiro administrativo e restrito a Admin, exibe dados derivados reais e permite apenas reconciliacao autoritativa com o provider. Nao existe acao manual de marcar como pago nem refund ativo.
+
 ## Politica de desenvolvimento
 
 - Trabalhar em tarefas pequenas e fechadas.

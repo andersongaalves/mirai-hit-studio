@@ -76,7 +76,11 @@ export function openAdminModal(modalOrId, options = {}) {
     initialize();
 
     const existing = modalStates.get(modal);
-    const opener = existing?.opener
+    const configuredOpener = typeof options.opener === "string"
+        ? document.querySelector(options.opener)
+        : options.opener;
+    const opener = configuredOpener
+        || (existing?.opener?.isConnected ? existing.opener : null)
         || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     modalStates.set(modal, {
         opener,

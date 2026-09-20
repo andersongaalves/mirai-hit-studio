@@ -100,6 +100,7 @@ Status desconhecido nunca aprova pagamento. Reembolso integral e suportado; reem
 
 - sem endpoint publico de checkout;
 - sem acao ativa de refund, suporte contabil a refund parcial/chargeback, boleto, assinatura ou split;
+- o rate limit do checkout e local por processo; protecao distribuida fica para a infraestrutura de release;
 - sem worker/fila propria para reprocessamento;
 - concorrencia foi coberta por constraints, locks e testes descartaveis; validacao de lock real em PostgreSQL continua recomendada antes da operacao financeira em producao;
 - sem persistencia de payload bruto;

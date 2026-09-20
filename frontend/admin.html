@@ -79,6 +79,9 @@
                             <button type="button" class="admin-nav__item" data-admin-target="section-producoes">
                                 Produções
                             </button>
+                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-financeiro">
+                                Financeiro
+                            </button>
                             <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-usuarios">
                                 Usuários
                             </button>
@@ -668,6 +671,61 @@
                         </section>
                     </div>
 
+                    <div id="section-financeiro" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Pagamentos e conciliação</span>
+                                <h1>Financeiro</h1>
+                                <p>Acompanhe cobranças, pagamentos confirmados e divergências operacionais.</p>
+                            </div>
+                        </header>
+                        <div id="financeiro-metrics" class="dashboard-kpi-grid financeiro-kpi-grid" aria-live="polite"></div>
+                        <div class="admin-filter-bar" aria-label="Filtros financeiros">
+                            <label class="admin-filter-field admin-filter-field--search">
+                                <span>Buscar</span>
+                                <input id="financeiro-search" type="search" maxlength="120" placeholder="Cliente, proposta ou cobrança" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Status</span>
+                                <select id="financeiro-status-filter">
+                                    <option value="">Todos</option>
+                                    <option value="pendente">Pendente</option>
+                                    <option value="parcialmente_paga">Parcialmente paga</option>
+                                    <option value="paga">Paga</option>
+                                    <option value="cancelada">Cancelada</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Conciliação</span>
+                                <select id="financeiro-reconciliation-filter">
+                                    <option value="">Todas</option>
+                                    <option value="clear">Sem pendência</option>
+                                    <option value="required">Necessária</option>
+                                    <option value="conflict">Conflito</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Desde</span>
+                                <input id="financeiro-date-from" type="datetime-local" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Até</span>
+                                <input id="financeiro-date-to" type="datetime-local" />
+                            </label>
+                            <div class="admin-filter-bar__actions">
+                                <button id="financeiro-apply-filters" type="button" class="btn-small">Aplicar</button>
+                                <button id="financeiro-clear-filters" type="button" class="btn-small">Limpar</button>
+                            </div>
+                        </div>
+                        <p id="financeiro-summary" class="newsletter-summary" aria-live="polite"></p>
+                        <div id="financeiro-list" class="admin-list-container" aria-live="polite"></div>
+                        <nav id="financeiro-pagination" class="audit-pagination hidden" aria-label="Paginação financeira">
+                            <button id="financeiro-previous-page" type="button" class="btn-small">Anterior</button>
+                            <span id="financeiro-page-label"></span>
+                            <button id="financeiro-next-page" type="button" class="btn-small">Próxima</button>
+                        </nav>
+                    </div>
+
                     <div id="section-auditoria" class="admin-section hidden admin-access-hidden" data-admin-only>
                         <header class="admin-page-header">
                             <div class="admin-page-header__content">
@@ -691,6 +749,9 @@
                                     <option value="production.status_changed">Status da produção</option>
                                     <option value="newsletter.campaign_sent">Campanha enviada</option>
                                     <option value="newsletter.subscriber_admin_unsubscribed">Inscrição cancelada</option>
+                                    <option value="payment.reconciled">Pagamento conciliado</option>
+                                    <option value="payment.reconciliation_required">Conciliação necessária</option>
+                                    <option value="payment.reconciliation_conflict">Conflito de conciliação</option>
                                 </select>
                             </label>
                             <label class="admin-filter-field">
@@ -702,6 +763,7 @@
                                     <option value="production">Produção</option>
                                     <option value="newsletter_campaign">Campanha</option>
                                     <option value="newsletter_subscriber">Inscrito</option>
+                                    <option value="payment">Pagamento</option>
                                 </select>
                             </label>
                             <label class="admin-filter-field">
@@ -1138,6 +1200,33 @@
                         <div class="admin-form-actions cliente-modal-actions">
                             <button id="cliente-save" type="button" class="btn-cta">Salvar cliente</button>
                         </div>
+                    </div>
+                </div>
+
+                <div
+                    id="modal-financeiro"
+                    class="modal hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="financeiro-modal-title"
+                >
+                    <div class="modal-content financeiro-modal-content">
+                        <header class="financeiro-modal-header">
+                            <div>
+                                <span class="admin-page-header__eyebrow">Detalhes financeiros</span>
+                                <h2 id="financeiro-modal-title">Cobrança</h2>
+                            </div>
+                            <button id="financeiro-close-modal" type="button" class="btn-small">Fechar</button>
+                        </header>
+                        <dl id="financeiro-detail-summary" class="financeiro-detail-grid"></dl>
+                        <div class="admin-form-actions financeiro-modal-actions">
+                            <button id="financeiro-copy-link" type="button" class="btn-small">Copiar link do checkout</button>
+                        </div>
+                        <section class="financeiro-payments-section" aria-labelledby="financeiro-payments-title">
+                            <h3 id="financeiro-payments-title">Pagamentos</h3>
+                            <div id="financeiro-payments" class="financeiro-payments"></div>
+                        </section>
                     </div>
                 </div>
 

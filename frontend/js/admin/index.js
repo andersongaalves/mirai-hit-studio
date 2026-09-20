@@ -18,6 +18,8 @@ import { resetDashboardState } from "./dashboard/dashboard_state.js";
 import { resetUsuariosState } from "./usuarios/usuarios_state.js";
 import { resetNewsletterState } from "./newsletter/newsletter_state.js";
 import { resetAuditoriaState } from "./auditoria/auditoria_state.js";
+import { closeFinanceiroModal } from "./financeiro/financeiro.js";
+import { resetFinanceiroState } from "./financeiro/financeiro_state.js";
 import { resetBuilder } from "./builder/builder.js";
 import { initializeAdminShell, resetAdminShell } from "./admin_shell.js";
 import { closeAllAdminModals } from "./admin_modal.js";
@@ -68,6 +70,7 @@ document.addEventListener("admin:logout", () => {
     resetUsuariosState();
     resetNewsletterState();
     resetAuditoriaState();
+    resetFinanceiroState();
     orcamentosState.filtro = { busca: "", status: "todos" };
     producoesState.filtro = { busca: "", status: "todos", prazo: "todos" };
     resetBuilder();
@@ -77,13 +80,14 @@ document.addEventListener("admin:logout", () => {
     Clientes.closeClienteModal();
     Usuarios.closeUsuarioModal();
     Newsletter.closeCampaignModal();
+    closeFinanceiroModal();
     closeAllAdminModals({ restoreFocus: false });
     document.querySelectorAll("#editor-servico").forEach(element => element.classList.add("hidden"));
     document.querySelectorAll(".admin-container input, .admin-container textarea").forEach(input => {
         input.value = "";
         if (input.type === "checkbox") input.checked = false;
     });
-    for (const id of ["dashboard-content", "orcamentos-list", "producoes-list", "clientes-list", "cliente-historico", "usuarios-list", "newsletter-campaigns-list", "newsletter-subscribers-list", "audit-list", "lista-servicos", "portfolio-list", "builder-preview-render", "builder-sections", "builder-benefits", "param_list_render", "prod_etapas"]) {
+    for (const id of ["dashboard-content", "orcamentos-list", "producoes-list", "clientes-list", "cliente-historico", "usuarios-list", "newsletter-campaigns-list", "newsletter-subscribers-list", "financeiro-metrics", "financeiro-list", "financeiro-detail-summary", "financeiro-payments", "audit-list", "lista-servicos", "portfolio-list", "builder-preview-render", "builder-sections", "builder-benefits", "param_list_render", "prod_etapas"]) {
         document.getElementById(id)?.replaceChildren();
     }
     document.querySelectorAll("#modal-orcamento span, #modal-producao span, #modal-orcamento h2, #modal-producao h2").forEach(el => { el.textContent = ""; });

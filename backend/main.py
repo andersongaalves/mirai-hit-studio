@@ -24,6 +24,7 @@ from routers.dashboard import router as dashboard_router
 from routers.audit_logs import router as audit_logs_router
 from routers.webhooks import router as webhooks_router
 from routers.checkout import router as checkout_router
+from routers.financeiro import router as financeiro_router
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,7 @@ app.include_router(dashboard_router)
 app.include_router(audit_logs_router)
 app.include_router(webhooks_router)
 app.include_router(checkout_router)
+app.include_router(financeiro_router)
 
 
 @app.get("/")

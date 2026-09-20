@@ -46,8 +46,7 @@ Propostas aprovadas antes da F3.1 permanecem validas e podem nao possuir cobranc
 
 ## Regras adiadas
 
-- Checkout e tokenizacao frontend: F3.4. A integracao backend Mercado Pago foi definida em F3.2.
+- Checkout e tokenizacao frontend foram concluidos em F3.4; a operacao administrativa de consulta e reconciliacao foi concluida em F3.5.
 - Acao ativa de refund e tratamento contabil completo de refund parcial/chargeback: fase futura.
 - Gates de inicio/entrega da producao: fase posterior, apos validacao operacional.
-- CRUD e interface administrativa financeira: F3.5.
 - Nenhum evento `purchase` e emitido antes de confirmacao autoritativa do backend/provider.

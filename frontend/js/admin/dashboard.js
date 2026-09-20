@@ -15,6 +15,7 @@ import { carregarDashboard } from "./dashboard/dashboard.js";
 import { initUsuarios } from "./usuarios/usuarios.js";
 import { initNewsletterAdmin } from "./newsletter/newsletter.js";
 import { initAuditoria } from "./auditoria/auditoria.js";
+import { initFinanceiro } from "./financeiro/financeiro.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
@@ -29,6 +30,7 @@ const loaders = [
     initUsuarios,
     initNewsletterAdmin,
     initAuditoria,
+    initFinanceiro,
 ];
 
 function focusHeading(container) {

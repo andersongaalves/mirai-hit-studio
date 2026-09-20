@@ -9,6 +9,9 @@ const ACTION_LABELS = {
     "production.status_changed": "Status da produção alterado",
     "newsletter.campaign_sent": "Campanha enviada",
     "newsletter.subscriber_admin_unsubscribed": "Inscrição cancelada pelo admin",
+    "payment.reconciled": "Pagamento conciliado",
+    "payment.reconciliation_required": "Conciliação necessária",
+    "payment.reconciliation_conflict": "Conflito de conciliação",
 };
 
 const ENTITY_LABELS = {
@@ -17,6 +20,7 @@ const ENTITY_LABELS = {
     production: "Produção",
     newsletter_campaign: "Campanha",
     newsletter_subscriber: "Inscrito",
+    payment: "Pagamento",
 };
 
 const METADATA_LABELS = {
@@ -35,7 +39,8 @@ export const actionLabel = value => ACTION_LABELS[value] || value || "Ação des
 export const entityLabel = value => ENTITY_LABELS[value] || value || "Sistema";
 
 export function actionVariant(action) {
-    if (action?.includes("deactivated") || action?.includes("unsubscribed")) return "warning";
+    if (action?.includes("conflict")) return "danger";
+    if (action?.includes("deactivated") || action?.includes("unsubscribed") || action?.includes("required")) return "warning";
     if (action?.includes("approved") || action?.includes("sent") || action?.includes("reactivated")) return "success";
     return "info";
 }

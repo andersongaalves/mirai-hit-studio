@@ -783,7 +783,68 @@
     overflow-wrap: anywhere;
 }
 
-.audit-mobile-view { display: none; }
+.audit-mobile-view,
+.financeiro-mobile-view { display: none; }
+
+.financeiro-kpi-grid { margin-bottom: var(--space-4); }
+
+.financeiro-modal-content { width: min(840px, 100%); }
+
+.financeiro-modal-header,
+.financeiro-payment__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.financeiro-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+}
+
+.financeiro-detail-grid div {
+    min-width: 0;
+    padding: var(--space-3);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.financeiro-detail-grid dt {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+.financeiro-detail-grid dd {
+    overflow-wrap: anywhere;
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-primary);
+}
+
+.financeiro-payments-section { margin-top: var(--space-5); }
+
+.financeiro-payments {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.financeiro-payment {
+    padding: var(--space-4);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+}
+
+.financeiro-payment__notice { color: var(--color-warning); }
+
+.financeiro-card .admin-entity-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+}
 
 .audit-pagination {
     display: flex;
@@ -1080,6 +1141,14 @@
 .producao-add-etapa input { flex: 1; }
 
 @media (max-width: 768px) {
+    .financeiro-table-view { display: none; }
+
+    .financeiro-mobile-view {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
     .audit-table-view { display: none; }
 
     .audit-mobile-view {
@@ -1135,6 +1204,8 @@
     .cliente-form-grid {
         grid-template-columns: 1fr;
     }
+
+    .financeiro-detail-grid { grid-template-columns: 1fr; }
 
     .producao-add-etapa {
         align-items: stretch;
@@ -1283,4 +1354,14 @@
     .cliente-modal-actions button {
         width: 100%;
     }
+
+    .financeiro-modal-header,
+    .financeiro-payment__header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .financeiro-modal-actions,
+    .financeiro-modal-actions button,
+    .financeiro-payment > button { width: 100%; }
 }
