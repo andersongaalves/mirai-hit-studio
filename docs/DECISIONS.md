@@ -155,3 +155,7 @@ Decisao: uma proposta aprovada cria uma cobranca idempotente com valor em `Decim
 ## ADR-038 - Mercado Pago via Orders API
 
 Decisao: Mercado Pago e o primeiro provider e usa a Orders API por HTTP direto. O backend controla valores e Access Token; cartoes chegam somente como token temporario. Cada tentativa persiste uma chave de idempotencia estavel antes da chamada, timeout permanece pendente e respostas externas sao normalizadas antes de atingir o dominio.
+
+## ADR-039 - Webhook apenas sinaliza; Order consultada e autoritativa
+
+Decisao: notificacoes Mercado Pago exigem HMAC oficial e nunca determinam status financeiro pelo corpo recebido. O backend consulta a Order, valida identidade, valor e moeda e aplica transicoes conservadoras sob lock curto. Entregas possuem deduplicacao tecnica; refund parcial, chargeback e divergencias ficam como conflito explicito.

@@ -127,7 +127,7 @@ from alembic.migration import MigrationContext
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'd9e4b7a1c2f6'
+assert head == 'e2f7c1a9b4d8'
 command.downgrade(config, 'a4c82d91f6e3')
 assert 'ativo' not in {column['name'] for column in inspect(engine).get_columns('usuarios')}
 with engine.begin() as connection:

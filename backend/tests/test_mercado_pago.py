@@ -45,7 +45,8 @@ class FakeSession:
         return response
 
 def order(amount='150.25', status='action_required', detail='waiting_transfer',
-          method='pix', provider_id='ORD-1', pix=True):
+          method='pix', provider_id='ORD-1', pix=True,
+          external_reference='opaque', currency='BRL'):
     payment_method = {'id': method, 'type': 'bank_transfer' if method == 'pix' else 'credit_card'}
     if pix:
         payment_method.update({
@@ -55,6 +56,8 @@ def order(amount='150.25', status='action_required', detail='waiting_transfer',
         })
     return {
         'id': provider_id,
+        'external_reference': external_reference,
+        'currency': currency,
         'status': status,
         'status_detail': detail,
         'total_amount': amount,
@@ -151,14 +154,14 @@ with Session(engine) as db:
     else:
         raise AssertionError('timeout hidden')
     persisted = db.get(PagamentoModel, payment.id)
-    assert persisted.status == 'pendente' and persisted.provider_payment_id is None
+    assert persisted.status == 'pendente' and persisted.provider_order_id is None
     result = mp_service.enviar_pix(db, payment.id, payer=payer, client=client)
     assert result.payment_id == payment.id
     assert result.result.status == PagamentoStatus.PENDENTE
     assert result.result.pix.qr_code == 'pix-secret-code'
     assert result.result.pix.ticket_url.startswith('https://')
     persisted = db.get(PagamentoModel, payment.id)
-    assert persisted.provider_payment_id == 'ORD-1'
+    assert persisted.provider_order_id == 'ORD-1'
     assert persisted.provider_idempotency_key == first_key
     assert [call[2]['headers']['X-Idempotency-Key'] for call in session.calls] == [first_key, first_key]
     assert session.calls[0][2]['json']['total_amount'] == '150.25'
@@ -187,10 +190,10 @@ with Session(engine) as db:
     assert payload['total_amount'] == '150.25'
     assert method == {'id': 'visa', 'type': 'credit_card', 'token': card_token, 'installments': 2}
     payment = db.get(PagamentoModel, result.payment_id)
-    assert payment.status == 'aprovado' and payment.provider_payment_id == 'ORD-1'
+    assert payment.status == 'aprovado' and payment.provider_order_id == 'ORD-1'
     assert payment.cobranca.status == 'paga'
     persisted = '|'.join(str(value) for value in [
-        payment.metodo, payment.provider, payment.provider_payment_id,
+        payment.metodo, payment.provider, payment.provider_order_id,
         payment.provider_reference, payment.provider_idempotency_key,
     ])
     assert card_token not in persisted and 'access-token-sentinel' not in persisted
@@ -294,13 +297,16 @@ from alembic.script import ScriptDirectory
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'd9e4b7a1c2f6'
+assert head == 'e2f7c1a9b4d8'
 command.downgrade(config, 'c4f8a2d19e73')
 columns = {column['name'] for column in inspect(engine).get_columns('pagamentos')}
 assert 'provider_idempotency_key' not in columns
 command.upgrade(config, 'head')
 columns = {column['name'] for column in inspect(engine).get_columns('pagamentos')}
 assert 'provider_idempotency_key' in columns
+assert 'provider_order_id' in columns
+assert 'provider_payment_id' not in columns
+assert 'provider_webhook_events' in inspect(engine).get_table_names()
 with engine.connect() as connection:
     assert compare_metadata(MigrationContext.configure(connection), Base.metadata) == []
 assert ScriptDirectory.from_config(config).get_current_head() == head

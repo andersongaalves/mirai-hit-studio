@@ -74,11 +74,11 @@ with Session(engine) as db:
 
     provider_id = 'provider-payment-unique'
     finance.registrar_pagamento(db, charge.id, tipo='integral', valor='1.00',
-                                status='cancelado', provider_payment_id=provider_id)
+                                status='cancelado', provider_order_id=provider_id)
     db.commit()
     try:
         finance.registrar_pagamento(db, charge.id, tipo='integral', valor='1.00',
-                                    status='recusado', provider_payment_id=provider_id)
+                                    status='recusado', provider_order_id=provider_id)
     except IntegrityError:
         db.rollback()
     else:
@@ -158,7 +158,7 @@ from alembic.script import ScriptDirectory
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'd9e4b7a1c2f6'
+assert head == 'e2f7c1a9b4d8'
 command.downgrade(config, 'b7d3e9a1c5f2')
 assert 'cobrancas' not in inspect(engine).get_table_names()
 assert 'pagamentos' not in inspect(engine).get_table_names()

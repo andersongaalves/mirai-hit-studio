@@ -111,6 +111,8 @@ class PixPaymentData:
 @dataclass(frozen=True)
 class ProviderPaymentResult:
     provider_id: str
+    external_reference: str | None
+    currency: str | None
     status: PagamentoStatus
     provider_status: str
     status_detail: str | None
@@ -325,8 +327,21 @@ class MercadoPagoClient:
             provider_id = data["id"]
             payments = data.get("transactions", {}).get("payments", [])
             payment = payments[0] if payments else {}
-            provider_status = payment.get("status") or data.get("status")
-            status_detail = payment.get("status_detail") or data.get("status_detail")
+            order_status = data.get("status")
+            order_detail = data.get("status_detail")
+            payment_status = payment.get("status")
+            payment_detail = payment.get("status_detail")
+            if order_detail == "partially_refunded":
+                provider_status = order_status
+                status_detail = order_detail
+            elif payment_status == "charged_back" or str(payment_detail or "").startswith(
+                "charged_back"
+            ):
+                provider_status = payment_status
+                status_detail = payment_detail
+            else:
+                provider_status = payment_status or order_status
+                status_detail = payment_detail or order_detail
             amount = _money(payment.get("amount", data.get("total_amount")))
             method_data = payment.get("payment_method") or {}
             method = method_data.get("id")
@@ -349,6 +364,23 @@ class MercadoPagoClient:
             )
         return ProviderPaymentResult(
             provider_id=provider_id,
+            external_reference=str(data.get("external_reference"))[:64]
+            if data.get("external_reference") is not None
+            else None,
+            currency=str(
+                data.get("currency")
+                or data.get("currency_id")
+                or payment.get("currency_id")
+            )[:3]
+            if any(
+                value is not None
+                for value in (
+                    data.get("currency"),
+                    data.get("currency_id"),
+                    payment.get("currency_id"),
+                )
+            )
+            else None,
             status=normalized_status,
             provider_status=str(provider_status)[:40],
             status_detail=str(status_detail)[:100] if status_detail is not None else None,

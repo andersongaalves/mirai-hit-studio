@@ -15,7 +15,7 @@ Proposta aceita, link de checkout e pagamento confirmado nao sao equivalentes.
 
 `Cobranca` possui uma relacao 1:1 com a proposta, cliente opcional, valor contratado, moeda BRL, status, vencimento opcional e referencia UUID opaca. O orcamento e derivado pela proposta; nao ha FK redundante.
 
-`Pagamento` pertence a uma cobranca e registra tipo (`integral`, `entrada`, `saldo`), valor, status, metodo, provider e identificadores externos. `provider_payment_id` identifica a order externa e `provider_idempotency_key` preserva a identidade unica e reutilizavel da tentativa.
+`Pagamento` pertence a uma cobranca e registra tipo (`integral`, `entrada`, `saldo`), valor, status, metodo, provider e identificadores externos. `provider_order_id` identifica a Order externa e `provider_idempotency_key` preserva a identidade unica e reutilizavel da tentativa. Pendencias e conflitos de reconciliacao ficam explicitos sem substituir o status financeiro.
 
 ## Dinheiro e status
 
@@ -28,7 +28,7 @@ O valor pago e a soma dos pagamentos `aprovado`:
 - igual ao total: `paga`;
 - acima do total: conflito de reconciliacao, nunca truncamento silencioso.
 
-Pagamentos pendentes, recusados, cancelados ou reembolsados nao compoem o valor pago. Reembolso preserva o registro; reembolso parcial e chargeback exigirao movimentos/regras adicionais em F3.3.
+Pagamentos pendentes, recusados, cancelados ou reembolsados nao compoem o valor pago. Reembolso integral preserva o registro e recalcula a cobranca. Reembolso parcial e chargeback sao detectados como conflitos; movimentos contabilmente completos continuam adiados.
 
 ## Integral e 50/50
 
@@ -47,7 +47,7 @@ Propostas aprovadas antes da F3.1 permanecem validas e podem nao possuir cobranc
 ## Regras adiadas
 
 - Checkout e tokenizacao frontend: F3.4. A integracao backend Mercado Pago foi definida em F3.2.
-- Webhooks, mudancas de status, refund e chargeback completos: F3.3.
+- Acao ativa de refund e tratamento contabil completo de refund parcial/chargeback: fase futura.
 - Gates de inicio/entrega da producao: fase posterior, apos validacao operacional.
 - CRUD e interface administrativa financeira: F3.5.
 - Nenhum evento `purchase` e emitido antes de confirmacao autoritativa do backend/provider.

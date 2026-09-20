@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: F3.2 concluida.
+Fase atual: F3.3 concluida.
 
 Ultimo checkpoint enviado: CP-F2.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-PAG apos F3.5.
 
 Proximo push: apos F3.5.
 
-Ultimo commit local: `feat: integra backend com mercado pago`.
+Ultimo commit local: `feat: adiciona webhooks e reconciliacao de pagamentos`.
 
 ## Concluido
 
@@ -55,7 +55,7 @@ F3 - Pagamentos/Financeiro
 
 - F3.1 Modelo financeiro. Concluida.
 - F3.2 Mercado Pago backend. Concluida.
-- F3.3 Webhooks, idempotencia e reconciliacao.
+- F3.3 Webhooks, idempotencia e reconciliacao. Concluida.
 - F3.4 Checkout.
 - F3.5 Financeiro admin.
 - CP-PAG.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F3.2 concluida
+F3.3 concluida
 
 ## Proxima subfase
 
-F3.3 - Webhooks, idempotencia e reconciliacao
+F3.4 - Checkout

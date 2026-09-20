@@ -136,7 +136,7 @@ def registrar_pagamento(
     status: PagamentoStatus | str = PagamentoStatus.PENDENTE,
     metodo: str | None = None,
     provider: str | None = None,
-    provider_payment_id: str | None = None,
+    provider_order_id: str | None = None,
     provider_reference: str | None = None,
 ) -> PagamentoModel:
     cobranca = db.scalar(
@@ -162,7 +162,7 @@ def registrar_pagamento(
         status=status_value,
         metodo=metodo,
         provider=provider,
-        provider_payment_id=provider_payment_id,
+        provider_order_id=provider_order_id,
         provider_reference=provider_reference,
         aprovado_em=datetime.now(timezone.utc)
         if status_value == PagamentoStatus.APROVADO.value
