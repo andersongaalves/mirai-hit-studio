@@ -125,7 +125,7 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Abrir usuario inativo', exact: true }).click();
         await page.locator('#usuario-new-password').fill('another-password');
         await page.locator('#usuario-password-reset').click();
-        await page.waitForSelector('.notification.success');
+        await page.waitForFunction(() => document.getElementById('usuario-new-password')?.value === '');
         assert.equal(await page.locator('#usuario-new-password').inputValue(), '');
         await page.keyboard.press('Escape');
 

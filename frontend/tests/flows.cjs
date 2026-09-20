@@ -57,6 +57,8 @@ const root = path.resolve(__dirname, '..');
                     recent_activity: [],
                 };
                 if (url.pathname === '/audit-logs') data = { items: [], total: 0, page: 1, page_size: 25, pages: 0 };
+                if (url.pathname === '/financeiro/resumo') data = { valor_a_receber: '0.00', valor_recebido: '0.00', cobrancas_parciais: 0, pagamentos_em_atencao: 0, total_cobrancas: 0 };
+                if (url.pathname === '/financeiro/cobrancas') data = { items: [], total: 0, page: 1, page_size: 25, pages: 0 };
                 if (url.pathname === '/servicos') data = services;
                 if (url.pathname === '/usuarios/produtores') data = [];
                 if (url.pathname === '/config') {
@@ -141,7 +143,7 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => Promise.all([window.fazerLogin(), window.fazerLogin()]));
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /audit-logs', 'GET /clientes', 'GET /config', 'GET /dashboard', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores'];
+        const expected = ['GET /audit-logs', 'GET /clientes', 'GET /config', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores'];
         assert.deepEqual(calls.filter(call => call.startsWith('GET')).sort(), expected);
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));

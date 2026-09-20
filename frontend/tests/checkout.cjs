@@ -122,6 +122,7 @@ async function staticResponse(route) {
         assert.equal(pixRequests, 1);
         assert.equal(await pixPage.locator('#pix-code').inputValue(), '000201-pix-code');
         await pixPage.locator('#copy-pix').click();
+        await pixPage.waitForFunction(() => document.getElementById('copy-pix')?.textContent === 'Código copiado');
         assert.equal(await pixPage.locator('#copy-pix').textContent(), 'Código copiado');
         assert.equal(await pixPage.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
 
