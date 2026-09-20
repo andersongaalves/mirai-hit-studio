@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: G.7 concluida.
+Fase atual: G concluida.
 
-Ultimo checkpoint enviado: CP-G1.
+Ultimo checkpoint enviado: CP-G2.
 
-Checkpoint atual: CP-G2 pronto para validacao.
+Checkpoint atual: CP-G2 enviado.
 
-Proximo checkpoint: CP-G2 apos G.7.
+Proximo checkpoint: CP-IA1 apos F2.3.
 
-Proximo push: apos G.7.
+Proximo push: conforme o bloco F2.
 
-Ultimo commit local: `fix: consolida acessibilidade e responsividade publica`.
+Ultimo commit local: `docs: registra checkpoint G2`.
 
 ## Concluido
 
@@ -71,7 +71,7 @@ G - Site publico
 - G.5 Portfolio/cases. Concluida.
 - G.6 Orcamento/contratacao. Concluida.
 - G.7 Acessibilidade/responsividade. Concluida.
-- CP-G2.
+- CP-G2 enviado.
 
 F2 - IA
 
@@ -97,7 +97,7 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G.7 concluida
+G concluida - CP-G2 enviado
 
 ## Proxima subfase
 
