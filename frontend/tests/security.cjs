@@ -40,8 +40,7 @@ const root = path.resolve(__dirname, '..');
             Object.assign(builderState, { intro:attack, sections:[{icon:attack,title:attack,items:[attack]}], benefits:[attack] });
             preview.renderPreview();
             for (const id of ['render-portfolio','filtros-portfolio']) { const div = document.createElement('div'); div.id=id; host.append(div); }
-            portfolio.renderizarProjetos([{titulo:attack,artista:attack,descricao:attack,categoria:quote,link_audio:'javascript:alert(1)',link_capa:'data:text/html,x'}]);
-            portfolio.renderizarFiltros([{categoria:quote}], () => {});
+            portfolio.renderizarProjetos([{id:1,titulo:attack,artista:attack,descricao:attack,categoria:quote,link_audio:'https://example.com/audio',link_capa:'data:text/html,x',vertical:'artists',segmentos_json:[],case_type:'demo'}]);
             const invalid = ['javascript:alert(1)', 'data:text/html,x', 'file:///etc/passwd', 'vbscript:msgbox(1)', 'https://user:pass@example.com', 'https://example.com/\n'];
             return {
                 urls:invalid.every(url => security.safeURL(url) === ''),
@@ -51,14 +50,14 @@ const root = path.resolve(__dirname, '..');
                 scripts:host.querySelectorAll('script,[onerror],[onfocus]').length,
                 previewUnsafe:document.querySelectorAll('#builder-preview-render img, #builder-preview-render script').length,
                 field:host.querySelector('.builder-title').value,
-                quote, href:host.querySelector('.portfolio-card').getAttribute('href'),
+                quote, href:host.querySelector('.portfolio-card__listen').getAttribute('href'),
                 text:host.textContent.includes(attack)
             };
         });
         assert.equal(result.urls, true); assert.equal(result.safe, 'https://example.com/pay');
         assert.equal(result.invalid, true); assert.equal(result.fallback, true);
         assert.equal(result.scripts, 0); assert.equal(result.previewUnsafe, 0);
-        assert.equal(result.field, result.quote); assert.equal(result.href, ''); assert.equal(result.text, true);
+        assert.equal(result.field, result.quote); assert.equal(result.href, 'https://example.com/audio'); assert.equal(result.text, true);
         assert.equal(await page.evaluate(() => window.executed), false);
         const session = await page.evaluate(async () => {
             const auth = await import('/js/admin/auth.js');

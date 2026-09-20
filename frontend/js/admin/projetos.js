@@ -20,7 +20,7 @@ document.addEventListener("admin:logout", () => { projetos = []; });
 
 export async function carregarPortfolio() {
     try {
-        const response = await authFetch("/projetos");
+        const response = await authFetch("/projetos/admin");
         if (!response.ok) throw new Error("Erro ao carregar projetos.");
         projetos = await response.json();
 
@@ -58,10 +58,18 @@ function renderizarProjetos() {
 
         artista.textContent = projeto.artista;
 
+        const classificacao = document.createElement("small");
+
+        classificacao.textContent = [projeto.vertical, projeto.case_type]
+            .filter(Boolean)
+            .join(" · ") || "Aguardando classificação pública";
+
         info.append(
             titulo,
 
             artista,
+
+            classificacao,
         );
 
         const destaque = document.createElement("div");
@@ -125,6 +133,14 @@ export function editarProjeto(id) {
 
     $("proj_categoria").value = projeto.categoria;
 
+    $("proj_vertical").value = projeto.vertical || "";
+
+    $("proj_segmentos").value = Array.isArray(projeto.segmentos_json)
+        ? projeto.segmentos_json.join(", ")
+        : "";
+
+    $("proj_case_type").value = projeto.case_type || "";
+
     $("proj_audio").value = projeto.link_audio;
 
     $("proj_capa").value = projeto.link_capa;
@@ -153,6 +169,15 @@ export async function salvarProjeto() {
         artista: $("proj_artista").value,
 
         categoria: $("proj_categoria").value,
+
+        vertical: $("proj_vertical").value || null,
+
+        segmentos_json: $("proj_segmentos").value
+            .split(",")
+            .map((segmento) => segmento.trim().toLowerCase())
+            .filter(Boolean),
+
+        case_type: $("proj_case_type").value || null,
 
         link_audio: $("proj_audio").value,
 
@@ -225,6 +250,12 @@ function limparFormulario() {
         "proj_artista",
 
         "proj_categoria",
+
+        "proj_vertical",
+
+        "proj_segmentos",
+
+        "proj_case_type",
 
         "proj_audio",
 

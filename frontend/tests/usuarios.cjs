@@ -78,7 +78,7 @@ async function staticResponse(route) {
             Object.assign(user, request.postDataJSON(), { is_admin: request.postDataJSON().role === 'admin', updated_at: now });
             return route.fulfill({ json: user });
         }
-        if (['/config', '/servicos', '/projetos', '/orcamentos', '/producoes', '/clientes'].includes(url.pathname)) {
+        if (['/config', '/servicos', '/projetos/admin', '/orcamentos', '/producoes', '/clientes'].includes(url.pathname)) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });

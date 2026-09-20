@@ -12,9 +12,26 @@ from core.dependencies import require_admin
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
+PUBLIC_VERTICALS = ("artists", "creators", "media_games")
+PUBLIC_CASE_TYPES = ("client_case", "demo", "concept_project", "study")
+
 
 @router.get("", response_model=list[ProjetoResponse])
 def listar_projetos(db: Session = Depends(get_db)):
+    return (
+        db.query(models.ProjetoModel)
+        .filter(
+            models.ProjetoModel.vertical.in_(PUBLIC_VERTICALS),
+            models.ProjetoModel.case_type.in_(PUBLIC_CASE_TYPES),
+        )
+        .all()
+    )
+
+
+@router.get("/admin", response_model=list[ProjetoResponse])
+def listar_projetos_admin(
+    db: Session = Depends(get_db), user=Depends(require_admin)
+):
     return db.query(models.ProjetoModel).all()
 
 

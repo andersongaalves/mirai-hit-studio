@@ -47,7 +47,7 @@ async function staticResponse(route) {
             }
             if (url.pathname === "/financeiro/pagamentos/9/reconciliar") { reconciliations++; return route.fulfill({ json: { payment_id: 9, previous_status: "pendente", current_status: "aprovado", changed: true, outcome: "updated" } }); }
             if (url.pathname === "/audit-logs") return route.fulfill({ json: { items: [], total: 0, page: 1, page_size: 25, pages: 0 } });
-            if (["/config", "/servicos", "/projetos", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores", "/newsletter/subscribers", "/newsletter/campaigns"].includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
+            if (["/config", "/servicos", "/projetos/admin", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores", "/newsletter/subscribers", "/newsletter/campaigns"].includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
             return route.fulfill({ status: 404, json: { detail: "not found" } });
         });
 
@@ -63,7 +63,14 @@ async function staticResponse(route) {
 
         await page.locator("#financeiro-status-filter").selectOption("parcialmente_paga");
         await page.locator("#financeiro-reconciliation-filter").selectOption("conflict");
+        const filteredResponse = page.waitForResponse(response => {
+            const url = new URL(response.url());
+            return url.pathname === "/financeiro/cobrancas" &&
+                url.searchParams.get("status") === "parcialmente_paga" &&
+                url.searchParams.get("reconciliation_status") === "conflict";
+        });
         await page.locator("#financeiro-apply-filters").click();
+        await filteredResponse;
         await page.waitForFunction(() => document.getElementById("financeiro-summary")?.textContent.includes("26 cobranças"));
         assert.ok(financeQueries.some(query => query.includes("status=parcialmente_paga") && query.includes("reconciliation_status=conflict")));
         await page.locator("#financeiro-next-page").click();

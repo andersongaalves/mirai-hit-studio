@@ -50,7 +50,7 @@ async function staticResponse(route) {
         }
         if (url.pathname === '/config') return route.fulfill({ json: {} });
         if (url.pathname === '/servicos') return route.fulfill({ json: [] });
-        if (url.pathname === '/projetos') return route.fulfill({ json: [] });
+        if (url.pathname === '/projetos/admin') return route.fulfill({ json: [] });
         if (url.pathname === '/orcamentos') return route.fulfill({ json: [] });
         if (url.pathname === '/producoes') return route.fulfill({ json: [] });
         if (url.pathname === '/clientes') return route.fulfill({ json: [] });

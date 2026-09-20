@@ -49,7 +49,7 @@ async function staticResponse(route) {
                     pages: 2,
                 } });
             }
-            if (["/config", "/servicos", "/projetos", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores", "/newsletter/subscribers", "/newsletter/campaigns"].includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
+            if (["/config", "/servicos", "/projetos/admin", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores", "/newsletter/subscribers", "/newsletter/campaigns"].includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
             return route.fulfill({ status: 404, json: { detail: "not found" } });
         });
 

@@ -130,6 +130,10 @@ function bindPortfolioListener() {
         const link = event.target.closest("[data-analytics-listen]");
         if (link) track("listen_portfolio", { project_id: link.dataset.projectId });
     });
+    document.addEventListener("play", event => {
+        const player = event.target.closest?.("audio[data-analytics-listen]");
+        if (player) track("listen_portfolio", { project_id: player.dataset.projectId });
+    }, true);
 }
 
 export function getAnalyticsConsent() {

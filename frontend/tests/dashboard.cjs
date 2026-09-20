@@ -41,7 +41,7 @@ async function staticResponse(route) {
         if (url.pathname === '/dashboard') return route.fulfill(dashboardFailure
             ? { status: 500, json: { detail: 'Falha controlada' } }
             : { json: dashboard });
-        if (['/config', '/servicos', '/projetos', '/orcamentos', '/producoes', '/clientes', '/usuarios'].includes(url.pathname)) {
+        if (['/config', '/servicos', '/projetos/admin', '/orcamentos', '/producoes', '/clientes', '/usuarios'].includes(url.pathname)) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
         if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });

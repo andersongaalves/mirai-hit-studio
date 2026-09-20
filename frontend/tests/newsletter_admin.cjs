@@ -60,7 +60,7 @@ async function staticResponse(route) {
                 Object.assign(item, { ativo: false, status: "unsubscribed" });
                 return route.fulfill({ json: item });
             }
-            if (["/config", "/servicos", "/projetos", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores"].includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
+            if (["/config", "/servicos", "/projetos/admin", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores"].includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
             return route.fulfill({ status: 404, json: { detail: "not found" } });
         });
         await page.goto("http://localhost:4173/admin.html");
