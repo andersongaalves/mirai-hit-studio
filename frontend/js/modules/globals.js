@@ -35,13 +35,16 @@ window.avancarPasso = function (passo) {
         .querySelectorAll(".step-indicator")
         .forEach((el) => el.classList.remove("active"));
 
-    document.getElementById(`step-${passo}`)?.classList.remove("hidden");
+    const target = document.getElementById(`step-${passo}`);
+    target?.classList.remove("hidden");
 
     for (let i = 1; i <= passo; i++) {
         const indicador = $(`ind-${i}`);
 
         if (indicador) {
             indicador.classList.add("active");
+            if (i === passo) indicador.setAttribute("aria-current", "step");
+            else indicador.removeAttribute("aria-current");
         }
     }
 
@@ -52,6 +55,9 @@ window.avancarPasso = function (passo) {
     if (passo === 2 && state.servicoSelecionadoOBJ) {
         trackOnce("begin_briefing", { service_id: state.servicoSelecionadoOBJ.id });
     }
+
+    target?.querySelector("h2")?.focus?.({ preventScroll: true });
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
 window.voltarPasso = function (passo) {

@@ -94,6 +94,10 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => document.getElementById('srv_1').click());
         await page.waitForSelector('#descricao', { state: 'attached' });
         for (const [description, options] of [['Texto do cliente', false], ['', true], ['Texto combinado', true], ['', false]]) {
+            const requestCompleted = page.waitForResponse(response =>
+                response.url() === 'http://localhost:8000/orcamentos'
+                && response.request().method() === 'POST',
+            );
             await page.evaluate(async ({ description, options }) => {
                 const { state } = await import('/js/state.js');
                 const { renderizarFormularioParametros } = await import('/js/ui.js');
@@ -113,8 +117,7 @@ const root = path.resolve(__dirname, '..');
                 calcular();
                 document.getElementById('btn-solicitar').click();
             }, { description, options });
-            await page.waitForFunction(count => document.querySelectorAll('.notification.success').length >= count, payloads.length || 1);
-            await page.waitForTimeout(100);
+            await requestCompleted;
             const payload = payloads.at(-1);
             assert.equal(payload.servico, 'Servico teste');
             assert.equal(payload.valor_total, options ? 890 : 200);

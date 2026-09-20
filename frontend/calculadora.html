@@ -2,297 +2,118 @@
 <html lang="pt-BR">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-        <title>Calculadora de Orçamento | Mirai Hit Studio</title>
-
-        <meta
-            name="description"
-            content="Calcule online o investimento da sua produção musical. Personalize beats, mixagem, masterização e instrumentais exclusivos e receba um orçamento da Mirai Hit Studio."
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Solicitar orçamento | Mirai Hit Studio</title>
+        <meta name="description" content="Conte o que seu projeto precisa e envie um briefing para a Mirai Hit Studio preparar uma proposta comercial." />
         <meta name="author" content="Mirai Hit Studio" />
         <meta name="robots" content="index,follow" />
         <meta name="theme-color" content="#111827" />
-
-        <!-- Open Graph -->
+        <meta name="mirai-ga-id" content="G-W4GLJXPRDM" />
         <meta property="og:type" content="website" />
-        <meta
-            property="og:title"
-            content="Calculadora de Orçamento | Mirai Hit Studio"
-        />
-        <meta
-            property="og:description"
-            content="Descubra o investimento ideal para sua produção musical com nossa calculadora online."
-        />
-        <meta
-            property="og:image"
-            content="https://www.miraihitstudio.com.br/assets/banner-social.png"
-        />
-        <meta
-            property="og:url"
-            content="https://www.miraihitstudio.com.br/calculadora"
-        />
-        <meta property="og:site_name" content="Mirai Hit Studio" />
-
-        <!-- Twitter Card -->
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta
-            name="twitter:title"
-            content="Calculadora de Orçamento | Mirai Hit Studio"
-        />
-        <meta
-            name="twitter:description"
-            content="Monte seu projeto e descubra o investimento da sua produção musical."
-        />
-        <meta
-            name="twitter:image"
-            content="https://www.miraihitstudio.com.br/assets/banner-social.png"
-        />
-
-        <!-- Canonical -->
-        <link
-            rel="canonical"
-            href="https://www.miraihitstudio.com.br/calculadora"
-        />
-
-        <!-- Manifest -->
+        <meta property="og:title" content="Solicitar orçamento | Mirai Hit Studio" />
+        <meta property="og:description" content="Envie seu briefing para receber uma proposta de produção musical ou áudio." />
+        <meta property="og:image" content="https://miraihitstudio.com.br/img/mirai-studio-hero.webp" />
+        <meta property="og:url" content="https://miraihitstudio.com.br/orcamento" />
+        <link rel="canonical" href="https://miraihitstudio.com.br/orcamento" />
         <link rel="manifest" href="/site.webmanifest" />
-
-        <!-- Favicon -->
-        <link
-            rel="icon"
-            type="image/png"
-            sizes="32x32"
-            href="./assets/favicon.png"
-        />
-        <link rel="apple-touch-icon" href="./assets/favicon.png" />
-
-        <!-- CSS -->
-        <link rel="stylesheet" href="css/main.css" />
-
-        <script type="application/ld+json">
-            {
-                "@context": "https://schema.org",
-                "@type": "WebApplication",
-
-                "name": "Calculadora de Orçamento - Mirai Hit Studio",
-
-                "description": "Ferramenta online para calcular o orçamento de produção musical personalizada da Mirai Hit Studio.",
-
-                "url": "https://www.miraihitstudio.com.br/calculadora",
-
-                "applicationCategory": "BusinessApplication",
-
-                "operatingSystem": "Any",
-
-                "browserRequirements": "Requires JavaScript",
-
-                "image": "https://www.miraihitstudio.com.br/assets/banner-social.png",
-
-                "provider": {
-                    "@type": "Organization",
-                    "name": "Mirai Hit Studio",
-                    "url": "https://www.miraihitstudio.com.br",
-                    "logo": {
-                        "@type": "ImageObject",
-                        "url": "https://www.miraihitstudio.com.br/img/logo-principal.png"
-                    }
-                },
-
-                "offers": {
-                    "@type": "Offer",
-                    "price": "0",
-                    "priceCurrency": "BRL",
-                    "availability": "https://schema.org/InStock"
-                },
-
-                "isAccessibleForFree": true
-            }
-        </script>
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
+        <link rel="apple-touch-icon" href="/assets/favicon.png" />
+        <link rel="stylesheet" href="/css/main.css" />
     </head>
-
-    <meta name="mirai-ga-id" content="G-W4GLJXPRDM" />
-
-    <body>
+    <body class="public-page quote-page">
         <div id="nav-placeholder"></div>
+        <main class="quote-main">
+            <header class="quote-header public-container">
+                <p class="public-eyebrow">Solicitação de orçamento</p>
+                <h1>Comece pelo que o projeto precisa.</h1>
+                <p>Escolha uma referência de serviço, organize o briefing e envie a solicitação. A equipe revisa o escopo antes de preparar a proposta comercial.</p>
+            </header>
 
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Calculadora de Orçamento</h2>
-                <p>Configure o seu projeto em 3 passos simples.</p>
-            </div>
-
-            <div class="stepper-container">
-                <div class="step-indicator active" id="ind-1">1. Serviço</div>
-                <div class="step-indicator" id="ind-2">2. Detalhes</div>
-                <div class="step-indicator" id="ind-3">3. Orçamento</div>
-            </div>
-
-            <div id="step-1" class="step-content active">
-                <h3
-                    style="
-                        text-align: center;
-                        margin-bottom: 30px;
-                        color: var(--cor-ciano);
-                    "
-                >
-                    O que você precisa hoje?
-                </h3>
-                <div class="services-wrapper">
-                    <div
-                        class="service-category"
-                        id="categoria-avulso"
-                        style="display: none"
-                    >
-                        <h4 class="category-title">Monte seu Projeto</h4>
-
-                        <div class="service-selector" id="render-avulsos"></div>
+            <div class="public-container quote-layout">
+                <form id="orcamento-form" class="quote-form">
+                    <div class="stepper-container" aria-label="Etapas da solicitação">
+                        <div class="step-indicator active" id="ind-1" aria-current="step"><span>1</span> Serviço</div>
+                        <div class="step-indicator" id="ind-2"><span>2</span> Briefing</div>
+                        <div class="step-indicator" id="ind-3"><span>3</span> Contato</div>
                     </div>
 
-                    <div
-                        class="service-category"
-                        id="categoria-combo"
-                        style="display: none"
-                    >
-                        <h4 class="category-title">Combos e Pacotes</h4>
+                    <div id="calculator-status" class="quote-status" role="status" aria-live="polite">Carregando serviços...</div>
 
-                        <div class="service-selector" id="render-combos"></div>
-                    </div>
-                </div>
-
-                <div
-                    class="panel hidden"
-                    style="
-                        border-color: var(--cor-ciano);
-                        background: rgba(0, 212, 255, 0.05);
-                        margin-top: 30px;
-                    "
-                >
-                    <h3
-                        id="info-title"
-                        style="
-                            color: var(--cor-ciano);
-                            margin-top: 0;
-                            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
-                            padding-bottom: 10px;
-                        "
-                    >
-                        Sobre o Serviço
-                    </h3>
-
-                    <div
-                        id="info-desc"
-                        style="
-                            white-space: pre-line;
-                            color: #e5e7eb;
-                            line-height: 1.8;
-                            font-family: var(--font-texto);
-                            font-size: 1.05rem;
-                        "
-                    ></div>
-                </div>
-
-                <div class="botoes-navegacao" style="justify-content: flex-end">
-                    <button
-                        id="btn-next-1"
-                        class="btn-cta disabled"
-                        onclick="avancarPasso(2)"
-                        disabled
-                    >
-                        Continuar ➔
-                    </button>
-                </div>
-            </div>
-
-            <div id="step-2" class="step-content hidden">
-                <div style="max-width: 800px; margin: 0 auto">
-                    <div id="panel-dinamico" class="panel active">
-                        <h3 id="titulo-panel">Personalize os detalhes</h3>
-                        <div id="render-parametros"></div>
-                    </div>
-                </div>
-
-                <div class="botoes-navegacao">
-                    <button class="btn-small" onclick="voltarPasso(1)">
-                        ⬅ Escolher outro serviço
-                    </button>
-                    <button class="btn-cta" onclick="avancarPasso(3)">
-                        Ver Valor Final ➔
-                    </button>
-                </div>
-            </div>
-
-            <div id="step-3" class="step-content hidden">
-                <div style="max-width: 600px; margin: 0 auto">
-                    <div class="result-panel">
-                        <h2>INVESTIMENTO ESTIMADO</h2>
-                        <div id="badge-desconto">DESCONTO APLICADO</div>
-                        <div></div>
-                        <div class="total-price" id="valorTotal">R$ 0,00</div>
-                        <div
-                            style="
-                                margin-top: 30px;
-                                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                                padding-top: 20px;
-                            "
-                        >
-                            <h3
-                                style="
-                                    margin-bottom: 20px;
-                                    font-size: 1.2rem;
-                                    color: #ccc;
-                                "
-                            >
-                                Para onde enviamos a proposta?
-                            </h3>
-                            <div class="form-group" style="text-align: left">
-                                <label> Seu Nome * </label>
-                                <input
-                                    type="text"
-                                    id="nome_cliente"
-                                    placeholder="Como te chamamos?"
-                                />
+                    <section id="step-1" class="step-content active" aria-labelledby="step-1-title">
+                        <h2 id="step-1-title" tabindex="-1">Qual serviço mais se aproxima da sua necessidade?</h2>
+                        <p class="step-copy">A seleção orienta o briefing. O escopo final será confirmado na proposta.</p>
+                        <div class="services-wrapper">
+                            <div class="service-category" id="categoria-avulso" hidden>
+                                <h3 class="category-title">Serviços</h3>
+                                <div class="service-selector" id="render-avulsos"></div>
                             </div>
-
-                            <div class="form-group" style="text-align: left">
-                                <label> Seu Email </label>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    placeholder="seu@email.com"
-                                />
-                            </div>
-
-                            <div class="form-group" style="text-align: left">
-                                <label> Seu WhatsApp * </label>
-                                <input
-                                    type="text"
-                                    id="whatsapp"
-                                    placeholder="(00) 99999-9999"
-                                />
+                            <div class="service-category" id="categoria-combo" hidden>
+                                <h3 class="category-title">Pacotes</h3>
+                                <div class="service-selector" id="render-combos"></div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                        <div class="botoes-navegacao botoes-navegacao--end">
+                            <button id="btn-next-1" class="btn-cta disabled" type="button" data-step-target="2" disabled>Continuar</button>
+                        </div>
+                    </section>
 
-                <div class="botoes-navegacao">
-                    <button class="btn-small" onclick="voltarPasso(2)">
-                        ⬅ Alterar Parâmetros
-                    </button>
+                    <section id="step-2" class="step-content hidden" aria-labelledby="step-2-title">
+                        <div id="panel-dinamico" class="panel active">
+                            <h2 id="step-2-title" tabindex="-1">Conte os detalhes relevantes</h2>
+                            <p class="step-copy">As perguntas mudam conforme o serviço para evitar um formulário genérico e longo.</p>
+                            <div id="render-parametros"></div>
+                        </div>
+                        <div class="botoes-navegacao">
+                            <button class="btn-outline" type="button" data-step-target="1">Escolher outro serviço</button>
+                            <button class="btn-cta" type="button" data-step-target="3">Revisar estimativa</button>
+                        </div>
+                    </section>
 
-                    <button
-                        id="btn-solicitar"
-                        class="btn-cta btn-submit"
-                        style="background: var(--cor-ciano); color: black"
-                    >
-                        ENVIAR PEDIDO
-                    </button>
-                </div>
+                    <section id="step-3" class="step-content hidden" aria-labelledby="step-3-title">
+                        <div class="result-panel">
+                            <p class="public-eyebrow">Estimativa atual</p>
+                            <h2 id="step-3-title" tabindex="-1">Investimento estimado</h2>
+                            <div id="badge-desconto" class="quote-discount" hidden></div>
+                            <div class="total-price" id="valorTotal">R$ 0,00</div>
+                            <p class="estimate-note">Este valor orienta a solicitação. Escopo, prazo, revisões, arquivos e condições de pagamento serão confirmados na proposta.</p>
+
+                            <fieldset class="contact-fields">
+                                <legend>Como podemos responder?</legend>
+                                <div class="form-group">
+                                    <label for="nome_cliente">Nome</label>
+                                    <input type="text" id="nome_cliente" name="nome_cliente" maxlength="120" autocomplete="name" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">E-mail</label>
+                                    <input type="email" id="email" name="email" maxlength="150" autocomplete="email" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="whatsapp">WhatsApp <span>(opcional)</span></label>
+                                    <input type="tel" id="whatsapp" name="whatsapp" maxlength="30" autocomplete="tel" inputmode="tel" />
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div id="quote-submit-status" class="quote-status hidden" role="status" aria-live="polite"></div>
+                        <div class="botoes-navegacao">
+                            <button class="btn-outline" type="button" data-step-target="2">Alterar briefing</button>
+                            <button id="btn-solicitar" class="btn-cta btn-submit" type="submit">Enviar solicitação</button>
+                        </div>
+                    </section>
+                </form>
+
+                <aside class="quote-context" aria-labelledby="quote-context-title">
+                    <h2 id="quote-context-title">O que acontece depois?</h2>
+                    <ol>
+                        <li><span>1</span><p><strong>Análise</strong> A equipe revisa o pedido e alinha dúvidas quando necessário.</p></li>
+                        <li><span>2</span><p><strong>Proposta</strong> Escopo, valores, prazo, revisões e entregas ficam documentados.</p></li>
+                        <li><span>3</span><p><strong>Contratação</strong> O checkout seguro só é disponibilizado quando existe uma cobrança vinculada à proposta.</p></li>
+                        <li><span>4</span><p><strong>Produção</strong> O trabalho começa conforme as condições aprovadas.</p></li>
+                    </ol>
+                    <p class="quote-context__note">Projetos custom ou premium passam por conversa humana antes do fechamento.</p>
+                </aside>
             </div>
-        </div>
-
+        </main>
         <div id="footer-placeholder"></div>
-
-        <script type="module" src="js/main.js"></script>
+        <script type="module" src="/js/main.js"></script>
     </body>
 </html>

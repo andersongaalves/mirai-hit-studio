@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: G.5 concluida.
+Fase atual: G.6 concluida.
 
 Ultimo checkpoint enviado: CP-G1.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-G2 apos G.7.
 
 Proximo push: apos G.7.
 
-Ultimo commit local: `feat: estrutura portfolio e cases publicos`.
+Ultimo commit local: `feat: consolida fluxo publico de contratacao`.
 
 ## Concluido
 
@@ -69,7 +69,7 @@ G - Site publico
 - G.3 Creators. Concluida.
 - G.4 Media & Games. Concluida.
 - G.5 Portfolio/cases. Concluida.
-- G.6 Orcamento/contratacao.
+- G.6 Orcamento/contratacao. Concluida.
 - G.7 Acessibilidade/responsividade.
 - CP-G2.
 
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G.5 concluida
+G.6 concluida
 
 ## Proxima subfase
 
-G.6 - Orcamento, contato e contratacao
+G.7 - Acessibilidade e responsividade publica

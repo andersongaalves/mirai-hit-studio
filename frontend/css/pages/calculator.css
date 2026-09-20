@@ -1,564 +1,256 @@
-/* --- ESTRUTURA GERAL DA CALCULADORA --- */
-.calc-grid {
+.quote-main { padding: 72px 0 96px; }
+
+.quote-header {
+    max-width: 900px;
+    margin-bottom: var(--space-10);
+}
+
+.quote-header h1 {
+    max-width: 760px;
+    margin-bottom: var(--space-4);
+    font-size: 3.25rem;
+    line-height: 1.08;
+}
+
+.quote-header > p:last-child {
+    max-width: 680px;
+    color: var(--color-text-secondary);
+    font-size: 1.1rem;
+}
+
+.quote-layout {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 40px; /* Aumentado de 30px para 40px para dar mais respiro entre colunas */
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-8);
     align-items: start;
 }
 
-/* --- PAINÉIS PRINCIPAIS --- */
-.panel {
-    background: rgba(17, 24, 39, 0.8);
-    border: 1px solid var(--cor-roxo);
-    padding: 35px; /* Aumentado para desgrudar o conteúdo das bordas */
-    border-radius: 12px;
-    margin-bottom: 30px;
+.quote-form { min-width: 0; }
+
+.stepper-container {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: var(--space-6);
+    border-bottom: var(--border-subtle);
 }
 
-.panel.active {
-    display: block;
+.step-indicator {
+    min-width: 0;
+    padding: var(--space-3) var(--space-2);
+    border-bottom: 3px solid transparent;
+    color: var(--color-text-secondary);
+    font-family: var(--font-subtitulos);
+    text-align: center;
 }
 
-.panel h3 {
-    color: var(--cor-ciano);
-    font-size: 1.5rem;
-    padding-bottom: 15px;
-    margin-bottom: 25px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.step-indicator span {
+    display: inline-grid;
+    width: 24px;
+    height: 24px;
+    margin-right: var(--space-1);
+    place-items: center;
+    border: var(--border-subtle);
+    border-radius: 50%;
+    font-size: var(--font-size-caption);
 }
 
-/* --- CARDS DE SELEÇÃO DE SERVIÇOS --- */
+.step-indicator.active {
+    border-bottom-color: var(--color-accent);
+    color: var(--color-text-primary);
+}
+
+.step-indicator.active span { border-color: var(--color-accent); color: var(--color-accent); }
+
+.step-content > h2,
+.panel > h2,
+.result-panel > h2,
+.quote-context > h2 {
+    margin: 0;
+    padding: 0;
+    font-size: 1.7rem;
+    text-align: left;
+}
+
+.step-content > h2::after,
+.panel > h2::after,
+.result-panel > h2::after,
+.quote-context > h2::after { content: none; }
+
+.step-copy {
+    margin: var(--space-2) 0 var(--space-6);
+    color: var(--color-text-secondary);
+}
+
+.quote-status {
+    margin-bottom: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    border: var(--border-subtle);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+}
+
+.quote-status[data-state="error"] { border-left-color: var(--color-danger); color: #fecaca; }
+.quote-status[data-state="success"] { border-left-color: var(--color-success); color: #bbf7d0; }
+
+.services-wrapper { margin-top: var(--space-6); }
+.service-category + .service-category { margin-top: var(--space-8); }
+
+.public-page .category-title {
+    margin: 0 0 var(--space-4);
+    padding: 0;
+    font-size: 1.25rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.public-page .category-title::after { content: none; }
+
 .service-selector {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
     align-items: start;
 }
 
-.radio-card {
-    min-width: 0;
-}
+.radio-card { position: relative; min-width: 0; }
 
 .radio-card input {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 .radio-card label {
+    min-height: 126px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.03);
-    border: 2px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 24px;
-    cursor: pointer;
-    transition: 0.35s;
+    align-items: flex-start;
+    padding: var(--space-5);
     overflow-wrap: anywhere;
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    background: var(--color-surface-elevated);
 }
 
-.radio-card label > * {
-    max-width: 100%;
-    min-width: 0;
+.radio-card label:hover { border-color: rgba(0, 212, 255, 0.55); }
+.radio-card input:focus-visible + label { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.radio-card input:checked + label { border-color: var(--color-accent); box-shadow: var(--shadow-glow); }
+
+.service-title { color: var(--color-text-primary); font-family: var(--font-subtitulos); font-size: 1.15rem; font-weight: 700; }
+.service-subtitle { margin-top: var(--space-2); color: var(--color-text-secondary); }
+.service-details { display: none; width: 100%; }
+.radio-card input:checked + label .service-details { display: block; margin-top: var(--space-5); }
+.service-description { color: var(--color-text-secondary); }
+.service-price { margin: var(--space-4) 0; padding: var(--space-3) 0; border-block: var(--border-subtle); }
+.service-price strong { display: block; color: var(--color-accent); font-family: var(--font-titulos); font-size: 1.5rem; }
+.service-selected { color: var(--color-success); font-weight: 700; }
+.service-discount { color: var(--color-warning); }
+
+.panel,
+.result-panel {
+    padding: var(--space-6);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-elevated);
 }
 
-.radio-card label:hover {
-    border-color: rgba(0, 212, 255, 0.35);
-    transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.05);
-}
+.form-group { margin-bottom: var(--space-5); text-align: left; }
+.form-group label { display: block; margin-bottom: var(--space-2); color: var(--color-text-primary); font-family: var(--font-titulos); }
+.form-group label span { color: var(--color-text-secondary); font-family: var(--font-texto); font-size: var(--font-size-small); }
 
-.radio-card input:checked + label {
-    border-color: var(--cor-ciano);
-    background: rgba(0, 212, 255, 0.08);
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.18);
-}
-
-.service-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: white;
-}
-
-.service-subtitle {
-    margin-top: 8px;
-    color: #aaa;
-    font-size: 0.9rem;
-}
-
-.service-details {
-    display: none;
-    width: 100%;
-}
-
-.radio-card input:checked + label .service-details {
-    display: block;
-    margin-top: 22px;
-    animation: expandCard 0.35s ease;
-}
-
-.service-details p {
-    color: #ddd;
-    line-height: 1.7;
-    margin-bottom: 20px;
-    text-align: left;
-}
-
-.service-price {
-    text-align: center;
-    padding: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    margin: 20px 0;
-}
-
-.service-price strong {
-    display: block;
-    margin-top: 8px;
-    color: var(--cor-ciano);
-    font-size: 2rem;
-    font-family: var(--font-titulos);
-}
-
-.service-selected {
-    text-align: center;
-    color: #4ade80;
-    font-weight: bold;
-}
-
-/* --- ESTILIZAÇÃO DOS FORMULÁRIOS E INPUTS (O SEGREDO DO DESIGN) --- */
-.form-group {
-    margin-bottom: 25px; /* Espaço generoso entre cada pergunta */
-    text-align: left;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: var(--cor-branco);
-    font-family: var(--font-titulos);
-    letter-spacing: 0.5px;
-}
-
-/* Aplica o tema escuro/neon em todos os campos de digitação e seleção */
 .form-group input,
 .form-group select,
-.form-group textarea,
-.result-panel input {
+.form-group textarea {
     width: 100%;
-    padding: 14px;
-    background: rgba(
-        255,
-        255,
-        255,
-        0.05
-    ); /* Fundo escuro levemente transparente */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: var(--cor-branco);
-    font-family: var(--font-texto);
-    font-size: 1rem;
-    transition: all 0.3s;
+    min-height: 46px;
+    padding: 12px;
+    border: var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    background: #0b111d;
+    font: inherit;
 }
 
-/* Remove a aparência padrão das setinhas do select em alguns navegadores */
-.form-group select {
-    appearance: auto;
-    background-color: #111827; /* Fundo sólido para as opções do select não ficarem transparentes */
-}
-
-/* Efeito ao clicar no campo (Focus) */
+.form-group textarea { min-height: 130px; resize: vertical; }
 .form-group input:focus,
 .form-group select:focus,
-.form-group textarea:focus,
-.result-panel input:focus {
-    outline: none;
-    border-color: var(--cor-ciano);
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
-    background: rgba(0, 0, 0, 0.2);
+.form-group textarea:focus { border-color: var(--color-accent); outline: 2px solid rgba(0, 212, 255, 0.22); outline-offset: 1px; }
+.form-group select option { color: var(--color-text-primary); background: var(--color-surface-elevated); }
+
+.result-panel { max-width: 680px; }
+.quote-discount { display: inline-flex; margin-top: var(--space-4); padding: 4px var(--space-2); border: 1px solid var(--color-warning); border-radius: var(--radius-sm); color: var(--color-warning); font-size: var(--font-size-small); }
+.quote-discount[hidden],
+.service-category[hidden],
+#container_canais_inst[hidden] { display: none; }
+.total-price { margin: var(--space-4) 0; color: var(--color-accent); font-family: var(--font-titulos); font-size: 2.75rem; }
+.estimate-note { max-width: 58ch; color: var(--color-text-secondary); }
+
+.contact-fields {
+    margin-top: var(--space-6);
+    padding: var(--space-6) 0 0;
+    border: 0;
+    border-top: var(--border-subtle);
 }
 
-/* Textos de ajuda menores abaixo dos inputs */
-.form-group small {
-    display: block;
-    color: #888;
-    margin-top: 6px;
-    font-size: 0.85rem;
+.contact-fields legend { margin-bottom: var(--space-5); font-family: var(--font-subtitulos); font-size: 1.25rem; }
+
+.botoes-navegacao {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+    padding-top: var(--space-5);
+    border-top: var(--border-subtle);
 }
 
-/* --- PAINEL DE RESULTADO (COLUNA DA DIREITA) --- */
-.result-panel {
+.botoes-navegacao--end { justify-content: flex-end; }
+
+.quote-context {
     position: sticky;
-    top: 100px;
-    padding: 40px 30px;
-    text-align: center;
-    border-radius: 15px;
-    border: 2px solid rgba(0, 212, 255, 0.3);
-    background: linear-gradient(
-        180deg,
-        rgba(17, 24, 39, 0.9) 0%,
-        rgba(178, 42, 240, 0.15) 100%
-    );
-    box-shadow:
-        0 10px 30px rgba(0, 0, 0, 0.5),
-        0 0 15px rgba(0, 212, 255, 0.1);
-    /* Animação do card flutuando */
-    animation: floatPanel 6s ease-in-out infinite;
+    top: 96px;
+    padding: var(--space-6);
+    border-left: 1px solid var(--color-accent);
+    background: #0e1522;
 }
 
-.result-panel h3 {
-    color: var(--cor-branco);
-    font-size: 1.2rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-}
+.quote-context ol { margin-top: var(--space-5); list-style: none; }
+.quote-context li { display: grid; grid-template-columns: 28px 1fr; gap: var(--space-3); padding: var(--space-3) 0; }
+.quote-context li > span { color: var(--color-accent); font-family: var(--font-subtitulos); }
+.quote-context li p { color: var(--color-text-secondary); }
+.quote-context li strong { display: block; color: var(--color-text-primary); }
+.quote-context__note { margin-top: var(--space-5); padding-top: var(--space-4); border-top: var(--border-subtle); color: var(--color-text-secondary); font-size: var(--font-size-small); }
 
-/* O Valor em Dinheiro */
-.total-price {
-    margin: 15px 0 25px;
-    color: var(--cor-ciano);
-    font-size: 3.5rem;
-    font-family: var(--font-titulos);
-    display: inline-block;
-    /* Animação do neon pulsando */
-    animation: neonPulse 2s infinite alternate;
-}
+.service-section { padding: var(--space-3) 0; border-bottom: var(--border-subtle); }
+.service-section-title { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); color: var(--color-accent); font-family: var(--font-titulos); cursor: pointer; }
+.service-section-title > div { display: flex; min-width: 0; align-items: center; gap: var(--space-3); }
+.service-icon { flex: 0 0 36px; min-height: 36px; display: grid; place-items: center; border-radius: var(--radius-md); background: rgba(0, 212, 255, 0.12); }
+.service-items { display: none; margin-top: var(--space-3); padding-left: var(--space-5); color: var(--color-text-secondary); }
+.service-section.active .service-items { display: block; }
+.service-benefits { margin-top: var(--space-4); padding-top: var(--space-4); border-top: var(--border-subtle); }
+.service-benefit { margin: var(--space-2) 0; color: var(--color-success); }
 
-/* Badge de Desconto (Chamativo e Agressivo) */
-#badge-desconto {
-    display: inline-flex;
-    background: linear-gradient(45deg, #ea00ff, #9900ff);
-    color: white;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 0 15px rgba(204, 0, 255, 0.5);
-    display: inline-block;
-    margin-bottom: 10px;
-    /* Animação de entrada e pulso contínuo */
-    animation: pulseBadge 1.5s infinite alternate;
-}
-
-/* Espaçamento extra para os inputs dentro do painel de resultado */
-.result-panel .form-group {
-    margin-bottom: 15px;
-}
-
-/* Botão Enviar com energia animada */
-.result-panel .btn-submit {
-    width: 100%;
-    margin-top: 20px;
-    padding: 16px;
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: linear-gradient(
-        90deg,
-        var(--cor-roxo),
-        var(--cor-ciano),
-        var(--cor-roxo)
-    );
-    background-size: 200% auto;
-    transition: all 0.3s ease;
-    /* Animação da cor correndo pelo botão */
-    animation: gradientMove 3s linear infinite;
-}
-
-.result-panel .btn-submit:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 25px var(--cor-ciano);
-}
-
-.calc-section {
-    margin-bottom: var(
-        --spacing-lg
-    ); /* Espaçamento padrão grande entre seções */
-    padding: var(--spacing-md);
-    background: rgba(17, 24, 39, 0.6);
-    border-radius: 16px;
-}
-
-/* Espaçamento entre os cards de serviço */
-.servicos-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 25px; /* Espaço entre os cards */
-    margin-top: 20px;
-}
-
-/* =======================================================
-   SERVICE RENDERER
-======================================================= */
-
-.service-description {
-    margin-top: 20px;
-    text-align: left;
-    color: #ddd;
-    animation: fadeIn 0.35s ease;
-}
-
-.service-intro {
-    margin-bottom: 22px;
-    color: #eee;
-    line-height: 1.7;
-}
-
-
-
-.service-section-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    color: var(--cor-ciano);
-    font-family: var(--font-titulos);
-    font-size: 1rem;
-    font-weight: bold;
-}
-
-.service-benefits {
-    margin-top: 25px;
-    padding-top: 18px;
-
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.service-benefit {
-    display: flex;
-    align-items: center;
-
-    margin: 10px 0;
-
-    color: #7ef2ae;
-
-    font-weight: 600;
-}
-
-.service-benefit::before {
-    content: "✓";
-
-    margin-right: 10px;
-
-    color: #22c55e;
-
-    font-weight: bold;
-}
-
-/* --- KEYFRAMES (AS ANIMAÇÕES) --- */
-
-/* Card flutuando e mudando o brilho da borda */
-@keyframes floatPanel {
-    0%,
-    100% {
-        transform: translateY(0);
-        box-shadow:
-            0 10px 30px rgba(0, 0, 0, 0.5),
-            0 0 15px rgba(0, 212, 255, 0.1);
-        border-color: rgba(0, 212, 255, 0.3);
-    }
-    50% {
-        transform: translateY(-8px);
-        box-shadow:
-            0 15px 35px rgba(0, 0, 0, 0.6),
-            0 0 25px rgba(178, 42, 240, 0.4);
-        border-color: rgba(178, 42, 240, 0.5);
-    }
-}
-
-/* Preço com brilho neon respirando */
-@keyframes neonPulse {
-    0% {
-        text-shadow:
-            0 0 10px rgba(0, 212, 255, 0.4),
-            0 0 20px rgba(0, 212, 255, 0.2);
-        transform: scale(1);
-    }
-    100% {
-        text-shadow:
-            0 0 20px rgba(0, 212, 255, 0.8),
-            0 0 40px rgba(0, 212, 255, 0.5);
-        transform: scale(1.03);
-    }
-}
-
-/* Badge de desconto chamando atenção */
-@keyframes pulseBadge {
-    0% {
-        box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
-        transform: scale(1);
-    }
-    100% {
-        box-shadow: 0 0 20px rgba(255, 0, 85, 0.8);
-        transform: scale(1.05);
-    }
-}
-
-/* Energia passando pelo botão de concluir */
-@keyframes gradientMove {
-    0% {
-        background-position: 0% center;
-    }
-    100% {
-        background-position: 200% center;
-    }
-}
-
-/* --- RESPONSIVIDADE --- */
 @media (max-width: 900px) {
-    .calc-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    .result-panel {
-        position: static;
-        margin-top: 20px;
-        animation: none; /* Desliga o flutuante no mobile para não atrapalhar o scroll */
-    }
+    .quote-layout { grid-template-columns: 1fr; }
+    .quote-context { position: static; order: -1; }
 }
 
-@keyframes expandCard {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-
-    to {
-        opacity: 1;
-        transform: none;
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-
-    to {
-        opacity: 1;
-        transform: none;
-    }
-}
-
-/* Espaçamento do container de serviços inteiro */
-.services-wrapper {
-    margin-bottom: 60px; /* Afasta os serviços do painel da calculadora abaixo */
-    padding: 20px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Linha divisória sutil */
-}
-
-/* Espaçamento entre a categoria "Avulso" e a categoria "Combo" */
-.service-category {
-    margin-bottom: 40px;
-}
-/* ===========================
-   SERVICE ACCORDION
-=========================== */
-
-.service-section {
-    padding: 14px 0;
-
-    border-bottom:
-        1px solid rgba(255,255,255,.08);
-}
-
-
-.service-section-title {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    cursor:pointer;
-
-    color:var(--cor-ciano);
-
-    font-family:
-        var(--font-titulos);
-}
-
-
-.service-section-title > div {
-    display:flex;
-    min-width: 0;
-    align-items:center;
-    gap:12px;
-}
-
-.service-section:first-child {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-}
-
-.service-icon {
-    flex-shrink: 0;
-    width:36px;
-    height:36px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    border-radius:8px;
-
-    background:
-        rgba(0,212,255,.12);
-}
-
-
-.service-items {
-    display:none;
-
-    margin-top:18px;
-
-    list-style:none;
-}
-
-
-.service-section.active 
-.service-items {
-
-    display:block;
-
-}
-
-.service-items li {
-    position: block;
-    margin-bottom:10px;
-    
-}
-
-.service-items li::before {
-    left: 0;
-    color: var(--cor-ciano);
-    font-size: 1.1rem;
-    content: "•";
-}
-
-.section-arrow{
-    flex-shrink: 0;
-
-    color:var(--cor-ciano);
-
-}
-
-
-.service-section:not(.active){
-
-    opacity:.75;
-
-}
-
-
-.service-section:hover{
-
-    opacity:1;
-
+@media (max-width: 600px) {
+    .quote-main { padding-top: 48px; }
+    .quote-header h1 { font-size: 2.35rem; }
+    .step-indicator { font-size: var(--font-size-small); }
+    .step-indicator span { display: grid; margin: 0 auto var(--space-1); }
+    .service-selector { grid-template-columns: 1fr; }
+    .panel,
+    .result-panel,
+    .quote-context { padding: var(--space-5); }
+    .botoes-navegacao { align-items: stretch; flex-direction: column-reverse; }
+    .botoes-navegacao button { width: 100%; }
+    .total-price { font-size: 2.2rem; }
 }

@@ -22,34 +22,49 @@ function obterDetalhes() {
 
 export function initOrcamento() {
     const btnSolicitar = $("btn-solicitar");
+    const form = $("orcamento-form");
+    const status = $("quote-submit-status");
 
-    if (!btnSolicitar || btnSolicitar.dataset.initialized) return;
+    if (!btnSolicitar || !form || btnSolicitar.dataset.initialized) return;
     btnSolicitar.dataset.initialized = "true";
     let enviando = false;
 
-    btnSolicitar.addEventListener(
-        "click",
+    const setStatus = (message, stateName = "") => {
+        if (!status) return;
+        status.textContent = message;
+        status.dataset.state = stateName;
+        status.classList.toggle("hidden", !message);
+    };
 
-        async () => {
+    form.addEventListener(
+        "submit",
+
+        async (event) => {
+            event.preventDefault();
             if (enviando) return;
             if (!state.servicoSelecionadoOBJ) {
+                setStatus("Selecione um serviço antes de enviar.", "error");
                 Notify.error("Selecione um serviço.");
 
                 return;
             }
+            if (!form.reportValidity()) {
+                setStatus("Revise os campos obrigatórios para continuar.", "error");
+                return;
+            }
 
             const payload = {
-                nome_cliente: $("nome_cliente").value,
+                nome_cliente: $("nome_cliente").value.trim(),
 
-                email: $("email").value,
+                email: $("email").value.trim(),
 
-                whatsapp: $("whatsapp").value,
+                whatsapp: $("whatsapp").value.trim() || null,
 
                 servico: state.servicoSelecionadoOBJ.nome,
 
                 valor_total: state.valorTotalCalculado,
 
-                link_guia: $("guia")?.value || "",
+                link_guia: $("guia")?.value.trim() || null,
 
                 detalhes: obterDetalhes(),
             };
@@ -57,15 +72,19 @@ export function initOrcamento() {
             try {
                 enviando = true;
                 btnSolicitar.disabled = true;
+                btnSolicitar.setAttribute("aria-busy", "true");
+                setStatus("Enviando solicitação...");
                 await API.postOrcamento(payload);
                 track("generate_lead", { service_id: state.servicoSelecionadoOBJ.id });
+                setStatus("Solicitação recebida. A equipe analisará o briefing antes de preparar a proposta.", "success");
                 Notify.success("Solicitação de orçamento enviada.");
-            } catch (error) {
-                console.error(error);
+            } catch {
+                setStatus("Não foi possível enviar agora. Seus dados continuam no formulário para uma nova tentativa.", "error");
                 Notify.error("Erro ao enviar solicitação de orçamento.");
             } finally {
                 enviando = false;
                 btnSolicitar.disabled = false;
+                btnSolicitar.removeAttribute("aria-busy");
             }
         },
     );

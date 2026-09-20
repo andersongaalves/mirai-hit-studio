@@ -7,49 +7,49 @@ import { state } from "./state.js";
 
 export const PARAM_TEMPLATES = {
     duracao: {
-        html: `<div class="form-group"><label>Duração Estimada (s)</label><input type="number" id="duracao" value="180" min="30"></div>`,
+        html: `<div class="form-group"><label for="duracao">Duração estimada (s)</label><input type="number" id="duracao" value="180" min="30"></div>`,
         detalhe: (v) => `Duração: ${v}s`,
     },
     pessoas: {
-        html: `<div class="form-group"><label>Artistas</label><input type="number" id="pessoas" value="1" min="1"></div>`,
+        html: `<div class="form-group"><label for="pessoas">Artistas</label><input type="number" id="pessoas" value="1" min="1"></div>`,
         detalhe: (v) => `Artistas: ${v}`,
     },
     canais_voz: {
-        html: `<div class="form-group"><label>Canais de Voz</label><input type="number" id="canais_voz" value="5" min="1"></div>`,
+        html: `<div class="form-group"><label for="canais_voz">Canais de voz</label><input type="number" id="canais_voz" value="5" min="1"></div>`,
         detalhe: (v) => `Canais Voz: ${v}`,
     },
     inst_aberto: {
-        html: `<div class="form-group"><label>Instrumental aberto (Stems)?</label><select id="inst_aberto"><option value="nao">Não</option><option value="sim">Sim</option></select></div><div class="form-group" id="container_canais_inst" style="display: none;"><label>Qtd Canais Instrumental</label><input type="number" id="canais_inst" value="1" min="1"></div>`,
+        html: `<div class="form-group"><label for="inst_aberto">Instrumental aberto (stems)?</label><select id="inst_aberto"><option value="nao">Não</option><option value="sim">Sim</option></select></div><div class="form-group" id="container_canais_inst" hidden><label for="canais_inst">Canais do instrumental</label><input type="number" id="canais_inst" value="1" min="1"></div>`,
         detalhe: (v, extra) =>
             v === "sim"
                 ? `Inst Aberto: Sim (${extra} canais)`
                 : `Inst Aberto: Não`,
     },
     melodias: {
-        html: `<div class="form-group"><label>Melodias</label><input type="number" id="melodias" value="5" min="1"></div>`,
+        html: `<div class="form-group"><label for="melodias">Melodias</label><input type="number" id="melodias" value="5" min="1"></div>`,
         detalhe: (v) => `Melodias: ${v}`,
     },
     instrumentacao: {
-        html: `<div class="form-group"><label>Instrumentação</label><select id="instrumentacao"><option value="eletronicos">Eletrônicos</option><option value="hibridos">Híbridos</option><option value="gravados">100% Gravados</option></select></div>`,
+        html: `<div class="form-group"><label for="instrumentacao">Instrumentação</label><select id="instrumentacao"><option value="eletronicos">Eletrônicos</option><option value="hibridos">Híbridos</option><option value="gravados">100% gravados</option></select></div>`,
         detalhe: (v) => `Inst: ${v}`,
     },
     exclusividade: {
-        html: `<div class="form-group"><label>Exclusividade</label><select id="exclusividade"><option value="sim">Sim</option><option value="nao">Não (Lease)</option></select></div>`,
+        html: `<div class="form-group"><label for="exclusividade">Exclusividade</label><select id="exclusividade"><option value="sim">Sim</option><option value="nao">Não (lease)</option></select></div>`,
         detalhe: (v) => `Exclusivo: ${v}`,
     },
     revisoes: {
-        html: `<div class="form-group"><label>Revisões</label><select id="revisoes"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>`,
+        html: `<div class="form-group"><label for="revisoes">Revisões</label><select id="revisoes"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>`,
         detalhe: (v) => `Revisões: ${v}`,
     },
     prazo: {
-        html: `<div class="form-group"><label>Prazo</label><select id="prazo"><option value="normal">Normal</option><option value="urgente">Urgente</option><option value="express">Express</option></select></div>`,
+        html: `<div class="form-group"><label for="prazo">Prazo desejado</label><select id="prazo"><option value="normal">Normal</option><option value="urgente">Urgente</option><option value="express">Express</option></select></div>`,
         detalhe: (v) => `Prazo: ${v}`,
     },
     descricao: {
-        html: `<div class="form-group"><label>Descrição</label><textarea id="descricao"></textarea></div>`,
+        html: `<div class="form-group"><label for="descricao">Descrição do projeto</label><textarea id="descricao" maxlength="5000" placeholder="Contexto, referências e resultado esperado"></textarea></div>`,
     },
     guia: {
-        html: `<div class="form-group"><label>Link da Guia</label><input type="text" id="guia"></div>`,
+        html: `<div class="form-group"><label for="guia">Link de referência <span>(opcional)</span></label><input type="url" id="guia" maxlength="500" placeholder="https://"></div>`,
     },
 };
 
@@ -62,6 +62,8 @@ export function renderizarBotoes(servicos) {
 
     boxAvulso.innerHTML = "";
     boxCombo.innerHTML = "";
+    $("categoria-avulso").hidden = true;
+    $("categoria-combo").hidden = true;
 
     servicos.forEach((srv) => {
         const temDesconto =
@@ -82,7 +84,7 @@ export function renderizarBotoes(servicos) {
 
         const descontoHTML = temDesconto
             ? `
-                <span id="badge-desconto" class="service-discount ">
+                <span class="service-discount">
                     -${escapeHtml(state.configGlobal.desconto)}% OFF
                 </span>
                 <br>
@@ -148,11 +150,11 @@ export function renderizarBotoes(servicos) {
     });
 
     if (boxAvulso.innerHTML) {
-        $("categoria-avulso").style.display = "block";
+        $("categoria-avulso").hidden = false;
     }
 
     if (boxCombo.innerHTML) {
-        $("categoria-combo").style.display = "block";
+        $("categoria-combo").hidden = false;
     }
 }
 
@@ -297,8 +299,7 @@ export function renderizarFormularioParametros(parametrosString) {
 
     if (selectInstAberto && containerCanais) {
         selectInstAberto.addEventListener("change", (e) => {
-            containerCanais.style.display =
-                e.target.value === "sim" ? "block" : "none";
+            containerCanais.hidden = e.target.value !== "sim";
             // Dispara um evento global de input para a calculadora refazer as contas imediatamente
             document.body.dispatchEvent(new Event("input", { bubbles: true }));
         });

@@ -7,22 +7,38 @@ import { money } from "../utils/format.js";
 import {$} from "../utils/dom.js";
 import { track } from "../analytics.js";
 
+function setCalculatorStatus(message, stateName = "") {
+    const status = $("calculator-status");
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = stateName;
+    status.classList.toggle("hidden", !message);
+}
+
 export async function initCalculadora() {
-    const [config, servicos] = await Promise.all([
-        API.getAPI("config"),
-
-        API.getAPI("servicos"),
-    ]);
-
-    state.configGlobal = {
-        ...config,
-
-        mult_desconto: (100 - config.desconto) / 100,
-    };
-
-    state.servicosDB = servicos;
-
-    UI.renderizarBotoes(state.servicosDB);
+    setCalculatorStatus("Carregando serviços...");
+    try {
+        const [config, servicos] = await Promise.all([
+            API.getAPI("config"),
+            API.getAPI("servicos"),
+        ]);
+        state.configGlobal = {
+            ...config,
+            mult_desconto: (100 - Number(config.desconto || 0)) / 100,
+        };
+        state.servicosDB = Array.isArray(servicos) ? servicos : [];
+        UI.renderizarBotoes(state.servicosDB);
+        setCalculatorStatus(
+            state.servicosDB.length
+                ? ""
+                : "Nenhum serviço está disponível no momento. Tente novamente mais tarde.",
+            state.servicosDB.length ? "" : "error",
+        );
+    } catch {
+        state.servicosDB = [];
+        UI.renderizarBotoes([]);
+        setCalculatorStatus("Não foi possível carregar os serviços. Tente novamente mais tarde.", "error");
+    }
 }
 
 export function calcular() {
@@ -55,13 +71,12 @@ export function calcular() {
         total *= state.configGlobal.mult_desconto;
 
         if (badge) {
-            badge.style.display = "inline-block";
-
+            badge.hidden = false;
             badge.innerText = `DESCONTO DE ${state.configGlobal.desconto}% APLICADO`;
         }
     } else {
         if (badge) {
-            badge.style.display = "none";
+            badge.hidden = true;
         }
     }
 
@@ -75,8 +90,17 @@ export function calcular() {
 }
 
 export async function initEventosCalculadora() {
-
     await initCalculadora();
+
+    const form = $("orcamento-form");
+    if (!form || form.dataset.calculatorInitialized === "true") return;
+    form.dataset.calculatorInitialized = "true";
+
+    form.querySelectorAll("[data-step-target]").forEach((button) => {
+        button.addEventListener("click", () => {
+            window.avancarPasso(Number(button.dataset.stepTarget));
+        });
+    });
 
     document.body.addEventListener(
         "input",
@@ -89,6 +113,7 @@ export async function initEventosCalculadora() {
 
                 if (state.servicoSelecionadoOBJ) {
                     track("view_service", { service_id: state.servicoSelecionadoOBJ.id });
+                    setCalculatorStatus("");
                 }
 
                 const btnNext1 = $("btn-next-1");
