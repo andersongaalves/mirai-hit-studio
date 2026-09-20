@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: G.1 concluida.
+Fase atual: G.2 concluida.
 
 Ultimo checkpoint enviado: CP-PAG.
 
-Checkpoint atual: CP-G1 em andamento.
+Checkpoint atual: CP-G1 pronto para validacao.
 
 Proximo checkpoint: CP-G1 apos G.2.
 
 Proximo push: apos G.2.
 
-Ultimo commit local: `refactor: reorganiza arquitetura publica da Mirai`.
+Ultimo commit local: `feat: adiciona home e vertical para artistas`.
 
 ## Concluido
 
@@ -64,7 +64,7 @@ G - Site publico
 
 - G.0 Provas sociais. Concluida.
 - G.1 Arquitetura publica. Concluida.
-- G.2 Home e Artists.
+- G.2 Home e Artists. Concluida.
 - CP-G1.
 - G.3 Creators.
 - G.4 Media & Games.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G.1 concluida
+G.2 concluida
 
 ## Proxima subfase
 
-G.2 - Home e Artists
+CP-G1 - regressao e envio

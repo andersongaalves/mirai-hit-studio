@@ -3,25 +3,86 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="Produção musical para artistas independentes com identidade, direção e acabamento profissional." />
+        <meta name="description" content="Produção musical para artistas independentes: instrumentais, vocal production, mixagem, masterização e produção completa." />
         <meta name="mirai-ga-id" content="G-W4GLJXPRDM" />
-        <title>Artistas | Mirai Hit Studio</title>
+        <meta name="theme-color" content="#111827" />
+        <meta property="og:title" content="Produção musical para artistas | Mirai Hit Studio" />
+        <meta property="og:description" content="Direção, produção e acabamento para músicas com identidade." />
+        <meta property="og:image" content="https://miraihitstudio.com.br/img/mirai-artists-hero.webp" />
+        <title>Produção musical para artistas | Mirai Hit Studio</title>
+        <link rel="canonical" href="https://miraihitstudio.com.br/artists" />
         <link rel="icon" href="/assets/favicon.png" />
         <link rel="stylesheet" href="/css/main.css" />
+        <link rel="preload" as="image" href="/img/mirai-artists-hero.webp" fetchpriority="high" />
     </head>
-    <body class="public-page" data-analytics-vertical="artists">
+    <body class="public-page artists-page" data-analytics-vertical="artists">
         <div id="nav-placeholder"></div>
         <main>
-            <section class="vertical-shell-hero">
-                <div class="container vertical-shell-hero__content">
-                    <img class="vertical-shell-hero__mark" src="/assets/logo_mirai_BnW.png" alt="" />
-                    <p class="section-label">Mirai para artistas</p>
-                    <h1>Produção musical com identidade e acabamento.</h1>
-                    <p>Do instrumental à master final, a Mirai estrutura o som para artistas que querem lançar com direção e consistência.</p>
-                    <div class="vertical-shell-hero__actions">
+            <section class="public-hero artists-hero" aria-labelledby="artists-title">
+                <div class="public-hero__shade" aria-hidden="true"></div>
+                <div class="public-container public-hero__content">
+                    <p class="public-eyebrow">Mirai para artistas</p>
+                    <h1 id="artists-title">Sua música com direção, identidade e acabamento.</h1>
+                    <p>Produção musical para artistas independentes que querem transformar referência e intenção em uma faixa pronta para lançar.</p>
+                    <div class="public-actions">
                         <a class="btn-cta" href="/orcamento">Solicitar orçamento</a>
                         <a class="btn-outline" href="/portfolio">Ouvir trabalhos</a>
                     </div>
+                </div>
+            </section>
+
+            <section class="public-band public-band--compact">
+                <div class="public-container artists-intro">
+                    <p class="public-eyebrow">Rap, trap, drill, funk, geek music e além</p>
+                    <p>Conhecemos a linguagem e a energia desses universos sem transformar gênero em limite. O ponto de partida é sempre o que a música precisa comunicar.</p>
+                </div>
+            </section>
+
+            <section class="public-section" aria-labelledby="artists-services-title">
+                <div class="public-container">
+                    <p class="public-eyebrow">Serviços</p>
+                    <h2 id="artists-services-title">Escolha uma etapa ou construa a produção completa</h2>
+                    <div class="service-capabilities">
+                        <article><span>01</span><h3>Produção musical</h3><p>Direção de arranjo, sonoridade e execução para organizar a faixa como um todo.</p></article>
+                        <article><span>02</span><h3>Instrumental</h3><p>Beat ou instrumental orientado pela identidade, pelas referências e pelo objetivo do lançamento.</p></article>
+                        <article><span>03</span><h3>Vocal production</h3><p>Direção de interpretação, organização de takes, edição e decisões que valorizam a voz.</p></article>
+                        <article><span>04</span><h3>Mixagem</h3><p>Equilíbrio, espaço e impacto para fazer todos os elementos funcionarem juntos.</p></article>
+                        <article><span>05</span><h3>Masterização</h3><p>Acabamento final e preparação técnica coerente com o formato de entrega.</p></article>
+                    </div>
+                </div>
+            </section>
+
+            <section class="public-band" aria-labelledby="artists-process-title">
+                <div class="public-container offers-layout">
+                    <div>
+                        <p class="public-eyebrow">Como funciona</p>
+                        <h2 id="artists-process-title">Um processo claro deixa mais espaço para criar</h2>
+                    </div>
+                    <ol class="artist-process">
+                        <li><span>01</span><div><strong>Briefing e referências</strong><p>Entendemos a música, o momento do artista e o resultado esperado.</p></div></li>
+                        <li><span>02</span><div><strong>Escopo e proposta</strong><p>Definimos serviços, entregas, condições e prazo antes de começar.</p></div></li>
+                        <li><span>03</span><div><strong>Produção e revisões</strong><p>O trabalho avança nas etapas previstas, com retorno organizado.</p></div></li>
+                        <li><span>04</span><div><strong>Finalização e entrega</strong><p>Os arquivos acordados são preparados para o destino do projeto.</p></div></li>
+                    </ol>
+                </div>
+            </section>
+
+            <section class="public-section proof-callout" aria-labelledby="artists-work-title">
+                <div class="public-container proof-callout__inner">
+                    <div>
+                        <p class="public-eyebrow">Trabalhos publicados</p>
+                        <h2 id="artists-work-title">Ouça o que já está disponível no portfólio</h2>
+                        <p class="section-copy">A Mirai só apresenta trabalhos identificados e autorizados. Novos projetos entram no catálogo conforme essa validação acontece.</p>
+                    </div>
+                    <a class="btn-outline" href="/portfolio">Abrir portfólio</a>
+                </div>
+            </section>
+
+            <section class="public-cta" aria-labelledby="artists-cta-title">
+                <div class="public-container">
+                    <p class="public-eyebrow">Próximo lançamento</p>
+                    <h2 id="artists-cta-title">Conte onde sua música está agora e aonde ela precisa chegar.</h2>
+                    <a class="btn-cta" href="/orcamento">Começar briefing</a>
                 </div>
             </section>
         </main>

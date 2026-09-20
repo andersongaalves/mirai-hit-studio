@@ -7,5 +7,14 @@ export async function initHome() {
     }
 
     await UI.renderizarPortfolio();
-    UI.initHeroParallax();
+
+    document.querySelectorAll("[data-carousel-direction]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const direction = Number(button.dataset.carouselDirection) || 0;
+            $("home-portfolio-track")?.scrollBy({
+                left: direction * 320,
+                behavior: "smooth",
+            });
+        });
+    });
 }

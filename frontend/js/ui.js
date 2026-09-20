@@ -175,8 +175,11 @@ export async function renderizarPortfolio() {
     const listaHits = Array.isArray(lista) ? lista.filter((p) => p?.destaque === true) : [];
 
     if (listaHits.length === 0) {
-        track.innerHTML =
-            "<p style='text-align:center; width: 100%; color: #aaa;'>Nenhum Hit adicionado. Marque projetos como 'Hit' no Admin.</p>";
+        track.replaceChildren();
+        const empty = document.createElement("p");
+        empty.className = "public-empty";
+        empty.textContent = "O portfólio público está sendo preparado com trabalhos identificados e autorizados.";
+        track.appendChild(empty);
         return;
     }
 
