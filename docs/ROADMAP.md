@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: G concluida.
+Fase atual: F2.1 concluida.
 
 Ultimo checkpoint enviado: CP-G2.
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-IA1 apos F2.3.
 
 Proximo push: conforme o bloco F2.
 
-Ultimo commit local: `docs: registra checkpoint G2`.
+Ultimo commit local: `docs: audita agente para arquitetura de IA da Mirai`.
 
 ## Concluido
 
@@ -75,7 +75,7 @@ G - Site publico
 
 F2 - IA
 
-- F2.1 Auditoria do agente Dark District.
+- F2.1 Auditoria e adaptacao do agente Dark District. Concluida.
 - F2.2 Nucleo do agente.
 - F2.3 Knowledge/tools.
 - CP-IA1.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-G concluida - CP-G2 enviado
+F2.1 concluida - auditoria do agente Dark District registrada
 
 ## Proxima subfase
 
-F2.1 - Auditoria/adaptacao do agente da Dark District
+F2.2 - Nucleo de conversas e orquestracao independente de canal

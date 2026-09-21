@@ -163,3 +163,7 @@ Decisao: notificacoes Mercado Pago exigem HMAC oficial e nunca determinam status
 ## ADR-040 - Checkout guest por referencia opaca
 
 Decisao: o checkout nao exige conta e usa a UUID publica da cobranca como credencial compartilhavel. O backend determina valores e estados; PAN/CVV permanecem no Mercado Pago, parcela comercial nao se confunde com parcelas do cartao e webhook/reconciliacao continuam autoritativos. O checkout nao entrega arquivos nem altera producao.
+
+## ADR-041 - Core de IA independente de canal
+
+Decisao: o core de conversas da Mirai separa adaptadores de canal, persistencia, politica de handoff, orquestracao, provider e tools em allowlist. Site e e-mail sao os canais iniciais; WhatsApp permanece fora da IA. Handoff e um estado central, nao um comportamento exclusivo da interface.
