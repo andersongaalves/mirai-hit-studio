@@ -21,6 +21,8 @@ from schemas.ai import (
     InboundMessage, OutboundMessage, ProcessingResult, ProviderInput, SafeMetadata,
 )
 from services.ai_orchestrator import AIOrchestrator, Decision, SYSTEM
+from services.ai_knowledge_service import AIKnowledgeService, build_tool_registry
+from services.ai_tools import ToolExecutionContext
 
 
 logger = logging.getLogger(__name__)
@@ -55,14 +57,26 @@ class Claim:
     version: int
     mode: str
     incoming: ProviderInput
+    tool_context: ToolExecutionContext
 
 
 class ConversationService:
-    def __init__(self, sessions, provider=None, *, clock=utcnow, lease_seconds=60, max_attempts=3):
+    def __init__(
+        self,
+        sessions,
+        provider=None,
+        *,
+        registry=None,
+        knowledge=None,
+        clock=utcnow,
+        lease_seconds=60,
+        max_attempts=3,
+    ):
         if not 1 <= lease_seconds <= 300 or not 1 <= max_attempts <= 5:
             raise ValueError("invalid_processing_limits")
         self.sessions = sessions
-        self.orchestrator = AIOrchestrator(provider)
+        self.knowledge = knowledge or AIKnowledgeService(sessions)
+        self.orchestrator = AIOrchestrator(provider, registry or build_tool_registry(sessions))
         self.clock = clock
         self.lease_seconds = lease_seconds
         self.max_attempts = max_attempts
@@ -166,7 +180,16 @@ class ConversationService:
             retryable=message.processing_status == "failed" and message.attempts < self.max_attempts,
         )
 
-    def claim(self, conversation_id, message_id, *, context=()) -> Claim | ProcessingResult:
+    def claim(
+        self,
+        conversation_id,
+        message_id,
+        *,
+        context=(),
+        identity_verified=False,
+        actor="client",
+        source=None,
+    ) -> Claim | ProcessingResult:
         # Validate externally prepared context before acquiring a lease.
         prepared = ProviderInput(system=SYSTEM, message="validate", context=context).context
         with self._transaction() as db:
@@ -209,6 +232,12 @@ class ConversationService:
             message.processing_status = "processing"
             message.attempts += 1
             message.error_code = None
+            knowledge = self.knowledge.context_for(message.content, db=db)
+            combined_context = ProviderInput(
+                system=SYSTEM,
+                message="validate",
+                context=tuple(prepared) + tuple(knowledge[:max(0, 8 - len(prepared))]),
+            ).context
             # Exclude drafts: a copilot suggestion has never been spoken to the user.
             previous_inputs = select(Message.id).where(
                 Message.conversation_id == conversation.id, Message.direction == "inbound",
@@ -220,16 +249,54 @@ class ConversationService:
                 Message.kind != "suggestion", Message.processing_status == "completed",
                 or_(Message.id.in_(previous_inputs), Message.reply_to_id.in_(previous_inputs)),
             ).order_by(Message.created_at.desc(), Message.id.desc()).limit(20)).all()
-            incoming = ProviderInput(system=SYSTEM, message=message.content, context=prepared,
+            incoming = ProviderInput(system=SYSTEM, message=message.content, context=combined_context,
                                      history=tuple(HistoryEntry(role=row.role, text=row.content)
                                                    for row in reversed(previous)))
-            return Claim(conversation.id, message.id, token, conversation.version, conversation.mode, incoming)
+            tool_context = ToolExecutionContext(
+                conversation_id=conversation.id,
+                cliente_id=conversation.cliente_id,
+                identity_verified=identity_verified,
+                mode=conversation.mode,
+                actor=actor,
+                source=source or conversation.channel,
+                request_id=message.request_id,
+            )
+            return Claim(
+                conversation.id,
+                message.id,
+                token,
+                conversation.version,
+                conversation.mode,
+                incoming,
+                tool_context,
+            )
 
-    def process(self, conversation_id, message_id, *, context=()):
-        claim = self.claim(conversation_id, message_id, context=context)
+    def process(
+        self,
+        conversation_id,
+        message_id,
+        *,
+        context=(),
+        identity_verified=False,
+        actor="client",
+        source=None,
+    ):
+        claim = self.claim(
+            conversation_id,
+            message_id,
+            context=context,
+            identity_verified=identity_verified,
+            actor=actor,
+            source=source,
+        )
         if isinstance(claim, ProcessingResult):
             return claim
-        decision = self.orchestrator.decide(status="open", mode=claim.mode, incoming=claim.incoming)
+        decision = self.orchestrator.decide(
+            status="open",
+            mode=claim.mode,
+            incoming=claim.incoming,
+            tool_context=claim.tool_context,
+        )
         return self.complete(claim, decision)
 
     def complete(self, claim: Claim, decision: Decision):

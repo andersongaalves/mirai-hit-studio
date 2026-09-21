@@ -186,7 +186,8 @@ for number in range(13):
     mid = service.receive(cid, inbound('Pergunta ' + str(number)))
     service.process(cid, mid, context=('Conhecimento aprovado',))
 assert len(provider.calls[-1].history) == 20
-assert provider.calls[-1].context == ('Conhecimento aprovado',)
+assert provider.calls[-1].context[0] == 'Conhecimento aprovado'
+assert any('"kind": "brand"' in item for item in provider.calls[-1].context)
 assert provider.calls[-1].system != provider.calls[-1].message
 rows = service.history(cid, limit=100)
 assert len(rows) == 26
@@ -366,21 +367,24 @@ assert len(current.history(cid)) == 2
     def test_tools_are_explicit_and_errors_sanitized(self):
         self.run_case(r'''
 from pydantic import BaseModel, ConfigDict
-from services.ai_tools import Tool, ToolRegistry, ToolError
+from services.ai_tools import Tool, ToolCategory, ToolExecutionContext, ToolRegistry, ToolError
 class Args(BaseModel):
     model_config = ConfigDict(extra='forbid')
     value: int
-registry = ToolRegistry([Tool('test_echo', Args, lambda data: data)])
-assert registry.execute('test_echo', {'value':2}).value == 2
+context = ToolExecutionContext(conversation_id=uuid4(), mode='autonomous', source='site')
+registry = ToolRegistry([Tool('test_echo', 'Echo test', ToolCategory.PUBLIC_READ,
+                              Args, Args, lambda context, data: data)])
+assert registry.execute('test_echo', {'value':2}, context).value == 2
 for name, args, code in [('eval', {'value':1}, 'tool_not_allowed'),
                          ('test_echo', {'value':1,'secret':'private'}, 'tool_invalid_arguments')]:
-    try: registry.execute(name, args)
+    try: registry.execute(name, args, context)
     except ToolError as error: assert str(error) == code
     else: raise AssertionError('unsafe tool accepted')
-def fail(data): raise RuntimeError('private@example.invalid')
-registry = ToolRegistry([Tool('test_fail', Args, fail)])
-try: registry.execute('test_fail', {'value':1})
-except ToolError as error: assert str(error) == 'tool_failure'
+def fail(context, data): raise RuntimeError('private@example.invalid')
+registry = ToolRegistry([Tool('test_fail', 'Failure test', ToolCategory.PUBLIC_READ,
+                              Args, Args, fail)])
+try: registry.execute('test_fail', {'value':1}, context)
+except ToolError as error: assert str(error) == 'tool_temporarily_unavailable'
 else: raise AssertionError('tool failure hidden')
 ''')
 

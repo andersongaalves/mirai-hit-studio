@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "brand": {
+    "name": "Mirai Hit Studio",
+    "positioning": "Estudio music-tech de producao musical, identidade sonora e audio para artistas, creators e midia interativa.",
+    "verticals": ["artists", "creators", "media_games"]
+  },
+  "faq": [
+    {
+      "topic": "contracting",
+      "answer": "O fluxo comeca com uma solicitacao de orcamento e briefing. A equipe pode preparar uma proposta comercial independente com escopo, valores e condicoes."
+    },
+    {
+      "topic": "deadlines",
+      "answer": "O prazo depende do escopo e deve ser confirmado na proposta comercial.",
+      "requires_confirmation": true
+    },
+    {
+      "topic": "revisions",
+      "answer": "A quantidade e o escopo das revisoes devem ser confirmados na proposta comercial.",
+      "requires_confirmation": true
+    },
+    {
+      "topic": "rights",
+      "answer": "Licencas, exclusividade e direitos dependem do servico e devem ser confirmados na proposta comercial.",
+      "requires_confirmation": true
+    },
+    {
+      "topic": "payments",
+      "answer": "As condicoes de pagamento sao definidas na proposta. Quando uma cobranca e disponibilizada, o checkout pode oferecer PIX ou cartao conforme as opcoes vigentes."
+    }
+  ]
+}

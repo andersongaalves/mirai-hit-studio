@@ -128,11 +128,15 @@ resultado incerto e idempotencia do transporte. Resposta gerada nao significa en
 
 ## Tools e seguranca
 
-`ToolRegistry` comeca vazio. Registro explicito exige schema de argumentos com
-extra=forbid; nome desconhecido e bloqueado. Erros sao tool_not_allowed,
-tool_invalid_arguments e tool_failure. Nao ha getattr dinamico, eval, SQL ou HTTP livre.
-Orquestrador/provider ainda nao executam tools. F2.3 devera adicionar autorizacao por
-tool e schemas de saida de cada contrato antes de registrar ferramentas comerciais.
+`ToolRegistry` usa registro explicito, schemas estritos de entrada/saida e categorias de
+risco. `ToolExecutionContext` e construido pelo servidor; o modelo nunca escolhe o
+cliente autorizado. Tools privadas exigem identidade verificada, tools desconhecidas
+sao bloqueadas e nao ha `getattr` dinamico, `eval`, SQL, shell ou HTTP livre.
+
+O provider pode solicitar tools por contrato vendor-neutral. O orquestrador limita cada
+turno a tres ciclos e quatro chamadas, devolve resultados normalizados e converte falhas
+criticas em handoff. Knowledge publico pequeno e tools implementadas estao descritos em
+`AI_KNOWLEDGE_TOOLS.md`; dados dinamicos nao ficam hardcoded no prompt.
 
 Logs usam somente UUIDs tecnicas, action, error_code e request_id (hash SHA-256 quando
 nao for UUID, evitando copiar dados pessoais disfarcados de correlacao). Nenhum prompt,
@@ -157,4 +161,4 @@ DDL PostgreSQL incluindo RLS/grants; configure_mappers tambem exercitado.
 
 SQLite nao comprova isolamento/locking/RLS PostgreSQL. Validacao formal em PostgreSQL
 descartavel segue pendente para I.1/I.3. Nenhum banco real ou provider real foi acessado.
-F2.3 e o proximo passo: knowledge e tools. F2.4/F2.5/F2.6 continuam separados.
+F2.3 conclui knowledge e tools. F2.4/F2.5/F2.6 continuam separados.

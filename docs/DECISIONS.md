@@ -175,3 +175,15 @@ Decisao: Conversation vincula Cliente opcionalmente e admite referencia anonima 
 ## ADR-043 - Processamento de IA com lease e efeitos idempotentes
 
 Decisao: mensagens possuem idempotencia e resposta unica no banco. Claim curto por conversa usa token, versao e lease recuperavel; provider opera fora da transacao e resultados obsoletos sao descartados. O provider padrao fica desabilitado e tools exigem registro explicito. Entrega de canal nao e responsabilidade deste core.
+
+## ADR-044 - Knowledge pequeno e dados dinamicos via fonte autoritativa
+
+Decisao: a IA usa conhecimento publico estruturado e versionado, sem RAG inicial. Servicos, portfolio e estados comerciais sao consultados por tools no dominio real; contexto e resultados permanecem limitados e nunca viram instrucoes de sistema.
+
+## ADR-045 - Autorizacao de tool pertence ao servidor
+
+Decisao: tools sao allowlisted e categorizadas. Leituras privadas exigem identidade verificada e `cliente_id` fornecido pelo contexto confiavel, nunca pelos argumentos do modelo. Queries privadas filtram o cliente e nao permitem enumeracao cruzada.
+
+## ADR-046 - Mutacoes comerciais sensiveis permanecem humanas
+
+Decisao: desconto, preco, proposta, pagamento, refund, usuarios e operacoes administrativas nao sao tools autonomas. Escritas de lead/briefing aguardam F2.7; preco customizado, negociacao e falhas criticas geram handoff controlado.
