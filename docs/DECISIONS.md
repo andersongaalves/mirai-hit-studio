@@ -167,3 +167,11 @@ Decisao: o checkout nao exige conta e usa a UUID publica da cobranca como creden
 ## ADR-041 - Core de IA independente de canal
 
 Decisao: o core de conversas da Mirai separa adaptadores de canal, persistencia, politica de handoff, orquestracao, provider e tools em allowlist. Site e e-mail sao os canais iniciais; WhatsApp permanece fora da IA. Handoff e um estado central, nao um comportamento exclusivo da interface.
+
+## ADR-042 - Identidade e estados de conversa separados do CRM
+
+Decisao: Conversation vincula Cliente opcionalmente e admite referencia anonima opaca. Status operacional (open/waiting_human/closed) e modo (autonomous/copilot/human) sao independentes. Handoff idempotente pausa autonomia e conserva o primeiro motivo; copiloto gera rascunho sem envio.
+
+## ADR-043 - Processamento de IA com lease e efeitos idempotentes
+
+Decisao: mensagens possuem idempotencia e resposta unica no banco. Claim curto por conversa usa token, versao e lease recuperavel; provider opera fora da transacao e resultados obsoletos sao descartados. O provider padrao fica desabilitado e tools exigem registro explicito. Entrega de canal nao e responsabilidade deste core.

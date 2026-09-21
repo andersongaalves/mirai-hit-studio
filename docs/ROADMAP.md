@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F2.1 concluida.
+Fase atual: F2.2 concluida.
 
 Ultimo checkpoint enviado: CP-G2.
 
-Checkpoint atual: CP-G2 enviado.
+Checkpoint atual: CP-IA1 em andamento.
 
 Proximo checkpoint: CP-IA1 apos F2.3.
 
 Proximo push: conforme o bloco F2.
 
-Ultimo commit local: `docs: audita agente para arquitetura de IA da Mirai`.
+Ultimo commit local: `feat: adiciona core de IA independente de canal`.
 
 ## Concluido
 
@@ -76,7 +76,7 @@ G - Site publico
 F2 - IA
 
 - F2.1 Auditoria e adaptacao do agente Dark District. Concluida.
-- F2.2 Nucleo do agente.
+- F2.2 Core de IA independente de canal. Concluida.
 - F2.3 Knowledge/tools.
 - CP-IA1.
 - F2.4 Chat.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F2.1 concluida - auditoria do agente Dark District registrada
+F2.2 concluida - core independente de canal; CP-IA1 em andamento
 
 ## Proxima subfase
 
-F2.2 - Nucleo de conversas e orquestracao independente de canal
+F2.3 - Knowledge + Tools
