@@ -33,7 +33,7 @@ def handoff_reason(text):
     normalized = "".join(c for c in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(c))
     rules = (
         (HandoffReason.MANUAL_REQUEST, r"\b(humano|atendente|pessoa real|falar com a equipe|falar com uma pessoa)\b"),
-        (HandoffReason.DISCOUNT, r"\bdescontos?\b"),
+        (HandoffReason.DISCOUNT, r"\b(descontos?|consegue reduzir|fecha por metade)\b"),
         (HandoffReason.NEGOTIATION, r"\b(negociar|negociacao|mais barato|faz por|quero fechar|fechar (?:o |a |esse |essa )?(?:negocio|projeto|proposta|contrato))\b"),
         (HandoffReason.CUSTOM_PRICING, r"\b(preco|valor|orcamento)\s+(customizado|personalizado|especial)\b"),
         (HandoffReason.PAYMENT_ISSUE, r"\b(reembolso|estorno|chargeback|cobranca indevida|paguei|pagamento duplicado|pagamento nao|problema com (?:o )?pagamento|pagamento contestado)\b"),

@@ -77,3 +77,5 @@ async function initApp() {
 // ===========================
 
 initApp();
+// Chat failure must not prevent navigation, the calculator or public forms.
+import("./chat/chat.js").then(module => module.initSiteChat()).catch(() => {});

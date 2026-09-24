@@ -187,3 +187,11 @@ Decisao: tools sao allowlisted e categorizadas. Leituras privadas exigem identid
 ## ADR-046 - Mutacoes comerciais sensiveis permanecem humanas
 
 Decisao: desconto, preco, proposta, pagamento, refund, usuarios e operacoes administrativas nao sao tools autonomas. Escritas de lead/briefing aguardam F2.7; preco customizado, negociacao e falhas criticas geram handoff controlado.
+
+## ADR-047 - Canal site anonimo nao autentica Cliente
+
+Decisao: SiteChannelAdapter reutiliza o core; token aleatorio autoriza apenas a conversa, com hash persistido e expiracao. Frontend nao controla identidade, cliente ou modo. UUID de mensagem permanece no retry; private tools continuam bloqueadas. SessionStorage conserva so sessao e eventual envio pendente, nunca transcript em analytics.
+
+## ADR-048 - OpenAI apenas no backend
+
+Decisao: por escolha explicita do responsavel, o primeiro provider concreto usa OpenAI Responses, configuracao por ambiente e startup independente de credenciais. Browser acessa somente API Mirai. Handoff permanece waiting_human sem alegar notificacao inexistente; Inbox segue em F2.6. Detalhes em AI_SITE_CHAT.md.

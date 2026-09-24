@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F2.3 concluida.
+Fase atual: F2.4 concluida.
 
-Ultimo checkpoint enviado: CP-G2.
+Ultimo checkpoint enviado: CP-IA1 (`29b07d8`).
 
-Checkpoint atual: CP-IA1 pronto para validacao.
+Checkpoint atual: CP-IA2 em andamento.
 
-Proximo checkpoint: CP-IA1.
+Proximo checkpoint: CP-IA2.
 
-Proximo push: conforme o bloco F2.
+Proximo push: apos F2.5.
 
-Ultimo commit local: `feat: adiciona knowledge e tools da IA`.
+Ultimo commit local: `feat: adiciona chat da IA ao site`.
 
 ## Concluido
 
@@ -78,8 +78,8 @@ F2 - IA
 - F2.1 Auditoria e adaptacao do agente Dark District. Concluida.
 - F2.2 Core de IA independente de canal. Concluida.
 - F2.3 Knowledge/tools. Concluida.
-- CP-IA1 pronto para checkpoint.
-- F2.4 Chat.
+- CP-IA1 enviado.
+- F2.4 Chat do site. Concluida.
 - F2.5 E-mail.
 - CP-IA2.
 - F2.6 Inbox/copiloto.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F2.3 concluida - Knowledge + Tools; CP-IA1 pronto para validacao
+F2.4 concluida - Chat anonimo, adapter site e provider OpenAI configuravel.
 
 ## Proxima subfase
 
-F2.4 - Chat do site, apos envio do CP-IA1
+F2.5 - Canal de E-mail. Nao iniciado.

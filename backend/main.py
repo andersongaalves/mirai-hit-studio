@@ -25,6 +25,7 @@ from routers.audit_logs import router as audit_logs_router
 from routers.webhooks import router as webhooks_router
 from routers.checkout import router as checkout_router
 from routers.financeiro import router as financeiro_router
+from routers.ai_chat import router as ai_chat_router
 
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,8 @@ app.add_middleware(
 @app.exception_handler(RequestValidationError)
 async def invalid_request(request, error):
     # Pydantic's default 'input' can echo passwords and other private values.
+    if request.url.path.startswith("/ai/chat/"):
+        return JSONResponse({"detail": "Mensagem invalida. Use ate 4000 caracteres."}, status_code=400)
     return JSONResponse({"detail": [{"loc": item["loc"], "msg": "Valor invalido.", "type": item["type"]}
                                     for item in error.errors()]}, status_code=422)
 
@@ -73,6 +76,7 @@ app.include_router(audit_logs_router)
 app.include_router(webhooks_router)
 app.include_router(checkout_router)
 app.include_router(financeiro_router)
+app.include_router(ai_chat_router)
 
 
 @app.get("/")
