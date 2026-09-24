@@ -99,6 +99,7 @@ class ProcessingResult(Contract):
         "processing_conflict", "retry_exhausted", "tool_not_allowed",
         "tool_invalid_arguments", "tool_not_authorized", "tool_temporarily_unavailable",
         "tool_loop_limit", "tool_call_limit", "tool_invalid_result",
+        "tool_conflict",
     ] | None = None
     retryable: bool = False
 

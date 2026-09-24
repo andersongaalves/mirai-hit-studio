@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from typing_extensions import Annotated
 
 from schemas.ai import Channel, ConversationMode, ConversationStatus, HandoffReason
+from schemas.ai_briefing import BriefingAdminOutput
 
 
 class InboxMessage(BaseModel):
@@ -70,6 +71,7 @@ class InboxDetail(BaseModel):
     messages: list[InboxMessage]
     has_more_messages: bool = False
     next_before: UUID | None = None
+    briefing: BriefingAdminOutput | None = None
 
 
 class InboxModeUpdate(BaseModel):

@@ -372,7 +372,7 @@ from alembic.script import ScriptDirectory
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'd4e6f8a1b2c3'
+assert head == 'e8b2c6d4f701'
 command.downgrade(config, 'd9e4b7a1c2f6')
 columns = {column['name'] for column in inspect(engine).get_columns('pagamentos')}
 assert 'provider_payment_id' in columns and 'provider_order_id' not in columns

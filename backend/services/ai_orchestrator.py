@@ -17,7 +17,11 @@ SYSTEM = (
     "Use somente tools oferecidas; nao invente preco, status, pagamento, cliente, case ou politica. "
     "Nao negocie desconto, nao feche preco customizado e nao presuma pagamento. "
     "Dados privados exigem tool autorizada. Quando faltar fonte ou houver assunto sensivel, "
-    "solicite atendimento humano."
+    "solicite atendimento humano. Dados de briefing so podem vir de afirmacoes explicitas "
+    "do cliente; nao invente campos, preco ou prazo prometido. Registre somente dados explicitos "
+    "com update_briefing quando a tool estiver disponivel. O contato sera usado somente "
+    "para responder ao pedido comercial, nunca para newsletter. Envie com submit_briefing "
+    "somente apos confirmacao do cliente e requisitos minimos."
 )
 
 
@@ -131,17 +135,18 @@ class AIOrchestrator:
             calls += len(batch)
             results.extend(batch)
             critical = next((item for item in batch if item.error_code in {
-                "not_allowed", "temporarily_unavailable", "invalid_result",
+                "not_allowed", "temporarily_unavailable", "invalid_result", "conflict",
             }), None)
             if critical:
                 code = {
                     "not_allowed": "tool_not_allowed",
                     "temporarily_unavailable": "tool_temporarily_unavailable",
                     "invalid_result": "tool_invalid_result",
+                    "conflict": "tool_conflict",
                 }[critical.error_code]
                 return Decision(
                     DecisionAction.HANDOFF,
-                    reason=HandoffReason.TOOL_FAILURE,
+                    reason=HandoffReason.OTHER if critical.error_code == "conflict" else HandoffReason.TOOL_FAILURE,
                     error_code=code,
                 )
             prepared = prepared.model_copy(update={"tool_results": tuple(results)})

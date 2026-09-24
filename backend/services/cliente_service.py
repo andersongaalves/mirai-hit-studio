@@ -60,11 +60,14 @@ def resolver_para_orcamento(
     nome: str,
     email: str | None,
     telefone: str | None,
+    erro_em_conflito: bool = False,
 ):
     email = normalizar_email(email)
     telefone = normalizar_telefone(telefone)
     cliente, conflito = _candidatos(db, email, telefone)
     if conflito:
+        if erro_em_conflito:
+            raise ClienteConflito("Identificadores pertencem a clientes diferentes.")
         return None
     if cliente:
         complementos = {}

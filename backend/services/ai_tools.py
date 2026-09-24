@@ -36,6 +36,7 @@ class ToolExecutionContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     conversation_id: UUID
+    message_id: UUID | None = None
     cliente_id: int | None = Field(default=None, gt=0)
     identity_verified: bool = False
     mode: ConversationMode
@@ -52,6 +53,7 @@ class Tool:
     input_schema: type[BaseModel]
     output_schema: type[BaseModel]
     execute: Callable[[ToolExecutionContext, BaseModel], BaseModel]
+    allow_unverified: bool = False
 
 
 def _log_reference(value):
@@ -75,6 +77,7 @@ class ToolRegistry:
                 or not strict_input
                 or not strict_output
                 or tool.category == ToolCategory.HUMAN_ONLY
+                or (tool.allow_unverified and tool.category != ToolCategory.CONTROLLED_WRITE)
             ):
                 raise ValueError("invalid_tool_registration")
             self._tools[tool.name] = tool
@@ -83,8 +86,12 @@ class ToolRegistry:
     def _authorized(tool, context):
         if tool.category == ToolCategory.PUBLIC_READ:
             return True
-        if tool.category in (ToolCategory.PRIVATE_READ, ToolCategory.CONTROLLED_WRITE):
+        if tool.category == ToolCategory.PRIVATE_READ:
             return context.identity_verified and context.cliente_id is not None
+        if tool.category == ToolCategory.CONTROLLED_WRITE:
+            return (tool.allow_unverified and context.message_id is not None
+                    and context.mode == ConversationMode.AUTONOMOUS
+                    and context.actor == "client" and context.source in {"site", "email"})
         return False
 
     def definitions(self, context: ToolExecutionContext):
@@ -139,6 +146,13 @@ class ToolRegistry:
                 "tool_invalid_result": "invalid_result",
                 "not_found": "not_found",
                 "conflict": "conflict",
+                "client_conflict": "conflict",
+                "stale_message": "conflict",
+                "missing_evidence": "invalid_input",
+                "invalid_field": "invalid_input",
+                "missing_required_fields": "invalid_input",
+                "confirmation_required": "invalid_input",
+                "already_submitted": "conflict",
             }
             error_code = stable.get(str(error), "temporarily_unavailable")
             return ProviderToolResult(

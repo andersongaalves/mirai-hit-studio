@@ -186,7 +186,7 @@ Decisao: tools sao allowlisted e categorizadas. Leituras privadas exigem identid
 
 ## ADR-046 - Mutacoes comerciais sensiveis permanecem humanas
 
-Decisao: desconto, preco, proposta, pagamento, refund, usuarios e operacoes administrativas nao sao tools autonomas. Escritas de lead/briefing aguardam F2.7; preco customizado, negociacao e falhas criticas geram handoff controlado.
+Decisao: desconto, preco, proposta, pagamento, refund, usuarios e operacoes administrativas nao sao tools autonomas. Escritas de briefing/lead sao controladas conforme ADR-055; preco customizado, negociacao e falhas criticas geram handoff controlado.
 
 ## ADR-047 - Canal site anonimo nao autentica Cliente
 
@@ -219,3 +219,11 @@ Decisao: a Inbox agrega site e email sem fundir conversas. Operador ativo assume
 ## ADR-054 - Copilot e rascunho humano
 
 Decisao: sugestao reutiliza o core, nunca e enviada automaticamente e pode ser regenerada no mesmo registro ou ignorada. O envio persiste texto final humano com chave idempotente; sugestao antiga e rejeitada quando chega novo inbound. Resposta manual funciona sem provider.
+
+## ADR-055 - Briefing progressivo com evidencia e escrita controlada
+
+Decisao: um briefing por Conversation conserva draft e permite merge/correcao. Tools `CONTROLLED_WRITE` aceitam apenas campos allowlisted comprovados na mensagem atual do cliente; ausente nao vira default. Prazo solicitado nao e compromisso, e modelo nao controla preco, desconto ou status comercial.
+
+## ADR-056 - Conversao usa Orcamento e Cliente existentes
+
+Decisao: submissao confirmada cria um unico Orcamento sem preco definido e resolve Cliente pelo service comercial, na mesma transacao. Conflitos exigem humano; vinculo CRM nao verifica identidade. Lead nao autoriza newsletter, proposta ou pagamento automatico.

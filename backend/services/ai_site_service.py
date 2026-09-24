@@ -12,6 +12,7 @@ from models.ai import AIConversationModel as Conversation
 from schemas.ai import ConversationCreate, InboundMessage
 from schemas.ai_site import SiteHistory, SiteHistoryMessage, SiteMessage, SiteReply, SiteSession
 from services.ai_conversation_service import ConversationError, aware, utcnow
+from services.ai_briefing_service import AIBriefingService
 
 
 def token_reference(token):
@@ -74,19 +75,24 @@ class SiteChatService:
         conversation = self.resolve(token)
         rows = self.core.history(conversation.id, limit=100)
         references = {row.id: row.external_message_id for row in rows if row.direction == "inbound"}
-        return SiteHistory(status=conversation.status, awaiting_human=(
-            conversation.status == "waiting_human" or conversation.mode == "human"
-        ), messages=[
+        return SiteHistory(
+            status=conversation.status,
+            **AIBriefingService(self.core.sessions).public_state(conversation.id),
+            awaiting_human=conversation.status == "waiting_human" or conversation.mode == "human",
+            messages=[
             SiteHistoryMessage(role=row.role, text=row.content, created_at=aware(row.created_at),
                                message_id=references.get(row.id if row.direction == "inbound" else row.reply_to_id)
                                or (row.id if row.direction == "outbound" else None),
                                sender="client" if row.direction == "inbound" else "human" if row.kind == "message" else "ai")
             for row in rows if row.kind != "suggestion" and row.role in {"user", "assistant"}
-        ])
+            ],
+        )
 
     def message(self, token, payload):
         conversation = self.resolve(token)
         adapter = SiteChannelAdapter(conversation)
         message_id = self.core.receive(conversation.id, adapter.normalize(payload, self.clock()))
         result = self.core.process(conversation.id, message_id, identity_verified=False, source="site")
-        return adapter.project(result, self.resolve(token).status)
+        reply = adapter.project(result, self.resolve(token).status)
+        state = AIBriefingService(self.core.sessions).public_state(conversation.id)
+        return reply.model_copy(update=state)

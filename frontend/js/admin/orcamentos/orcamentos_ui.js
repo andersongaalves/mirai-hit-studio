@@ -1,5 +1,4 @@
 import { $ } from "../../utils/dom.js";
-import { money } from "../../utils/format.js";
 import { renderAdminState } from "../ui.js";
 
 import {
@@ -9,7 +8,7 @@ import {
     createSelectElement,
 } from "./orcamentos_dom.js";
 
-import { formatStatus } from "./orcamentos_utils.js";
+import { formatEstimatedValue, formatStatus } from "./orcamentos_utils.js";
 
 const emptyHandlers = {
     onVisualizar: () => {},
@@ -82,7 +81,7 @@ function createOrcamentoCard(item, produtores, handlers) {
 
         createTextElement(
             "span",
-            money(item.valor_total),
+            formatEstimatedValue(item.valor_total),
         ),
     );
 

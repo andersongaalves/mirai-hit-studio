@@ -41,6 +41,14 @@ export function initSiteChat() {
             else sessionStorage.removeItem(SESSION_KEY);
         } catch { /* The current page still works without persistent storage. */ }
     }
+    function trackBriefing(result) {
+        if (result.briefing_started && !session?.briefingTracked && track("begin_briefing")) {
+            session.briefingTracked = true; persist();
+        }
+        if (result.lead_created && !session?.leadTracked && track("generate_lead")) {
+            session.leadTracked = true; persist();
+        }
+    }
     function controls() {
         view.input.disabled = busy || !loaded || state !== "open" || Boolean(pending);
         view.send.disabled = view.input.disabled || !view.input.value.trim();
@@ -77,6 +85,7 @@ export function initSiteChat() {
                 pending = null; persist();
             }
             state = history.status; awaitingHuman = history.awaiting_human; loaded = true;
+            trackBriefing(history);
             if (state !== "open") { pending = null; persist(); }
             view.status.textContent = state === "waiting_human" ? WAITING : state === "closed"
                 ? "Conversa encerrada. Você pode iniciar uma nova conversa."
@@ -104,6 +113,7 @@ export function initSiteChat() {
             if (result.action === "error") throw new Error("response_unavailable");
             if (result.text) view.append("assistant", result.text, pending.message_id);
             state = result.status; awaitingHuman = state === "waiting_human"; pending = null; persist();
+            trackBriefing(result);
             track("ai_chat_message");
             view.status.textContent = state === "waiting_human" ? WAITING : state === "closed"
                 ? "Conversa encerrada. Inicie uma nova conversa." : "";

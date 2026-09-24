@@ -30,6 +30,8 @@ from schemas.ai_tools import (
 )
 from services import financial_service
 from services.ai_tools import Tool, ToolCategory, ToolError, ToolRegistry
+from services.ai_briefing_service import AIBriefingService
+from schemas.ai_briefing import BriefingSubmitInput, BriefingToolOutput, BriefingUpdateInput
 
 
 KNOWLEDGE_FILE = Path(__file__).resolve().parents[1] / "ai" / "knowledge" / "public.json"
@@ -172,6 +174,7 @@ class AIKnowledgeService:
 
 
 def build_tool_registry(sessions):
+    briefing = AIBriefingService(sessions)
     def list_services(context, data: ListServicesInput):
         del context
         with sessions() as db:
@@ -350,5 +353,15 @@ def build_tool_registry(sessions):
         Tool(
             "get_payment_status", "Consulta status financeiro confirmado pelo backend.",
             ToolCategory.PRIVATE_READ, ProposalReferenceInput, PaymentStatusOutput, get_payment,
+        ),
+        Tool(
+            "update_briefing", "Salva apenas dados explicitamente informados na mensagem atual do cliente.",
+            ToolCategory.CONTROLLED_WRITE, BriefingUpdateInput, BriefingToolOutput, briefing.update,
+            allow_unverified=True,
+        ),
+        Tool(
+            "submit_briefing", "Cria solicitacao de orcamento somente apos confirmacao e campos obrigatorios.",
+            ToolCategory.CONTROLLED_WRITE, BriefingSubmitInput, BriefingToolOutput, briefing.submit,
+            allow_unverified=True,
         ),
     ))

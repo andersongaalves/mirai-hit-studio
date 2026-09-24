@@ -1,3 +1,9 @@
+import { money } from "../../utils/format.js";
+
+export function formatEstimatedValue(value) {
+    return value == null ? "A definir" : money(value);
+}
+
 const STATUS_LABELS = {
     novo: "🆕 Novo",
     em_analise: "🟡 Em análise",

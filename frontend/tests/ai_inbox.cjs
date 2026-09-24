@@ -13,6 +13,11 @@ let conversation = {
     assigned_username: null, cliente_id: null, cliente_nome: malicious, cliente_email: null,
     sender_reference: null, email_subject: null, handoff_reason: 'manual_request', version: 1,
     created_at: now, updated_at: now, closed_at: null, has_more_messages: false, next_before: null,
+    briefing: { status: 'draft', interest: 'Mixagem', service_id: 1, service_name: 'Mixagem',
+        contact_name: 'Cliente', contact_email: 'cliente@example.com', contact_phone: null,
+        details: { project_type: null, style: 'trap', track_count: 24, requested_deadline: null,
+            goal: null, references: [], notes: malicious }, missing_fields: ['contact_phone'],
+        orcamento_id: null, created_at: now, updated_at: now, submitted_at: null },
     messages: [{ id: inboundId, direction: 'inbound', role: 'user', kind: 'message',
         content: malicious, created_at: now, received_at: now, delivery: 'sent' }],
 };
@@ -110,6 +115,8 @@ function listPage(url) {
         await page.getByRole('button', { name: `Abrir conversa ${malicious}` }).click();
         assert.equal(await page.locator('#inbox-detail img, #inbox-list img').count(), 0);
         assert.equal(await page.evaluate(() => Boolean(window.inboxXss)), false);
+        assert.ok((await page.locator('.inbox-briefing').innerText()).includes(malicious));
+        assert.ok((await page.locator('.inbox-briefing').innerText()).includes('24'));
         await page.getByRole('button', { name: 'Assumir atendimento' }).click();
         await page.locator('#inbox-mode-select').selectOption('copilot');
         await page.getByRole('button', { name: 'Gerar sugestão' }).click();
@@ -136,6 +143,7 @@ function listPage(url) {
         await page.locator('#password').fill('test-password');
         await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
         await page.locator('[data-admin-target="section-inbox"]').click();
+        await page.locator('.inbox-conversation-item').waitFor();
         const beforeSearch = calls.filter(call => call === 'GET /admin/ai/conversations').length;
         await page.locator('#inbox-search').fill('sem resultado');
         await page.getByText('Nenhuma conversa encontrada.').waitFor();

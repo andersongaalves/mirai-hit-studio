@@ -1,6 +1,5 @@
 import { $ } from "../../utils/dom.js";
-import { money } from "../../utils/format.js";
-import { formatStatus } from "./orcamentos_utils.js";
+import { formatEstimatedValue, formatStatus } from "./orcamentos_utils.js";
 import { safeURL } from "../../utils/security.js";
 import { closeAdminModal, openAdminModal } from "../admin_modal.js";
 
@@ -46,7 +45,7 @@ export function abrirModalOrcamento(orcamento) {
     setText("orc_produtor", orcamento.produtor?.username ?? "Sem produtor");
     setText("orc_whatsapp", orcamento.whatsapp);
     setText("orc_servico", orcamento.servico);
-    setText("orc_valor", money(orcamento.valor_total));
+    setText("orc_valor", formatEstimatedValue(orcamento.valor_total));
     setText("orc_data", orcamento.data_solicitacao);
     setValue("orc_detalhes", orcamento.detalhes);
     setText("orc_status", formatStatus(orcamento.status));

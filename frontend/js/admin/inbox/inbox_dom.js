@@ -6,6 +6,7 @@ const LABELS = {
     manual_request: "Solicitação de atendente", provider_failure: "Falha do provedor", low_confidence: "Baixa confiança",
     tool_failure: "Falha de ferramenta", negotiation: "Negociação", discount: "Desconto", payment_issue: "Problema de pagamento",
     custom_pricing: "Preço personalizado", complaint: "Reclamação", other: "Outro motivo",
+    service_or_interest: "serviço ou interesse", contact_name: "nome", contact_email: "e-mail",
 };
 
 function label(value) { return LABELS[value] || value || "Não informado"; }
@@ -119,6 +120,25 @@ export function renderDetail(container, detail, handlers) {
     if (detail.handoff_reason) summary.append(badge(detail.handoff_reason, "warning"));
     summary.append(text("p", detail.cliente_email || detail.sender_reference || "Contato não identificado"));
 
+    const briefing = document.createElement("section");
+    briefing.className = "inbox-briefing";
+    briefing.append(text("h3", "Briefing"));
+    if (detail.briefing) {
+        const data = detail.briefing;
+        briefing.append(badge(data.status === "submitted" ? "Enviado" : "Rascunho", data.status === "submitted" ? "success" : "info"));
+        const fields = [
+            ["Serviço", data.service_name || data.interest], ["Nome", data.contact_name],
+            ["E-mail", data.contact_email], ["Telefone", data.contact_phone],
+            ["Tipo de projeto", data.details?.project_type], ["Estilo", data.details?.style],
+            ["Faixas/stems", data.details?.track_count], ["Prazo desejado", data.details?.requested_deadline],
+            ["Objetivo", data.details?.goal], ["Referências", data.details?.references?.join(", ")],
+            ["Detalhes", data.details?.notes], ["Orçamento", data.orcamento_id ? `#${data.orcamento_id}` : null],
+        ];
+        fields.filter(([, value]) => value !== null && value !== undefined && value !== "")
+            .forEach(([name, value]) => briefing.append(text("p", `${name}: ${value}`)));
+        if (data.missing_fields?.length) briefing.append(text("p", `Faltam: ${data.missing_fields.map(label).join(", ")}`));
+    } else briefing.append(text("p", "Briefing ainda não iniciado."));
+
     const actions = document.createElement("div");
     actions.className = "inbox-detail__actions";
     if (!detail.assigned_user_id) {
@@ -186,7 +206,7 @@ export function renderDetail(container, detail, handlers) {
         event.preventDefault();
         handlers.onSend(textarea.value, suggestion?.id || null);
     });
-    container.append(header, summary, actions, messages, composer);
+    container.append(header, summary, briefing, actions, messages, composer);
 }
 
 export function renderError(container, message) { renderAdminState(container, "error", message); }

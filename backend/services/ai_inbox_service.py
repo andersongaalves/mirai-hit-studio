@@ -11,6 +11,7 @@ from models.ai import AIConversationModel as Conversation, AIEmailThreadModel as
 from models.cliente import ClienteModel
 from schemas.ai import ConversationMode, ConversationStatus
 from services.ai_conversation_service import ConversationError, ConversationService
+from services.ai_briefing_service import AIBriefingService
 from services.ai_email_service import AIEmailError
 from services.audit_service import record as audit_record
 
@@ -101,7 +102,9 @@ class AIInboxService:
             rows = db.scalars(query.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit + 1)).all()
             has_more = len(rows) > limit
             thread = db.get(EmailThread, conversation.id) if conversation.channel == "email" else None
-            return self._detail_payload(conversation, rows[:limit], thread, has_more)
+            detail = self._detail_payload(conversation, rows[:limit], thread, has_more)
+            detail["briefing"] = AIBriefingService(self.sessions).admin_view(conversation.id)
+            return detail
 
     def list(self, *, page=1, page_size=20, status=None, mode=None, channel=None,
              handoff=False, assigned_user_id=None, unassigned=False, search=None,

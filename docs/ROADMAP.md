@@ -2,7 +2,7 @@
 
 ## Status
 
-Fase atual: F2.6 concluida.
+Fase atual: F2.7 concluida.
 
 Ultimo checkpoint enviado: CP-IA2 (`de9c291`).
 
@@ -12,7 +12,7 @@ Proximo checkpoint: CP-IA3.
 
 Proximo push: apos F2.8.
 
-Ultimo commit local: `feat: adiciona inbox e copiloto da IA`.
+Ultimo commit local: `feat: integra briefing da IA ao CRM`.
 
 ## Concluido
 
@@ -83,7 +83,7 @@ F2 - IA
 - F2.5 E-mail. Concluida.
 - CP-IA2 enviado.
 - F2.6 Inbox/copiloto. Concluida.
-- F2.7 Briefing/CRM.
+- F2.7 Briefing/CRM. Concluida.
 - F2.8 Guardrails/metricas.
 - CP-IA3.
 
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F2.6 concluida - Inbox unificada site/email, atendimento humano e sugestoes Copilot com envio revisado.
+F2.7 concluida - briefing progressivo, conversao controlada em Orcamento/Cliente e visualizacao na Inbox.
 
 ## Proxima subfase
 
-F2.7 - Briefing + CRM. Nao iniciar nesta fase.
+F2.8 - Guardrails + custos + evals + metricas. Nao iniciar nesta fase.

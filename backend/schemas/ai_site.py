@@ -28,6 +28,8 @@ class SiteHistoryMessage(BaseModel):
 class SiteHistory(BaseModel):
     status: Literal["open", "waiting_human", "closed"]
     awaiting_human: bool = False
+    briefing_started: bool = False
+    lead_created: bool = False
     messages: list[SiteHistoryMessage]
 
 
@@ -36,3 +38,5 @@ class SiteReply(BaseModel):
     action: Literal["reply", "handoff", "no_action", "error"]
     text: str | None = None
     retryable: bool = False
+    briefing_started: bool = False
+    lead_created: bool = False

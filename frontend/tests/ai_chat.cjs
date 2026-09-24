@@ -31,7 +31,9 @@ const root = path.resolve(__dirname, '..');
                         if (mode !== 'handoff') history.push({ role: 'assistant', text, message_id: data.message_id });
                     }
                     if (mode === 'lost') return route.fulfill({ status: 503 });
-                    return route.fulfill({ json: { action: mode, status: state, text: mode === 'reply' ? text : null } });
+                    return route.fulfill({ json: { action: mode, status: state, text: mode === 'reply' ? text : null,
+                        briefing_started: data.message === 'Unicode: produção 音楽' || data.message === 'Briefing confirmado',
+                        lead_created: data.message === 'Briefing confirmado' } });
                 }
                 return route.fulfill({ json: [] });
             }
@@ -107,6 +109,13 @@ const root = path.resolve(__dirname, '..');
         });
         const event = await page.evaluate(() => window.dataLayer.find(entry => entry[0] === 'event' && entry[1] === 'ai_chat_message'));
         assert.deepEqual(event[2], {});
+        mode = 'reply';
+        await input.fill('Briefing confirmado');
+        await input.press('Enter');
+        await page.waitForFunction(() => !document.querySelector('#site-chat-message').disabled);
+        const briefEvents = await page.evaluate(() => window.dataLayer.filter(entry => entry[0] === 'event' && ['begin_briefing', 'generate_lead'].includes(entry[1])));
+        assert.deepEqual(briefEvents.map(entry => entry[1]), ['begin_briefing', 'generate_lead']);
+        assert.deepEqual(briefEvents.map(entry => entry[2]), [{}, {}]);
         mode = 'handoff';
         await input.fill('Quero falar com uma pessoa');
         await input.press('Enter');

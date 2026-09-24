@@ -10,3 +10,4 @@ from .proposta import PropostaModel
 from .audit_log import AuditLogModel
 from .financeiro import CobrancaModel, PagamentoModel, ProviderWebhookEventModel
 from .ai import AIConversationModel, AIEmailThreadModel, AIMessageModel
+from .ai_briefing import AIBriefingModel

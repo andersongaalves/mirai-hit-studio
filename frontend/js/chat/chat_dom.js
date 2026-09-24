@@ -26,7 +26,7 @@ export function createChatView() {
     title.tabIndex = -1;
     const close = button("Fechar");
     header.append(title, close);
-    const intro = element("p", "site-chat-intro", "Atendimento por IA sobre serviços e projetos de áudio. Não envie dados sensíveis.");
+    const intro = element("p", "site-chat-intro", "Atendimento por IA. Contato informado para orçamento é usado só para responder ao pedido, não para newsletter. Não envie dados de pagamento.");
     const messages = element("ol", "site-chat-messages");
     messages.setAttribute("aria-label", "Mensagens da conversa");
     messages.setAttribute("role", "log");

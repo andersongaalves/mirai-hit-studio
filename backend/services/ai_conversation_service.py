@@ -23,6 +23,7 @@ from schemas.ai import (
 from services.ai_orchestrator import AIOrchestrator, Decision, SYSTEM
 from services.ai_knowledge_service import AIKnowledgeService, build_tool_registry
 from services.ai_tools import ToolExecutionContext
+from services.ai_briefing_service import AIBriefingService
 
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,7 @@ class ConversationService:
             raise ValueError("invalid_processing_limits")
         self.sessions = sessions
         self.knowledge = knowledge or AIKnowledgeService(sessions)
+        self.briefing = AIBriefingService(sessions)
         self.orchestrator = AIOrchestrator(provider, registry or build_tool_registry(sessions))
         self.clock = clock
         self.lease_seconds = lease_seconds
@@ -193,10 +195,12 @@ class ConversationService:
     ):
         prepared = ProviderInput(system=SYSTEM, message="validate", context=context).context
         knowledge = self.knowledge.context_for(message.content, db=db)
+        briefing_context = self.briefing.context_for(conversation.id, db=db)
         combined_context = ProviderInput(
             system=SYSTEM,
             message="validate",
-            context=tuple(prepared) + tuple(knowledge[:max(0, 8 - len(prepared))]),
+            context=tuple(prepared) + tuple(briefing_context[:max(0, 8 - len(prepared))])
+            + tuple(knowledge[:max(0, 8 - len(prepared) - len(briefing_context))]),
         ).context
         previous_inputs = select(Message.id).where(
             Message.conversation_id == conversation.id, Message.direction == "inbound",
@@ -220,6 +224,7 @@ class ConversationService:
         )
         tool_context = ToolExecutionContext(
             conversation_id=conversation.id,
+            message_id=message.id,
             cliente_id=conversation.cliente_id,
             identity_verified=identity_verified,
             mode=conversation.mode,

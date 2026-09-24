@@ -16,7 +16,7 @@ class OrcamentoBase(BaseModel):
     whatsapp: str | None = None
 
     servico: str
-    valor_total: float
+    valor_total: float | None
 
     link_guia: str | None = None
     detalhes: str | None = None
@@ -33,7 +33,7 @@ class OrcamentoCreate(OrcamentoBase):
     email: EmailStr = Field(max_length=150)
     whatsapp: str | None = Field(default=None, max_length=30)
     servico: str = Field(min_length=1, max_length=100)
-    valor_total: float = Field(ge=0)
+    valor_total: float | None = Field(ge=0)
     link_guia: str | None = Field(default=None, max_length=500)
     detalhes: str | None = Field(default=None, max_length=20000)
     _url = field_validator("link_guia")(http_url)

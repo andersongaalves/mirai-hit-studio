@@ -73,7 +73,7 @@ class EmailService:
             protocolo=protocolo,
             nome=orcamento.nome_cliente,
             servico=orcamento.servico,
-            valor=f"{orcamento.valor_total:.2f}",
+            valor=f"{orcamento.valor_total:.2f}" if orcamento.valor_total is not None else "A definir",
             data=orcamento.data_solicitacao.strftime("%d/%m/%Y %H:%M"),
             observacoes=orcamento.detalhes,
         )
@@ -94,7 +94,7 @@ class EmailService:
             email=orcamento.email,
             telefone=orcamento.whatsapp,
             servico=orcamento.servico,
-            valor=f"{orcamento.valor_total:.2f}",
+            valor=f"{orcamento.valor_total:.2f}" if orcamento.valor_total is not None else "A definir",
             data=orcamento.data_solicitacao.strftime("%d/%m/%Y %H:%M"),
             observacoes=orcamento.detalhes,
         )

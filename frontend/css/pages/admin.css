@@ -694,6 +694,9 @@
 .inbox-detail__header h2 { margin: 0; overflow-wrap: anywhere; }
 .inbox-detail__summary { padding: var(--space-3) 0; }
 .inbox-detail__summary p { flex: 1 1 100%; margin: 0; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.inbox-briefing { padding: var(--space-3) 0; border-bottom: var(--border-subtle); }
+.inbox-briefing h3 { margin: 0 0 var(--space-2); }
+.inbox-briefing p { margin: var(--space-2) 0 0; overflow-wrap: anywhere; }
 .inbox-detail__actions { padding: var(--space-3) 0; border-bottom: var(--border-subtle); }
 .inbox-mode-label { color: var(--color-text-secondary); }
 .inbox-messages { display: grid; gap: var(--space-3); max-height: 52vh; overflow-y: auto; padding: var(--space-4) 0; }
