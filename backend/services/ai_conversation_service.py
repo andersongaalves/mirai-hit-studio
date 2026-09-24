@@ -180,6 +180,55 @@ class ConversationService:
             retryable=message.processing_status == "failed" and message.attempts < self.max_attempts,
         )
 
+    def _prepare_provider_input(
+        self,
+        db,
+        conversation,
+        message,
+        *,
+        context=(),
+        identity_verified=False,
+        actor="client",
+        source=None,
+    ):
+        prepared = ProviderInput(system=SYSTEM, message="validate", context=context).context
+        knowledge = self.knowledge.context_for(message.content, db=db)
+        combined_context = ProviderInput(
+            system=SYSTEM,
+            message="validate",
+            context=tuple(prepared) + tuple(knowledge[:max(0, 8 - len(prepared))]),
+        ).context
+        previous_inputs = select(Message.id).where(
+            Message.conversation_id == conversation.id, Message.direction == "inbound",
+            or_(Message.created_at < message.created_at,
+                (Message.created_at == message.created_at) & (Message.id < message.id)),
+        )
+        # A reply may complete after the next inbound; include it through its original input.
+        previous = db.scalars(select(Message).where(
+            Message.conversation_id == conversation.id,
+            Message.kind != "suggestion",
+            Message.processing_status == "completed",
+            or_(Message.id.in_(previous_inputs), Message.reply_to_id.in_(previous_inputs),
+                (Message.direction == "outbound") & Message.reply_to_id.is_(None)
+                & (Message.created_at < message.created_at)),
+        ).order_by(Message.created_at.desc(), Message.id.desc()).limit(20)).all()
+        incoming = ProviderInput(
+            system=SYSTEM,
+            message=message.content,
+            context=combined_context,
+            history=tuple(HistoryEntry(role=row.role, text=row.content) for row in reversed(previous)),
+        )
+        tool_context = ToolExecutionContext(
+            conversation_id=conversation.id,
+            cliente_id=conversation.cliente_id,
+            identity_verified=identity_verified,
+            mode=conversation.mode,
+            actor=actor,
+            source=source or conversation.channel,
+            request_id=message.request_id,
+        )
+        return incoming, tool_context
+
     def claim(
         self,
         conversation_id,
@@ -232,34 +281,9 @@ class ConversationService:
             message.processing_status = "processing"
             message.attempts += 1
             message.error_code = None
-            knowledge = self.knowledge.context_for(message.content, db=db)
-            combined_context = ProviderInput(
-                system=SYSTEM,
-                message="validate",
-                context=tuple(prepared) + tuple(knowledge[:max(0, 8 - len(prepared))]),
-            ).context
-            # Exclude drafts: a copilot suggestion has never been spoken to the user.
-            previous_inputs = select(Message.id).where(
-                Message.conversation_id == conversation.id, Message.direction == "inbound",
-                or_(Message.created_at < message.created_at,
-                    (Message.created_at == message.created_at) & (Message.id < message.id)),
-            )
-            previous = db.scalars(select(Message).where(
-                Message.conversation_id == conversation.id,
-                Message.kind != "suggestion", Message.processing_status == "completed",
-                or_(Message.id.in_(previous_inputs), Message.reply_to_id.in_(previous_inputs)),
-            ).order_by(Message.created_at.desc(), Message.id.desc()).limit(20)).all()
-            incoming = ProviderInput(system=SYSTEM, message=message.content, context=combined_context,
-                                     history=tuple(HistoryEntry(role=row.role, text=row.content)
-                                                   for row in reversed(previous)))
-            tool_context = ToolExecutionContext(
-                conversation_id=conversation.id,
-                cliente_id=conversation.cliente_id,
-                identity_verified=identity_verified,
-                mode=conversation.mode,
-                actor=actor,
-                source=source or conversation.channel,
-                request_id=message.request_id,
+            incoming, tool_context = self._prepare_provider_input(
+                db, conversation, message, context=prepared,
+                identity_verified=identity_verified, actor=actor, source=source,
             )
             return Claim(
                 conversation.id,
@@ -270,6 +294,102 @@ class ConversationService:
                 incoming,
                 tool_context,
             )
+
+    def suggest(self, conversation_id, message_id=None, *, context=(), identity_verified=False,
+                actor="operator", source="internal"):
+        """Generate or replace one copilot draft for the latest inbound message."""
+        with self._transaction() as db:
+            conversation = self._lock(db, conversation_id)
+            if conversation.status == "closed":
+                raise ConversationError("conversation_closed")
+            if conversation.status != "open" or conversation.mode != ConversationMode.COPILOT.value:
+                raise ConversationError("conversation_not_in_copilot")
+            if message_id:
+                message = db.get(Message, str(message_id))
+            else:
+                message = db.scalar(select(Message).where(
+                    Message.conversation_id == conversation.id,
+                    Message.direction == "inbound",
+                ).order_by(Message.created_at.desc(), Message.id.desc()))
+            if message is None or message.conversation_id != conversation.id or message.direction != "inbound":
+                raise ConversationError("message_not_found")
+            latest = db.scalar(select(Message.id).where(
+                Message.conversation_id == conversation.id, Message.direction == "inbound",
+            ).order_by(Message.created_at.desc(), Message.id.desc()))
+            if message.id != latest:
+                raise ConversationError("stale_suggestion")
+            existing = db.scalar(select(Message).where(
+                Message.reply_to_id == message.id, Message.kind != "suggestion",
+            ))
+            if existing is not None:
+                raise ConversationError("suggestion_unavailable")
+            now = self.clock()
+            if conversation.claim_token and conversation.lease_until and aware(conversation.lease_until) > now:
+                raise ConversationError("processing_conflict")
+            token = str(uuid4())
+            version = conversation.version
+            target_message_id = message.id
+            conversation.claim_token = token
+            conversation.lease_until = now + timedelta(seconds=self.lease_seconds)
+            incoming, tool_context = self._prepare_provider_input(
+                db, conversation, message, context=context,
+                identity_verified=identity_verified, actor=actor, source=source,
+            )
+        decision = self.orchestrator.decide(
+            status="open", mode=ConversationMode.COPILOT.value,
+            incoming=incoming, tool_context=tool_context,
+        )
+        if decision.action != DecisionAction.SUGGESTION or not decision.text:
+            with self._transaction() as db:
+                conversation = self._lock(db, conversation_id)
+                if conversation.claim_token == token:
+                    conversation.claim_token = None
+                    conversation.lease_until = None
+            raise ConversationError(decision.error_code or "suggestion_unavailable")
+        stale = False
+        with self._transaction() as db:
+            conversation = self._lock(db, conversation_id)
+            message = db.get(Message, target_message_id)
+            if (conversation.claim_token != token or conversation.version != version
+                    or conversation.status != "open" or conversation.mode != ConversationMode.COPILOT.value
+                    or conversation.lease_until is None or aware(conversation.lease_until) <= self.clock()
+                    or message is None):
+                raise ConversationError("processing_conflict")
+            latest = db.scalar(select(Message.id).where(
+                Message.conversation_id == conversation.id, Message.direction == "inbound",
+            ).order_by(Message.created_at.desc(), Message.id.desc()))
+            if message.id != latest:
+                stale = True
+            else:
+                draft = db.scalar(select(Message).where(
+                    Message.reply_to_id == message.id, Message.kind == "suggestion",
+                ))
+                if draft is None:
+                    draft = Message(
+                        id=str(uuid4()), conversation_id=conversation.id, direction="outbound",
+                        role="assistant", channel=conversation.channel, reply_to_id=message.id,
+                        kind="suggestion", content=decision.text, processing_status="completed",
+                        created_at=self.clock(), request_id=message.request_id,
+                    )
+                    db.add(draft)
+                else:
+                    draft.content = decision.text
+                    draft.created_at = self.clock()
+            conversation.claim_token = None
+            conversation.lease_until = None
+            conversation.updated_at = self.clock()
+            if not stale:
+                db.flush()
+                result = {
+                    "id": draft.id,
+                    "conversation_id": conversation.id,
+                    "target_message_id": message.id,
+                    "text": draft.content,
+                    "created_at": draft.created_at,
+                }
+        if stale:
+            raise ConversationError("stale_suggestion")
+        return result
 
     def process(
         self,

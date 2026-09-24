@@ -32,3 +32,11 @@ def require_admin(user=Depends(get_current_user)):
     if not user.is_admin or user.role != "admin":
         raise HTTPException(status_code=403, detail="Permissao administrativa necessaria.")
     return user
+
+
+def require_ai_operator(user=Depends(get_current_user)):
+    """Allow the internal roles that operate the AI inbox."""
+    if (not user.ativo or user.role not in {"admin", "produtor"}
+            or (user.role == "admin" and not user.is_admin)):
+        raise HTTPException(status_code=403, detail="Permissao operacional necessaria.")
+    return user

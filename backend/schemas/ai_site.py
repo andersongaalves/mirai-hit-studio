@@ -20,12 +20,14 @@ class SiteSession(BaseModel):
 class SiteHistoryMessage(BaseModel):
     message_id: str | None = None
     role: Literal["user", "assistant"]
+    sender: Literal["client", "ai", "human"] | None = None
     text: str
     created_at: datetime
 
 
 class SiteHistory(BaseModel):
     status: Literal["open", "waiting_human", "closed"]
+    awaiting_human: bool = False
     messages: list[SiteHistoryMessage]
 
 

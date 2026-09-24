@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F2.5 concluida.
+Fase atual: F2.6 concluida.
 
-Ultimo checkpoint enviado: CP-IA1 (`29b07d8`).
+Ultimo checkpoint enviado: CP-IA2 (`de9c291`).
 
-Checkpoint atual: CP-IA2 pronto para checkpoint.
+Checkpoint atual: CP-IA3 em andamento.
 
-Proximo checkpoint: CP-IA2.
+Proximo checkpoint: CP-IA3.
 
-Proximo push: apos F2.5.
+Proximo push: apos F2.8.
 
-Ultimo commit local: `feat: adiciona canal de email da IA`.
+Ultimo commit local: `feat: adiciona inbox e copiloto da IA`.
 
 ## Concluido
 
@@ -81,8 +81,8 @@ F2 - IA
 - CP-IA1 enviado.
 - F2.4 Chat do site. Concluida.
 - F2.5 E-mail. Concluida.
-- CP-IA2.
-- F2.6 Inbox/copiloto.
+- CP-IA2 enviado.
+- F2.6 Inbox/copiloto. Concluida.
 - F2.7 Briefing/CRM.
 - F2.8 Guardrails/metricas.
 - CP-IA3.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F2.5 concluida - Canal Resend assinado, threading RFC, idempotencia inbound/outbound e adapter de e-mail.
+F2.6 concluida - Inbox unificada site/email, atendimento humano e sugestoes Copilot com envio revisado.
 
 ## Proxima subfase
 
-F2.6 - Inbox + Copilot. Nao iniciar nesta fase.
+F2.7 - Briefing + CRM. Nao iniciar nesta fase.

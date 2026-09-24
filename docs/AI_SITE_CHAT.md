@@ -75,7 +75,8 @@ policy before production activation. Messages/history are sent to OpenAI for rep
 - Timeout preserves inbound; retry exhaustion follows the existing core handoff.
 - 409 means closed/conflict/in-flight. UI checks status and otherwise offers retry.
 - waiting_human stops automation. UI disables further input and honestly explains
-  that the request is recorded but no human notification/Inbox is implemented yet.
+  that the request is recorded for atendimento na Inbox. A resposta humana posterior
+  aparece pelo history polling quando o dialog esta aberto e a pagina esta visivel.
   API can still record messages in waiting_human without calling the provider.
 - Copilot suggestions are never delivered or shown in public history.
 

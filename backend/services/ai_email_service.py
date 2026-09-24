@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import sqlite3
 import re
+from types import SimpleNamespace
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -213,6 +214,20 @@ class AIEmailService:
                 return existing.external_message_id
             existing.external_message_id = str(provider_id)[:200]
         return str(provider_id)[:200]
+
+    def send_human_message(self, conversation_id, message_id):
+        """Deliver a persisted Inbox message using the existing email thread."""
+        with self.core.sessions() as db:
+            row = db.get(Message, str(message_id))
+            thread = db.get(EmailThread, str(conversation_id))
+            if (row is None or thread is None or row.conversation_id != str(conversation_id)
+                    or row.channel != "email" or row.direction != "outbound" or row.kind != "message"):
+                raise AIEmailError("message_not_found")
+            if row.external_message_id:
+                return row.external_message_id
+            outbound = SimpleNamespace(id=row.id, text=row.content)
+            db.expunge(thread)
+        return self._send(outbound, thread)
 
     def handle(self, payload, *, request_id=None):
         data = self._event_data(payload)

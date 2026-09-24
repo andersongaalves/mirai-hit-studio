@@ -110,7 +110,7 @@ const root = path.resolve(__dirname, '..');
         mode = 'handoff';
         await input.fill('Quero falar com uma pessoa');
         await input.press('Enter');
-        await page.waitForFunction(() => document.querySelector('.site-chat-status').textContent.includes('não é notificada'));
+        await page.waitForFunction(() => document.querySelector('.site-chat-status').textContent.includes('encaminhada para atendimento humano'));
         assert.ok(await input.isDisabled());
         await page.getByRole('button', { name: 'Nova conversa' }).click();
         await page.waitForFunction(() => !document.querySelector('#site-chat-message').disabled);
@@ -124,6 +124,10 @@ const root = path.resolve(__dirname, '..');
         await page.waitForFunction(() => !document.querySelector('#site-chat-message').disabled);
         for (const width of [320, 360, 375, 390, 414, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 700 });
+            await page.waitForFunction(expected => {
+                const box = document.querySelector('#site-chat').getBoundingClientRect();
+                return box.x >= 0 && box.right <= expected + 1;
+            }, width);
             const bounds = await page.locator('#site-chat').boundingBox();
             assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width + 1, JSON.stringify(bounds));
             assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= 701);
@@ -137,6 +141,7 @@ const root = path.resolve(__dirname, '..');
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.screenshot({ path: path.join(process.env.TEMP || '.', 'mirai-chat-desktop.png') });
         await page.getByRole('button', { name: 'Fechar', exact: true }).click();
+        await page.waitForFunction(() => document.querySelector('#site-chat-launcher').getAttribute('aria-expanded') === 'false');
         assert.equal(await launcher.getAttribute('aria-expanded'), 'false');
         await page.setViewportSize({ width: 320, height: 700 });
         await page.evaluate(async () => {

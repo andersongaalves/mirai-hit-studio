@@ -42,10 +42,11 @@ def session_token(authorization: str = Header(default="")):
 def get_site_chat_service():
     key = getattr(settings, "AI_API_KEY", None)
     key = key.get_secret_value() if key else ""
-    if not getattr(settings, "AI_ENABLED", False) or not key or not getattr(settings, "AI_MODEL", ""):
-        raise HTTPException(503, "Chat temporariamente indisponivel.")
-    provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS)
-    return SiteChatService(ConversationService(SessionLocal, provider), session_hours=settings.AI_SESSION_HOURS)
+    enabled = bool(getattr(settings, "AI_ENABLED", False) and key and getattr(settings, "AI_MODEL", ""))
+    provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS) if enabled else None
+    service = SiteChatService(ConversationService(SessionLocal, provider), session_hours=getattr(settings, "AI_SESSION_HOURS", 24))
+    service.ai_enabled = enabled
+    return service
 
 
 def run(action):
@@ -65,6 +66,8 @@ router = APIRouter(prefix="/ai/chat", tags=["Site chat"], dependencies=[Depends(
 
 @router.post("/session", response_model=SiteSession, status_code=201)
 def create_session(service=Depends(get_site_chat_service)):
+    if not getattr(service, "ai_enabled", True):
+        raise HTTPException(503, "Chat temporariamente indisponivel.")
     return run(service.create_session)
 
 

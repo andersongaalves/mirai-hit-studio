@@ -79,6 +79,9 @@
                             <button type="button" class="admin-nav__item" data-admin-target="section-producoes">
                                 Produções
                             </button>
+                            <button type="button" class="admin-nav__item" data-admin-target="section-inbox">
+                                Inbox IA
+                            </button>
                             <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-financeiro">
                                 Financeiro
                             </button>
@@ -586,6 +589,83 @@
                             class="admin-list-container"
                             aria-live="polite"
                         ></div>
+                    </div>
+
+                    <div id="section-inbox" class="admin-section hidden">
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Atendimento</span>
+                                <h1>Inbox IA</h1>
+                                <p>Conduza conversas do site e do e-mail com apoio da IA, sempre sob revisão humana.</p>
+                            </div>
+                        </header>
+
+                        <div class="admin-filter-bar inbox-toolbar" aria-label="Filtros da Inbox IA">
+                            <label class="admin-filter-field admin-filter-field--search">
+                                <span>Buscar</span>
+                                <input id="inbox-search" type="search" maxlength="80" placeholder="Cliente, assunto ou conversa" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Status</span>
+                                <select id="inbox-status-filter">
+                                    <option value="">Todos</option>
+                                    <option value="waiting_human">Aguardando atendimento</option>
+                                    <option value="open">Abertas</option>
+                                    <option value="closed">Encerradas</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Modo</span>
+                                <select id="inbox-mode-filter">
+                                    <option value="">Todos</option>
+                                    <option value="autonomous">Autônomo</option>
+                                    <option value="copilot">Copiloto</option>
+                                    <option value="human">Humano</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Canal</span>
+                                <select id="inbox-channel-filter">
+                                    <option value="">Todos</option>
+                                    <option value="site">Site</option>
+                                    <option value="email">E-mail</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-check">
+                                <input id="inbox-handoff-filter" type="checkbox" />
+                                <span>Somente handoff</span>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Responsável</span>
+                                <select id="inbox-assigned-filter">
+                                    <option value="">Todos</option>
+                                    <option value="mine">Minhas</option>
+                                    <option value="unassigned">Não assumidas</option>
+                                </select>
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>De</span>
+                                <input id="inbox-updated-from" type="date" />
+                            </label>
+                            <label class="admin-filter-field">
+                                <span>Até</span>
+                                <input id="inbox-updated-to" type="date" />
+                            </label>
+                            <div class="admin-filter-bar__actions">
+                                <button id="inbox-clear-filters" type="button" class="btn-small hidden">Limpar filtros</button>
+                            </div>
+                        </div>
+
+                        <div class="inbox-layout">
+                            <section id="inbox-list-panel" class="inbox-list-panel" aria-labelledby="inbox-list-title">
+                                <h2 id="inbox-list-title" class="admin-visually-hidden">Conversas</h2>
+                                <div id="inbox-list" class="admin-list-container" aria-live="polite"></div>
+                                <nav id="inbox-pagination" class="inbox-pagination hidden" aria-label="Paginação da Inbox"></nav>
+                            </section>
+                            <section id="inbox-detail-panel" class="inbox-detail-panel hidden" aria-labelledby="inbox-detail-title">
+                                <div id="inbox-detail" aria-live="polite"></div>
+                            </section>
+                        </div>
                     </div>
 
                     <div id="section-usuarios" class="admin-section hidden admin-access-hidden" data-admin-only>

@@ -620,6 +620,98 @@
     grid-column: 1 / -1;
 }
 
+.inbox-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.4fr);
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.inbox-list-panel,
+.inbox-detail-panel {
+    min-width: 0;
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+}
+
+.inbox-conversation-list {
+    display: grid;
+    gap: 1px;
+    overflow: hidden;
+    border-radius: inherit;
+}
+
+.inbox-conversation-item {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-bottom: var(--border-subtle);
+    background: var(--color-surface);
+}
+
+.inbox-conversation-item:last-child { border-bottom: 0; }
+.inbox-conversation-item.is-selected { border-left: 3px solid var(--color-accent); background: var(--color-surface-elevated); }
+.inbox-conversation-item__header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.inbox-conversation-item__header strong { flex: 1 1 100%; overflow-wrap: anywhere; }
+.inbox-conversation-item__preview,
+.inbox-conversation-item__meta { margin: 0; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.inbox-conversation-item__preview { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.inbox-conversation-item > button { justify-self: start; }
+
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    padding: 3px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-caption);
+    overflow-wrap: anywhere;
+}
+.admin-badge--info { border-color: var(--color-accent); }
+.admin-badge--success { border-color: var(--color-success); }
+.admin-badge--warning { border-color: var(--color-warning); }
+.admin-badge--danger { border-color: var(--color-danger); }
+
+.inbox-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-top: var(--border-subtle);
+}
+.inbox-pagination__label { color: var(--color-text-secondary); font-size: var(--font-size-small); }
+
+.inbox-detail-panel { padding: var(--space-4); }
+.inbox-detail__header,
+.inbox-detail__summary,
+.inbox-detail__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.inbox-detail__header { justify-content: space-between; border-bottom: var(--border-subtle); padding-bottom: var(--space-3); }
+.inbox-detail__header h2 { margin: 0; overflow-wrap: anywhere; }
+.inbox-detail__summary { padding: var(--space-3) 0; }
+.inbox-detail__summary p { flex: 1 1 100%; margin: 0; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.inbox-detail__actions { padding: var(--space-3) 0; border-bottom: var(--border-subtle); }
+.inbox-mode-label { color: var(--color-text-secondary); }
+.inbox-messages { display: grid; gap: var(--space-3); max-height: 52vh; overflow-y: auto; padding: var(--space-4) 0; }
+.inbox-message { max-width: 88%; padding: var(--space-3); border: var(--border-subtle); border-radius: var(--radius-md); }
+.inbox-message--inbound { justify-self: start; background: var(--color-surface-elevated); }
+.inbox-message--outbound { justify-self: end; border-color: var(--color-accent); }
+.inbox-message--suggestion { border-style: dashed; border-color: var(--color-warning); }
+.inbox-message strong { display: block; margin-bottom: var(--space-1); color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.inbox-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.inbox-composer { display: grid; gap: var(--space-2); border-top: var(--border-subtle); padding-top: var(--space-3); }
+.inbox-composer textarea { min-height: 110px; resize: vertical; }
+.admin-filter-check { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 42px; color: var(--color-text-secondary); }
+
+@media (max-width: 900px) {
+    .inbox-layout { grid-template-columns: minmax(0, 1fr); }
+    .inbox-list-panel--mobile-hidden { display: none; }
+}
+
 .proposta-item-row {
     display: grid;
     grid-template-columns: minmax(220px, 1fr) 90px 140px 120px 120px auto;

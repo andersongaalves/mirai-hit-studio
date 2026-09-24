@@ -16,6 +16,10 @@ ALLOWED_METADATA = {
     "total_sent",
     "total_failed",
     "total_skipped",
+    "old_mode",
+    "new_mode",
+    "new_assigned_user_id",
+    "channel",
 }
 
 

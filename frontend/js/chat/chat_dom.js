@@ -51,13 +51,13 @@ export function createChatView() {
     form.append(label, input, actions);
     dialog.append(header, intro, messages, status, form);
     document.body.append(launcher, dialog);
-    function append(role, text, id) {
+    function append(role, text, id, sender = "ai") {
         const key = id ? `${role}:${id}` : null;
         if (key && [...messages.children].some(row => row.dataset.messageKey === key)) return;
         const nearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 80;
         const row = element("li", `site-chat-message site-chat-message--${role === "user" ? "user" : "assistant"}`);
         if (key) row.dataset.messageKey = key;
-        row.append(element("strong", "", role === "user" ? "Você" : "Assistente Mirai"), element("p", "", text));
+        row.append(element("strong", "", role === "user" ? "Você" : sender === "human" ? "Atendimento Mirai" : "Assistente Mirai"), element("p", "", text));
         messages.append(row);
         if (nearBottom) messages.scrollTop = messages.scrollHeight;
     }

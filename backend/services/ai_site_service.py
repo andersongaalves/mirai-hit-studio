@@ -74,9 +74,13 @@ class SiteChatService:
         conversation = self.resolve(token)
         rows = self.core.history(conversation.id, limit=100)
         references = {row.id: row.external_message_id for row in rows if row.direction == "inbound"}
-        return SiteHistory(status=conversation.status, messages=[
+        return SiteHistory(status=conversation.status, awaiting_human=(
+            conversation.status == "waiting_human" or conversation.mode == "human"
+        ), messages=[
             SiteHistoryMessage(role=row.role, text=row.content, created_at=aware(row.created_at),
-                               message_id=references.get(row.id if row.direction == "inbound" else row.reply_to_id))
+                               message_id=references.get(row.id if row.direction == "inbound" else row.reply_to_id)
+                               or (row.id if row.direction == "outbound" else None),
+                               sender="client" if row.direction == "inbound" else "human" if row.kind == "message" else "ai")
             for row in rows if row.kind != "suggestion" and row.role in {"user", "assistant"}
         ])
 

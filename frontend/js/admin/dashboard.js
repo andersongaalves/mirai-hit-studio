@@ -16,6 +16,7 @@ import { initUsuarios } from "./usuarios/usuarios.js";
 import { initNewsletterAdmin } from "./newsletter/newsletter.js";
 import { initAuditoria } from "./auditoria/auditoria.js";
 import { initFinanceiro } from "./financeiro/financeiro.js";
+import { initInbox } from "./inbox/inbox.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
@@ -32,6 +33,10 @@ const loaders = [
     initAuditoria,
     initFinanceiro,
 ];
+
+const sectionLoaders = {
+    "section-inbox": initInbox,
+};
 
 function focusHeading(container) {
     const heading = container?.querySelector("h1, h2");
@@ -66,6 +71,7 @@ export function mostrarSecao(id) {
     setActiveSection(id);
 
     focusHeading($(id));
+    sectionLoaders[id]?.().catch(() => {});
 }
 
 export function voltarDashboard() {

@@ -211,3 +211,11 @@ Decisao: remetente normalizado pode vincular uma conversa a um Cliente unico, ma
 ## ADR-052 - Entrega de e-mail idempotente e conservadora
 
 Decisao: anexos nao entram automaticamente na IA, loops de autoresposta sao bloqueados e cada resposta outbound usa idempotency key estavel por `AIMessage`. Retry de entrega nao gera nova resposta do modelo.
+
+## ADR-053 - Inbox unificada com responsabilidade explicita
+
+Decisao: a Inbox agrega site e email sem fundir conversas. Operador ativo assume a conversa sob lock antes de alterar modo ou responder; assumir handoff volta a `open/human` e nao reativa autonomia. O browser nao escolhe canal nem destino.
+
+## ADR-054 - Copilot e rascunho humano
+
+Decisao: sugestao reutiliza o core, nunca e enviada automaticamente e pode ser regenerada no mesmo registro ou ignorada. O envio persiste texto final humano com chave idempotente; sugestao antiga e rejeitada quando chega novo inbound. Resposta manual funciona sem provider.

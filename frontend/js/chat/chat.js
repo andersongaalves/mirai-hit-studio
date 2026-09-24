@@ -3,7 +3,7 @@ import { chatRequest } from "./chat_api.js";
 import { createChatView } from "./chat_dom.js";
 
 const SESSION_KEY = "mirai.site_chat.v1";
-const WAITING = "Esta conversa precisa de atendimento humano e ficou registrada. A equipe ainda não é notificada por este chat. Use a página de contato para falar com a Mirai.";
+const WAITING = "Esta conversa foi encaminhada para atendimento humano. Mantenha o chat aberto para acompanhar a resposta da equipe.";
 
 function readSession() {
     try {
@@ -34,7 +34,7 @@ export function initSiteChat() {
     window.addEventListener("resize", positionLauncher);
     positionLauncher();
     let session = readSession(), pending = session?.pending || null;
-    let busy = false, loaded = false, state = "open", retryAction = null;
+    let busy = false, loaded = false, state = "open", retryAction = null, awaitingHuman = false;
     function persist() {
         try {
             if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, pending }));
@@ -72,11 +72,11 @@ export function initSiteChat() {
             }
             const history = await chatRequest("history", { token: session.token });
             view.messages.replaceChildren();
-            for (const message of history.messages) view.append(message.role, message.text, message.message_id);
+            for (const message of history.messages) view.append(message.role, message.text, message.message_id, message.sender);
             if (pending && history.messages.some(message => message.role === "assistant" && message.message_id === pending.message_id)) {
                 pending = null; persist();
             }
-            state = history.status; loaded = true;
+            state = history.status; awaitingHuman = history.awaiting_human; loaded = true;
             if (state !== "open") { pending = null; persist(); }
             view.status.textContent = state === "waiting_human" ? WAITING : state === "closed"
                 ? "Conversa encerrada. Você pode iniciar uma nova conversa."
@@ -103,7 +103,7 @@ export function initSiteChat() {
             const result = await chatRequest("messages", { token: session.token, payload: pending });
             if (result.action === "error") throw new Error("response_unavailable");
             if (result.text) view.append("assistant", result.text, pending.message_id);
-            state = result.status; pending = null; persist();
+            state = result.status; awaitingHuman = state === "waiting_human"; pending = null; persist();
             track("ai_chat_message");
             view.status.textContent = state === "waiting_human" ? WAITING : state === "closed"
                 ? "Conversa encerrada. Inicie uma nova conversa." : "";
@@ -155,5 +155,19 @@ export function initSiteChat() {
     });
     view.retry.addEventListener("click", () => retryAction?.());
     view.fresh.addEventListener("click", () => load(true));
+    setInterval(async () => {
+        if (!awaitingHuman || !session || !loaded || busy || !view.dialog.open || document.hidden) return;
+        try {
+            const history = await chatRequest("history", { token: session.token });
+            if (!view.dialog.open) return;
+            for (const message of history.messages) view.append(message.role, message.text, message.message_id, message.sender);
+            state = history.status;
+            awaitingHuman = history.awaiting_human;
+            view.status.textContent = state === "waiting_human" ? WAITING : state === "closed"
+                ? "Conversa encerrada. Você pode iniciar uma nova conversa."
+                : "Atendimento Mirai disponível.";
+            controls();
+        } catch { /* Poll failures leave the current conversation visible. */ }
+    }, 15000);
     controls();
 }
