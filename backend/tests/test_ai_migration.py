@@ -45,20 +45,20 @@ from alembic.script import ScriptDirectory
 from sqlalchemy.orm import configure_mappers
 import models
 
-ai_tables = {'ai_conversations', 'ai_messages'}
+ai_tables = {'ai_conversations', 'ai_messages', 'ai_email_threads'}
 # Historical chain starts from a preexisting schema. Build the parent schema only
 # in this disposable database, then exercise the new revision through Alembic.
 with engine.begin() as connection:
     Base.metadata.create_all(connection, tables=[table for table in Base.metadata.sorted_tables
                                                 if table.name not in ai_tables])
 command.stamp(migration_config(), 'f6c2a8d4e1b9')
-assert ScriptDirectory.from_config(migration_config()).get_heads() == ['c8a1d6e4b209']
+assert ScriptDirectory.from_config(migration_config()).get_heads() == ['d4e6f8a1b2c3']
 command.upgrade(migration_config(), 'head')
 assert ai_tables <= set(inspect(engine).get_table_names())
 with engine.connect() as connection:
     differences = compare_metadata(MigrationContext.configure(connection), Base.metadata)
     assert not differences, differences
-    assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'c8a1d6e4b209'
+    assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'd4e6f8a1b2c3'
 configure_mappers()
 command.downgrade(migration_config(), 'f6c2a8d4e1b9')
 assert not ai_tables & set(inspect(engine).get_table_names())

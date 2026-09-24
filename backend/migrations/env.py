@@ -24,6 +24,7 @@ from models.servico import ServicoModel
 from models.proposta import PropostaModel
 from models.audit_log import AuditLogModel
 from models.financeiro import CobrancaModel, PagamentoModel
+from models.ai import AIConversationModel, AIEmailThreadModel, AIMessageModel
 
 
 config = context.config

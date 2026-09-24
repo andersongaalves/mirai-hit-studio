@@ -79,8 +79,28 @@ class AIMessageModel(Base):
     conversation = relationship("AIConversationModel", back_populates="messages")
 
 
+class AIEmailThreadModel(Base):
+    """Email-only correlation data kept outside the channel-neutral core."""
+
+    __tablename__ = "ai_email_threads"
+    __table_args__ = (
+        UniqueConstraint("root_message_id", name="uq_ai_email_thread_root_message"),
+        Index("ix_ai_email_thread_sender", "sender_email"),
+    )
+    conversation_id = Column(
+        String(36), ForeignKey("ai_conversations.id"), primary_key=True
+    )
+    sender_email = Column(String(254), nullable=False)
+    subject = Column(String(200), nullable=False)
+    root_message_id = Column(String(998), nullable=False)
+    last_inbound_message_id = Column(String(998), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    conversation = relationship("AIConversationModel")
+
+
 # Bootstrap uses metadata directly; keep private-table protection equivalent to Alembic.
-for table in (AIConversationModel.__table__, AIMessageModel.__table__):
+for table in (AIConversationModel.__table__, AIMessageModel.__table__, AIEmailThreadModel.__table__):
     event.listen(table, "after_create", DDL(
         "ALTER TABLE %(fullname)s ENABLE ROW LEVEL SECURITY"
     ).execute_if(dialect="postgresql"))

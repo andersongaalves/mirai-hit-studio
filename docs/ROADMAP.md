@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F2.4 concluida.
+Fase atual: F2.5 concluida.
 
 Ultimo checkpoint enviado: CP-IA1 (`29b07d8`).
 
-Checkpoint atual: CP-IA2 em andamento.
+Checkpoint atual: CP-IA2 pronto para checkpoint.
 
 Proximo checkpoint: CP-IA2.
 
 Proximo push: apos F2.5.
 
-Ultimo commit local: `feat: adiciona chat da IA ao site`.
+Ultimo commit local: `feat: adiciona canal de email da IA`.
 
 ## Concluido
 
@@ -80,7 +80,7 @@ F2 - IA
 - F2.3 Knowledge/tools. Concluida.
 - CP-IA1 enviado.
 - F2.4 Chat do site. Concluida.
-- F2.5 E-mail.
+- F2.5 E-mail. Concluida.
 - CP-IA2.
 - F2.6 Inbox/copiloto.
 - F2.7 Briefing/CRM.
@@ -97,8 +97,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F2.4 concluida - Chat anonimo, adapter site e provider OpenAI configuravel.
+F2.5 concluida - Canal Resend assinado, threading RFC, idempotencia inbound/outbound e adapter de e-mail.
 
 ## Proxima subfase
 
-F2.5 - Canal de E-mail. Nao iniciado.
+F2.6 - Inbox + Copilot. Nao iniciar nesta fase.

@@ -9,4 +9,4 @@ from .producao import ProducaoModel
 from .proposta import PropostaModel
 from .audit_log import AuditLogModel
 from .financeiro import CobrancaModel, PagamentoModel, ProviderWebhookEventModel
-from .ai import AIConversationModel, AIMessageModel
+from .ai import AIConversationModel, AIEmailThreadModel, AIMessageModel

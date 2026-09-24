@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     BACKUP_FOLDER: str
     BACKUP_KEEP_DAYS: int
 
-    RESEND_API_KEY: str
+    RESEND_API_KEY: str = ""
     EMAIL_FROM: str
     ADMIN_EMAIL: str
     PUBLIC_API_URL: str = "http://localhost:8000"
@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     AI_API_KEY: SecretStr = SecretStr("")
     AI_TIMEOUT_SECONDS: float = Field(default=8, ge=1, le=10)
     AI_SESSION_HOURS: int = Field(default=24, ge=1, le=168)
+    AI_EMAIL_ENABLED: bool = False
+    AI_EMAIL_FROM: str = ""
+    AI_EMAIL_INBOUND_ADDRESS: str = ""
+    AI_EMAIL_MAX_BODY_CHARS: int = Field(default=8000, ge=1000, le=20000)
+    RESEND_WEBHOOK_SECRET: SecretStr = SecretStr("")
 
     MERCADO_PAGO_ACCESS_TOKEN: str | None = None
     MERCADO_PAGO_PUBLIC_KEY: str | None = None

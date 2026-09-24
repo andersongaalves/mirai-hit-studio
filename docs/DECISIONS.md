@@ -195,3 +195,19 @@ Decisao: SiteChannelAdapter reutiliza o core; token aleatorio autoriza apenas a 
 ## ADR-048 - OpenAI apenas no backend
 
 Decisao: por escolha explicita do responsavel, o primeiro provider concreto usa OpenAI Responses, configuracao por ambiente e startup independente de credenciais. Browser acessa somente API Mirai. Handoff permanece waiting_human sem alegar notificacao inexistente; Inbox segue em F2.6. Detalhes em AI_SITE_CHAT.md.
+
+## ADR-049 - Resend como canal de e-mail da IA
+
+Decisao: o canal bidirecional de e-mail usa Resend e permanece separado de newsletter e e-mails transacionais. O recurso e desabilitado por padrao e usa configuracao server-side dedicada.
+
+## ADR-050 - E-mail assinado e thread por referencias RFC
+
+Decisao: somente `email.received` e processado apos verificacao oficial dos headers Svix sobre o corpo raw. Threading usa `Message-ID`, `In-Reply-To` e `References`; assunto sozinho nao une conversas. Dados especificos ficam em `AIEmailThreadModel`.
+
+## ADR-051 - From nao autentica Cliente
+
+Decisao: remetente normalizado pode vincular uma conversa a um Cliente unico, mas nao eleva `identity_verified` e nao libera tools privadas. Remetentes desconhecidos nao criam Cliente automaticamente.
+
+## ADR-052 - Entrega de e-mail idempotente e conservadora
+
+Decisao: anexos nao entram automaticamente na IA, loops de autoresposta sao bloqueados e cada resposta outbound usa idempotency key estavel por `AIMessage`. Retry de entrega nao gera nova resposta do modelo.
