@@ -37,7 +37,7 @@ async function staticResponse(route) {
         await page.goto("http://localhost:4173/creators");
         await page.waitForSelector(".site-nav[data-initialized='true']");
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === "event" && item[1] === "view_vertical"));
-        assert.match(await page.locator("h1").textContent(), /assinatura sonora/i);
+        assert.match(await page.locator("h1").textContent(), /identidade sonora para criadores/i);
         assert.equal(await page.locator(".creator-capabilities article").count(), 6);
         assert.equal(await page.locator(".application-grid article").count(), 3);
         assert.match(await page.locator("main").textContent(), /YouTube|streaming/);

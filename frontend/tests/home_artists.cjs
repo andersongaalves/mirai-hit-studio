@@ -63,7 +63,7 @@ async function staticResponse(route) {
         await page.goto("http://localhost:4173/");
         await page.waitForSelector(".site-nav[data-initialized='true']");
         await page.waitForSelector("#home-portfolio-track .public-empty");
-        assert.match(await page.locator("h1").textContent(), /Produção musical e áudio/);
+        assert.equal(await page.locator("h1").textContent(), "Mirai Hit Studio");
         assert.equal(await page.locator(".vertical-card").count(), 3);
         assert.equal(await page.locator(".process-list > li").count(), 6);
         assert.equal(await page.getByText("estúdio de rap geek", { exact: false }).count(), 0);
@@ -89,7 +89,7 @@ async function staticResponse(route) {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("http://localhost:4173/artists");
         await page.waitForSelector(".site-nav[data-initialized='true']");
-        assert.match(await page.locator("h1").textContent(), /identidade e acabamento/);
+        assert.match(await page.locator("h1").textContent(), /Produção musical para artistas/);
         assert.equal(await page.locator(".service-capabilities article").count(), 5);
         assert.match(await page.locator(".artists-intro").textContent(), /rap, trap, drill, funk, geek music/i);
         assert.equal(await page.locator("[data-public-path='/artists']").getAttribute("aria-current"), "page");

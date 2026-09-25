@@ -37,7 +37,7 @@ async function staticResponse(route) {
         await page.goto("http://localhost:4173/media-games");
         await page.waitForSelector(".site-nav[data-initialized='true']");
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === "event" && item[1] === "view_vertical"));
-        assert.match(await page.locator("h1").textContent(), /constrói mundos/i);
+        assert.match(await page.locator("h1").textContent(), /design sonoro para mídia e games/i);
         assert.equal(await page.locator(".media-capabilities article").count(), 7);
         assert.match(await page.locator("main").textContent(), /Demo, Concept Project e Study/);
         assert.equal(await page.getByText(/grandes estúdios|clientes como|trabalhamos com/i).count(), 0);
