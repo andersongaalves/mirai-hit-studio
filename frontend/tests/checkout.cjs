@@ -121,6 +121,8 @@ async function staticResponse(route) {
         await pixPage.waitForSelector('#pix-result:not(.hidden)');
         assert.equal(pixRequests, 1);
         assert.equal(await pixPage.locator('#pix-code').inputValue(), '000201-pix-code');
+        assert.match(await pixPage.locator('#pix-expiration').textContent(), /21\/09\/2026.*horário local/);
+        assert.equal(await pixPage.locator('#payment-options').getAttribute('aria-describedby'), 'payment-option-help');
         await pixPage.locator('#copy-pix').click();
         await pixPage.waitForFunction(() => document.getElementById('copy-pix')?.textContent === 'Código copiado');
         assert.equal(await pixPage.locator('#copy-pix').textContent(), 'Código copiado');

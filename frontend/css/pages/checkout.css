@@ -1,5 +1,6 @@
 .checkout-page {
     min-height: 100vh;
+    background-image: none;
 }
 
 .checkout-shell {
@@ -81,7 +82,11 @@
 
 .checkout-totals dt { color: var(--color-text-secondary); }
 .checkout-totals dd { text-align: right; font-weight: 700; }
+.checkout-totals dd { min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.checkout-totals div:last-child { border-bottom: 0; }
+.checkout-totals div:last-child dd { font-family: var(--font-subtitulos); font-size: var(--font-size-h3); }
 .checkout-provider-note { margin-top: var(--space-4); font-size: var(--font-size-small); }
+#payment-option-help { margin: 0 0 var(--space-5); }
 
 .checkout-options {
     display: grid;
@@ -108,7 +113,7 @@
 
 .checkout-option:has(input:checked) {
     border-color: var(--color-accent);
-    box-shadow: var(--shadow-glow);
+    background: var(--color-surface-elevated);
 }
 
 .checkout-option span:first-of-type { flex: 1; }
@@ -146,6 +151,7 @@
 .checkout-terminal[data-kind="success"] { color: var(--color-success); }
 .checkout-result[data-kind="warning"],
 .checkout-terminal[data-kind="warning"] { color: var(--color-warning); }
+.checkout-result:not(.hidden), .checkout-terminal:not(.hidden) { border-left: 3px solid currentColor; padding: var(--space-3); overflow-wrap: anywhere; }
 
 .checkout-pix {
     display: grid;

@@ -166,7 +166,9 @@ function renderPix(pix) {
     const ticket = safeHttps(pix.ticket_url);
     $("pix-ticket").href = ticket;
     setHidden("pix-ticket", !ticket);
-    $("pix-expiration").textContent = pix.expiration_time ? `Válido até ${pix.expiration_time}.` : "";
+    const expiration = pix.expiration_time ? new Date(pix.expiration_time) : null;
+    $("pix-expiration").textContent = expiration && Number.isFinite(expiration.getTime())
+        ? `Válido até ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(expiration)} (horário local).` : "";
 }
 
 function isMercadoPagoUrl(value) {

@@ -44,9 +44,10 @@
                 <div id="checkout-terminal" class="checkout-terminal hidden" role="status" aria-live="polite"></div>
                 <div id="checkout-form">
                     <h2 id="payment-title">Escolha como pagar</h2>
-                    <fieldset id="payment-options" class="checkout-options">
-                        <legend>Pagamento comercial</legend>
+                    <fieldset id="payment-options" class="checkout-options" aria-describedby="payment-option-help">
+                        <legend>Quanto você quer pagar agora?</legend>
                     </fieldset>
+                    <p id="payment-option-help" class="checkout-provider-note">O valor escolhido é deste pagamento. Se pagar a entrada, o restante continua como saldo da proposta.</p>
                     <div class="checkout-methods" role="group" aria-label="Forma de pagamento">
                         <button id="method-pix" class="checkout-method is-active" type="button" aria-pressed="true">Pix</button>
                         <button id="method-card" class="checkout-method" type="button" aria-pressed="false">Cartão</button>
@@ -58,7 +59,7 @@
                     </div>
 
                     <div id="card-panel" class="checkout-panel hidden">
-                        <p id="card-help">Os dados do cartão são tokenizados pelo Mercado Pago e não passam pelos servidores da Mirai.</p>
+                        <p id="card-help">Preencha os dados no formulário do Mercado Pago. A Mirai não recebe o número nem o código de segurança do cartão.</p>
                         <div id="card-loading" class="checkout-inline-status hidden" role="status">Carregando formulário seguro...</div>
                         <div id="card-payment-brick"></div>
                         <div id="card-error" class="checkout-inline-error hidden" role="alert"></div>
@@ -71,6 +72,7 @@
                     <label for="pix-code">Código Pix copia e cola</label>
                     <textarea id="pix-code" rows="4" readonly></textarea>
                     <button id="copy-pix" class="btn-outline" type="button">Copiar código Pix</button>
+                    <p class="checkout-muted">Abra o app do seu banco e use o QR Code ou o código copiado. Aguarde a confirmação neste checkout antes de tentar pagar novamente.</p>
                     <a id="pix-ticket" class="checkout-ticket hidden" target="_blank" rel="noopener noreferrer">Abrir pagamento Pix</a>
                     <p id="pix-expiration" class="checkout-muted"></p>
                 </div>
