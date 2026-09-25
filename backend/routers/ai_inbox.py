@@ -6,6 +6,7 @@ from datetime import datetime
 
 from core.config import settings
 from core.dependencies import require_ai_operator
+from core.rate_limit import allow_request
 from database import SessionLocal
 from integrations.resend_ai_email import ResendAIEmailClient
 from schemas.ai import Channel, ConversationMode, ConversationStatus
@@ -18,6 +19,8 @@ from services.ai_conversation_service import ConversationService
 from services.ai_email_service import AIEmailError, AIEmailService
 from services.ai_inbox_service import AIInboxService, InboxError
 from services.ai_openai_provider import OpenAIProvider
+from schemas.ai_metrics import AIMetrics
+from services.ai_metrics_service import metrics
 
 
 router = APIRouter(prefix="/admin/ai/conversations", tags=["AI Inbox"])
@@ -31,7 +34,8 @@ def get_ai_core():
     key = _secret_value(getattr(settings, "AI_API_KEY", ""))
     provider = None
     if getattr(settings, "AI_ENABLED", False) and key and getattr(settings, "AI_MODEL", ""):
-        provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS)
+        provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS,
+                                 max_output_tokens=getattr(settings, "AI_MAX_OUTPUT_TOKENS", 1200))
     return ConversationService(SessionLocal, provider)
 
 
@@ -101,6 +105,13 @@ def list_conversations(
     )
 
 
+@router.get("/metrics", response_model=AIMetrics)
+def get_metrics(days: int = Query(7, ge=7, le=30), _user=Depends(require_ai_operator)):
+    if days not in (7, 30):
+        raise HTTPException(status_code=422, detail="invalid_metrics_period")
+    return metrics(SessionLocal, days=days)
+
+
 @router.get("/{conversation_id}", response_model=InboxDetail)
 def get_conversation(
     conversation_id: str,
@@ -146,6 +157,12 @@ def create_suggestion(
     service=Depends(get_inbox_service),
     user=Depends(require_ai_operator),
 ):
+    try:
+        allowed, wait = allow_request(f"ai-copilot:{user.id}", 20, 60)
+    except Exception:
+        raise HTTPException(status_code=503, detail="rate_limit_unavailable") from None
+    if not allowed:
+        raise HTTPException(status_code=429, detail="rate_limit_exceeded", headers={"Retry-After": str(wait)})
     try:
         suggestion = service.suggest(conversation_id, user, payload.message_id if payload else None)
         return {"suggestion": suggestion}

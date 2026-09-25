@@ -620,6 +620,14 @@
     grid-column: 1 / -1;
 }
 
+.inbox-metrics { margin-bottom: var(--space-4); border-bottom: var(--border-subtle); padding-bottom: var(--space-3); }
+.inbox-metrics summary { cursor: pointer; padding: var(--space-2) 0; }
+.inbox-metrics h3 { font-size: var(--font-size-body); margin: var(--space-3) 0; letter-spacing: 0; text-transform: none; }
+.inbox-metrics h3::after { display: none; }
+.inbox-metrics-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--space-3); }
+.inbox-metrics-values div { min-width: 0; overflow-wrap: anywhere; }
+.inbox-metrics-values dt { color: var(--color-text-secondary); }
+.inbox-metrics-values dd { margin: var(--space-1) 0 0; font-weight: 700; }
 .inbox-layout {
     display: grid;
     grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.4fr);

@@ -23,6 +23,12 @@ let conversation = {
 };
 let suggestionId = '9d182f84-f159-4438-8d07-09674fc995da';
 const calls = [];
+let metricsFailure = false;
+const metricsResponse = { channels: [{ channel: 'site', conversations_started: 0,
+    cohort_closed: 0, cohort_handoffs: 0, autonomous_replies: 0, human_replies: 0,
+    copilot_generated: 0, copilot_used: 0, briefings_started: 0, budgets_created: 0,
+    provider_calls: 0, total_tokens: null, usage_known_calls: 0, cost_unknown_calls: 0,
+    costs: [{ amount: 1, currency: malicious, measured_calls: 1 }] }] };
 
 async function staticResponse(route) {
     const url = new URL(route.request().url());
@@ -66,6 +72,8 @@ function listPage(url) {
             pipeline: { orcamentos_abertos: 0, propostas_enviadas: 0, propostas_aprovadas: 0, producoes_ativas: 0 },
             attention: { producoes_atrasadas: 0, propostas_aguardando_decisao: 0 }, recent_activity: [],
         } });
+        if (url.pathname === '/admin/ai/conversations/metrics') return route.fulfill(metricsFailure
+            ? { status: 503, json: { detail: 'private error' } } : { json: metricsResponse });
         if (url.pathname === '/admin/ai/conversations' && request.method() === 'GET') return route.fulfill({ json: listPage(url) });
         if (url.pathname === `/admin/ai/conversations/${id}` && request.method() === 'GET') return route.fulfill({ json: conversation });
         if (url.pathname === `/admin/ai/conversations/${id}/assign`) {
@@ -112,6 +120,20 @@ function listPage(url) {
         await page.locator('#password').fill('test-password');
         await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
         await page.locator('[data-admin-target="section-inbox"]').click();
+        assert.equal(calls.filter(call => call.includes('/metrics')).length, 0);
+        await page.locator('#inbox-metrics summary').click();
+        await page.locator('#inbox-metrics-content dd').first().waitFor();
+        assert.equal(await page.locator('#inbox-metrics-content dd').first().innerText(), '0');
+        assert.equal(await page.locator('#inbox-metrics-content img').count(), 0);
+        assert.ok((await page.locator('#inbox-metrics-content').innerText()).includes('Indisponível'));
+        assert.equal(calls.filter(call => call.includes('/metrics')).length, 1);
+        metricsFailure = true;
+        await page.locator('#inbox-metrics-period').selectOption('30');
+        await page.getByText('Não foi possível carregar as métricas.').waitFor();
+        assert.equal(await page.getByText('private error', { exact: true }).count(), 0);
+        metricsFailure = false;
+        await page.locator('#inbox-metrics-refresh').click();
+        await page.locator('#inbox-metrics-content dd').first().waitFor();
         await page.getByRole('button', { name: `Abrir conversa ${malicious}` }).click();
         assert.equal(await page.locator('#inbox-detail img, #inbox-list img').count(), 0);
         assert.equal(await page.evaluate(() => Boolean(window.inboxXss)), false);
@@ -131,14 +153,23 @@ function listPage(url) {
         await page.getByText('Texto editado pelo atendente').waitFor();
         await page.getByRole('button', { name: 'Encerrar' }).click();
         await page.locator('#inbox-detail .admin-badge').filter({ hasText: 'Encerrada' }).waitFor();
+        if (process.env.AI_METRICS_SCREENSHOTS) {
+            await page.waitForFunction(() => document.querySelectorAll('.notification').length === 0);
+        }
         for (const width of [320, 375, 390, 414, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 800 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `overflow ${width}`);
+            if (process.env.AI_METRICS_SCREENSHOTS && [320, 1440].includes(width)) {
+                await page.locator('#inbox-metrics summary').evaluate(node => node.scrollIntoView({ block: 'start' }));
+                await page.screenshot({ path: path.join(process.env.AI_METRICS_SCREENSHOTS, `mirai-ai-metrics-${width}.png`) });
+            }
         }
         assert.ok(calls.includes(`POST /admin/ai/conversations/${id}/messages`));
         await page.getByRole('button', { name: 'Sair' }).click();
         assert.equal(await page.locator('#inbox-detail').innerText(), '');
         assert.equal(await page.locator('#inbox-list').innerText(), '');
+        assert.equal(await page.locator('#inbox-metrics-content').innerText(), '');
+        assert.equal(await page.locator('#inbox-metrics').evaluate(node => node.open), false);
         await page.locator('#username').fill('admin');
         await page.locator('#password').fill('test-password');
         await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();

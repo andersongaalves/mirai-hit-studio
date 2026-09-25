@@ -51,7 +51,7 @@ def reject_ddl(connection, cursor, statement, parameters, context, many):
                 'projetos', 'configuracoes', 'newsletter', 'newsletter_campaigns',
                 'newsletter_deliveries', 'audit_logs', 'cobrancas', 'pagamentos',
                 'provider_webhook_events', 'ai_conversations', 'ai_messages', 'ai_email_threads',
-                'ai_briefings', 'alembic_version'}
+                'ai_briefings', 'ai_usage_events', 'alembic_version'}
             with engine.connect() as connection:
                 assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').all() == [(head,)]
             configure_mappers()

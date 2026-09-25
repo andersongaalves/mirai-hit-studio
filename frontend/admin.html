@@ -600,6 +600,16 @@
                             </div>
                         </header>
 
+                        <details id="inbox-metrics" class="inbox-metrics">
+                            <summary>Métricas da IA</summary>
+                            <div class="admin-filter-bar">
+                                <label class="admin-filter-field"><span>Período</span>
+                                    <select id="inbox-metrics-period"><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select>
+                                </label>
+                                <button id="inbox-metrics-refresh" type="button" class="btn-outline">Atualizar métricas</button>
+                            </div>
+                            <div id="inbox-metrics-content" aria-live="polite"></div>
+                        </details>
                         <div class="admin-filter-bar inbox-toolbar" aria-label="Filtros da Inbox IA">
                             <label class="admin-filter-field admin-filter-field--search">
                                 <span>Buscar</span>

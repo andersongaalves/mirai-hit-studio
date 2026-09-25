@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F2.7 concluida.
+Fase atual: F2.8 concluida. Bloco F2 implementado e validado localmente.
 
 Ultimo checkpoint enviado: CP-IA2 (`de9c291`).
 
-Checkpoint atual: CP-IA3 em andamento.
+Checkpoint atual: CP-IA3 pronto para regressao final e push.
 
 Proximo checkpoint: CP-IA3.
 
-Proximo push: apos F2.8.
+Proximo push: CP-IA3, somente apos regressao final aprovada.
 
-Ultimo commit local: `feat: integra briefing da IA ao CRM`.
+Ultimo commit local: `feat: adiciona guardrails evals e metricas da IA`.
 
 ## Concluido
 
@@ -84,8 +84,9 @@ F2 - IA
 - CP-IA2 enviado.
 - F2.6 Inbox/copiloto. Concluida.
 - F2.7 Briefing/CRM. Concluida.
-- F2.8 Guardrails/metricas.
-- CP-IA3.
+- F2.8 Guardrails/custos/evals/metricas. Concluida.
+- F2 concluida; limites operacionais e de avaliacao em AI_GUARDRAILS_EVALS_METRICS.md.
+- CP-IA3 pronto; envio confirmado somente apos push.
 
 J - UX/CRO: auditoria UX, CRO publico, CRO checkout, UX Admin, UX IA e polish.
 
@@ -97,8 +98,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F2.7 concluida - briefing progressivo, conversao controlada em Orcamento/Cliente e visualizacao na Inbox.
+F2.8 concluida - guardrails, usage sem conteudo, custos opcionais, evals offline e metricas na Inbox.
 
 ## Proxima subfase
 
-F2.8 - Guardrails + custos + evals + metricas. Nao iniciar nesta fase.
+J.1 - Auditoria global de UX baseada em dados. Nao iniciar nesta fase.

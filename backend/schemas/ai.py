@@ -5,6 +5,7 @@ from enum import Enum
 import json
 from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID
+from schemas.ai_usage import ProviderUsage
 
 from pydantic import (
     AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, field_validator,
@@ -147,6 +148,8 @@ class ProviderToolResult(Contract):
             raise ValueError("Tool result must contain either data or an error")
         if not self.success and self.data is not None:
             raise ValueError("Failed tool result cannot contain data")
+        if self.data is not None and len(json.dumps(self.data, default=str)) > 32000:
+            raise ValueError("Tool result exceeds limits")
         return self
 
 
@@ -165,6 +168,7 @@ class ProviderResponse(Contract):
     tool_calls: tuple[ToolCall, ...] = Field(default=(), max_length=3)
     model: str | None = Field(default=None, max_length=100)
     usage_tokens: int | None = Field(default=None, ge=0)
+    usage: ProviderUsage | None = None
     finish_reason: Literal["stop", "length"] = "stop"
 
     @model_validator(mode="after")

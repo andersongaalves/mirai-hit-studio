@@ -43,7 +43,8 @@ def get_ai_email_service():
         raise HTTPException(status_code=503, detail="Canal de e-mail indisponivel.")
     try:
         client = ResendAIEmailClient(getattr(settings, "RESEND_API_KEY", ""))
-        provider = OpenAIProvider(api_key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS)
+        provider = OpenAIProvider(api_key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS,
+                                 max_output_tokens=getattr(settings, "AI_MAX_OUTPUT_TOKENS", 1200))
         return AIEmailService(
             ConversationService(SessionLocal, provider), client,
             sender_address=settings.AI_EMAIL_FROM,

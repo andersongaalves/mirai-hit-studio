@@ -26,6 +26,7 @@ from models.audit_log import AuditLogModel
 from models.financeiro import CobrancaModel, PagamentoModel
 from models.ai import AIConversationModel, AIEmailThreadModel, AIMessageModel
 from models.ai_briefing import AIBriefingModel
+from models.ai_usage import AIUsageEventModel
 
 
 config = context.config

@@ -39,6 +39,16 @@ with Operations.context(context):
 assert 'ALTER TABLE ai_briefings ENABLE ROW LEVEL SECURITY' in buffer.getvalue()
 assert 'REVOKE ALL ON TABLE ai_briefings FROM anon' in buffer.getvalue()
 assert 'REVOKE ALL ON TABLE ai_briefings FROM authenticated' in buffer.getvalue()
+usage_spec = importlib.util.spec_from_file_location('usage_revision', 'migrations/versions/f2a8c4e6d901_create_ai_usage_events.py')
+usage_revision = importlib.util.module_from_spec(usage_spec)
+usage_spec.loader.exec_module(usage_revision)
+buffer = io.StringIO()
+context = MigrationContext.configure(dialect_name='postgresql', opts={'as_sql': True, 'output_buffer': buffer})
+with Operations.context(context):
+    usage_revision.upgrade()
+for fragment in ('CREATE TABLE ai_usage_events', 'ALTER TABLE ai_usage_events ENABLE ROW LEVEL SECURITY',
+                 'REVOKE ALL ON TABLE ai_usage_events FROM anon', 'REVOKE ALL ON TABLE ai_usage_events FROM authenticated'):
+    assert fragment in buffer.getvalue(), fragment
 emitted = []
 mock = create_mock_engine('postgresql://', lambda statement, *args, **kwargs: emitted.append(str(statement.compile(dialect=mock.dialect))))
 Base.metadata.create_all(mock, tables=[Base.metadata.tables['ai_conversations'], Base.metadata.tables['ai_messages']])
@@ -55,20 +65,20 @@ from alembic.script import ScriptDirectory
 from sqlalchemy.orm import configure_mappers
 import models
 
-ai_tables = {'ai_conversations', 'ai_messages', 'ai_email_threads', 'ai_briefings'}
+ai_tables = {'ai_conversations', 'ai_messages', 'ai_email_threads', 'ai_briefings', 'ai_usage_events'}
 # Historical chain starts from a preexisting schema. Build the parent schema only
 # in this disposable database, then exercise the new revision through Alembic.
 with engine.begin() as connection:
     Base.metadata.create_all(connection, tables=[table for table in Base.metadata.sorted_tables
                                                 if table.name not in ai_tables])
 command.stamp(migration_config(), 'f6c2a8d4e1b9')
-assert ScriptDirectory.from_config(migration_config()).get_heads() == ['e8b2c6d4f701']
+assert ScriptDirectory.from_config(migration_config()).get_heads() == ['f2a8c4e6d901']
 command.upgrade(migration_config(), 'head')
 assert ai_tables <= set(inspect(engine).get_table_names())
 with engine.connect() as connection:
     differences = compare_metadata(MigrationContext.configure(connection), Base.metadata)
     assert not differences, differences
-    assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'e8b2c6d4f701'
+    assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'f2a8c4e6d901'
 configure_mappers()
 command.downgrade(migration_config(), 'f6c2a8d4e1b9')
 assert not ai_tables & set(inspect(engine).get_table_names())

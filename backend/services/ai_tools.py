@@ -43,6 +43,8 @@ class ToolExecutionContext(BaseModel):
     actor: Literal["client", "operator", "system"] = "client"
     source: Literal["site", "email", "internal"]
     request_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9._-]{8,64}$")
+    claim_token: UUID | None = None
+    conversation_version: int | None = Field(default=None, ge=0)
 
 
 @dataclass(frozen=True)
@@ -126,17 +128,17 @@ class ToolRegistry:
         except (ValidationError, TypeError, ValueError):
             raise ToolError("tool_invalid_result") from None
 
-    def run(self, call: ToolCall, context: ToolExecutionContext):
+    def run(self, call: ToolCall, context: ToolExecutionContext, *, telemetry=None):
         started = monotonic()
         error_code = None
         try:
             output = self.execute(call.name, call.arguments, context)
-            return ProviderToolResult(
-                call_id=call.id,
-                name=call.name,
-                success=True,
-                data=output.model_dump(mode="json"),
-            )
+            try:
+                return ProviderToolResult(
+                    call_id=call.id, name=call.name, success=True, data=output.model_dump(mode="json"),
+                )
+            except (ValidationError, TypeError, ValueError):
+                raise ToolError("tool_invalid_result") from None
         except ToolError as error:
             stable = {
                 "tool_not_allowed": "not_allowed",
@@ -163,10 +165,14 @@ class ToolRegistry:
             )
         finally:
             duration_ms = round((monotonic() - started) * 1000)
+            safe_name = call.name if call.name in self._tools else "unregistered"
+            if telemetry:
+                telemetry.emit(kind="tool", name=safe_name, result="error" if error_code else "success",
+                               error_code=error_code, latency_ms=duration_ms)
             logger.info(
                 "ai_tool_called tool=%s success=%s error_code=%s duration_ms=%s "
                 "conversation_id=%s request_id=%s",
-                call.name,
+                safe_name,
                 error_code is None,
                 error_code,
                 duration_ms,

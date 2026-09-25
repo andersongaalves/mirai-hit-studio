@@ -6,7 +6,8 @@ from schemas.ai import ProviderInput, ProviderResponse
 
 
 class ProviderError(Exception):
-    def __init__(self, code: Literal["provider_unavailable", "provider_timeout", "provider_invalid_response"]):
+    def __init__(self, code: Literal["provider_unavailable", "provider_timeout", "provider_invalid_response"], *, usage=None):
+        self.usage = usage
         self.code = code if code in {
             "provider_unavailable", "provider_timeout", "provider_invalid_response",
         } else "provider_unavailable"

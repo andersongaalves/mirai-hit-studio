@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 import logging
 import hashlib
 from uuid import UUID, uuid4
+from time import monotonic
 
 from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -24,6 +25,7 @@ from services.ai_orchestrator import AIOrchestrator, Decision, SYSTEM
 from services.ai_knowledge_service import AIKnowledgeService, build_tool_registry
 from services.ai_tools import ToolExecutionContext
 from services.ai_briefing_service import AIBriefingService
+from services.ai_usage_service import UsageRecorder, record_copilot
 
 
 logger = logging.getLogger(__name__)
@@ -231,6 +233,8 @@ class ConversationService:
             actor=actor,
             source=source or conversation.channel,
             request_id=message.request_id,
+            claim_token=conversation.claim_token,
+            conversation_version=conversation.version,
         )
         return incoming, tool_context
 
@@ -340,7 +344,7 @@ class ConversationService:
                 db, conversation, message, context=context,
                 identity_verified=identity_verified, actor=actor, source=source,
             )
-        decision = self.orchestrator.decide(
+        decision = self._decide(
             status="open", mode=ConversationMode.COPILOT.value,
             incoming=incoming, tool_context=tool_context,
         )
@@ -385,6 +389,7 @@ class ConversationService:
             conversation.updated_at = self.clock()
             if not stale:
                 db.flush()
+                record_copilot(db, conversation, message, "copilot_generated")
                 result = {
                     "id": draft.id,
                     "conversation_id": conversation.id,
@@ -416,13 +421,21 @@ class ConversationService:
         )
         if isinstance(claim, ProcessingResult):
             return claim
-        decision = self.orchestrator.decide(
+        decision = self._decide(
             status="open",
             mode=claim.mode,
             incoming=claim.incoming,
             tool_context=claim.tool_context,
         )
         return self.complete(claim, decision)
+
+    def _decide(self, **kwargs):
+        recorder = UsageRecorder(self.sessions, kwargs.get("tool_context"))
+        started = monotonic()
+        decision = self.orchestrator.decide(**kwargs, telemetry=recorder)
+        recorder.emit(kind="turn", result=decision.action.value, error_code=decision.error_code,
+                      latency_ms=round((monotonic() - started) * 1000))
+        return decision
 
     def complete(self, claim: Claim, decision: Decision):
         with self._transaction() as db:
@@ -445,6 +458,8 @@ class ConversationService:
             elif decision.action == DecisionAction.HANDOFF:
                 self._handoff(conversation, decision.reason)
             elif decision.action in (DecisionAction.REPLY, DecisionAction.SUGGESTION):
+                if decision.action == DecisionAction.SUGGESTION:
+                    record_copilot(db, conversation, message, "copilot_generated")
                 db.add(Message(
                     id=str(uuid4()), conversation_id=conversation.id, direction="outbound",
                     role="assistant", channel=conversation.channel, reply_to_id=message.id,

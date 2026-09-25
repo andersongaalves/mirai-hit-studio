@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     AI_MODEL: str = ""
     AI_API_KEY: SecretStr = SecretStr("")
     AI_TIMEOUT_SECONDS: float = Field(default=8, ge=1, le=10)
+    AI_MAX_OUTPUT_TOKENS: int = Field(default=1200, ge=128, le=4096)
     AI_SESSION_HOURS: int = Field(default=24, ge=1, le=168)
     AI_EMAIL_ENABLED: bool = False
     AI_EMAIL_FROM: str = ""

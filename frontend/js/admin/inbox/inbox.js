@@ -4,6 +4,7 @@ import { renderDetail, renderError, renderList, renderPagination } from "./inbox
 import { renderAdminState } from "../ui.js";
 import * as Notify from "../../utils/notifications.js";
 import { getCurrentUser } from "../auth.js";
+import { initMetrics, resetMetrics } from "./inbox_metrics.js";
 
 let initialized = false;
 
@@ -197,10 +198,12 @@ function bind() {
 export async function initInbox() {
     if (!$("section-inbox")) return;
     if (!initialized) { initialized = true; bind(); }
+    initMetrics();
     await carregarPagina(inboxState.page);
 }
 
 export function resetInbox() {
+    resetMetrics();
     resetInboxState();
     ["inbox-search", "inbox-status-filter", "inbox-mode-filter", "inbox-channel-filter", "inbox-assigned-filter", "inbox-updated-from", "inbox-updated-to"].forEach((id) => {
         window.clearTimeout($(id)?.dataset.timer);

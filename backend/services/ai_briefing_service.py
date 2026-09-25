@@ -59,6 +59,17 @@ class AIBriefingService:
 
     @staticmethod
     def _message(db, conversation, context):
+        if (conversation.mode != "autonomous" or context.mode != "autonomous"
+                or context.actor != "client"):
+            raise ToolError("tool_not_authorized")
+        if context.claim_token is not None:
+            expiry = conversation.lease_until
+            if expiry is not None and expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            if (conversation.claim_token != str(context.claim_token)
+                    or conversation.version != context.conversation_version
+                    or expiry is None or expiry <= _now()):
+                raise ToolError("conflict")
         if context.message_id is None or str(context.conversation_id) != conversation.id:
             raise ToolError("invalid_context")
         message = db.get(Message, str(context.message_id))
@@ -176,6 +187,9 @@ class AIBriefingService:
                 if briefing.orcamento_id:
                     return self._tool_result(briefing, self._email(db, conversation))
                 message = self._message(db, conversation, context)
+                confirmation = _fold(message.content)
+                if re.search(r"\b(nao|nunca|cancele|cancelar|not|don't)\b", confirmation):
+                    raise ToolError("confirmation_required")
                 if not re.search(r"\b(quero (?:um )?orcamento|solicito (?:um )?orcamento|quero contratar|"
                                  r"pode enviar|pode encaminhar|envie (?:o )?(?:pedido|orcamento)|confirmo o envio)\b",
                                  _fold(message.content)):

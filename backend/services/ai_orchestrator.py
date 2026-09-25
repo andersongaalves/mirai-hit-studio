@@ -3,12 +3,15 @@
 import re
 import unicodedata
 from dataclasses import dataclass
+from time import monotonic
 
 from pydantic import ValidationError
 
 from schemas.ai import DecisionAction, HandoffReason, ProviderInput, ProviderResponse
 from services.ai_provider import AIProvider, DisabledProvider, ProviderError
 from services.ai_tools import ToolExecutionContext, ToolRegistry
+from services.ai_response_policy import unsupported_claim
+from schemas.ai_usage import ProviderUsage
 
 
 SYSTEM = (
@@ -37,10 +40,10 @@ def handoff_reason(text):
     normalized = "".join(c for c in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(c))
     rules = (
         (HandoffReason.MANUAL_REQUEST, r"\b(humano|atendente|pessoa real|falar com a equipe|falar com uma pessoa)\b"),
-        (HandoffReason.DISCOUNT, r"\b(descontos?|consegue reduzir|fecha por metade)\b"),
+        (HandoffReason.DISCOUNT, r"\b(descontos?|discount|consegue reduzir|fecha por metade)\b"),
         (HandoffReason.NEGOTIATION, r"\b(negociar|negociacao|mais barato|faz por|quero fechar|fechar (?:o |a |esse |essa )?(?:negocio|projeto|proposta|contrato))\b"),
         (HandoffReason.CUSTOM_PRICING, r"\b(preco|valor|orcamento)\s+(customizado|personalizado|especial)\b"),
-        (HandoffReason.PAYMENT_ISSUE, r"\b(reembolso|estorno|chargeback|cobranca indevida|paguei|pagamento duplicado|pagamento nao|problema com (?:o )?pagamento|pagamento contestado)\b"),
+        (HandoffReason.PAYMENT_ISSUE, r"\b(reembolso|refund|estorno|chargeback|cobranca indevida|paguei|pagamento duplicado|pagamento nao|problema com (?:o )?pagamento|pagamento contestado)\b"),
         (HandoffReason.COMPLAINT, r"\b(reclamacao|reclamar|fraude|golpe|insatisfeito)\b"),
     )
     return next((reason for reason, pattern in rules if re.search(pattern, normalized)), None)
@@ -69,6 +72,7 @@ class AIOrchestrator:
         mode,
         incoming: ProviderInput,
         tool_context: ToolExecutionContext | None = None,
+        telemetry=None,
     ) -> Decision:
         if status != "open" or mode == "human":
             return Decision(DecisionAction.NO_ACTION)
@@ -82,7 +86,7 @@ class AIOrchestrator:
         calls = 0
         for cycle in range(self.max_tool_cycles + 1):
             try:
-                response = ProviderResponse.model_validate(self.provider.generate(prepared))
+                response = self._generate(prepared, telemetry, cycle)
             except TimeoutError:
                 return Decision(DecisionAction.ERROR, error_code="provider_timeout")
             except ProviderError as error:
@@ -111,6 +115,8 @@ class AIOrchestrator:
             if response.finish_reason != "stop":
                 return Decision(DecisionAction.HANDOFF, reason=HandoffReason.LOW_CONFIDENCE)
             if not response.tool_calls:
+                if unsupported_claim(response.text, results):
+                    return Decision(DecisionAction.HANDOFF, reason=HandoffReason.LOW_CONFIDENCE)
                 action = DecisionAction.SUGGESTION if mode == "copilot" else DecisionAction.REPLY
                 return Decision(action, text=response.text)
             if tool_context is None:
@@ -131,15 +137,17 @@ class AIOrchestrator:
                     reason=HandoffReason.TOOL_FAILURE,
                     error_code="tool_loop_limit",
                 )
-            batch = tuple(self.registry.run(call, tool_context) for call in response.tool_calls)
+            batch = tuple(self.registry.run(call, tool_context, telemetry=telemetry)
+                          for call in response.tool_calls)
             calls += len(batch)
             results.extend(batch)
             critical = next((item for item in batch if item.error_code in {
-                "not_allowed", "temporarily_unavailable", "invalid_result", "conflict",
+                "not_allowed", "not_authorized", "temporarily_unavailable", "invalid_result", "conflict",
             }), None)
             if critical:
                 code = {
                     "not_allowed": "tool_not_allowed",
+                    "not_authorized": "tool_not_allowed",
                     "temporarily_unavailable": "tool_temporarily_unavailable",
                     "invalid_result": "tool_invalid_result",
                     "conflict": "tool_conflict",
@@ -155,3 +163,32 @@ class AIOrchestrator:
             reason=HandoffReason.TOOL_FAILURE,
             error_code="tool_loop_limit",
         )
+
+    def _generate(self, incoming, telemetry, cycle):
+        started = monotonic()
+        usage, code = None, None
+        if getattr(self.provider, "provider_name", None):
+            try:
+                usage = ProviderUsage(provider=self.provider.provider_name, model=getattr(self.provider, "model", None))
+            except (ValueError, TypeError):
+                pass
+        try:
+            response = ProviderResponse.model_validate(self.provider.generate(incoming))
+            usage = response.usage or usage
+            return response
+        except ProviderError as error:
+            usage, code = error.usage or usage, error.code
+            raise
+        except TimeoutError:
+            code = "provider_timeout"
+            raise
+        except (ValidationError, TypeError, ValueError):
+            code = "provider_invalid_response"
+            raise
+        except Exception:
+            code = "provider_unavailable"
+            raise
+        finally:
+            if telemetry:
+                telemetry.emit(kind="provider", result="error" if code else "success", error_code=code,
+                               latency_ms=round((monotonic() - started) * 1000), usage=usage, cycle=cycle)

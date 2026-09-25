@@ -132,6 +132,10 @@ O Financeiro administrativo e restrito a Admin, exibe dados derivados reais e pe
 
 ## Politica de desenvolvimento
 
+F2.8: usage tecnico sem conteudo, custo opcional com snapshot de tarifa e metricas agregadas na Inbox.
+Guardrails/evals e limites residuais: `docs/AI_GUARDRAILS_EVALS_METRICS.md`.
+Autorizacao continua no servidor; encerramento nao comprova resolucao e vinculo CRM nao verifica identidade.
+
 - Trabalhar em tarefas pequenas e fechadas.
 - Ler somente arquivos relevantes para cada subfase.
 - Usar testes focados durante subfases.

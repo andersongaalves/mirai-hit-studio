@@ -227,3 +227,15 @@ Decisao: um briefing por Conversation conserva draft e permite merge/correcao. T
 ## ADR-056 - Conversao usa Orcamento e Cliente existentes
 
 Decisao: submissao confirmada cria um unico Orcamento sem preco definido e resolve Cliente pelo service comercial, na mesma transacao. Conflitos exigem humano; vinculo CRM nao verifica identidade. Lead nao autoriza newsletter, proposta ou pagamento automatico.
+
+## ADR-057 - Observabilidade tecnica sem conteudo
+
+Decisao: ai_usage_events conserva somente tentativas, usage, latencia e geracao/uso de sugestoes que nao podem ser reconstruidos apos sobrescrita. Metricas operacionais derivam das entidades existentes. Endpoint agregado segue permissao da Inbox e nao expoe PII nem alimenta analytics publico.
+
+## ADR-058 - Custo opcional com tarifa historica
+
+Decisao: consumo informado pelo provider e preservado; tarifa local versionada e opcional. Cada estimativa conserva snapshot e moeda, sem cambio ou reavaliacao retroativa. Ausencia de usage/rate significa desconhecido, nao zero. Resumo nao substitui fatura ou limite de gasto do fornecedor.
+
+## ADR-059 - Guardrails avaliados offline e autoridade no servidor
+
+Decisao: fixtures adversariais usam providers/tools sinteticos; autorizacao nao depende do prompt. Escrita de briefing revalida controle da conversa e rejeita confirmacao negada. Checks de resposta complementam a allowlist sem prometer eliminar alucinacoes. Encerramento nao e resolution rate, e contagens de sugestoes nao sao acceptance rate de coorte.

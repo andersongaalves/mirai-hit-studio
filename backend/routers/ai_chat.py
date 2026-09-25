@@ -43,7 +43,8 @@ def get_site_chat_service():
     key = getattr(settings, "AI_API_KEY", None)
     key = key.get_secret_value() if key else ""
     enabled = bool(getattr(settings, "AI_ENABLED", False) and key and getattr(settings, "AI_MODEL", ""))
-    provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS) if enabled else None
+    provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS,
+                             max_output_tokens=getattr(settings, "AI_MAX_OUTPUT_TOKENS", 1200)) if enabled else None
     service = SiteChatService(ConversationService(SessionLocal, provider), session_hours=getattr(settings, "AI_SESSION_HOURS", 24))
     service.ai_enabled = enabled
     return service

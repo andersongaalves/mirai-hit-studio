@@ -306,6 +306,9 @@ class AIInboxService:
                                                                    "new_mode": conversation.mode})
                 db.flush()
                 message_id = message.id
+                if suggestion is not None:
+                    from services.ai_usage_service import record_copilot
+                    record_copilot(db, conversation, message, "copilot_used")
                 created = True
         if channel == "email" and self.email_delivery is None:
             raise InboxError("delivery_unavailable")
