@@ -74,6 +74,18 @@ async function staticResponse(route) {
         await page.locator('#password').fill('synthetic-password');
         await page.locator('#login-panel').getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
+        const dangerStyle = await page.evaluate(() => {
+            const button = document.createElement('button');
+            button.className = 'btn-small btn-danger';
+            document.getElementById('admin-area').append(button);
+            const style = getComputedStyle(button);
+            const result = { color: style.color, background: style.backgroundColor, height: button.getBoundingClientRect().height };
+            button.remove();
+            return result;
+        });
+        assert.notEqual(dangerStyle.color, dangerStyle.background, 'danger text must remain visible');
+        assert.ok(dangerStyle.height >= 44, 'admin controls retain a touch target');
+        assert.equal(await page.locator('.admin-sidebar__logout.btn-danger').count(), 0);
 
         const keyboardFocus = await page.evaluate(() => {
             const control = document.querySelector('.admin-nav__item[data-admin-target="dashboard-menu"]');

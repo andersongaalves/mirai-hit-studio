@@ -33,7 +33,7 @@ sao hipoteses; nao se afirma aumento de conversao sem medicao posterior.
 | J03 | S2 | Alta | checkout.html: legend Pagamento comercial; explicacao de tokenizacao | Termos internos dificultam escolha; texto claro sobre valor atual, cartao e confirmacao | J.3 |
 | J04 | S2 | Alta | checkout.js: expiration_time inserido sem formatacao | Data tecnica reduz compreensao; formatar data/hora e lidar com valor invalido | J.3 |
 | J05 | S2 | Alta | admin.css: moldura roxa/glow, dashboard-section enquadrada | Ruido em operacao; retirar moldura decorativa e separar secoes sem cards externos | J.4 |
-| J06 | S1 | Alta | admin.html logout combina btn-outline/btn-danger; regras de hover concorrentes | Garantir texto legivel em repouso/hover e acao de sair secundaria, nao exclusao | J.4 |
+| J06 | S1 | Alta | components.css define texto vermelho em btn-small.btn-danger; admin.css define fundo vermelho | Captura confirma texto invisivel no logout; corrigir variantes e tornar sair secundario | J.4 |
 | J07 | S2 | Alta | inbox_dom.js: sugestao aparece no historico e preenche composer | Reforcar que e rascunho nao enviado, editavel antes do envio humano | J.5 |
 | J08 | S2 | Alta | inbox_metrics.js: nomes/resultados/error_code expostos diretamente | Usar rotulos operacionais, sem codigo tecnico bruto ou falsa taxa de resolucao | J.5 |
 | J09 | S2 | Media | chat.css: cabecalho, aviso longo e acoes disputam altura | Compactar copy e validar composer em viewport baixo; distinguir humano de IA | J.5 |
