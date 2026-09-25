@@ -28,6 +28,7 @@ const metricsResponse = { channels: [{ channel: 'site', conversations_started: 0
     cohort_closed: 0, cohort_handoffs: 0, autonomous_replies: 0, human_replies: 0,
     copilot_generated: 0, copilot_used: 0, briefings_started: 0, budgets_created: 0,
     provider_calls: 0, total_tokens: null, usage_known_calls: 0, cost_unknown_calls: 0,
+    operations: [{ name: 'provider', result: 'error', error_code: 'private_provider_failure', count: 1, latency_ms: 120 }],
     costs: [{ amount: 1, currency: malicious, measured_calls: 1 }] }] };
 
 async function staticResponse(route) {
@@ -126,6 +127,9 @@ function listPage(url) {
         assert.equal(await page.locator('#inbox-metrics-content dd').first().innerText(), '0');
         assert.equal(await page.locator('#inbox-metrics-content img').count(), 0);
         assert.ok((await page.locator('#inbox-metrics-content').innerText()).includes('Indisponível'));
+        assert.ok(!(await page.locator('#inbox-metrics-content').textContent()).includes('private_provider_failure'));
+        await page.getByText('Desempenho das operações', { exact: true }).click();
+        assert.match(await page.locator('#inbox-metrics-content').innerText(), /Respostas da IA com falha: 1/);
         assert.equal(calls.filter(call => call.includes('/metrics')).length, 1);
         metricsFailure = true;
         await page.locator('#inbox-metrics-period').selectOption('30');
@@ -143,6 +147,8 @@ function listPage(url) {
         await page.locator('#inbox-mode-select').selectOption('copilot');
         await page.getByRole('button', { name: 'Gerar sugestão' }).click();
         await page.getByRole('button', { name: 'Regenerar sugestão' }).waitFor();
+        assert.match(await page.locator('.inbox-message--suggestion strong').innerText(), /não enviado/);
+        assert.equal(await page.locator('#inbox-reply-text').getAttribute('aria-describedby'), 'inbox-reply-help');
         assert.equal(await page.locator('#inbox-reply-text').inputValue(), 'Texto da IA');
         await page.getByRole('button', { name: 'Ignorar sugestão' }).click();
         await page.waitForFunction(() => !document.querySelector('#inbox-detail .inbox-message--suggestion'));

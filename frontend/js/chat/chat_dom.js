@@ -26,7 +26,7 @@ export function createChatView() {
     title.tabIndex = -1;
     const close = button("Fechar");
     header.append(title, close);
-    const intro = element("p", "site-chat-intro", "Atendimento por IA. Contato informado para orçamento é usado só para responder ao pedido, não para newsletter. Não envie dados de pagamento.");
+    const intro = element("p", "site-chat-intro", "Assistente de IA da Mirai. Seu contato serve ao atendimento, não à newsletter. Não envie dados de pagamento.");
     const messages = element("ol", "site-chat-messages");
     messages.setAttribute("aria-label", "Mensagens da conversa");
     messages.setAttribute("role", "log");
@@ -55,7 +55,7 @@ export function createChatView() {
         const key = id ? `${role}:${id}` : null;
         if (key && [...messages.children].some(row => row.dataset.messageKey === key)) return;
         const nearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 80;
-        const row = element("li", `site-chat-message site-chat-message--${role === "user" ? "user" : "assistant"}`);
+        const row = element("li", `site-chat-message site-chat-message--${role === "user" ? "user" : sender === "human" ? "human" : "assistant"}`);
         if (key) row.dataset.messageKey = key;
         row.append(element("strong", "", role === "user" ? "Você" : sender === "human" ? "Atendimento Mirai" : "Assistente Mirai"), element("p", "", text));
         messages.append(row);

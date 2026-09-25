@@ -89,7 +89,7 @@ function createMessage(message, handlers) {
     const article = document.createElement("article");
     article.className = `inbox-message inbox-message--${message.direction} inbox-message--${message.kind}`;
     article.append(
-        text("strong", message.kind === "suggestion" ? "Sugestão da IA" : message.kind === "reply" ? "IA" : message.direction === "inbound" ? "Cliente" : "Atendente"),
+        text("strong", message.kind === "suggestion" ? "Rascunho da IA · não enviado" : message.kind === "reply" ? "IA" : message.direction === "inbound" ? "Cliente" : "Atendente"),
         text("p", message.content),
     );
     if (message.delivery === "pending") {
@@ -201,7 +201,10 @@ export function renderDetail(container, detail, handlers) {
     textarea.disabled = send.disabled;
     const replyLabel = text("label", "Resposta humana");
     replyLabel.htmlFor = textarea.id;
-    composer.append(replyLabel, textarea, send);
+    const help = text("p", suggestion ? "Revise e edite o rascunho. Só será enviado quando você confirmar em Enviar resposta." : "Esta resposta será enviada ao cliente pelo canal da conversa.", "inbox-composer__help");
+    help.id = "inbox-reply-help";
+    textarea.setAttribute("aria-describedby", help.id);
+    composer.append(replyLabel, help, textarea, send);
     composer.addEventListener("submit", (event) => {
         event.preventDefault();
         handlers.onSend(textarea.value, suggestion?.id || null);

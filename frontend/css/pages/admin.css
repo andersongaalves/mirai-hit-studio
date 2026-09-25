@@ -625,6 +625,9 @@
 .inbox-metrics-values div { min-width: 0; overflow-wrap: anywhere; }
 .inbox-metrics-values dt { color: var(--color-text-secondary); }
 .inbox-metrics-values dd { margin: var(--space-1) 0 0; font-weight: 700; }
+.inbox-metrics details { margin-block: var(--space-3); }
+.inbox-metrics details ul { padding-left: var(--space-5); color: var(--color-text-secondary); }
+.inbox-composer__help { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-small); }
 .inbox-layout {
     display: grid;
     grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.4fr);

@@ -12,6 +12,7 @@
 .site-chat-messages { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; list-style: none; padding: 0; margin: 0; }
 .site-chat-message { margin-bottom: var(--space-3); border-left: 2px solid var(--color-border); padding: var(--space-2) var(--space-3); overflow-wrap: anywhere; }
 .site-chat-message--user { border-color: var(--color-accent); }
+.site-chat-message--human { border-color: var(--color-success); }
 .site-chat-message strong { font-size: var(--font-size-small); }
 .site-chat-message p { margin: var(--space-1) 0 0; white-space: pre-wrap; }
 .site-chat-form { display: grid; gap: var(--space-2); flex-shrink: 0; }
@@ -20,4 +21,11 @@
 .site-chat :focus-visible, .site-chat-launcher:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 .site-chat button:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 480px) { .site-chat { inset: var(--space-4); width: calc(100vw - 32px); height: calc(100dvh - 32px); } }
+@media (max-height: 600px) {
+    .site-chat { padding: var(--space-2); }
+    .site-chat[open] { gap: var(--space-2); }
+    .site-chat-intro { max-height: 48px; overflow-y: auto; }
+    .site-chat-form textarea { min-height: 44px; max-height: 64px; }
+    .site-chat-messages { min-height: 44px; }
+}
 @media (prefers-reduced-motion: reduce) { .site-chat *, .site-chat-launcher { animation: none; transition: none; scroll-behavior: auto; } }

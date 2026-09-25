@@ -42,9 +42,15 @@ export function renderMetrics(container, data) {
         section.append(values);
         const technical = document.createElement("ul");
         for (const operation of operations) {
-            technical.append(text("li", `${operation.name}: ${operation.result}${operation.error_code ? ` (${operation.error_code})` : ""} · ${number(operation.count)} · média ${number(operation.latency_ms)} ms`));
+            const name = operation.name === "provider" ? "Respostas da IA" : "Consultas e ações auxiliares";
+            const result = operation.result === "success" ? "concluídas" : operation.result === "error" ? "com falha" : "outros resultados";
+            technical.append(text("li", `${name} ${result}: ${number(operation.count)} · tempo médio ${number(operation.latency_ms)} ms`));
         }
-        if (technical.childElementCount) section.append(technical);
+        if (technical.childElementCount) {
+            const details = document.createElement("details");
+            details.append(text("summary", "Desempenho das operações"), technical);
+            section.append(details);
+        }
         for (const cost of channel.costs || []) {
             section.append(text("p", `Custo estimado parcial: ${number(cost.amount)} ${cost.currency} (${number(cost.measured_calls)} chamadas)`));
         }
