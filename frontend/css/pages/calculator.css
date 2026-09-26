@@ -238,7 +238,7 @@
 
 @media (max-width: 900px) {
     .quote-layout { grid-template-columns: 1fr; }
-    .quote-context { position: static; order: -1; }
+    .quote-context { position: static; }
 }
 
 @media (max-width: 600px) {

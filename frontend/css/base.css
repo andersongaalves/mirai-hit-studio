@@ -6,17 +6,7 @@
 
 body {
     background-color: var(--cor-fundo);
-    background-image:
-        radial-gradient(
-            circle at 50% 0%,
-            rgba(178, 42, 240, 0.15) 0%,
-            transparent 60%
-        ),
-        radial-gradient(
-            circle at 100% 100%,
-            rgba(0, 212, 255, 0.05) 0%,
-            transparent 50%
-        );
+    background-image: none;
     color: var(--cor-branco);
     font-family: var(--font-texto);
     font-size: var(--font-size-body);
@@ -33,7 +23,7 @@ h2 {
 h3,
 h4 {
     font-family: var(--font-subtitulos);
-    font-weight: 400;
+    font-weight: 700;
 }
 
 a {
@@ -88,19 +78,19 @@ button.disabled,
 
 h2,
 .section-title {
-    font-size: 2.5rem;
+    font-size: var(--font-size-h2);
     color: var(--cor-branco);
     text-align: center;
-    margin-bottom: 50px; /* Espaço generoso abaixo do título */
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    margin-bottom: var(--space-6);
+    text-transform: none;
+    letter-spacing: 0;
     position: relative;
-    padding-bottom: 15px;
+    padding-bottom: 0;
 }
 
 /* Efeito decorativo abaixo do título */
 h2::after {
-    content: "";
+    content: none;
     position: absolute;
     bottom: 0;
     left: 50%;
@@ -113,21 +103,21 @@ h2::after {
 
 h3,
 .category-title {
-    font-size: 2rem;
+    font-size: var(--font-size-h3);
     color: var(--cor-branco);
     text-align: left;
-    margin-top: 20px;
-    margin-bottom: 20px; /* Espaço generoso abaixo do título */
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-4);
+    text-transform: none;
+    letter-spacing: 0;
     position: relative;
-    padding-bottom: 15px;
+    padding-bottom: 0;
 }
 
 /* Efeito decorativo para os subtítulos (Alinhado à esquerda) */
 h3::after,
 .category-title::after {
-    content: "";
+    content: none;
     position: absolute;
     bottom: 0;
     left: 0; /* Alinha a barra à esquerda, já que o texto é text-align: left */

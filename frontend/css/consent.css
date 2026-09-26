@@ -55,10 +55,9 @@
 }
 
 .analytics-preferences {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    z-index: 999;
+    display: block;
+    margin: var(--space-4) var(--space-4) var(--space-4) auto;
+    background: var(--color-surface-elevated);
     padding: 7px 12px;
     font-size: 0.85rem;
 }

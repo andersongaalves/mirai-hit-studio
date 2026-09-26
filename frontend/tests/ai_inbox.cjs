@@ -122,7 +122,7 @@ function listPage(url) {
         await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
         await page.locator('[data-admin-target="section-inbox"]').click();
         assert.equal(calls.filter(call => call.includes('/metrics')).length, 0);
-        await page.locator('#inbox-metrics summary').click();
+        await page.locator('#inbox-metrics > summary').click();
         await page.locator('#inbox-metrics-content dd').first().waitFor();
         assert.equal(await page.locator('#inbox-metrics-content dd').first().innerText(), '0');
         assert.equal(await page.locator('#inbox-metrics-content img').count(), 0);
@@ -166,7 +166,7 @@ function listPage(url) {
             await page.setViewportSize({ width, height: 800 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `overflow ${width}`);
             if (process.env.AI_METRICS_SCREENSHOTS && [320, 1440].includes(width)) {
-                await page.locator('#inbox-metrics summary').evaluate(node => node.scrollIntoView({ block: 'start' }));
+                await page.locator('#inbox-metrics > summary').evaluate(node => node.scrollIntoView({ block: 'start' }));
                 await page.screenshot({ path: path.join(process.env.AI_METRICS_SCREENSHOTS, `mirai-ai-metrics-${width}.png`) });
             }
         }

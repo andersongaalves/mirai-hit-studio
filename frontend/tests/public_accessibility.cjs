@@ -56,10 +56,11 @@ function apiResponse(route) {
     try {
         const context = await browser.newContext();
         await context.addInitScript(() => localStorage.setItem('mirai.analytics_consent.v1', 'rejected'));
-        await context.route('**/*', route => {
+        await context.route('**/*', async route => {
             const url = new URL(route.request().url());
             if (url.origin === 'http://localhost:4173') return staticResponse(route);
             if (url.origin === 'http://localhost:8000') return apiResponse(route);
+            if (url.href === 'https://cdn.example.com/capa.webp') return route.fulfill({ contentType: 'image/webp', body: await fs.readFile(path.join(root, 'img/mirai-studio-hero.webp')) });
             return route.fulfill({ status: 200, body: '' });
         });
 
@@ -119,11 +120,33 @@ function apiResponse(route) {
             assert.deepEqual(structure.unlabeled, [], `${pathname}: form labels`);
             assert.deepEqual(structure.imagesWithoutAlt, [], `${pathname}: image alt`);
             assert.deepEqual(structure.tinyTargets, [], `${pathname}: target size`);
+            assert.notEqual(await page.locator('#analytics-preferences').evaluate(element => getComputedStyle(element).position), 'fixed', 'privacy preferences must not cover payment controls');
 
             for (const width of widths) {
                 await page.setViewportSize({ width, height: 900 });
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
                 assert.ok(overflow <= 1, `${pathname}: overflow at ${width}px (${overflow}px)`);
+                if (pathname === '/portfolio') {
+                    const cover = await page.locator('.portfolio-card__cover').first().boundingBox();
+                    assert.ok(Math.abs(cover.width / cover.height - 1.6) < 0.02, 'cover follows its responsive ratio, not fixed HTML height');
+                }
+                if (process.env.VISUAL_OUTPUT && [390, 1440].includes(width)) {
+                    const name = pathname.startsWith('/checkout/') ? 'checkout' : pathname.slice(1) || 'home';
+                    await page.screenshot({ path: path.join(process.env.VISUAL_OUTPUT, `mirai-j-${name}-${width}.png`), animations: 'disabled' });
+                }
+            }
+            if (['/', '/artists', '/creators', '/media-games'].includes(pathname)) {
+                await page.setViewportSize({ width: 375, height: 700 });
+                const heroBottom = await page.locator('.public-hero').evaluate(element => element.getBoundingClientRect().bottom);
+                assert.ok(heroBottom <= 668, `${pathname}: next section must be visible (${heroBottom})`);
+            }
+            if (pathname === '/orcamento') {
+                await page.setViewportSize({ width: 390, height: 844 });
+                const positions = await page.evaluate(() => ({
+                    service: document.getElementById('srv_1').getBoundingClientRect().top,
+                    context: document.querySelector('.quote-context').getBoundingClientRect().top,
+                }));
+                assert.ok(positions.service < positions.context, 'service selection precedes explanatory context');
             }
         }
 

@@ -94,16 +94,13 @@
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
+    border-radius: var(--radius-md);
 }
 .glass-card:hover {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    transform: translateY(-15px) scale(1.02);
-    border-color: var(--cor-ciano);
-    box-shadow: 0 15px 30px rgba(0, 212, 255, 0.2);
+    border-radius: var(--radius-md);
 }
 
 .symbol-grid {
@@ -153,14 +150,14 @@
 }
 
 .scrolling-card:hover {
-    transform: translateY(-15px) scale(1.02);
+    transform: translateY(-2px);
     border-color: var(--cor-ciano);
-    box-shadow: 0 15px 30px rgba(0, 212, 255, 0.2);
+    box-shadow: var(--shadow-sm);
     background: rgba(255, 255, 255, 0.06);
 }
 
 .scrolling-card:hover img {
-    transform: scale(1.08);
+    transform: none;
 }
 .carousel-btn {
     position: absolute;
@@ -184,25 +181,27 @@
 
 /* Buttons */
 .btn-cta {
-    background: linear-gradient(45deg, var(--cor-ciano), var(--cor-roxo));
-    color: white;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
     padding: 14px 28px;
     border: none;
     border-radius: 4px;
     font-weight: bold;
     text-transform: uppercase;
     cursor: pointer;
-    transition: 0.3s;
+    transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
+.btn-cta, .btn-outline, .btn-small { min-height: 44px; font-family: var(--font-titulos); letter-spacing: 0; }
 .btn-cta:hover {
-    box-shadow: 0 0 15px var(--cor-ciano);
+    background: var(--color-accent-hover);
+    box-shadow: var(--shadow-glow);
 }
 .btn-cta:active {
     transform: translateY(1px);
 }
 .btn-outline {
     background: transparent;
-    border: 2px solid var(--cor-roxo);
+    border: 1px solid var(--color-text-secondary);
     color: white;
     padding: 14px 28px;
     border-radius: 4px;
@@ -232,7 +231,7 @@
     transition: all 0.2s ease-in-out;
     font-family: inherit;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
 }
 
 .btn-small:hover {
@@ -242,18 +241,18 @@
 }
 
 .btn-small:active {
-    transform: scale(0.96);
+    transform: translateY(1px);
 }
 
 /* Variante perigosa (como o botão de Excluir) que você já usa no admin */
 .btn-small.btn-danger {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--color-danger);
+    border-color: var(--color-danger);
 }
 
 .btn-small.btn-danger:hover {
     background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
+    border-color: var(--color-danger);
 }
 
 /* Aliases para novos modulos; classes legadas permanecem intactas. */

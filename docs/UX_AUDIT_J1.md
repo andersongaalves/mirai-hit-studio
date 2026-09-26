@@ -39,8 +39,11 @@ sao hipoteses; nao se afirma aumento de conversao sem medicao posterior.
 | J09 | S2 | Media | chat.css: cabecalho, aviso longo e acoes disputam altura | Compactar copy e validar composer em viewport baixo; distinguir humano de IA | J.5 |
 | J10 | S2 | Alta | base.css: h2/h3 decorados globalmente; components.css glass-card salta 15px | Remover ornamento global e movimento de superficies nao interativas | J.6 |
 | J11 | S3 | Alta | variables.css: escala com vw, fonte logo Impact, cores dispersas | Consolidar tokens e escala fixa responsiva; identidade usa arquivo de logo existente | J.6 |
+| J12 | S2 | Alta | Capturas J.6 Home/checkout: botoes transparentes sobre texto e Pix | Preferencias no fluxo apos conteudo; launcher de chat opaco | J.6 |
+| J13 | S2 | Alta | calculator.css mobile order:-1 no aside; captura 390px | Texto explicativo precedia selecao; manter ordem DOM, formulario antes do contexto | J.6 |
+| J14 | S2 | Alta | Portfolio: hero 430px e copy defensiva antes do audio | Cabecalho mais curto, marca literal e materiais mais proximos do primeiro viewport | J.6 |
 
-Contagem: S0=0, S1=1, S2=9, S3=1. Ausencia de S0 nesta amostra nao certifica
+Contagem: S0=0, S1=1, S2=12, S3=1. Ausencia de S0 nesta amostra nao certifica
 ausencia de problemas em producao. Screenshots temporarios nao entram no Git.
 
 ## Preservar

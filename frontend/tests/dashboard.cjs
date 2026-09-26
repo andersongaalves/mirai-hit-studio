@@ -56,6 +56,16 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.dashboard-kpi').count(), 5);
         assert.match(await page.locator('#dashboard-metrics').textContent(), /4/);
         assert.equal(await page.locator('#dashboard-pipeline li').count(), 4);
+        const attentionBeforePipeline = await page.evaluate(() =>
+            Boolean(document.getElementById('dashboard-attention').compareDocumentPosition(document.getElementById('dashboard-pipeline')) & Node.DOCUMENT_POSITION_FOLLOWING));
+        assert.equal(attentionBeforePipeline, true);
+        if (process.env.VISUAL_OUTPUT) {
+            for (const width of [390, 1440]) {
+                await page.setViewportSize({ width, height: 900 });
+                await page.evaluate(() => window.scrollTo(0, 0));
+                await page.screenshot({ path: path.join(process.env.VISUAL_OUTPUT, `mirai-j-admin-${width}.png`), animations: 'disabled' });
+            }
+        }
         assert.equal(await page.locator('#dashboard-activity img, #dashboard-activity script').count(), 0);
         assert.match(await page.locator('#dashboard-activity').textContent(), /<img src=x/);
         await page.locator('#dashboard-attention').getByRole('button', { name: 'Ver producoes' }).click();

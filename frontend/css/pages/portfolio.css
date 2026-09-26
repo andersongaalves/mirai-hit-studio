@@ -1,8 +1,8 @@
 .portfolio-hero {
-    min-height: 430px;
+    min-height: 280px;
     display: grid;
     align-items: end;
-    padding-block: var(--space-10);
+    padding-block: var(--space-8);
     border-bottom: var(--border-subtle);
     background-color: #080d15;
     background-image: url("../../img/mirai-studio-hero.webp");
@@ -89,6 +89,7 @@
 
 .portfolio-card__cover {
     width: 100%;
+    height: auto;
     aspect-ratio: 16 / 10;
     display: block;
     object-fit: cover;

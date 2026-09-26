@@ -16,12 +16,12 @@ function readSession() {
 export function initSiteChat() {
     if (document.getElementById("site-chat-launcher")) return;
     const view = createChatView();
-    // Keep the launcher above consent/preferences without making chat depend on consent.
+    // Keep the launcher above the consent banner without depending on its decision.
     const positionLauncher = () => {
         const banner = document.getElementById("analytics-consent-dialog");
         const rect = banner?.getBoundingClientRect();
         const overlaps = rect && rect.left < view.launcher.getBoundingClientRect().right;
-        view.launcher.style.bottom = `${overlaps ? Math.max(76, innerHeight - rect.top + 12) : 76}px`;
+        view.launcher.style.bottom = `${overlaps ? Math.max(16, innerHeight - rect.top + 12) : 16}px`;
     };
     const resize = new ResizeObserver(positionLauncher);
     resize.observe(document.body);

@@ -52,7 +52,7 @@ function criarEstruturaDashboard() {
 
     const attentionSection = element("section", "dashboard-section");
     attentionSection.setAttribute("aria-labelledby", "dashboard-attention-title");
-    const attentionTitle = element("h2", "", "Requer atencao");
+    const attentionTitle = element("h2", "", "Requer atenção");
     attentionTitle.id = "dashboard-attention-title";
     const attention = element("div");
     attention.id = "dashboard-attention";
@@ -65,7 +65,7 @@ function criarEstruturaDashboard() {
     const activity = element("div");
     activity.id = "dashboard-activity";
     activitySection.append(activityTitle, activity);
-    content.replaceChildren(metricsSection, pipelineSection, attentionSection, activitySection);
+    content.replaceChildren(metricsSection, attentionSection, pipelineSection, activitySection);
 }
 
 function renderMetricas(data) {

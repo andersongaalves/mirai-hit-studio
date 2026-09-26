@@ -15,9 +15,9 @@ Os tokens vivem em `frontend/css/variables.css`. As variaveis `--cor-*` existent
 
 | Papel | Token | Valor/base |
 |---|---|---|
-| Fundo | `--color-background` | `#0b0f19` |
-| Superficie | `--color-surface` | azul-escuro translucido |
-| Superficie elevada | `--color-surface-elevated` | `#111827` |
+| Fundo | `--color-background` | `#111827` oficial |
+| Superficie | `--color-surface` | `#171f2e` |
+| Superficie elevada | `--color-surface-elevated` | `#1c2636` |
 | Destaque | `--color-accent` | `#00D4FF` |
 | Destaque secundario | `--color-accent-secondary` | `#B22AF0` |
 | Texto principal | `--color-text-primary` | `#F9FAFB` |
@@ -42,7 +42,7 @@ Escala visual: display para hero real; h1 para pagina; h2 para secao; h3 para pa
 
 | Elemento | Regra |
 |---|---|
-| Botao primary | `.btn-cta`; ciano/roxo reservado para acao principal |
+| Botao primary | `.btn-cta`; ciano com texto escuro e contraste, sem gradiente |
 | Botao secondary | `.btn-outline`; sem competir visualmente com primary |
 | Botao ghost | `.btn-small`; acao secundaria ou contextual |
 | Perigo | `.btn-small.btn-danger`; apenas acao destrutiva |
@@ -73,3 +73,12 @@ Em mobile: comandos e textos nao podem truncar, grids devem cair para uma coluna
 ## Direcao para G e J
 
 G deve usar a fundacao para paginas de vertical e portfolio: espaco negativo, hierarquia sonora, midia real e CTA claro. J podera revisar composicao, hierarquia final, CRO e microinteracoes depois que as jornadas existirem. Evitar agora neon dominante, glitch continuo, iconografia gamer generica e efeitos que ocultem conteudo.
+
+## Consolidacao J
+
+Manual 2.0 preservado. Escala tipografica fixa com ajuste por breakpoint, radius
+de cards limitado a 8px e titulos globais sem barras/glow. Roxo permanece na
+identidade, nao em toda moldura administrativa. Superficies nao interativas nao
+saltam no hover. Botoes de perigo usam texto/borda sem fundo de mesma cor.
+Privacidade permanece acessivel apos o conteudo, sem cobrir checkout; chat tem
+acionador opaco e respeita o banner de consentimento. Validacao em UX_POLISH_J.md.

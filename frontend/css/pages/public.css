@@ -46,13 +46,13 @@
 
 .public-page .btn-cta {
     border: 1px solid var(--color-accent);
-    color: #071018;
+    color: var(--color-on-accent);
     background: var(--color-accent);
 }
 
 .public-page .btn-cta:hover {
-    color: #071018;
-    background: #73e9ff;
+    color: var(--color-on-accent);
+    background: var(--color-accent-hover);
     box-shadow: var(--shadow-glow);
 }
 
@@ -130,7 +130,7 @@
 
 .public-band {
     border-block: var(--border-subtle);
-    background: #111827;
+    background: var(--color-surface);
 }
 
 .public-band--compact { padding-block: 48px; }

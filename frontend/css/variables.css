@@ -1,17 +1,18 @@
 @import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@600&family=Rajdhani:wght@700&display=swap");
 
 :root {
-    --cor-fundo: #0b0f19;
+    --cor-fundo: #111827;
     --cor-ciano: #00d4ff;
     --cor-roxo: #b22af0;
     --cor-branco: #f9fafb;
     --cor-sucesso: #4ade80;
     --cor-aviso: #fbbf24;
-    --cor-perigo: #ef4444;
+    --cor-perigo: #f87171;
     --cor-texto-secundario: #aab3c2;
+    --cor-cinza-claro: var(--cor-texto-secundario);
     --cor-borda-sutil: rgba(255, 255, 255, 0.1);
-    --cor-superficie: rgba(17, 24, 39, 0.8);
-    --cor-superficie-elevada: #111827;
+    --cor-superficie: #171f2e;
+    --cor-superficie-elevada: #1c2636;
 
     /* Aliases semanticos para componentes novos, preservando a API visual atual. */
     --color-background: var(--cor-fundo);
@@ -25,10 +26,12 @@
     --color-success: var(--cor-sucesso);
     --color-warning: var(--cor-aviso);
     --color-danger: var(--cor-perigo);
-    --font-logo: "Impact", sans-serif;
+    --color-on-accent: #071018;
+    --color-accent-hover: #73e9ff;
+    --font-logo: "Ethnocentric", sans-serif;
     --font-titulos: "Oxanium", sans-serif;
     --font-subtitulos: "Rajdhani", sans-serif;
-    --font-texto: "Calibri", sans-serif;
+    --font-texto: "Calibri", "Segoe UI", Arial, sans-serif;
     --spacing-xs: 8px;
     --spacing-sm: 16px;
     --spacing-md: 32px;
@@ -42,9 +45,9 @@
     --space-8: 48px;
     --space-10: 64px;
 
-    --font-size-display: clamp(2.5rem, 6vw, 4rem);
-    --font-size-h1: clamp(2rem, 4vw, 3rem);
-    --font-size-h2: clamp(1.65rem, 3vw, 2.5rem);
+    --font-size-display: 3.75rem;
+    --font-size-h1: 3rem;
+    --font-size-h2: 2rem;
     --font-size-h3: 1.5rem;
     --font-size-body: 1rem;
     --font-size-small: 0.875rem;
@@ -52,12 +55,17 @@
 
     --radius-sm: 4px;
     --radius-md: 8px;
-    --radius-lg: 12px;
+    --radius-lg: 8px;
     --border-subtle: 1px solid var(--cor-borda-sutil);
     --border-accent: 1px solid var(--cor-ciano);
     --shadow-sm: 0 8px 16px rgba(0, 0, 0, 0.24);
     --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.42);
     --shadow-glow: 0 0 16px rgba(0, 212, 255, 0.32);
+    --transition-fast: 160ms ease;
+}
+
+@media (max-width: 768px) {
+    :root { --font-size-display: 2.5rem; --font-size-h1: 2rem; --font-size-h2: 1.65rem; }
 }
 
 @font-face {

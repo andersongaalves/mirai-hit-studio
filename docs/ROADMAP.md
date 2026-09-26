@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: F2.8 concluida. Bloco F2 implementado e validado localmente.
+Fase atual: J.1-J.6 concluidas; CP-J pronto para validacao final e push.
 
-Ultimo checkpoint enviado: CP-IA2 (`de9c291`).
+Ultimo checkpoint enviado: CP-IA3 (`972049f`).
 
-Checkpoint atual: CP-IA3 pronto para regressao final e push.
+Checkpoint atual: CP-J. Envio confirmado no relatorio somente apos push.
 
-Proximo checkpoint: CP-IA3.
+Proximo checkpoint: bloco H, conforme planejamento da proxima fase.
 
-Proximo push: CP-IA3, somente apos regressao final aprovada.
+Proximo push: CP-J, somente apos regressao final aprovada.
 
-Ultimo commit local: `feat: adiciona guardrails evals e metricas da IA`.
+Ultimo commit local previsto: `style: aplica polish visual premium da Mirai`.
 
 ## Concluido
 
@@ -86,9 +86,17 @@ F2 - IA
 - F2.7 Briefing/CRM. Concluida.
 - F2.8 Guardrails/custos/evals/metricas. Concluida.
 - F2 concluida; limites operacionais e de avaliacao em AI_GUARDRAILS_EVALS_METRICS.md.
-- CP-IA3 pronto; envio confirmado somente apos push.
+- CP-IA3 enviado em `972049f`.
 
-J - UX/CRO: auditoria UX, CRO publico, CRO checkout, UX Admin, UX IA e polish.
+J - UX/CRO
+
+- J.1 Auditoria UX e identidade. Concluida.
+- J.2 Experiencia e conversao publica. Concluida.
+- J.3 Checkout. Concluida.
+- J.4 Admin. Concluida.
+- J.5 IA/Inbox. Concluida.
+- J.6 Polish transversal. Concluida.
+- CP-J pronto para regressao final e push; resultados em UX_POLISH_J.md.
 
 H - SEO/performance: SEO tecnico, SEO por vertical e Core Web Vitals.
 
@@ -98,8 +106,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-F2.8 concluida - guardrails, usage sem conteudo, custos opcionais, evals offline e metricas na Inbox.
+J.6 concluida - identidade preservada, interfaces refinadas e regressao local.
 
 ## Proxima subfase
 
-J.1 - Auditoria global de UX baseada em dados. Nao iniciar nesta fase.
+H.1 - SEO tecnico. Nao iniciar nesta missao.
