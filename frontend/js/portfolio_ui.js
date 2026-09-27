@@ -80,7 +80,7 @@ function createProjectCard(project) {
     if (isDirectAudio(audioURL)) {
         media = element("audio", "");
         media.controls = true;
-        media.preload = "metadata";
+        media.preload = "none";
         media.src = audioURL;
         media.dataset.analyticsListen = "";
         media.dataset.projectId = String(project.id);

@@ -244,6 +244,17 @@
     transform: translateY(1px);
 }
 
+.site-chat-launcher.btn-small {
+    position: fixed;
+    bottom: var(--space-4);
+    left: var(--space-4);
+    z-index: 998;
+    min-height: 44px;
+    letter-spacing: 0;
+    background: var(--color-surface-elevated);
+    box-shadow: var(--shadow-sm);
+}
+
 /* Variante perigosa (como o botão de Excluir) que você já usa no admin */
 .btn-small.btn-danger {
     color: var(--color-danger);

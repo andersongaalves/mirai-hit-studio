@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@600&family=Rajdhani:wght@700&display=swap");
-
 :root {
     --cor-fundo: #111827;
     --cor-ciano: #00d4ff;
@@ -71,4 +69,5 @@
 @font-face {
     font-family: "Ethnocentric";
     src: url("../fonts/ethnocentric.ttf") format("truetype");
+    font-display: swap;
 }

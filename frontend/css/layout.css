@@ -1,3 +1,5 @@
+.public-page #nav-placeholder { min-height: 69px; }
+
 .site-nav {
     display: flex;
     justify-content: space-between;

@@ -49,7 +49,7 @@ async function staticResponse(route) {
         assert.equal(await page.locator("script").filter({ hasText: "alert(1)" }).count(), 0);
         assert.match(await page.locator(".portfolio-card").first().textContent(), /<script>alert\(1\)<\/script>/);
         assert.equal(await page.locator("audio").getAttribute("autoplay"), null);
-        assert.equal(await page.locator("audio").getAttribute("preload"), "metadata");
+        assert.equal(await page.locator("audio").getAttribute("preload"), "none");
         assert.ok((await page.locator(".portfolio-card__cover").first().getAttribute("src")).includes("logo-principal.webp"));
 
         await page.locator("audio").evaluate(audio => audio.dispatchEvent(new Event("play")));

@@ -4,6 +4,22 @@ import { createChatView } from "./chat_dom.js";
 
 const SESSION_KEY = "mirai.site_chat.v1";
 const WAITING = "Esta conversa foi encaminhada para atendimento humano. Mantenha o chat aberto para acompanhar a resposta da equipe.";
+let chatStylesPromise;
+
+function ensureChatStyles() {
+    const current = document.querySelector('link[data-site-chat-styles]');
+    if (current) return chatStylesPromise || Promise.resolve();
+    const stylesheet = document.createElement("link");
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = "/css/chat.css";
+    stylesheet.dataset.siteChatStyles = "true";
+    chatStylesPromise = new Promise((resolve, reject) => {
+        stylesheet.addEventListener("load", resolve, { once: true });
+        stylesheet.addEventListener("error", reject, { once: true });
+    });
+    document.head.append(stylesheet);
+    return chatStylesPromise;
+}
 
 function readSession() {
     try {
@@ -13,7 +29,9 @@ function readSession() {
     return null;
 }
 
-export function initSiteChat() {
+export async function initSiteChat({ open = false, replaceLauncher = null } = {}) {
+    await ensureChatStyles();
+    replaceLauncher?.remove();
     if (document.getElementById("site-chat-launcher")) return;
     const view = createChatView();
     // Keep the launcher above the consent banner without depending on its decision.
@@ -180,4 +198,5 @@ export function initSiteChat() {
         } catch { /* Poll failures leave the current conversation visible. */ }
     }, 15000);
     controls();
+    if (open) view.launcher.click();
 }

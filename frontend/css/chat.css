@@ -1,4 +1,3 @@
-.site-chat-launcher.btn-small { position: fixed; bottom: var(--space-4); left: var(--space-4); z-index: 998; box-shadow: var(--shadow-sm); background: var(--color-surface-elevated); min-height: 44px; letter-spacing: 0; }
 .site-chat { inset: auto var(--space-4) var(--space-4) auto; margin: 0; padding: var(--space-4); width: min(420px, calc(100vw - 32px)); height: min(620px, calc(100dvh - 32px)); max-width: none; max-height: none; border: var(--border-subtle); border-radius: var(--radius-md); color: var(--color-text-primary); background: var(--color-surface-elevated); box-shadow: var(--shadow-md); }
 .site-chat[open] { display: flex; flex-direction: column; gap: var(--space-3); }
 .site-chat::backdrop { background: var(--color-surface); }

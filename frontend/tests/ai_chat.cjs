@@ -164,6 +164,17 @@ const root = path.resolve(__dirname, '..');
         assert.ok(launchBounds.y + launchBounds.height <= consentBounds.y);
         await launcher.click();
         assert.ok(await page.locator('#site-chat').isVisible());
+
+        const lazyPage = await context.newPage();
+        lazyPage.on('pageerror', error => errors.push(error.message));
+        await lazyPage.goto('http://localhost:4173/index.html');
+        const lazyLauncher = lazyPage.locator('#site-chat-launcher');
+        await lazyLauncher.waitFor();
+        assert.equal(await lazyPage.locator('link[data-site-chat-styles]').count(), 0);
+        await lazyLauncher.click();
+        await lazyPage.locator('#site-chat[open]').waitFor();
+        assert.equal(await lazyPage.locator('link[data-site-chat-styles]').count(), 1);
+        assert.equal(await lazyPage.locator('#site-chat-launcher').count(), 1);
         assert.deepEqual(errors, []);
         console.log('Site chat: session, retry, XSS, consent, handoff, keyboard and 8 widths passed.');
     } finally { await browser.close(); }

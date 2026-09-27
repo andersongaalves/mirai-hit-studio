@@ -2,6 +2,7 @@ import "./modules/globals.js";
 
 import { initComponents } from "./modules/components.js";
 import { initAnalytics } from "./analytics.js";
+import { initSiteChatLauncher } from "./chat/chat_launcher.js";
 
 import {$} from "./utils/dom.js";
 
@@ -77,5 +78,4 @@ async function initApp() {
 // ===========================
 
 initApp();
-// Chat failure must not prevent navigation, the calculator or public forms.
-import("./chat/chat.js").then(module => module.initSiteChat()).catch(() => {});
+initSiteChatLauncher();

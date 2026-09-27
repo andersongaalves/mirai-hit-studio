@@ -1,14 +1,10 @@
 /* Ficheiro: css/main.css */
+@import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@600&family=Rajdhani:wght@700&display=swap");
 @import url("variables.css"); /* Cores e Fontes primeiro de tudo */
 @import url("base.css"); /* Resets, body, títulos e .container */
 @import url("layout.css"); /* Nav e Footer */
 @import url("components.css"); /* Botões genéricos, inputs, etc */
 
-/*ficheiros específicos de cada página */
-@import url("pages/calculator.css");
-@import url("pages/portfolio.css");
 @import url("pages/public.css");
 @import url("notifications.css");
 @import url("consent.css");
-@import url("chat.css");
-@import url("pages/admin.css");
