@@ -2,17 +2,17 @@
 
 ## Status
 
-Fase atual: H.1 concluida; CP-H segue em andamento.
+Fase atual: H.2 concluida; CP-H segue em andamento.
 
 Ultimo checkpoint enviado: CP-IA3 (`972049f`).
 
-Checkpoint atual: CP-J. Envio confirmado no relatorio somente apos push.
+Checkpoint atual: CP-H. Envio confirmado no relatorio somente apos push.
 
 Proximo checkpoint: CP-H, apos H.3.
 
 Proximo push: CP-H, somente apos H.3 e regressao aprovada.
 
-Ultimo commit local previsto: `style: aplica polish visual premium da Mirai`.
+Ultimo commit local previsto: `feat: otimiza conteudo SEO da Mirai`.
 
 ## Concluido
 
@@ -101,6 +101,7 @@ J - UX/CRO
 H - SEO/performance: SEO tecnico, SEO por vertical e Core Web Vitals.
 
 - H.1 SEO tecnico. Concluida.
+- H.2 SEO de conteudo, intencao de busca e interlinking. Concluida.
 
 I - QA/release: PostgreSQL/migrations, E2E comercial/pagamentos, E2E IA/e-mail, infraestrutura, regressao global, cleanup/release e v2.0.0.
 
@@ -108,8 +109,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-H.1 concluida - indexacao, sitemap, robots, noindex e dados estruturados revisados.
+H.2 concluida - conteudo, intencao de busca e interlinking das paginas publicas revisados.
 
 ## Proxima subfase
 
-H.2 - SEO de conteudo.
+H.3 - Core Web Vitals e performance.

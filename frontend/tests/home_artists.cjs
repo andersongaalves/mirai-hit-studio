@@ -63,7 +63,7 @@ async function staticResponse(route) {
         await page.goto("http://localhost:4173/");
         await page.waitForSelector(".site-nav[data-initialized='true']");
         await page.waitForSelector("#home-portfolio-track .public-empty");
-        assert.equal(await page.locator("h1").textContent(), "Mirai Hit Studio");
+        assert.equal(await page.locator("h1").textContent(), "Produção musical e áudio com identidade para artistas, criadores e projetos digitais");
         assert.equal(await page.locator(".vertical-card").count(), 3);
         assert.equal(await page.locator(".process-list > li").count(), 6);
         assert.equal(await page.getByText("estúdio de rap geek", { exact: false }).count(), 0);
