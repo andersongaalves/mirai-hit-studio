@@ -69,6 +69,6 @@ Com consentimento aceito, o checkout pode emitir `begin_checkout`, `payment_meth
 
 ## Configuracao e limites
 
-Configurar `MERCADO_PAGO_PUBLIC_KEY`, `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET` e `PUBLIC_FRONTEND_URL`. O arquivo `frontend/_redirects` fornece o rewrite do Cloudflare Pages.
+Configurar `MERCADO_PAGO_PUBLIC_KEY`, `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET` e `PUBLIC_FRONTEND_URL`. A Pages Function `functions/checkout/[[path]].js` serve o shell para a rota dinamica sem remover a referencia da URL.
 
 O rate limit atual usa armazenamento SQLite compartilhado pelo processo/host e nao substitui protecao de borda em multiplas instancias. Compartilhamento automatico por e-mail e gestao financeira permanecem para F3.5.

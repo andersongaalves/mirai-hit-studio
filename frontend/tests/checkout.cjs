@@ -104,6 +104,18 @@ async function staticResponse(route) {
             return route.fulfill({ status: 200, body: '' });
         });
 
+        const routingPage = await context.newPage();
+        routingPage.on('pageerror', error => pageErrors.push(error.message));
+        await routingPage.goto('http://localhost:4173/checkout/test-token-routing-123?source=test');
+        await routingPage.waitForSelector('#checkout-error:not(.hidden)');
+        assert.equal(await routingPage.evaluate(() => location.pathname), '/checkout/test-token-routing-123');
+        assert.equal(await routingPage.evaluate(() => location.search), '?source=test');
+        assert.match(await routingPage.locator('#checkout-error-message').textContent(), /link de checkout inválido/i);
+        await routingPage.goto('http://localhost:4173/checkout/test-token-routing-123/');
+        await routingPage.waitForSelector('#checkout-error:not(.hidden)');
+        assert.equal(await routingPage.evaluate(() => location.pathname), '/checkout/test-token-routing-123/');
+        await routingPage.close();
+
         const pixPage = await context.newPage();
         pixPage.on('pageerror', error => pageErrors.push(error.message));
         await pixPage.goto(`http://localhost:4173/checkout/${tokenA}`);

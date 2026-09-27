@@ -62,6 +62,11 @@ function activateProvider() {
     return true;
 }
 
+function analyticsPagePath() {
+    const path = location.pathname.slice(0, 500) || "/";
+    return /^\/checkout\/[^/]+\/?$/.test(path) ? "/checkout/:reference" : path;
+}
+
 function sanitizeProperties(eventName, properties = {}) {
     const allowed = EVENT_PROPERTIES[eventName] ?? [];
     const output = {};
@@ -70,7 +75,7 @@ function sanitizeProperties(eventName, properties = {}) {
         if ((property === "service_id" || property === "project_id") && Number.isInteger(Number(value)) && Number(value) > 0) {
             output[property] = Number(value);
         }
-        if (property === "page_path") output[property] = location.pathname.slice(0, 500) || "/";
+        if (property === "page_path") output[property] = analyticsPagePath();
         if (property === "vertical" && ["artists", "creators", "media_games"].includes(value)) output[property] = value;
         if (property === "payment_method" && ["pix", "card"].includes(value)) output[property] = value;
         if (property === "payment_option" && ["integral", "entrada", "saldo"].includes(value)) output[property] = value;

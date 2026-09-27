@@ -14,10 +14,9 @@ const routes = {
 
 async function assertRedirectConfiguration() {
     const redirects = await fs.readFile(path.join(root, "_redirects"), "utf8");
-    for (const route of ["artists", "creators", "media-games", "portfolio"]) {
-        assert.doesNotMatch(redirects, new RegExp(`^/${route}\\s`, "m"), `${route} uses Cloudflare Pages clean URLs directly`);
+    for (const route of ["artists", "creators", "media-games", "portfolio", "checkout"]) {
+        assert.doesNotMatch(redirects, new RegExp(`^/${route}(?:/|\\s)`, "m"), `${route} must not use an HTML rewrite`);
     }
-    assert.match(redirects, /^\/checkout\/\*\s+\/checkout\.html\s+200$/m, "checkout keeps its dynamic fallback");
 }
 
 

@@ -51,11 +51,14 @@ async function staticResponse(route) {
         assert.equal(analyticsRequests.length, 0);
 
         await page.getByRole('button', { name: 'Privacidade' }).click();
+        await page.evaluate(() => history.replaceState({}, '', '/checkout/private-reference-must-not-leak'));
         await page.getByRole('button', { name: 'Aceitar metricas' }).click();
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === 'event' && item[1] === 'page_view'), null, { timeout: 5000 });
         await page.waitForTimeout(50);
         assert.equal(await page.evaluate(() => localStorage.getItem('mirai.analytics_consent.v1')), 'accepted');
         assert.equal(analyticsRequests.length, 1);
+        const pageView = await page.evaluate(() => window.dataLayer.find(item => item[0] === 'event' && item[1] === 'page_view'));
+        assert.deepEqual(pageView[2], { page_path: '/checkout/:reference' });
         await page.evaluate(async () => (await import('/js/analytics.js')).track('view_service', { service_id: 7, email: 'blocked@example.com', whatsapp: '000', briefing: 'private' }));
         const serviceEvent = await page.evaluate(() => window.dataLayer.find(item => item[0] === 'event' && item[1] === 'view_service'));
         assert.deepEqual(serviceEvent[2], { service_id: 7 });
