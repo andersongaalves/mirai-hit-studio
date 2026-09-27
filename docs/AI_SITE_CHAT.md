@@ -36,7 +36,7 @@ Explicit **Nova conversa** creates a separate conversation without deleting hist
 - Core always receives identity_verified=False. Public tools reuse the real registry;
   private budget/proposal/production/payment reads remain denied.
 
-## OpenAI configuration
+## Provider configuration
 
 Provider chosen explicitly by the owner: OpenAI. Backend calls Responses API with
 native function definitions, no automatic HTTP retry and `store=false`.
@@ -44,21 +44,24 @@ Conversation history stays in Mirai; each request supplies bounded core history,
 knowledge and prior tool results as untrusted input. No vendor conversation ID.
 Only the core executes tools. Provider handoff requests map to the core's enum.
 
-Configure on the backend, never in frontend assets:
+The chat subsystem and the generative provider are configured independently. For a
+functional chat without external generation, configure on the backend:
 
 ```dotenv
-AI_ENABLED=false
+AI_ENABLED=true
+AI_PROVIDER=disabled
 AI_MODEL=
 AI_API_KEY=
 AI_TIMEOUT_SECONDS=8
 AI_SESSION_HOURS=24
 ```
 
-Set a model available to the OpenAI project and its server-side API key, then enable
-AI_ENABLED. No model or credential is fabricated. SecretStr masks key representations.
-Startup performs no provider request. Missing/disabled configuration returns 503
-without disabling the website or creating fake AI answers. History access also
-stays unavailable while the channel is disabled.
+This mode supports sessions, history, strict FAQ/service/portfolio replies and handoff.
+An uncovered question is handed to the team instead of receiving a fabricated answer.
+For OpenAI generation, use `AI_PROVIDER=openai` and set `AI_MODEL` plus the server-only
+`AI_API_KEY`. If `AI_PROVIDER` is absent, an existing key and model preserve the prior
+OpenAI behavior; otherwise the provider is disabled. `AI_ENABLED=false` still disables
+new chat sessions. Startup performs no provider request and no credential is fabricated.
 
 Reference: [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling).
 `store=false` is not a promise of zero vendor retention; review the account's data

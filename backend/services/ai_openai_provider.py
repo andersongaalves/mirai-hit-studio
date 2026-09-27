@@ -9,6 +9,7 @@ from services.ai_provider import ProviderError
 
 
 class OpenAIProvider:
+    available = True
     provider_name = "openai"
 
     def __init__(self, api_key, model, *, timeout=8, transport=None, max_output_tokens=1200):

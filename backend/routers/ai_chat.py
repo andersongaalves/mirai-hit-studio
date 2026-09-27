@@ -8,7 +8,7 @@ from core.rate_limit import allow_request
 from database import SessionLocal
 from schemas.ai_site import SiteHistory, SiteMessage, SiteReply, SiteSession
 from services.ai_conversation_service import ConversationError, ConversationService
-from services.ai_openai_provider import OpenAIProvider
+from services.ai_provider_factory import build_ai_provider
 from services.ai_site_service import SiteChatService, token_reference
 
 
@@ -40,11 +40,8 @@ def session_token(authorization: str = Header(default="")):
 
 
 def get_site_chat_service():
-    key = getattr(settings, "AI_API_KEY", None)
-    key = key.get_secret_value() if key else ""
-    enabled = bool(getattr(settings, "AI_ENABLED", False) and key and getattr(settings, "AI_MODEL", ""))
-    provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS,
-                             max_output_tokens=getattr(settings, "AI_MAX_OUTPUT_TOKENS", 1200)) if enabled else None
+    enabled = bool(getattr(settings, "AI_ENABLED", False))
+    provider = build_ai_provider(settings)
     service = SiteChatService(ConversationService(SessionLocal, provider), session_hours=getattr(settings, "AI_SESSION_HOURS", 24))
     service.ai_enabled = enabled
     return service

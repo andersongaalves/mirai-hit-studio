@@ -96,7 +96,7 @@ class ProcessingResult(Contract):
     outbound: OutboundMessage | None = None
     reason: HandoffReason | None = None
     error_code: Literal[
-        "provider_unavailable", "provider_timeout", "provider_invalid_response",
+        "provider_disabled", "provider_unavailable", "provider_timeout", "provider_invalid_response",
         "processing_conflict", "retry_exhausted", "tool_not_allowed",
         "tool_invalid_arguments", "tool_not_authorized", "tool_temporarily_unavailable",
         "tool_loop_limit", "tool_call_limit", "tool_invalid_result",

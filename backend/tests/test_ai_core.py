@@ -248,7 +248,8 @@ for value, code, reason in [
     assert result.outbound is None
 disabled = ConversationService(sessions)
 cid = conversation()
-assert disabled.process(cid, disabled.receive(cid, inbound())).error_code == 'provider_unavailable'
+result = disabled.process(cid, disabled.receive(cid, inbound()))
+assert result.action == 'handoff' and result.reason == 'other' and result.error_code == 'provider_disabled'
 ''')
 
     def test_lease_expiry_recovery_and_fencing(self):

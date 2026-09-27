@@ -14,6 +14,10 @@ Ao assumir, `waiting_human` passa a `open/human`, preservando o motivo do handof
 
 `POST /admin/ai/conversations/{id}/suggestions` reutiliza `AIOrchestrator`, conhecimento, historico e tools do core. O contexto usa `identity_verified=false` mesmo quando um operador esta autenticado. Uma sugestao (`AIMessage.kind=suggestion`) e rascunho, nunca entrega. Regenerar atualiza o mesmo registro. Ignorar apaga apenas o rascunho; mensagens enviadas nao sao apagadas. O operador pode editar o texto no composer e so `Enviar` cria uma nova mensagem humana. O backend compara a mensagem inbound mais recente com `reply_to_id`; se houver nova mensagem, rejeita a sugestao antiga. Falha do provider ou de tool nao bloqueia resposta manual.
 
+Com `AI_PROVIDER=disabled`, gerar/regenerar sugestao retorna indisponibilidade controlada;
+nenhum rascunho deterministico e fingido como Copilot. Consulta da Inbox, atribuicao e
+resposta manual permanecem funcionais.
+
 ## Entrega humana
 
 O browser envia apenas texto, referencia opcional da sugestao e chave idempotente. Canal, identidade e destino vem do servidor. `AIMessage.kind=message` com direcao outbound identifica resposta humana. A mesma chave de request e a trava da conversa evitam mensagem logica duplicada. O detalhe distingue `draft`, `pending` e `sent`.

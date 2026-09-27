@@ -15,9 +15,14 @@ class ProviderError(Exception):
 
 
 class AIProvider(Protocol):
+    available: bool
+
     def generate(self, incoming: ProviderInput) -> ProviderResponse: ...
 
 
 class DisabledProvider:
+    available = False
+    provider_name = "disabled"
+
     def generate(self, incoming: ProviderInput) -> ProviderResponse:
         raise ProviderError("provider_unavailable")

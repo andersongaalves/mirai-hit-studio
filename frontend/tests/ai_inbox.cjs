@@ -24,6 +24,7 @@ let conversation = {
 let suggestionId = '9d182f84-f159-4438-8d07-09674fc995da';
 const calls = [];
 let metricsFailure = false;
+let providerDisabled = false;
 const metricsResponse = { channels: [{ channel: 'site', conversations_started: 0,
     cohort_closed: 0, cohort_handoffs: 0, autonomous_replies: 0, human_replies: 0,
     copilot_generated: 0, copilot_used: 0, briefings_started: 0, budgets_created: 0,
@@ -86,6 +87,7 @@ function listPage(url) {
             return route.fulfill({ json: { conversation } });
         }
         if (url.pathname === `/admin/ai/conversations/${id}/suggestions` && request.method() === 'POST') {
+            if (providerDisabled) return route.fulfill({ status: 503, json: { detail: 'provider_disabled' } });
             const suggestion = { id: suggestionId, direction: 'outbound', role: 'assistant', kind: 'suggestion',
                 content: 'Texto da IA', created_at: now, received_at: null, delivery: 'draft' };
             conversation = { ...conversation, messages: [...conversation.messages.filter(message => message.kind !== 'suggestion'), suggestion] };
@@ -152,6 +154,11 @@ function listPage(url) {
         assert.equal(await page.locator('#inbox-reply-text').inputValue(), 'Texto da IA');
         await page.getByRole('button', { name: 'Ignorar sugestão' }).click();
         await page.waitForFunction(() => !document.querySelector('#inbox-detail .inbox-message--suggestion'));
+        providerDisabled = true;
+        await page.getByRole('button', { name: 'Gerar sugestão' }).click();
+        await page.getByText('Copiloto indisponível. Você ainda pode responder manualmente.').waitFor();
+        assert.equal(await page.locator('#inbox-reply-text').isEnabled(), true);
+        providerDisabled = false;
         await page.getByRole('button', { name: 'Gerar sugestão' }).click();
         await page.getByRole('button', { name: 'Regenerar sugestão' }).waitFor();
         await page.locator('#inbox-reply-text').fill('Texto editado pelo atendente');

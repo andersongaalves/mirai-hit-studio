@@ -50,6 +50,9 @@ geracao/uso de sugestao. Inclui latencia monotonic em ms, ciclo, codigo estavel,
 IDs internos e referencia de request UUID/hash. Nao armazena prompt, mensagem,
 resposta, contato, argumentos, payload, JWT, segredo ou erro bruto.
 
+Respostas locais usam `turn/deterministic_reply`; provider intencionalmente desligado
+usa `turn/provider_disabled`. Nenhum dos dois cria evento `provider`, tokens ou custo.
+
 Justificativa da tabela: tokens e latencia eram descartados; sugestoes sao sobrescritas
 ou removidas. Conversas, respostas e briefings continuam derivados das entidades,
 sem duplicar transcript ou criar event store comercial. Retry idempotente ja

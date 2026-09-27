@@ -12,7 +12,7 @@ from integrations.resend_ai_email import ResendAIEmailClient
 from services.ai_conversation_service import ConversationService
 from services.ai_email_service import AIEmailError, AIEmailService
 from services.ai_email_channel import normalize_sender
-from services.ai_openai_provider import OpenAIProvider
+from services.ai_provider_factory import build_ai_provider
 from services import mercado_pago_webhook_service as webhook_service
 
 
@@ -30,23 +30,17 @@ def _secret_value(value):
 
 
 def get_ai_email_service():
-    api_key = getattr(settings, "AI_API_KEY", None)
-    api_key = _secret_value(api_key)
     if (
         not getattr(settings, "AI_EMAIL_ENABLED", False)
         or not getattr(settings, "AI_ENABLED", False)
-        or not api_key
-        or not getattr(settings, "AI_MODEL", "")
         or not getattr(settings, "AI_EMAIL_FROM", "")
         or not normalize_sender(getattr(settings, "AI_EMAIL_INBOUND_ADDRESS", ""))
     ):
         raise HTTPException(status_code=503, detail="Canal de e-mail indisponivel.")
     try:
         client = ResendAIEmailClient(getattr(settings, "RESEND_API_KEY", ""))
-        provider = OpenAIProvider(api_key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS,
-                                 max_output_tokens=getattr(settings, "AI_MAX_OUTPUT_TOKENS", 1200))
         return AIEmailService(
-            ConversationService(SessionLocal, provider), client,
+            ConversationService(SessionLocal, build_ai_provider(settings)), client,
             sender_address=settings.AI_EMAIL_FROM,
             max_body_chars=getattr(settings, "AI_EMAIL_MAX_BODY_CHARS", 8000),
         )

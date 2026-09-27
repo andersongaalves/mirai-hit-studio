@@ -11,6 +11,7 @@ from schemas.ai import DecisionAction, HandoffReason, ProviderInput, ProviderRes
 from services.ai_provider import AIProvider, DisabledProvider, ProviderError
 from services.ai_tools import ToolExecutionContext, ToolRegistry
 from services.ai_response_policy import unsupported_claim
+from services.ai_deterministic_service import deterministic_reply
 from schemas.ai_usage import ProviderUsage
 
 
@@ -79,6 +80,26 @@ class AIOrchestrator:
         reason = handoff_reason(incoming.message)
         if reason:
             return Decision(DecisionAction.HANDOFF, reason=reason)
+        if not getattr(self.provider, "available", True):
+            if mode == "autonomous" and tool_context is not None:
+                local = deterministic_reply(
+                    incoming.message, self.registry, tool_context, telemetry=telemetry,
+                )
+                if local:
+                    if telemetry:
+                        telemetry.emit(
+                            kind="turn", name=local.intent, result="deterministic_reply",
+                        )
+                    return Decision(DecisionAction.REPLY, text=local.text)
+            if telemetry:
+                telemetry.emit(
+                    kind="turn", result="provider_disabled", error_code="provider_disabled",
+                )
+            return Decision(
+                DecisionAction.HANDOFF,
+                reason=HandoffReason.OTHER,
+                error_code="provider_disabled",
+            )
         prepared = incoming.model_copy(update={
             "tools": self.registry.definitions(tool_context) if tool_context else (),
         })

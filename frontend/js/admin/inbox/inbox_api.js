@@ -1,9 +1,14 @@
 import { authFetch } from "../auth.js";
 
+const ERROR_MESSAGES = {
+    provider_disabled: "Copiloto indisponível. Você ainda pode responder manualmente.",
+};
+
 async function readResponse(response, fallback) {
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-        const error = new Error(typeof data?.detail === "string" ? data.detail : fallback);
+        const detail = typeof data?.detail === "string" ? data.detail : "";
+        const error = new Error(ERROR_MESSAGES[detail] || fallback);
         error.status = response.status;
         throw error;
     }

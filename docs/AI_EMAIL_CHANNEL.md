@@ -32,6 +32,10 @@ RESEND_WEBHOOK_SECRET=whsec_...
 
 Sem `AI_EMAIL_ENABLED`, endereco inbound, segredo do webhook ou `RESEND_API_KEY`, o endpoint responde indisponivel e a aplicacao continua iniciando; nenhum processamento de IA ou envio e tentado.
 
+O canal pode operar com `AI_ENABLED=true` e `AI_PROVIDER=disabled`: respostas locais
+estritamente reconhecidas continuam disponiveis e os demais pedidos seguem para handoff,
+sem autoresposta inventada. A entrega Resend continua exigindo sua configuracao propria.
+
 Para ativar o canal, configure no Resend o recebimento do dominio/endereco, assine o webhook `email.received` e copie o signing secret para o ambiente. O dominio `.resend.app` pode ser usado apenas conforme a disponibilidade do ambiente de desenvolvimento; DNS nao e configurado pela aplicacao.
 
 O endpoint verifica o corpo raw com o helper oficial do SDK Resend e os headers Svix `svix-id`, `svix-timestamp` e `svix-signature`. JSON invalido, assinatura ausente/invalida ou secret ausente nao criam conversa nem mensagem.

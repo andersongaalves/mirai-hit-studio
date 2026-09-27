@@ -18,7 +18,7 @@ from schemas.ai_inbox import (
 from services.ai_conversation_service import ConversationService
 from services.ai_email_service import AIEmailError, AIEmailService
 from services.ai_inbox_service import AIInboxService, InboxError
-from services.ai_openai_provider import OpenAIProvider
+from services.ai_provider_factory import build_ai_provider
 from schemas.ai_metrics import AIMetrics
 from services.ai_metrics_service import metrics
 
@@ -26,17 +26,8 @@ from services.ai_metrics_service import metrics
 router = APIRouter(prefix="/admin/ai/conversations", tags=["AI Inbox"])
 
 
-def _secret_value(value):
-    return value.get_secret_value() if hasattr(value, "get_secret_value") else str(value or "")
-
-
 def get_ai_core():
-    key = _secret_value(getattr(settings, "AI_API_KEY", ""))
-    provider = None
-    if getattr(settings, "AI_ENABLED", False) and key and getattr(settings, "AI_MODEL", ""):
-        provider = OpenAIProvider(key, settings.AI_MODEL, timeout=settings.AI_TIMEOUT_SECONDS,
-                                 max_output_tokens=getattr(settings, "AI_MAX_OUTPUT_TOKENS", 1200))
-    return ConversationService(SessionLocal, provider)
+    return ConversationService(SessionLocal, build_ai_provider(settings))
 
 
 def get_ai_email_delivery():
@@ -73,6 +64,7 @@ def _error(error):
         "autonomous_mode_admin_locked": 409,
         "conversation_not_in_copilot": 409,
         "suggestion_unavailable": 503,
+        "provider_disabled": 503,
         "provider_unavailable": 503,
         "provider_timeout": 503,
         "provider_invalid_response": 503,
