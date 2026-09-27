@@ -4,7 +4,21 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const routes = { "/artists": "/artists.html", "/creators": "/creators.html", "/media-games": "/media-games.html" };
+const routes = {
+    "/artists": "/artists.html",
+    "/creators": "/creators.html",
+    "/media-games": "/media-games.html",
+    "/portfolio": "/portfolio.html",
+};
+
+
+async function assertRedirectConfiguration() {
+    const redirects = await fs.readFile(path.join(root, "_redirects"), "utf8");
+    for (const route of ["artists", "creators", "media-games", "portfolio"]) {
+        assert.doesNotMatch(redirects, new RegExp(`^/${route}\\s`, "m"), `${route} uses Cloudflare Pages clean URLs directly`);
+    }
+    assert.match(redirects, /^\/checkout\/\*\s+\/checkout\.html\s+200$/m, "checkout keeps its dynamic fallback");
+}
 
 
 async function staticResponse(route) {
@@ -19,6 +33,7 @@ async function staticResponse(route) {
 
 
 (async () => {
+    await assertRedirectConfiguration();
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || "msedge" });
     try {
         const context = await browser.newContext({ viewport: { width: 390, height: 800 } });
@@ -50,7 +65,7 @@ async function staticResponse(route) {
 
         await page.setViewportSize({ width: 1024, height: 800 });
         assert.equal(await page.locator(".site-nav__links").isVisible(), true);
-        for (const target of ["/creators", "/media-games"]) {
+        for (const target of ["/creators", "/media-games", "/portfolio"]) {
             await page.goto(`http://localhost:4173${target}`);
             await page.waitForSelector(".site-nav[data-initialized='true']");
             assert.equal(await page.locator(`[data-public-path="${target}"]`).getAttribute("aria-current"), "page");
