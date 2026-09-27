@@ -110,8 +110,8 @@ K - Growth continuo.
 
 ## Subfase atual
 
-H.3 concluida - carregamento publico, Core Web Vitals e assets revisados. CP-H pronto para checkpoint.
+I.1 concluida - PostgreSQL real, migrations, constraints, concorrencia, idempotencia e RLS validados sem operacoes destrutivas. Clean bootstrap e downgrade permanecem pendentes ate existir banco descartavel.
 
 ## Proxima subfase
 
-I.1 - PostgreSQL e migrations reais.
+I.2 - E2E comercial e pagamentos.
