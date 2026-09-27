@@ -2,15 +2,15 @@
 
 ## Status
 
-Fase atual: J.1-J.6 concluidas; CP-J pronto para validacao final e push.
+Fase atual: H.1 concluida; CP-H segue em andamento.
 
 Ultimo checkpoint enviado: CP-IA3 (`972049f`).
 
 Checkpoint atual: CP-J. Envio confirmado no relatorio somente apos push.
 
-Proximo checkpoint: bloco H, conforme planejamento da proxima fase.
+Proximo checkpoint: CP-H, apos H.3.
 
-Proximo push: CP-J, somente apos regressao final aprovada.
+Proximo push: CP-H, somente apos H.3 e regressao aprovada.
 
 Ultimo commit local previsto: `style: aplica polish visual premium da Mirai`.
 
@@ -100,14 +100,16 @@ J - UX/CRO
 
 H - SEO/performance: SEO tecnico, SEO por vertical e Core Web Vitals.
 
+- H.1 SEO tecnico. Concluida.
+
 I - QA/release: PostgreSQL/migrations, E2E comercial/pagamentos, E2E IA/e-mail, infraestrutura, regressao global, cleanup/release e v2.0.0.
 
 K - Growth continuo.
 
 ## Subfase atual
 
-J.6 concluida - identidade preservada, interfaces refinadas e regressao local.
+H.1 concluida - indexacao, sitemap, robots, noindex e dados estruturados revisados.
 
 ## Proxima subfase
 
-H.1 - SEO tecnico. Nao iniciar nesta missao.
+H.2 - SEO de conteudo.

@@ -2,4 +2,4 @@ User-agent: *
 
 Allow: /
 
-Sitemap: https://www.miraihitstudio.com.br/sitemap.xml
+Sitemap: https://miraihitstudio.com.br/sitemap.xml

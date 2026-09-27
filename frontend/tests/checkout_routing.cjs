@@ -33,6 +33,7 @@ async function callRoute(pathname, method = "GET") {
     const routed = await callRoute(tokenPath);
     assert.equal(routed.response.status, 200);
     assert.equal(await routed.response.text(), "checkout shell");
+    assert.equal(routed.response.headers.get("X-Robots-Tag"), "noindex, nofollow, noarchive");
     assert.equal(new URL(routed.assetRequest.url).pathname, "/checkout");
     assert.equal(new URL(routed.assetRequest.url).search, "?source=test");
     assert.equal(routed.assetRequest.method, "GET");

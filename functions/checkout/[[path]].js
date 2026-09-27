@@ -11,5 +11,8 @@ export async function onRequest({ request, env }) {
 
     const assetUrl = new URL(request.url);
     assetUrl.pathname = "/checkout";
-    return env.ASSETS.fetch(new Request(assetUrl, request));
+    const response = await env.ASSETS.fetch(new Request(assetUrl, request));
+    const headers = new Headers(response.headers);
+    headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
