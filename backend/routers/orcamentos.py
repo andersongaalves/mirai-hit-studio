@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -29,9 +32,24 @@ router = APIRouter(
 def criar_orcamento(
     orcamento: OrcamentoCreate,
     db: Session = Depends(get_db),
+    idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
 
-    novo = orcamento_service.criar(db, orcamento)
+    try:
+        novo, criado = orcamento_service.criar_com_resultado(
+            db, orcamento, str(idempotency_key) if idempotency_key else None
+        )
+    except orcamento_service.OrcamentoReplayConflito as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
+
+    if not criado:
+        # A public retry must not reveal notes/status added later by an operator.
+        return OrcamentoResponse.model_validate(novo).model_copy(update={
+            **orcamento.model_dump(), "status": "novo", "produtor_id": None,
+            "observacoes": "", "proposta_codigo": None, "proposta_pdf": None,
+            "proposta_enviada": False, "proposta_enviada_em": None,
+            "updated_at": novo.data_solicitacao,
+        })
 
     protocolo = (
         f"MHS-"

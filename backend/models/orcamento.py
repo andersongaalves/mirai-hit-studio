@@ -11,6 +11,9 @@ class OrcamentoModel(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    idempotency_key = Column(String(36), unique=True, index=True, nullable=True)
+    request_hash = Column(String(64), nullable=True)
+
     nome_cliente = Column(String(120), nullable=False)
 
     email = Column(String(150), nullable=False)

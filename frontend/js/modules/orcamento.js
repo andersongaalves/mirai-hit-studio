@@ -28,6 +28,7 @@ export function initOrcamento() {
     if (!btnSolicitar || !form || btnSolicitar.dataset.initialized) return;
     btnSolicitar.dataset.initialized = "true";
     let enviando = false;
+    let submission = null;
 
     const setStatus = (message, stateName = "") => {
         if (!status) return;
@@ -74,8 +75,15 @@ export function initOrcamento() {
                 btnSolicitar.disabled = true;
                 btnSolicitar.setAttribute("aria-busy", "true");
                 setStatus("Enviando solicitação...");
-                await API.postOrcamento(payload);
-                track("generate_lead", { service_id: state.servicoSelecionadoOBJ.id });
+                const fingerprint = JSON.stringify(payload);
+                if (submission?.fingerprint !== fingerprint) {
+                    submission = { fingerprint, key: crypto.randomUUID() };
+                }
+                await API.postOrcamento(payload, submission.key);
+                if (!submission.confirmed) {
+                    track("generate_lead", { service_id: state.servicoSelecionadoOBJ.id });
+                    submission.confirmed = true;
+                }
                 setStatus("Solicitação recebida. A equipe analisará o briefing antes de preparar a proposta.", "success");
                 Notify.success("Solicitação de orçamento enviada.");
             } catch {

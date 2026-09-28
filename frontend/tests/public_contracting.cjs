@@ -25,8 +25,10 @@ async function staticResponse(route) {
         const page = await context.newPage();
         const errors = [];
         const payloads = [];
+        const requestKeys = [];
         let failLead = false;
         let pendingLead = false;
+        let dropLead = false;
         page.on('pageerror', error => errors.push(error.message));
         page.on('console', message => {
             if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(message.text());
@@ -49,6 +51,8 @@ async function staticResponse(route) {
                 }] });
                 if (url.pathname === '/orcamentos' && request.method() === 'POST') {
                     payloads.push(request.postDataJSON());
+                    requestKeys.push(request.headers()['idempotency-key']);
+                    if (dropLead) return route.abort('failed');
                     if (pendingLead) await new Promise(resolve => setTimeout(resolve, 120));
                     if (failLead) return route.fulfill({ status: 500, json: { detail: 'erro sintetico' } });
                     return route.fulfill({ json: { id: payloads.length } });
@@ -104,6 +108,19 @@ async function staticResponse(route) {
         });
         await page.waitForFunction(() => document.getElementById('quote-submit-status').dataset.state === 'success');
         assert.equal(payloads.length, beforeDoubleSubmit + 1);
+        assert.match(requestKeys[0], /^[0-9a-f-]{36}$/);
+        assert.notEqual(requestKeys[0], requestKeys[1], 'changed form needs a new request key');
+        assert.equal(requestKeys[1], requestKeys[2], 'retry must preserve its request key');
+
+        dropLead = true;
+        await page.locator('#nome_cliente').fill('Retry de rede');
+        await page.locator('#btn-solicitar').click();
+        await page.waitForFunction(() => document.getElementById('quote-submit-status').dataset.state === 'error');
+        const droppedKey = requestKeys.at(-1);
+        dropLead = false;
+        await page.locator('#btn-solicitar').click();
+        await page.waitForFunction(() => document.getElementById('quote-submit-status').dataset.state === 'success');
+        assert.equal(requestKeys.at(-1), droppedKey, 'lost response retry must use the original key');
 
         for (const width of [320, 360, 375, 390, 414, 768, 1024, 1280, 1440]) {
             await page.setViewportSize({ width, height: 900 });

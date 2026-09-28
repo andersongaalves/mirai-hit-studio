@@ -38,7 +38,7 @@ export function getAPI(endpoint) {
 // POST
 // ===========================
 
-export function postAPI(endpoint, payload) {
+export function postAPI(endpoint, payload, headers = {}) {
     return request(
         endpoint,
 
@@ -47,6 +47,7 @@ export function postAPI(endpoint, payload) {
 
             headers: {
                 "Content-Type": "application/json",
+                ...headers,
             },
 
             body: JSON.stringify(payload),
@@ -58,11 +59,12 @@ export function postAPI(endpoint, payload) {
 // ORÇAMENTO
 // ===========================
 
-export function postOrcamento(payload) {
+export function postOrcamento(payload, idempotencyKey) {
     return postAPI(
         "orcamentos",
 
         payload,
+        idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {},
     );
 }
 
