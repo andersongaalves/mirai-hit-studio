@@ -112,6 +112,8 @@ K - Growth continuo.
 
 I.1 concluida - PostgreSQL real, migrations, constraints, concorrencia, idempotencia e RLS validados sem operacoes destrutivas. Clean bootstrap e downgrade permanecem pendentes ate existir banco descartavel.
 
+I.2 em andamento: jornada HTTP comercial suplementar em SQLite e correcao de retry de orcamento. Migration `b8c41e7d290a` preparada com autorizacao, nao aplicada remotamente. E2E PostgreSQL/browser e validacao concorrente ainda pendentes; ver `COMMERCIAL_PAYMENTS_E2E_I2.md`. Nao iniciar I.3.
+
 ## Proxima subfase
 
 I.2 - E2E comercial e pagamentos.
