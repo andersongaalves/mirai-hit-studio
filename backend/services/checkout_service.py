@@ -55,7 +55,7 @@ def _query(token: str, *, lock=False):
             selectinload(CobrancaModel.pagamentos),
         )
     )
-    return query.with_for_update() if lock else query
+    return query.with_for_update(of=CobrancaModel) if lock else query
 
 
 def carregar(db: Session, token: str, *, lock=False) -> CobrancaModel:

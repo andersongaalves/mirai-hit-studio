@@ -40,6 +40,14 @@ class CheckoutTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(CHECKOUT_SETUP + source)
 
+    def test_checkout_lock_targets_only_charge_table(self):
+        self.run_case(r'''
+from sqlalchemy.dialects import postgresql
+query = checkout_service._query('00000000-0000-0000-0000-000000000001', lock=True)
+sql = str(query.compile(dialect=postgresql.dialect()))
+assert 'FOR UPDATE OF cobrancas' in sql
+''')
+
     def test_public_summary_options_and_no_internal_data(self):
         self.run_case(r'''
 with Session(engine) as db:
