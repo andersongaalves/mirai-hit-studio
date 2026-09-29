@@ -46,7 +46,8 @@ core = ConversationService(SessionLocal, ai)
 service = AIEmailService(core, email, sender_address='assistente@example.invalid',
                          limiter=lambda identity, limit, window: (True, 0))
 
-def event(email_id, message_id, sender='cliente@example.invalid', text='Ola', subject='Ajuda', **extra):
+def event(email_id, message_id, sender='cliente@example.invalid',
+          text='Crie uma resposta para um conceito sonoro abstrato', subject='Ajuda', **extra):
     data = {'email_id': email_id, 'from': sender, 'to': ['assistente@example.invalid'],
             'subject': subject, 'message_id': message_id, 'text': text,
             'created_at': '2026-09-24T12:00:00Z'}
@@ -208,7 +209,7 @@ class AIEmailTests(unittest.TestCase):
                     bad = dict(headers, **{'svix-signature': 'v1,invalid'})
                     assert (await client.post('/webhooks/resend', content=json.dumps(event('route-2', '<route-2@example.invalid>')).encode(), headers=bad)).status_code == 401
                     assert len(email.sent) == before
-                    modified = body.replace(b'Ola', b'Tampered')
+                    modified = body.replace(b'conceito', b'Tampered')
                     assert (await client.post('/webhooks/resend', content=modified, headers=headers)).status_code == 401
                     assert (await client.post('/webhooks/resend', content=body, headers={'svix-id': svix_id})).status_code == 401
                     settings.RESEND_WEBHOOK_SECRET = ''

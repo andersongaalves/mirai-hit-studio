@@ -173,7 +173,7 @@ else:
 seed_public()
 registry = build_tool_registry(sessions)
 context = tool_context()
-incoming = ProviderInput(system='System', message='Quais servicos existem?')
+incoming = ProviderInput(system='System', message='Compare possibilidades para um projeto sonoro incomum')
 class SequenceProvider:
     def __init__(self, responses): self.responses, self.calls = list(responses), []
     def generate(self, data):

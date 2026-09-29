@@ -108,7 +108,7 @@ class Loop:
 loop = Loop()
 registry = ToolRegistry([Tool('read_data','read',ToolCategory.PUBLIC_READ,Input,Output,lambda c,a:Output(text='safe'))])
 result = AIOrchestrator(loop,registry).decide(status='open',mode='autonomous',
-    incoming=ProviderInput(system='safe',message='hello'),tool_context=ctx)
+    incoming=ProviderInput(system='safe',message='Analise um conceito sonoro abstrato'),tool_context=ctx)
 assert result.action == 'handoff' and result.error_code == 'tool_loop_limit' and loop.calls == 4
 ''')
 

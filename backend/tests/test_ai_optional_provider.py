@@ -65,6 +65,23 @@ class OptionalProviderTests(unittest.TestCase):
                     AIUsageEventModel.result == 'deterministic_reply')) == 3
         """)
 
+    def test_enabled_provider_is_not_called_for_deterministic_public_capabilities(self):
+        self.run_case(SETUP + """
+            provider.available = True
+            with SessionLocal.begin() as db:
+                db.add(ServicoModel(id=1, nome='Mixagem', subtitulo='Equilibrio e acabamento',
+                    valor_base=300, categoria='audio'))
+                db.add(ProjetoModel(id=1, titulo='Aurora', artista='Mirai', categoria='Trilha',
+                    link_audio='https://example.invalid/audio.mp3',
+                    link_capa='https://example.invalid/cover.webp', vertical='media_games',
+                    segmentos_json=['games'], case_type='demo'))
+            for question in ('Ola', 'Qual o prazo de entrega?',
+                             'Quais servicos voces oferecem?', 'Quero conhecer o portfolio',
+                             'Quero falar com uma pessoa'):
+                send(site.create_session().session_token, question)
+            assert provider.calls == 0
+        """)
+
     def test_unknown_message_falls_back_to_human_without_hallucination(self):
         self.run_case(SETUP + """
             token = site.create_session().session_token

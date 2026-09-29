@@ -80,17 +80,17 @@ class AIOrchestrator:
         reason = handoff_reason(incoming.message)
         if reason:
             return Decision(DecisionAction.HANDOFF, reason=reason)
+        if mode == "autonomous" and tool_context is not None:
+            local = deterministic_reply(
+                incoming.message, self.registry, tool_context, telemetry=telemetry,
+            )
+            if local:
+                if telemetry:
+                    telemetry.emit(
+                        kind="turn", name=local.intent, result="deterministic_reply",
+                    )
+                return Decision(DecisionAction.REPLY, text=local.text)
         if not getattr(self.provider, "available", True):
-            if mode == "autonomous" and tool_context is not None:
-                local = deterministic_reply(
-                    incoming.message, self.registry, tool_context, telemetry=telemetry,
-                )
-                if local:
-                    if telemetry:
-                        telemetry.emit(
-                            kind="turn", name=local.intent, result="deterministic_reply",
-                        )
-                    return Decision(DecisionAction.REPLY, text=local.text)
             if telemetry:
                 telemetry.emit(
                     kind="turn", result="provider_disabled", error_code="provider_disabled",

@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     PUBLIC_FRONTEND_URL: str = "http://localhost:4173"
     AI_ENABLED: bool = False
     AI_PROVIDER: str = ""
+    AI_BASE_URL: str = ""
     AI_MODEL: str = ""
     AI_API_KEY: SecretStr = SecretStr("")
     AI_TIMEOUT_SECONDS: float = Field(default=8, ge=1, le=10)

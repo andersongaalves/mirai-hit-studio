@@ -12,12 +12,18 @@ class OpenAIProvider:
     available = True
     provider_name = "openai"
 
-    def __init__(self, api_key, model, *, timeout=8, transport=None, max_output_tokens=1200):
+    def __init__(self, api_key, model, *, timeout=8, transport=None, max_output_tokens=1200,
+                 base_url="https://api.openai.com/v1", provider_name="openai", supports_store=True):
         if not 128 <= max_output_tokens <= 4096:
             raise ValueError("invalid_output_limit")
+        if provider_name not in {"openai", "groq"}:
+            raise ValueError("invalid_provider")
         self.api_key, self.model = api_key, model
         self.timeout, self.transport = timeout, transport
         self.max_output_tokens = max_output_tokens
+        self.base_url = str(base_url).rstrip("/")
+        self.provider_name = provider_name
+        self.supports_store = supports_store
 
     def generate(self, incoming):
         if not self.api_key or not self.model:
@@ -39,17 +45,20 @@ class OpenAIProvider:
         usage = None
         try:
             with httpx.Client(timeout=self.timeout, transport=self.transport) as client:
-                response = client.post("https://api.openai.com/v1/responses", headers={
+                payload = {"model": self.model, "instructions": incoming.system,
+                           "input": inputs, "tools": tools, "parallel_tool_calls": False,
+                           "max_output_tokens": self.max_output_tokens}
+                if self.supports_store:
+                    payload["store"] = False
+                response = client.post(f"{self.base_url}/responses", headers={
                     "Authorization": "Bearer " + self.api_key,
-                }, json={"model": self.model, "instructions": incoming.system,
-                         "input": inputs, "tools": tools, "parallel_tool_calls": False,
-                         "store": False, "max_output_tokens": self.max_output_tokens})
+                }, json=payload)
             if response.status_code >= 400:
                 raise ProviderError("provider_unavailable")
             data = response.json()
             raw_usage = data.get("usage") or {}
             try:
-                usage = ProviderUsage(provider="openai", model=data.get("model") or self.model,
+                usage = ProviderUsage(provider=self.provider_name, model=data.get("model") or self.model,
                     input_tokens=raw_usage.get("input_tokens"), output_tokens=raw_usage.get("output_tokens"),
                     total_tokens=raw_usage.get("total_tokens"),
                     cached_input_tokens=(raw_usage.get("input_tokens_details") or {}).get("cached_tokens"))
