@@ -116,4 +116,5 @@ I.2 concluida - migration `b8c41e7d290a` aplicada ao PostgreSQL autorizado; retr
 
 ## Proxima subfase
 
-I.3 - E2E IA e e-mail.
+I.3 - E2E IA e e-mail em validacao. Integracao Groq, testes fake e jornadas conectadas
+implementados; smoke Groq real e e-mail live controlado aguardam credenciais/ambiente.

@@ -72,8 +72,8 @@ with engine.begin() as connection:
     Base.metadata.create_all(connection, tables=[table for table in Base.metadata.sorted_tables
                                                 if table.name not in ai_tables])
 command.stamp(migration_config(), 'f6c2a8d4e1b9')
-assert ScriptDirectory.from_config(migration_config()).get_heads() == ['f2a8c4e6d901']
-command.upgrade(migration_config(), 'head')
+assert ScriptDirectory.from_config(migration_config()).get_heads() == ['b8c41e7d290a']
+command.upgrade(migration_config(), 'f2a8c4e6d901')
 assert ai_tables <= set(inspect(engine).get_table_names())
 with engine.connect() as connection:
     differences = compare_metadata(MigrationContext.configure(connection), Base.metadata)
@@ -83,7 +83,7 @@ configure_mappers()
 command.downgrade(migration_config(), 'f6c2a8d4e1b9')
 assert not ai_tables & set(inspect(engine).get_table_names())
 assert 'clientes' in inspect(engine).get_table_names()
-command.upgrade(migration_config(), 'head')
+command.upgrade(migration_config(), 'f2a8c4e6d901')
 with engine.connect() as connection:
     assert not compare_metadata(MigrationContext.configure(connection), Base.metadata)
 ''')
