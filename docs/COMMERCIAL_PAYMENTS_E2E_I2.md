@@ -1,12 +1,12 @@
 # I.2 - Commercial and payments E2E
 
-## Status: partial, not a release checkpoint
+## Status: completed locally, not a release checkpoint
 
-The connected PostgreSQL/browser journey is **not yet validated**. No push or
-remote migration is authorized by this work. I.3 has not started.
-
-The HTTP tests below are supplementary evidence on disposable SQLite, not a
-substitute for the requested real PostgreSQL and browser E2E.
+I.2 is validated with the real local frontend, local FastAPI HTTP server and the
+authorized Supabase PostgreSQL. Mercado Pago and Resend remain transport fakes:
+no real payment, Pix or email was sent. Migration `b8c41e7d290a` was applied to
+the authorized database, but no Git push or application deploy was performed.
+I.3 has not started.
 
 ## Reproduced defect and correction
 
@@ -22,8 +22,9 @@ The backend stores a unique nullable key and a SHA-256 fingerprint of the
 validated request. A replay returns the same budget without resending emails;
 changed data with the same key returns 409. A new key permits a genuinely new
 request even with identical content. Requests without a key remain compatible.
-The unique database index protects against concurrent workers; PostgreSQL
-concurrency validation for this addition remains pending.
+The unique database index protects against concurrent workers. Five PostgreSQL
+runs with two simultaneous requests each produced five logical budgets and zero
+duplicates.
 
 Public replay responses do not expose operator notes, proposal paths or later
 administrative status. Keys/hashes are not included in response schemas.
@@ -36,17 +37,22 @@ durable outbox is outside I.2 and has not been introduced.
 
 ### Migration boundary
 
-User explicitly authorized preparing, **not applying**, migration
-`b8c41e7d290a` after `f2a8c4e6d901`. It adds only nullable `idempotency_key` and
-`request_hash` columns and a unique index. Existing rows need no backfill.
-Historical migrations are unchanged. Upgrade was exercised on a disposable
-legacy-shaped SQLite table; legacy rows and uniqueness were checked.
+Migration `b8c41e7d290a` follows `f2a8c4e6d901`. It adds only nullable
+`idempotency_key` (`VARCHAR(36)`) and `request_hash` (`VARCHAR(64)`) columns to
+`orcamentos`, plus a unique index on the key. It has no default or backfill and
+does not touch users, roles or permissions. Existing backend code ignores the
+new nullable columns, so the rollout is backward-compatible.
 
-**Do not deploy the changed ORM/backend against the unmigrated remote DB.**
-Even reads of budgets require the new columns. A separately authorized database
-upgrade or a disposable PostgreSQL with the new schema is required before the
-remaining PostgreSQL journey. No remote upgrade/downgrade was executed here.
-Index creation/lock timing still requires evaluation against the target table.
+Preflight on PostgreSQL 17.6 found four existing budgets and zero possible key
+collisions. The incremental SQL was transactional and non-destructive; the
+unique index can briefly lock the small table. Revision advanced only from
+`f2a8c4e6d901` to `b8c41e7d290a`. Columns, nullability and index were verified
+afterward. Supabase backup capability was identified, but project-specific
+restore/PITR availability was not independently proven from the database
+connection. No downgrade was run and historical revisions were not changed.
+
+Current database and local Alembic both report the single head
+`b8c41e7d290a`. Application deployment remains intentionally separate.
 
 ## Supplementary connected HTTP evidence
 
@@ -87,63 +93,83 @@ Covered in connected HTTP scenarios:
 Separate retry tests cover UUID validation, changed-payload conflict, independent
 identical submissions, private-note protection, and legacy migration rows.
 
-## Browser regression
+## Connected PostgreSQL and browser evidence
 
-`frontend/tests/public_contracting.cjs` checks request-key stability on retry and
-rotation after changed contact data, together with its existing double-submit,
-validation, payload and responsive checks. This existing suite uses API fixtures;
-it is not the requested connected PostgreSQL browser journey.
+`backend/tests/test_commercial_postgres_i2.py` is opt-in and aborts unless the
+explicit active-database acknowledgement is present. It serves the real frontend
+and FastAPI over loopback and drives Microsoft Edge with Playwright. Database,
+routers, authentication, services, PDF generation and Admin UI are real. Only
+provider HTTP and email delivery are replaced by deterministic transports.
+
+Validated end to end:
+
+- Existing catalog service, dynamic briefing, retained contact values and public
+  double-submit through the calculator.
+- Budget and briefing visible in Admin, persisted proposal snapshot, real PDF,
+  fake email send, repeated approval, exactly one production and one charge.
+- Dynamic `/checkout/<reference>` without redirect, masked analytics, safe XSS
+  rendering and no contact data in the public summary.
+- Pix entry `99.99`, balance `100.00`, QR copy text/ticket URL, signed webhook,
+  identical webhook replay, final paid state and Finance UI.
+- Card rejection, retry with 3DS, transient token absent from persistence,
+  authoritative reconciliation, refund and Finance detail showing `Reembolsado`.
+- Two independent checkout references, malformed/nonexistent token handling,
+  invalid webhook signature and provider amount mismatch recorded as conflict.
+- Desktop and 390 px checkout rendering without horizontal overflow. A Finance
+  screenshot was captured in the temporary fixture directory and removed after
+  validation.
+
+The PostgreSQL run exposed a real incompatibility hidden by SQLite: `FOR UPDATE`
+was applied to nullable outer-joined relations. The query now uses
+`FOR UPDATE OF cobrancas`, preserving charge serialization while locking only
+the intended table. A PostgreSQL-dialect regression test protects the SQL shape.
 
 ## Reproduction
 
-From `backend` with the existing virtualenv:
+Disposable HTTP regression from `backend`:
 
 ```text
 python -m unittest discover -s tests -p '*i2.py' -v
 ```
 
-From the repository root with Playwright resolvable and Edge available:
+Connected PostgreSQL/browser validation is opt-in and requires the explicit
+authorized target and acknowledgement; credentials are never printed. From the
+repository root, the four normal browser regressions remain:
 
 ```text
 node frontend/tests/public_contracting.cjs
 ```
 
-These commands require no real database/provider credentials.
+The normal commands require no provider credentials. The connected test uses a
+real PostgreSQL URL but never a real Mercado Pago or Resend credential.
 
-## Recorded validation (2026-09-28)
+## Recorded validation (2026-09-29)
 
-- Five new backend tests passed (three connected HTTP journeys, retry contract,
-  additive migration preserving legacy rows).
-- Existing Checkout, Proposal commercial, Clients, Webhooks and Finance Admin:
-  31 tests passed initially; one migration test assumed a fixed old head. It now
-  discovers the current head, and its rerun passed, including metadata comparison.
-- Browser suites: public contracting, flows, checkout and analytics passed.
-  Public contracting also checks lost-response retry reuses its key.
-- Four existing security/public-admin contract tests passed.
-- Python syntax, focused Ruff, changed JS syntax and `git diff --check` passed.
-- Local Alembic has one head: `b8c41e7d290a`. This is not evidence that a remote
-  database has been upgraded. No remote connection was used in these runs.
+- 38 disposable backend regressions plus 3 connected PostgreSQL/browser tests:
+  41 passed.
+- Browser suites `public_contracting`, `flows`, `checkout` and `analytics`:
+  all passed.
+- Four security/public-admin contract tests passed; the contract subprocess was
+  rerun with the workspace Playwright path after an environment-only failure.
+- Focused Ruff, Python/JS syntax and `git diff --check` passed.
+- Connected cleanup confirmed zero I2 clients, budgets and synthetic users; the
+  harness also asserts zero proposals, productions, charges, payments and fake
+  webhook events before teardown completes.
+- Protected-user digest stayed exactly
+  `1:17ab03a60784110c7f5bb942ef9089aadd6455ce2dca4a96d448029da4c008b2`.
+- PostgreSQL and local Alembic report one head: `b8c41e7d290a`.
 
-## Remaining I.2 acceptance work
+## Deliberately not validated here
 
-- Authorized PostgreSQL environment containing the pending migration.
-- Existing catalog service -> public browser -> API -> PostgreSQL -> proposal
-  -> checkout -> Finance browser, desktop and 390px, without domain mocks.
-- Concurrent retry and selective fixture cleanup evidence on PostgreSQL.
-- Client matching/conflict and independent snapshot after source change.
-- QR target verification, checkout route/reference, cross-client isolation.
-- Amount/provider mismatch, unknown/malformed webhook in connected scenarios.
-- Browser payment/3DS states, analytics privacy and Finance screenshots.
-- Confirm full focused regressions and record counts before closing I.2.
-
-Real Mercado Pago/Resend delivery is intentionally untested; official sandbox
-and deployed routing remain candidates for I.4/I.5. I.6 release must not treat
-the supplemental tests as complete PostgreSQL/payment-provider evidence.
+Real Mercado Pago/Resend delivery, project-specific Supabase restore execution,
+unknown provider resources and deployed routing remain for I.4/I.5. No browser
+test can prove real card authorization or payable Pix while transports are fake.
+I.6 must preserve this distinction during release validation.
 
 ## LeanDev
 
 Inspection followed budget -> proposal -> checkout -> provider -> Finance.
-Expanded into startup only to avoid automatic backup seeding, into middleware
-for request IDs/rate limiting, and into migrations for the reproduced retry bug.
-No IA core, SEO, newsletter or broad Admin audit was undertaken. Exact cumulative
-read/search counts across resumed turns were not retained. No context cache added.
+Context expanded only when PostgreSQL exposed the outer-join lock defect and when
+the Admin module graph exceeded the local test server queue. No IA core, SEO,
+newsletter or broad Admin audit was undertaken. Exact cumulative read/search
+counts across resumed turns were not retained. No context cache was added.
