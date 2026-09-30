@@ -113,32 +113,22 @@ console, not hardcoded.
 
 ## Resend
 
-- Account query found one domain: `miraihitstudio.com.br`.
-- Sending capability is enabled; DKIM and sending-subdomain MX/TXT records verify.
-- Receiving capability exists, but the root MX record is failed and the domain status is
-  `partially_failed`.
-- There are zero registered webhooks and zero received messages.
+- The domain `miraihitstudio.com.br` is verified for sending and the AI channel uses a
+  sender from that domain. The first inbound smoke used the account-provided private
+  configuration with a `resend.app` receiving address, so custom receiving MX was not a
+  prerequisite for Gate D.
 - The application route is `POST /webhooks/resend`; it verifies raw-body Svix headers
   before parsing JSON and fails closed without `RESEND_WEBHOOK_SECRET`.
-- The current production route returns 503, confirming inbound is not configured.
-
-To finish inbound: correct the receiving MX in DNS, choose the account-provided inbound
-address, register the HTTPS webhook for `email.received`, store its signing secret only
-in Render, enable the AI email variables, deploy, then send controlled synthetic inbound
-and outbound replies. Do not create a webhook until the signing secret can be saved in
-the backend environment.
-
-### Action required in Resend and Render
-
-In Resend, open Receiving Emails and record the non-secret inbound address; a provided
-`<alias>@<id>.resend.app` address can run the first smoke without custom MX. Create one
-webhook to `https://mirai-hit-studio.onrender.com/webhooks/resend` for `email.received`.
-Save its signing secret directly as `RESEND_WEBHOOK_SECRET` in Render, confirm the
-verified outbound sender and configure `AI_EMAIL_ENABLED`, `AI_EMAIL_FROM` and
-`AI_EMAIL_INBOUND_ADDRESS`. Report only whether each variable is configured, never its
-value. Then send one controlled synthetic email and verify signature, retrieval,
-conversation/threading and reply headers. Custom-domain inbound additionally requires
-the failed root MX to be corrected.
+- The registered production webhook is
+  `https://api.miraihitstudio.com.br/webhooks/resend` for `email.received`. Its signing
+  secret and provider credentials remain only in Render.
+- Gate D is closed. Production health returned 200, an unsigned request was rejected with
+  401, and a controlled real inbound e-mail produced a Resend webhook HTTP 200. The
+  automatic reply reached the sender and remained in the original thread. No address,
+  message body, payload or secret was recorded in this document.
+- Custom-domain receiving remains optional. If adopted later, only the exact MX records
+  presented by Resend should be applied after checking for conflicts with existing mail
+  routing; it is not required for the validated v2.0 inbound path.
 
 ## Mercado Pago
 
@@ -294,7 +284,7 @@ bodies, phone numbers or payment tokens.
 1. Gate A - Render/runtime: confirmed.
 2. Gate B - private PDF Storage: confirmed.
 3. Gate C - automated external PostgreSQL backup: confirmed.
-4. Gate D - configure and validate Resend inbound, webhook, signing secret and controlled reply.
+4. Gate D - Resend inbound, signed webhook and threaded controlled reply: confirmed.
 5. Gate E - configure/test Mercado Pago sandbox with explicitly identified test credentials.
 6. Gate F - configure the Cloudflare `www` to apex 308 redirect and verify path/query.
 7. Inspect Render and provider logs for the controlled smokes; public behavior and safe

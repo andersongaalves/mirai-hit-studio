@@ -129,8 +129,9 @@ externo diario tambem foi validado de ponta a ponta: dump PostgreSQL 17, validac
 criptografia AES-256, checksum e armazenamento privado no Cloudflare R2 com retencao de
 30 dias. Supabase Free continua sem PITR e o restore drill permanece reservado para I.6.
 Estado dos gates: A Render/runtime concluido; B PDF Storage concluido; C backup externo
-concluido; D Resend pendente; E Mercado Pago sandbox pendente; F redirect `www` pendente.
-I.4 permanece parcialmente concluida e I.5 nao foi iniciada. Ver
+concluido; D Resend inbound concluido com webhook assinado, processamento HTTP 200 e
+resposta automatica no mesmo thread; E Mercado Pago sandbox pendente; F redirect `www`
+pendente. I.4 permanece parcialmente concluida e I.5 nao foi iniciada. Ver
 `PRODUCTION_INFRA_I4.md`.
 
 ## Proxima subfase
