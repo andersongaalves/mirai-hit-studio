@@ -72,8 +72,29 @@ jobs:
                     | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
                   sudo apt-get update -qq
                   sudo apt-get install -y --no-install-recommends postgresql-client-17 gnupg
-                  pg_dump --version
-                  pg_restore --version
+                  postgres_bin="/usr/lib/postgresql/17/bin"
+                  export PATH="${postgres_bin}:${PATH}"
+                  echo "$postgres_bin" >> "$GITHUB_PATH"
+
+                  pg_dump_path="$(command -v pg_dump)"
+                  pg_restore_path="$(command -v pg_restore)"
+                  pg_dump_version="$(pg_dump --version)"
+                  pg_restore_version="$(pg_restore --version)"
+                  pg_dump_major="$(sed -nE 's/^pg_dump \(PostgreSQL\) ([0-9]+).*/\1/p' <<< "$pg_dump_version")"
+                  pg_restore_major="$(sed -nE 's/^pg_restore \(PostgreSQL\) ([0-9]+).*/\1/p' <<< "$pg_restore_version")"
+
+                  echo "$pg_dump_path"
+                  echo "$pg_restore_path"
+                  echo "$pg_dump_version"
+                  echo "$pg_restore_version"
+                  if [[ "$pg_dump_path" != "$postgres_bin/pg_dump" || "$pg_dump_major" != "17" ]]; then
+                    echo "backup_pg_dump_version_invalid" >&2
+                    exit 1
+                  fi
+                  if [[ "$pg_restore_path" != "$postgres_bin/pg_restore" || "$pg_restore_major" != "17" ]]; then
+                    echo "backup_pg_restore_version_invalid" >&2
+                    exit 1
+                  fi
                   aws --version
 
             - name: Install backup script dependency
