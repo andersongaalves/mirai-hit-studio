@@ -1,4 +1,5 @@
 import json
+import logging
 import resend
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
@@ -17,6 +18,7 @@ from services import mercado_pago_webhook_service as webhook_service
 
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
+logger = logging.getLogger(__name__)
 MAX_WEBHOOK_BODY_BYTES = 64 * 1024
 MAX_RESEND_BODY_BYTES = 256 * 1024
 
@@ -30,12 +32,19 @@ def _secret_value(value):
 
 
 def get_ai_email_service():
-    if (
-        not getattr(settings, "AI_EMAIL_ENABLED", False)
-        or not getattr(settings, "AI_ENABLED", False)
-        or not getattr(settings, "AI_EMAIL_FROM", "")
-        or not normalize_sender(getattr(settings, "AI_EMAIL_INBOUND_ADDRESS", ""))
-    ):
+    missing = []
+    if not getattr(settings, "AI_EMAIL_ENABLED", False):
+        missing.append("AI_EMAIL_ENABLED")
+    if not getattr(settings, "AI_ENABLED", False):
+        missing.append("AI_ENABLED")
+    if not normalize_sender(getattr(settings, "AI_EMAIL_FROM", "")):
+        missing.append("AI_EMAIL_FROM")
+    if not normalize_sender(getattr(settings, "AI_EMAIL_INBOUND_ADDRESS", "")):
+        missing.append("AI_EMAIL_INBOUND_ADDRESS")
+    if not getattr(settings, "RESEND_API_KEY", ""):
+        missing.append("RESEND_API_KEY")
+    if missing:
+        logger.warning("ai_email_configuration_incomplete missing=%s", ",".join(missing))
         raise HTTPException(status_code=503, detail="Canal de e-mail indisponivel.")
     try:
         client = ResendAIEmailClient(getattr(settings, "RESEND_API_KEY", ""))
@@ -45,12 +54,14 @@ def get_ai_email_service():
             max_body_chars=getattr(settings, "AI_EMAIL_MAX_BODY_CHARS", 8000),
         )
     except AIEmailError:
+        logger.warning("ai_email_configuration_invalid")
         raise HTTPException(status_code=503, detail="Canal de e-mail indisponivel.") from None
 
 
 def _verify_resend_signature(body, request):
     secret = _secret_value(getattr(settings, "RESEND_WEBHOOK_SECRET", ""))
     if not secret:
+        logger.warning("resend_webhook_configuration_incomplete missing=RESEND_WEBHOOK_SECRET")
         raise HTTPException(status_code=503, detail="Webhook indisponivel.")
     try:
         payload = body.decode("utf-8")

@@ -60,6 +60,33 @@ class AIEmailTests(unittest.TestCase):
     def run_case(self, source):
         test_bootstrap_database.BootstrapTests.run_case(self, SETUP + textwrap.dedent(source[len(SETUP):]))
 
+    def test_configuration_log_contains_names_without_values(self):
+        self.run_case(SETUP + """
+            from fastapi import HTTPException
+            from unittest.mock import patch
+            from core.config import settings
+            from routers.webhooks import get_ai_email_service
+            settings.AI_EMAIL_ENABLED = False
+            settings.AI_ENABLED = False
+            settings.AI_EMAIL_FROM = 'private-sender@example.invalid'
+            settings.AI_EMAIL_INBOUND_ADDRESS = ''
+            settings.RESEND_API_KEY = 'private-resend-key'
+            with patch('routers.webhooks.logger.warning') as warning:
+                try:
+                    get_ai_email_service()
+                except HTTPException as error:
+                    assert error.status_code == 503
+                else:
+                    raise AssertionError('configuration should be rejected')
+            template, names = warning.call_args.args
+            message = template % names
+            assert 'AI_EMAIL_ENABLED' in message
+            assert 'AI_ENABLED' in message
+            assert 'AI_EMAIL_INBOUND_ADDRESS' in message
+            assert 'private-sender@example.invalid' not in message
+            assert 'private-resend-key' not in message
+        """)
+
     def test_duplicate_delivery_has_one_message_and_one_logical_reply(self):
         self.run_case(SETUP + """
             payload = event('email-1', '<one@example.invalid>')
