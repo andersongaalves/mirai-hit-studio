@@ -114,7 +114,10 @@ I.1 concluida - PostgreSQL real, migrations, constraints, concorrencia, idempote
 
 I.2 concluida - migration `b8c41e7d290a` aplicada ao PostgreSQL autorizado; retry concorrente, jornada comercial, checkout Pix/cartao, webhook, reconciliacao, reembolso e Finance validados com frontend/backend reais e transports externos sinteticos. Nenhum push ou deploy foi realizado; ver `COMMERCIAL_PAYMENTS_E2E_I2.md`.
 
+I.3 concluida - E2E IA e e-mail validado com Groq live, tool calling, guardrails,
+grounded context e jornadas conectadas. Resend live inbound/outbound foi transferido
+para I.4 por depender da infraestrutura publica e do signing secret.
+
 ## Proxima subfase
 
-I.3 - E2E IA e e-mail em validacao. Integracao Groq, testes fake e jornadas conectadas
-implementados; smoke Groq real e e-mail live controlado aguardam credenciais/ambiente.
+I.4 - Infraestrutura real, deploy controlado e integracoes de producao.

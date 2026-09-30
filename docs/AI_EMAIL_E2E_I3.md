@@ -3,10 +3,10 @@
 ## Status
 
 A integracao Groq e a jornada conectada foram implementadas e validadas com transportes
-sinteticos. O gate live continua pendente: o ambiente local nao possui `AI_API_KEY` ou
-`GROQ_API_KEY`, e nao possui endereco inbound mais signing secret do Resend. Nenhuma
-credencial foi criada, exibida ou copiada. I.3 nao deve ser marcada como concluida ate
-o smoke Groq real e, quando houver ambiente controlado, a jornada Resend live.
+sinteticos e com um smoke live controlado da Groq. A chave foi detectada somente no
+processo, sem ser exibida ou persistida. A validacao live do Resend inbound foi
+transferida para I.4, onde endpoint publico e signing secret podem ser configurados com
+seguranca.
 
 ## Provider architecture
 
@@ -118,15 +118,29 @@ codigos seguros existentes e seguem para retry/handoff conforme o core; nao ha r
 HTTP automatico novo. `DisabledProvider` conserva respostas deterministicas e encaminha
 perguntas flexiveis. OpenAI continua coberto pelo contrato anterior.
 
-## Live gates and I.4
+## Live Groq validation
 
-- Groq live smoke, latencia, usage e live evals: bloqueados por ausencia de chave.
-- Resend live inbound/outbound: bloqueado por ausencia de signing secret e endereco
-  inbound controlado; possuir apenas API key nao autoriza envio.
+- `AI_API_KEY` detectada no processo: sim.
+- Provider: `groq`.
+- Modelo: `openai/gpt-oss-20b`.
+- Endpoint: Responses API oficial da Groq.
+- Smoke real: aprovado em 962 ms, com usage presente e 270 tokens.
+- Live evals: 4/4 aprovados.
+- Tool calling publico: aprovado.
+- Pricing e acoes financeiras: handoff aprovado.
+- Prompt injection: guardrail aprovado.
+- Grounded context: aprovado.
+- Custo: desconhecido; nenhuma tarifa foi presumida.
+- Nenhuma chave, header ou arquivo de secret foi persistido.
+
+## Remaining I.4 gates
+
+- Resend live inbound/outbound: transferido para I.4, pois depende de signing secret,
+  endpoint HTTPS implantado e endereco inbound controlado.
 - A Resend documenta enderecos `*.resend.app` para inbound e destinatarios de teste
   para eventos de envio, mas a configuracao de conta/webhook nao deve ser inventada.
 - Render, Cloudflare, DNS, rate limit distribuido e deploy permanecem para I.4.
-- Nenhum pagamento, migration, push ou deploy faz parte desta validacao.
+- Nenhum pagamento ou migration fez parte da validacao live da Groq.
 
 ## LeanDev
 
