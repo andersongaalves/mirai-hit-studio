@@ -19,19 +19,21 @@ are not configured or cannot yet be verified. No secret value is recorded here.
 | Generative AI | Groq Responses API | `openai/gpt-oss-20b` | `AI_API_KEY` | production smoke and telemetry passed |
 | Email | Resend | sending domain plus inbound webhook | `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` | outbound domain present; inbound incomplete |
 | Payments | Mercado Pago | checkout and signed webhook | MP access/public/webhook keys | production endpoints currently unavailable (503) |
-| Documents | local storage adapter | absolute persistent mount | `PROPOSTA_PDF_DIR` | production persistence not proven |
+| Documents | private Supabase Storage adapter | bucket `propostas-pdf` | server-only Storage credentials | production persistence validated |
 | Analytics | consent-gated frontend adapter | provider ID configured outside this audit | provider-specific | no PII or admin metrics added |
 
 ## Render and Python
 
 - Repository: `andersongaalves/mirai-hit-studio`.
-- Expected service branch: `main`; dashboard confirmation is still required.
-- Expected root directory: `backend`; dashboard confirmation is still required.
-- Expected build command: `pip install -r requirements.txt`.
-- Expected start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
-- Health path: `/health`; it returns 200 without exposing configuration.
+- Service branch: `main`; root directory: `backend`; both were confirmed in Render.
+- Build command: `pip install -r requirements.txt`.
+- Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`, without reload.
+- Auto-deploy is enabled on commit.
+- Health path: `/health`; Render probes returned 200 after it was configured.
 - Runtime is pinned by `backend/.python-version` to Python 3.13.1, matching the
-  development and connected-test interpreter. Render's unpinned default was 3.14.3.
+  development and connected-test interpreter. The deploy log supplied for this gate did
+  not print the interpreter version, so this is configuration evidence rather than a
+  direct runtime observation.
 - A clean Python 3.13.1 venv installed only `requirements.txt`; `main`, `httpx`,
   Resend, FastAPI and SQLAlchemy imported successfully.
 - Runtime dependencies include `httpx==0.28.1`; test-only packages were not copied.
@@ -39,20 +41,12 @@ are not configured or cannot yet be verified. No secret value is recorded here.
   about two seconds. This is consistent with a cold start and should be observed after
   deploy rather than treated as application failure.
 
-The push triggered successful `build`, `deploy`, `report-build-status` and Cloudflare
-Pages checks for commit `b44f3d6`. Render build command, start command, auto-deploy
-setting, instance count, persistent disk and deployed Python version are not exposed by
-the public endpoint. They still require confirmation in the Render dashboard/build log.
+The service uses one Free instance with 0.1 CPU and 512 MB RAM. Autoscaling is disabled.
+The Free plan does not provide a persistent disk. `WEB_CONCURRENCY=1` was observed in the
+deploy log.
 
-### Action required in Render
-
-Confirm without copying secrets out of the dashboard: branch `main`; root `backend`;
-build `pip install -r requirements.txt`; start
-`uvicorn main:app --host 0.0.0.0 --port $PORT` without `--reload`; auto-deploy policy;
-effective Python `3.13.1`; instance type/count; health path `/health`; persistent disk
-and mount path; and presence of the required environment names. A single instance allows
-the current filesystem-backed rate limiter as a documented temporary limitation.
-Multiple instances require a distributed limiter before release.
+A single instance allows the current filesystem-backed rate limiter as a documented
+temporary limitation. Multiple instances require a distributed limiter before release.
 
 ## PostgreSQL, migrations and RLS
 
@@ -200,10 +194,20 @@ Canonicals and sitemap already use the apex and must not change.
 
 ## Storage, rate limiting and backups
 
-- Proposal PDFs use `LocalDocumentoStorage` and require an absolute persistent
-  `PROPOSTA_PDF_DIR`. Render's ephemeral filesystem is not durable storage.
-- A Render persistent disk or a private object-storage adapter must be confirmed before
-  relying on generated PDFs across deploys. This is a release risk, not silently assumed.
+- Proposal PDFs now support private Supabase Storage through a server-only adapter. New
+  objects use opaque keys with proposal/version IDs and a random UUID, never customer
+  data. Uploads explicitly disable upsert.
+- `propostas.pdf_path` stores the opaque `supabase://` reference and the nullable
+  `pdf_sha256` stores the integrity hash. Existing local references remain readable as a
+  legacy path and can be promoted without changing the bytes sent to the customer.
+- The bucket is created private when absent and rejected if reported public. Access uses
+  only backend credentials; the frontend receives neither credentials nor direct object
+  URLs. Downloads continue to stream through the authenticated FastAPI route.
+- Sending first confirms upload and hash persistence in the transaction, then submits the
+  exact same bytes to e-mail. Upload failure prevents e-mail and status transition. A
+  persisted document is reused and is never overwritten; sent documents with a durable
+  object cannot be regenerated. Legacy documents without a durable object may be promoted
+  or regenerated when their old file is unavailable.
 - Rate limiting uses a bounded SQLite file shared by processes on one filesystem. It is
   not globally distributed across Render instances. This is temporarily acceptable only
   for a single instance and modest traffic; instance topology needs dashboard confirmation.
@@ -216,15 +220,17 @@ Canonicals and sitemap already use the apex and must not change.
   blocker until an automated, private backup with retention exists or the project is
   upgraded and managed backup status is confirmed.
 
-### Action required for documents and backups
+The additive proposal-hash migration is applied to the connected PostgreSQL. Render uses
+the Supabase adapter with a private `propostas-pdf` bucket and server-only credentials.
+Proposal 58 was used as the controlled storage fixture: generation uploaded the opaque
+object `propostas/58/v1/15e000c1360a4b0ba4bef2ee127e74b8.pdf` with HTTP 200. After a
+manual deploy of the same commit, health, proposal preview and document retrieval all
+returned 200 and the same PDF remained available. No e-mail was sent. Gate B is closed.
 
-In Render, attach a persistent disk and point `PROPOSTA_PDF_DIR` to an absolute directory
-under its mount, or adopt a private object-storage adapter in a later versioned change.
-Only files under the mount survive deploy/restart, and a disk constrains the service to
-one instance. Generate a synthetic PDF and verify it after a controlled redeploy; never
-use a client document. For PostgreSQL, schedule `scripts.backup_database` to private,
-encrypted off-site storage with an explicit retention policy. Do not leave dumps on
-Render's ephemeral filesystem.
+### Action required for backups
+
+For PostgreSQL, schedule `scripts.backup_database` to private, encrypted off-site storage
+with an explicit retention policy. Do not leave dumps on Render's ephemeral filesystem.
 
 ## Secrets and logging
 
@@ -232,7 +238,8 @@ Expected server-only names:
 
 `DATABASE_URL`, `SECRET_KEY`, `AI_API_KEY`, `RESEND_API_KEY`,
 `RESEND_WEBHOOK_SECRET`, `MERCADO_PAGO_ACCESS_TOKEN`,
-`MERCADO_PAGO_WEBHOOK_SECRET`, and administrative email credentials/configuration.
+`MERCADO_PAGO_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, and administrative email
+credentials/configuration.
 
 `MERCADO_PAGO_PUBLIC_KEY` is intentionally public but still configured server-side for
 the checkout endpoint. Tracked-file scanning found no live Groq, Resend, webhook,
@@ -276,8 +283,8 @@ bodies, phone numbers or payment tokens.
 
 ## External gates before I.4 completion
 
-1. Confirm Render branch/root/build/start/auto-deploy, Python, topology and disk.
-2. Configure persistent PDF storage and prove a synthetic file survives redeploy.
+1. Render branch/root/build/start/auto-deploy, runtime pin, topology, health and disk: confirmed.
+2. Private Supabase PDF storage, integrity hash and redeploy persistence: confirmed.
 3. Configure and validate Resend inbound, webhook, signing secret and controlled reply.
 4. Configure/test Mercado Pago sandbox with explicitly identified test credentials.
 5. Configure the Cloudflare `www` to apex 308 redirect and verify path/query.

@@ -123,8 +123,10 @@ para I.4 por depender da infraestrutura publica e do signing secret.
 I.4 parcialmente concluida - release candidate e deploy em `main` validados; site,
 backend, PostgreSQL, CORS, Checkout shell e Groq em producao passaram nos smokes.
 Data API foi restringida pela migration `93c2cf108202`, com regressao conectada aprovada.
-Permanecem pendentes configuracao/validacao de Resend inbound, Mercado Pago sandbox,
-redirect `www`, storage persistente de PDFs, painel Render e backup externo; o projeto
+O painel Render foi confirmado e o adapter privado de PDFs no Supabase Storage foi
+validado em producao com hash, imutabilidade e persistencia apos redeploy.
+Permanecem pendentes Resend inbound, Mercado Pago sandbox,
+redirect `www` e backup externo; o projeto
 Supabase esta no plano Free, sem backup diario gerenciado/PITR. Ver
 `PRODUCTION_INFRA_I4.md`. I.5 nao foi iniciada.
 
