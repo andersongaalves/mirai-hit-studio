@@ -4,9 +4,10 @@ Audit date: 2026-09-29/30 (America/Sao_Paulo).
 
 ## Status
 
-The local release candidate is reproducible and the I.1-I.3 pre-deploy gates pass.
-This document separates public/runtime evidence from settings that require provider
-dashboard access. No secret value is recorded here.
+The release candidate is reproducible, the I.1-I.3 gates pass and commit `b44f3d6`
+was pushed to `main`. Public post-deploy smokes passed for the site, backend and Groq.
+I.4 remains partially complete because provider-dashboard and DNS gates listed below
+are not configured or cannot yet be verified. No secret value is recorded here.
 
 ## Production inventory
 
@@ -15,7 +16,7 @@ dashboard access. No secret value is recorded here.
 | Frontend | Cloudflare Pages | project `mirai-hit-studio`, branch `main` | none required by static pages | public site healthy |
 | Backend | Render | Python/Uvicorn, service URL `mirai-hit-studio.onrender.com` | runtime env | health healthy after cold start |
 | Database | Supabase PostgreSQL 17.6 | Alembic `b8c41e7d290a` | `DATABASE_URL` | connected and at head |
-| Generative AI | Groq Responses API | `openai/gpt-oss-20b` | `AI_API_KEY` | local/live I.3 validated; production smoke pending deploy |
+| Generative AI | Groq Responses API | `openai/gpt-oss-20b` | `AI_API_KEY` | production smoke and telemetry passed |
 | Email | Resend | sending domain plus inbound webhook | `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` | outbound domain present; inbound incomplete |
 | Payments | Mercado Pago | checkout and signed webhook | MP access/public/webhook keys | production endpoints currently unavailable (503) |
 | Documents | local storage adapter | absolute persistent mount | `PROPOSTA_PDF_DIR` | production persistence not proven |
@@ -38,9 +39,10 @@ dashboard access. No secret value is recorded here.
   about two seconds. This is consistent with a cold start and should be observed after
   deploy rather than treated as application failure.
 
-Render build command, start command, auto-deploy setting, instance count, persistent
-disk and deployed Python version are not exposed by the public endpoint. They must be
-confirmed in the Render dashboard/build log before calling I.4 complete.
+The push triggered successful `build`, `deploy`, `report-build-status` and Cloudflare
+Pages checks for commit `b44f3d6`. Render build command, start command, auto-deploy
+setting, instance count, persistent disk and deployed Python version are not exposed by
+the public endpoint. They still require confirmation in the Render dashboard/build log.
 
 ## PostgreSQL, migrations and RLS
 
@@ -89,10 +91,13 @@ AI_API_KEY=<secret>
 ```
 
 I.3 validated the official Responses endpoint, usage, tool calling, grounded context,
-guardrails and deterministic-first routing. The local key exists only in ignored runtime
-configuration. Production values cannot be read from the public endpoint; one controlled
-post-deploy generative turn will prove the deployed configuration. Published rate limits
-are account/model dependent and must be read from the Groq console, not hardcoded.
+guardrails and deterministic-first routing. A controlled post-deploy site conversation
+returned 200 and persisted provider telemetry with provider `groq`, model
+`openai/gpt-oss-20b`, 1,869 total tokens and 1,454 ms provider latency. A separate smoke
+validated deterministic greeting, public-services lookup, history and explicit handoff
+to `waiting_human`. Prompts, replies, session tokens and credentials were not logged.
+Published rate limits remain account/model dependent and must be read from the Groq
+console, not hardcoded.
 
 ## Resend
 
@@ -187,6 +192,22 @@ bodies, phone numbers or payment tokens.
 - Ruff, compileall and `configure_mappers()`: passed.
 - Alembic current/head: one head, `b8c41e7d290a`.
 
+## Deploy and post-deploy evidence
+
+- Git push: `b44f3d6e7902e1aa42d206bc8f90fe12b46ebf17` on `main`.
+- GitHub checks: `build`, `deploy`, `report-build-status` and Cloudflare Pages completed
+  successfully for that commit.
+- Backend health: 200 after warm-up; one earlier 25-second timeout remains consistent
+  with the documented cold-start behavior.
+- Site Chat: session 201; deterministic reply 200; Groq reply 200; explicit handoff 200;
+  persisted history ended in `waiting_human`.
+- Public routes: Home, three verticals, Portfolio, robots, sitemap and synthetic checkout
+  path returned 200. Checkout retained `X-Robots-Tag: noindex, nofollow, noarchive`.
+- CORS: official apex preflight returned 200 with the expected origin; an unrelated
+  origin returned 400 without an allow-origin header.
+- PostgreSQL remains at the single repository head `b8c41e7d290a` after deploy.
+- `www` still returns 200 instead of redirecting to the apex domain.
+
 ## External gates before I.4 completion
 
 1. Confirm Render branch/root/build/start/auto-deploy, Python and persistent disk.
@@ -195,7 +216,8 @@ bodies, phone numbers or payment tokens.
 4. Configure the Cloudflare `www` to apex 308 redirect.
 5. Confirm Supabase exposed schemas, backups, retention and PITR.
 6. Resolve Data API grants before exposing a publishable Supabase key.
-7. Run post-deploy backend, Chat/Groq, Pages, checkout and log smokes.
+7. Inspect Render and provider logs for the controlled smokes; public behavior and safe
+   database telemetry passed, but dashboard log access was unavailable in this run.
 
 ## Sources checked
 

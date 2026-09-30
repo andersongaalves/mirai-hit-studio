@@ -2,17 +2,18 @@
 
 ## Status
 
-Fase atual: H.3 concluida; CP-H pronto para checkpoint.
+Fase atual: I.4 parcialmente concluida; deploy controlado e smokes publicos aprovados,
+com gates externos de infraestrutura pendentes.
 
-Ultimo checkpoint enviado: CP-IA3 (`972049f`).
+Ultimo checkpoint enviado: CP-H.
 
-Checkpoint atual: CP-H pronto para validacao e envio.
+Checkpoint atual: bloco I em andamento.
 
-Proximo checkpoint: definido pelo bloco I.
+Proximo checkpoint: definido pelo bloco I apos conclusao dos gates de release.
 
-Proximo push: CP-H, somente apos H.3 e regressao aprovada.
+Proximo push: somente apos a proxima entrega versionada do bloco I.
 
-Ultimo commit local previsto: `perf: otimiza carregamento e Core Web Vitals`.
+Ultimo deploy auditado: `b44f3d6` (`chore: prepara infraestrutura de producao`).
 
 ## Concluido
 
@@ -103,6 +104,7 @@ H - SEO/performance: SEO tecnico, SEO por vertical e Core Web Vitals.
 - H.1 SEO tecnico. Concluida.
 - H.2 SEO de conteudo, intencao de busca e interlinking. Concluida.
 - H.3 Performance e Core Web Vitals. Concluida.
+- CP-H enviado.
 
 I - QA/release: PostgreSQL/migrations, E2E comercial/pagamentos, E2E IA/e-mail, infraestrutura, regressao global, cleanup/release e v2.0.0.
 
@@ -118,6 +120,12 @@ I.3 concluida - E2E IA e e-mail validado com Groq live, tool calling, guardrails
 grounded context e jornadas conectadas. Resend live inbound/outbound foi transferido
 para I.4 por depender da infraestrutura publica e do signing secret.
 
+I.4 parcialmente concluida - release candidate e deploy em `main` validados; site,
+backend, PostgreSQL, CORS, Checkout shell e Groq em producao passaram nos smokes.
+Permanecem pendentes configuracao/validacao de Resend inbound, Mercado Pago sandbox,
+redirect `www`, storage persistente de PDFs, backups/PITR e grants do Data API. Ver
+`PRODUCTION_INFRA_I4.md`. I.5 nao foi iniciada.
+
 ## Proxima subfase
 
-I.4 - Infraestrutura real, deploy controlado e integracoes de producao.
+I.4 - concluir gates externos de infraestrutura e integracoes de producao.
