@@ -124,11 +124,14 @@ I.4 parcialmente concluida - release candidate e deploy em `main` validados; sit
 backend, PostgreSQL, CORS, Checkout shell e Groq em producao passaram nos smokes.
 Data API foi restringida pela migration `93c2cf108202`, com regressao conectada aprovada.
 O painel Render foi confirmado e o adapter privado de PDFs no Supabase Storage foi
-validado em producao com hash, imutabilidade e persistencia apos redeploy.
-Permanecem pendentes Resend inbound, Mercado Pago sandbox,
-redirect `www` e backup externo; o projeto
-Supabase esta no plano Free, sem backup diario gerenciado/PITR. Ver
-`PRODUCTION_INFRA_I4.md`. I.5 nao foi iniciada.
+validado em producao com hash, imutabilidade e persistencia apos redeploy. O backup
+externo diario tambem foi validado de ponta a ponta: dump PostgreSQL 17, validacao,
+criptografia AES-256, checksum e armazenamento privado no Cloudflare R2 com retencao de
+30 dias. Supabase Free continua sem PITR e o restore drill permanece reservado para I.6.
+Estado dos gates: A Render/runtime concluido; B PDF Storage concluido; C backup externo
+concluido; D Resend pendente; E Mercado Pago sandbox pendente; F redirect `www` pendente.
+I.4 permanece parcialmente concluida e I.5 nao foi iniciada. Ver
+`PRODUCTION_INFRA_I4.md`.
 
 ## Proxima subfase
 

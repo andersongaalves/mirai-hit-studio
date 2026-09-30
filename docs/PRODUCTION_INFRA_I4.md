@@ -216,9 +216,15 @@ Canonicals and sitemap already use the apex and must not change.
 - The Supabase organization is on the Free plan. Current Supabase documentation says
   automatic daily backups are provided on Pro, Team and Enterprise; Free projects should
   make regular off-site logical exports. PITR is a paid add-on for Pro or higher and is
-  unavailable on the current plan. No scheduled off-site dump was proven. This is a v2.0
-  blocker until an automated, private backup with retention exists or the project is
-  upgraded and managed backup status is confirmed.
+  unavailable on the current plan.
+- Gate C is closed with a daily external backup for v2.0: Supabase PostgreSQL is exported
+  in PostgreSQL 17 custom format, validated with `pg_restore --list`, encrypted with GPG
+  AES-256, decrypted and validated again, hashed with SHA-256, then uploaded to the private
+  Cloudflare R2 bucket `mirai-production-backups`. Objects under `daily/` expire after 30
+  days. The workflow verifies the remote object size and removes temporary runner files.
+- GitHub Actions run `36787530623` proved the complete path with
+  `/usr/lib/postgresql/17/bin/pg_dump` and `pg_restore` 17.11. No secret was exposed in the
+  logs. Restore was not executed and remains a required drill for I.6.
 
 The additive proposal-hash migration is applied to the connected PostgreSQL. Render uses
 the Supabase adapter with a private `propostas-pdf` bucket and server-only credentials.
@@ -227,10 +233,12 @@ object `propostas/58/v1/15e000c1360a4b0ba4bef2ee127e74b8.pdf` with HTTP 200. Aft
 manual deploy of the same commit, health, proposal preview and document retrieval all
 returned 200 and the same PDF remained available. No e-mail was sent. Gate B is closed.
 
-### Action required for backups
+### Gate C - external backup
 
-For PostgreSQL, schedule `scripts.backup_database` to private, encrypted off-site storage
-with an explicit retention policy. Do not leave dumps on Render's ephemeral filesystem.
+Gate C is complete. The adopted chain is: Supabase PostgreSQL -> PostgreSQL 17 custom
+dump -> archive validation -> GPG AES-256 -> decrypt verification -> SHA-256 -> private
+Cloudflare R2 -> 30-day lifecycle. This is the v2.0 backup strategy while Supabase remains
+on the Free plan without PITR. Recovery readiness still depends on the I.6 restore drill.
 
 ## Secrets and logging
 
@@ -283,13 +291,12 @@ bodies, phone numbers or payment tokens.
 
 ## External gates before I.4 completion
 
-1. Render branch/root/build/start/auto-deploy, runtime pin, topology, health and disk: confirmed.
-2. Private Supabase PDF storage, integrity hash and redeploy persistence: confirmed.
-3. Configure and validate Resend inbound, webhook, signing secret and controlled reply.
-4. Configure/test Mercado Pago sandbox with explicitly identified test credentials.
-5. Configure the Cloudflare `www` to apex 308 redirect and verify path/query.
-6. Configure automated off-site PostgreSQL backup and retention or upgrade Supabase;
-   current Free plan has no managed daily backup/PITR.
+1. Gate A - Render/runtime: confirmed.
+2. Gate B - private PDF Storage: confirmed.
+3. Gate C - automated external PostgreSQL backup: confirmed.
+4. Gate D - configure and validate Resend inbound, webhook, signing secret and controlled reply.
+5. Gate E - configure/test Mercado Pago sandbox with explicitly identified test credentials.
+6. Gate F - configure the Cloudflare `www` to apex 308 redirect and verify path/query.
 7. Inspect Render and provider logs for the controlled smokes; public behavior and safe
    database telemetry passed, but dashboard log access was unavailable in this run.
 
