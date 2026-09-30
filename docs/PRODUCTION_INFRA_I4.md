@@ -15,7 +15,7 @@ are not configured or cannot yet be verified. No secret value is recorded here.
 | --- | --- | --- | --- | --- |
 | Frontend | Cloudflare Pages | project `mirai-hit-studio`, branch `main` | none required by static pages | public site healthy |
 | Backend | Render | Python/Uvicorn, service URL `mirai-hit-studio.onrender.com` | runtime env | health healthy after cold start |
-| Database | Supabase PostgreSQL 17.6 | Alembic `b8c41e7d290a` | `DATABASE_URL` | connected and at head |
+| Database | Supabase PostgreSQL 17.6 | Alembic `93c2cf108202` | `DATABASE_URL` | connected, at head and Data API restricted |
 | Generative AI | Groq Responses API | `openai/gpt-oss-20b` | `AI_API_KEY` | production smoke and telemetry passed |
 | Email | Resend | sending domain plus inbound webhook | `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` | outbound domain present; inbound incomplete |
 | Payments | Mercado Pago | checkout and signed webhook | MP access/public/webhook keys | production endpoints currently unavailable (503) |
@@ -44,13 +44,25 @@ Pages checks for commit `b44f3d6`. Render build command, start command, auto-dep
 setting, instance count, persistent disk and deployed Python version are not exposed by
 the public endpoint. They still require confirmation in the Render dashboard/build log.
 
+### Action required in Render
+
+Confirm without copying secrets out of the dashboard: branch `main`; root `backend`;
+build `pip install -r requirements.txt`; start
+`uvicorn main:app --host 0.0.0.0 --port $PORT` without `--reload`; auto-deploy policy;
+effective Python `3.13.1`; instance type/count; health path `/health`; persistent disk
+and mount path; and presence of the required environment names. A single instance allows
+the current filesystem-backed rate limiter as a documented temporary limitation.
+Multiple instances require a distributed limiter before release.
+
 ## PostgreSQL, migrations and RLS
 
 - PostgreSQL: 17.6.
-- Database revision and repository head: `b8c41e7d290a`; a single Alembic head.
+- Database revision and repository head: `93c2cf108202`; a single Alembic head.
 - Migration `b8c41e7d290a` only adds nullable request-idempotency columns and a unique
   index. The previously deployed backend ignores them, so the database-first rollout is
   backward-compatible.
+- Migration `93c2cf108202` removes Data API privileges from browser client roles and
+  changes no tables, rows, constraints or application-role permissions.
 - Future migrations use a manual/pre-deploy gate run once before application rollout.
   `alembic upgrade head` must not be added to multi-worker application startup.
 - The backend connects as role `postgres`: non-superuser, table owner and
@@ -58,25 +70,31 @@ the public endpoint. They still require confirmation in the Render dashboard/bui
 - The frontend contains no Supabase client, REST Data API URL, publishable key or direct
   database access. FastAPI authentication/authorization remains the primary boundary.
 
-### Data API risk
+### Data API boundary and remediation
 
-The database currently grants broad table privileges to `anon` and `authenticated` on
-16 application tables. Several have RLS disabled; the 10 RLS-enabled tables have no
-policies. If `public` is exposed through the Supabase Data API and a publishable key is
-available, tables without RLS can be read or modified directly. This is a high-priority
-pre-release risk even though the current frontend does not use that API.
+The `public` schema is exposed to PostgREST. Initially, 16 backend tables and 15
+sequences granted broad privileges to both `anon` and `authenticated`; 11 exposed tables
+had RLS disabled and 10 RLS-enabled tables had no policies. Repository search confirmed
+there is no `supabase-js`, `/rest/v1`, `/graphql/v1`, publishable key or direct browser
+database access. Supabase Auth has zero users; application authentication lives in
+`usuarios` behind FastAPI.
 
-Do not alter the application owner role during I.4. The safe remediation is a separate,
-tested privilege migration:
+The 16 tables were `alembic_version`, `audit_logs`, `clientes`, `cobrancas`,
+`configuracoes`, `newsletter`, `newsletter_campaigns`, `newsletter_deliveries`,
+`orcamentos`, `pagamentos`, `producoes`, `projetos`, `propostas`,
+`provider_webhook_events`, `servicos` and `usuarios`.
 
-1. confirm exposed schemas and API settings in Supabase;
-2. snapshot current grants and default privileges;
-3. revoke all application-table privileges from `anon` and `authenticated`;
-4. revoke corresponding default privileges for future tables;
-5. prove FastAPI still works through its server role and Data API client roles are denied;
-6. keep rollback SQL that restores only explicitly documented grants.
+Migration `93c2cf108202` revoked table, sequence and function privileges from `anon` and
+`authenticated`, revoked function execution from `PUBLIC`, and changed owner `postgres`
+defaults so future objects remain private. It does not touch `auth`, Storage or internal
+schemas. Verification found zero client table grants, zero sequence usage grants and zero
+unsafe owner defaults. Both client roles fail privilege checks for `usuarios` and
+`servicos`; the application user count stayed stable. Security advisors no longer report
+the non-RLS tables as externally exposed.
 
-No privilege or RLS change was applied to production in this audit.
+The production boundary is `Browser -> FastAPI -> PostgreSQL`. The backend role remains
+owner-like with `BYPASSRLS`; FastAPI authorization is primary and RLS is defense in depth.
+The downgrade restores only the observed legacy tables/sequences and default privileges.
 
 ## Groq
 
@@ -116,12 +134,33 @@ in Render, enable the AI email variables, deploy, then send controlled synthetic
 and outbound replies. Do not create a webhook until the signing secret can be saved in
 the backend environment.
 
+### Action required in Resend and Render
+
+In Resend, open Receiving Emails and record the non-secret inbound address; a provided
+`<alias>@<id>.resend.app` address can run the first smoke without custom MX. Create one
+webhook to `https://mirai-hit-studio.onrender.com/webhooks/resend` for `email.received`.
+Save its signing secret directly as `RESEND_WEBHOOK_SECRET` in Render, confirm the
+verified outbound sender and configure `AI_EMAIL_ENABLED`, `AI_EMAIL_FROM` and
+`AI_EMAIL_INBOUND_ADDRESS`. Report only whether each variable is configured, never its
+value. Then send one controlled synthetic email and verify signature, retrieval,
+conversation/threading and reply headers. Custom-domain inbound additionally requires
+the failed root MX to be corrected.
+
 ## Mercado Pago
 
 The current production checkout config and webhook both return 503. Local configuration
 also has no access token, public key or webhook secret, so no sandbox or real payment was
 attempted. Provider test credentials may be added later for a controlled sandbox smoke;
 real cards and real charges are outside I.4.
+
+### Action required in Mercado Pago and Render
+
+In Your integrations, activate and identify test credentials explicitly; configure the
+test webhook URL `https://mirai-hit-studio.onrender.com/webhooks/mercado-pago` and its
+secret, then save the existing Mercado Pago environment names directly in Render. Do not
+paste values into chat. Only proven test credentials may exercise official test buyer and
+card flows for approved, rejected, webhook and reconciliation states. Ambiguous or
+production credentials must not be used for I.4 testing.
 
 ## Cloudflare Pages and edge
 
@@ -140,6 +179,14 @@ real cards and real charges are outside I.4.
 - MIME types verified: HTML, CSS, JavaScript, WebP, plain-text robots and XML sitemap.
 - CSP remains report-only. HSTS, nosniff, frame denial, referrer and permissions policy
   headers are present. CSP enforcement remains an I.5 decision after violation review.
+
+### Action required in Cloudflare
+
+Create one hostname redirect rule matching only `www.miraihitstudio.com.br`, targeting
+the HTTPS apex with status 308 and preserving path and query. Verify `www /`,
+`www /artists` and `www /creators?x=1` each perform exactly one redirect to the equivalent
+apex URL. The final smoke still returns 200 from `www`, so this gate remains open.
+Canonicals and sitemap already use the apex and must not change.
 
 ## CORS, health and failure isolation
 
@@ -161,8 +208,23 @@ real cards and real charges are outside I.4.
   not globally distributed across Render instances. This is temporarily acceptable only
   for a single instance and modest traffic; instance topology needs dashboard confirmation.
 - Repository scripts provide explicit `pg_dump`/restore operations. Provider-managed
-  backup retention and PITR availability were not inferable from PostgreSQL and require
-  Supabase dashboard confirmation. Restore drill remains I.6.
+  restore remains reserved for I.6.
+- The Supabase organization is on the Free plan. Current Supabase documentation says
+  automatic daily backups are provided on Pro, Team and Enterprise; Free projects should
+  make regular off-site logical exports. PITR is a paid add-on for Pro or higher and is
+  unavailable on the current plan. No scheduled off-site dump was proven. This is a v2.0
+  blocker until an automated, private backup with retention exists or the project is
+  upgraded and managed backup status is confirmed.
+
+### Action required for documents and backups
+
+In Render, attach a persistent disk and point `PROPOSTA_PDF_DIR` to an absolute directory
+under its mount, or adopt a private object-storage adapter in a later versioned change.
+Only files under the mount survive deploy/restart, and a disk constrains the service to
+one instance. Generate a synthetic PDF and verify it after a controlled redeploy; never
+use a client document. For PostgreSQL, schedule `scripts.backup_database` to private,
+encrypted off-site storage with an explicit retention policy. Do not leave dumps on
+Render's ephemeral filesystem.
 
 ## Secrets and logging
 
@@ -190,7 +252,7 @@ bodies, phone numbers or payment tokens.
 - Security plus budget idempotency: 5/5.
 - Frontend contracting, checkout, routing, Chat, Inbox and XSS suites: passed.
 - Ruff, compileall and `configure_mappers()`: passed.
-- Alembic current/head: one head, `b8c41e7d290a`.
+- Alembic current/head: one head, `93c2cf108202`.
 
 ## Deploy and post-deploy evidence
 
@@ -205,17 +267,22 @@ bodies, phone numbers or payment tokens.
   path returned 200. Checkout retained `X-Robots-Tag: noindex, nofollow, noarchive`.
 - CORS: official apex preflight returned 200 with the expected origin; an unrelated
   origin returned 400 without an allow-origin header.
-- PostgreSQL remains at the single repository head `b8c41e7d290a` after deploy.
+- PostgreSQL remains at the single repository head `93c2cf108202` after deploy.
+- Data API hardening commit `06bff80` passed `build`, `deploy`,
+  `report-build-status` and Cloudflare Pages checks. Connected I.2 and I.3 suites passed
+  after the privilege change; final health, public routes, checkout shell, Admin auth
+  surface, deterministic Chat, Groq Chat and CORS smokes passed.
 - `www` still returns 200 instead of redirecting to the apex domain.
 
 ## External gates before I.4 completion
 
-1. Confirm Render branch/root/build/start/auto-deploy, Python and persistent disk.
-2. Configure and validate Resend receiving DNS, webhook and signing secret.
-3. Configure/test Mercado Pago sandbox if test credentials are available.
-4. Configure the Cloudflare `www` to apex 308 redirect.
-5. Confirm Supabase exposed schemas, backups, retention and PITR.
-6. Resolve Data API grants before exposing a publishable Supabase key.
+1. Confirm Render branch/root/build/start/auto-deploy, Python, topology and disk.
+2. Configure persistent PDF storage and prove a synthetic file survives redeploy.
+3. Configure and validate Resend inbound, webhook, signing secret and controlled reply.
+4. Configure/test Mercado Pago sandbox with explicitly identified test credentials.
+5. Configure the Cloudflare `www` to apex 308 redirect and verify path/query.
+6. Configure automated off-site PostgreSQL backup and retention or upgrade Supabase;
+   current Free plan has no managed daily backup/PITR.
 7. Inspect Render and provider logs for the controlled smokes; public behavior and safe
    database telemetry passed, but dashboard log access was unavailable in this run.
 
@@ -225,6 +292,7 @@ bodies, phone numbers or payment tokens.
 - Resend inbound, webhook management, raw-body verification and threading docs.
 - Cloudflare Pages serving, headers and `www` redirect documentation.
 - Supabase RLS, API security and backup documentation/changelog.
+- Mercado Pago test credentials, test accounts and signed webhook documentation.
 
 I.5 remains responsible for global launch regression, enforced CSP decision and full
 deployed Lighthouse/security review. I.6 remains responsible for restore drill and final
