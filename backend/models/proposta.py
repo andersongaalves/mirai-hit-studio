@@ -90,6 +90,11 @@ class PropostaModel(Base):
         nullable=True,
     )
 
+    pdf_sha256 = Column(
+        String(64),
+        nullable=True,
+    )
+
     gerada_em = Column(
         DateTime(timezone=True),
         nullable=True,

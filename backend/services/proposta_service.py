@@ -140,7 +140,12 @@ def atualizar(db: Session, proposta_id: int, dados: PropostaUpdate):
         alteracoes["totais_json"] = calcular_totais(itens).model_dump(mode="json")
         alteracoes = {campo: valor for campo, valor in alteracoes.items() if getattr(proposta, campo) != valor}
         if alteracoes:
-            alteracoes.update(versao=proposta.versao + 1, pdf_path=None, gerada_em=None)
+            alteracoes.update(
+                versao=proposta.versao + 1,
+                pdf_path=None,
+                pdf_sha256=None,
+                gerada_em=None,
+            )
             crud.atualizar(db, proposta, alteracoes)
         resposta = _resposta(proposta)
         db.commit()

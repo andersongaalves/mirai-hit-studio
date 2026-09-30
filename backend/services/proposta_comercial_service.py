@@ -11,7 +11,7 @@ from crud import crud_proposta, crud_producao
 from models.enums.proposta import PropostaStatus as Status
 from core.enums import OrcamentoStatus
 from services import proposta_service as service, proposta_documento_service as documentos
-from services.documento_storage import LocalDocumentoStorage
+from services.documento_storage import DocumentoIndisponivel
 from services.email_service import EmailService
 from services.pdf_service import moeda
 from services import audit_service
@@ -22,6 +22,14 @@ logger = logging.getLogger(__name__)
 
 class EnvioIndisponivel(Exception):
     pass
+
+
+def _pdf_valido(data):
+    try:
+        reader = PdfReader(BytesIO(data), strict=True)
+        return bool(data.startswith(b"%PDF-") and not reader.is_encrypted and len(reader.pages))
+    except Exception:
+        return False
 
 
 def _carregar(db, proposta_id):
@@ -39,12 +47,23 @@ def _carregar(db, proposta_id):
 def _pdf_atual(db, model):
     if model.pdf_path and model.gerada_em and model.pdf_path.startswith(f"proposta-{model.id}-v{model.versao}-"):
         try:
-            data = LocalDocumentoStorage().ler(model.pdf_path)
-            reader = PdfReader(BytesIO(data), strict=True)
-            if data.startswith(b"%PDF-") and not reader.is_encrypted and len(reader.pages):
+            data = documentos.ler_atual(model)
+        except (DocumentoIndisponivel, service.PropostaConflito):
+            valido = False
+        else:
+            valido = _pdf_valido(data)
+        if valido:
+            if model.pdf_sha256:
                 return data
-        except Exception:
-            pass  # Missing/corrupt document must be regenerated before sending.
+            return documentos.persistir_bytes_sem_commit(db, model, data)
+    elif model.pdf_path and model.gerada_em and model.pdf_sha256:
+        try:
+            data = documentos.ler_atual(model)
+        except DocumentoIndisponivel:
+            raise EnvioIndisponivel("PDF persistido indisponivel; o envio foi interrompido.") from None
+        if _pdf_valido(data):
+            return data
+        raise EnvioIndisponivel("PDF persistido invalido; o envio foi interrompido.")
     return documentos.gerar_sem_commit(db, model)
 
 
