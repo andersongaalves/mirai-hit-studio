@@ -65,7 +65,7 @@ class CommercialPostgresI2Tests(unittest.TestCase):
         settings.MERCADO_PAGO_PUBLIC_KEY = "TEST-I2-NOT-REAL"
         settings.PUBLIC_FRONTEND_URL = "http://127.0.0.1:5500"
         with engine.connect() as connection:
-            if connection.execute(text("select version_num from alembic_version")).scalar_one() != "b8c41e7d290a":
+            if connection.execute(text("select version_num from alembic_version")).scalar_one() != "93c2cf108202":
                 raise RuntimeError("I.2 database is not at expected head")
             columns = {item["name"] for item in inspect(connection).get_columns("orcamentos")}
             if not {"idempotency_key", "request_hash"} <= columns:
