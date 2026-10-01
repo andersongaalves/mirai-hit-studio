@@ -1003,6 +1003,40 @@
     }
 }
 
+@media (min-width: 901px) {
+    .home-hero {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        align-content: center;
+        gap: 28px;
+        padding-block: 44px;
+        text-align: center;
+    }
+
+    .home-hero__symbol {
+        width: 170px;
+        margin-bottom: 18px;
+    }
+
+    .home-hero__lettering {
+        width: min(100%, 430px);
+    }
+
+    .home-hero__message {
+        max-width: 720px;
+        padding-top: 0;
+    }
+
+    .home-hero h1,
+    .home-hero__message > p:not(.home-kicker, .home-hero__slogan) {
+        margin-inline: auto;
+    }
+
+    .home-actions {
+        justify-content: center;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .home-page *,
     .home-page *::before,
