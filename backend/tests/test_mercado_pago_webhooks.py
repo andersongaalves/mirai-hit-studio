@@ -60,7 +60,7 @@ def payment_attempt(db, *, provider_order_id=None, budget_id=1, tipo='integral')
     return payment
 
 def signature(resource_id, request_id='request-1', timestamp='1726826886'):
-    manifest = f'id:{resource_id.lower()};request-id:{request_id};ts:{timestamp};'
+    manifest = f'id:{resource_id};request-id:{request_id};ts:{timestamp};'
     digest = hmac.new(
         config.settings.MERCADO_PAGO_WEBHOOK_SECRET.encode(),
         manifest.encode(), hashlib.sha256,

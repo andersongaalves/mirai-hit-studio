@@ -65,9 +65,7 @@ def verify_signature(
         raise WebhookSignatureError()
     if any(not SIGNATURE_PART_PATTERN.fullmatch(value) for value in digests):
         raise WebhookSignatureError()
-    manifest = (
-        f"id:{resource_id.lower()};request-id:{request_id};ts:{timestamps[0]};"
-    )
+    manifest = f"id:{resource_id};request-id:{request_id};ts:{timestamps[0]};"
     expected = hmac.new(
         secret.encode("utf-8"), manifest.encode("utf-8"), hashlib.sha256
     ).hexdigest()
