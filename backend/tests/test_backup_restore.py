@@ -1,16 +1,15 @@
 """Safe PostgreSQL backup/restore wrapper tests without a real database."""
 
-from datetime import datetime, timezone
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import patch
 
 from scripts.backup_database import backup_database
 from scripts.database_tools import DatabaseToolError, postgres_environment
 from scripts.restore_database import restore_database
-
 
 DATABASE_URL = "postgresql://mirai_user:secret-password@localhost:5432/mirai_test?sslmode=require"
 
@@ -89,13 +88,32 @@ class BackupRestoreTests(unittest.TestCase):
                 restore_database(
                     DATABASE_URL,
                     backup,
+                    environment="test",
+                    confirmation="RESTORE",
+                    schema="public",
+                    runner=success,
+                )
+                restore_database(
+                    DATABASE_URL,
+                    backup,
                     environment="production",
                     confirmation="RESTORE_PRODUCTION",
                     allow_production=True,
                     runner=success,
                 )
-                self.assertEqual(len(calls), 2)
+                self.assertEqual(len(calls), 3)
                 self.assertTrue(all("secret-password" not in " ".join(command) for command, _ in calls))
+                self.assertNotIn("--schema", calls[0][0])
+                self.assertEqual(calls[1][0][calls[1][0].index("--schema") + 1], "public")
+                with self.assertRaisesRegex(DatabaseToolError, "restore_schema_not_allowed"):
+                    restore_database(
+                        DATABASE_URL,
+                        backup,
+                        environment="test",
+                        confirmation="RESTORE",
+                        schema="private",
+                        runner=success,
+                    )
                 with self.assertRaisesRegex(DatabaseToolError, "pg_restore_failed"):
                     restore_database(
                         DATABASE_URL,

@@ -2,9 +2,9 @@
 
 import argparse
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 from scripts.database_tools import (
     DatabaseToolError,
@@ -12,7 +12,6 @@ from scripts.database_tools import (
     postgres_environment,
     require_tool,
 )
-
 
 PRODUCTION_ENVIRONMENTS = {"prod", "production"}
 ALLOWED_ENVIRONMENTS = {"dev", "development", "test", "staging", *PRODUCTION_ENVIRONMENTS}
@@ -25,6 +24,7 @@ def restore_database(
     environment: str,
     confirmation: str,
     allow_production: bool = False,
+    schema: str | None = None,
     runner=subprocess.run,
 ):
     if not database_url:
@@ -42,19 +42,22 @@ def restore_database(
     backup = existing_dump(backup_path)
     executable = require_tool("pg_restore")
     pg_environment, database_name = postgres_environment(database_url)
+    if schema is not None and schema != "public":
+        raise DatabaseToolError("restore_schema_not_allowed")
+    command = [
+        executable,
+        "--exit-on-error",
+        "--clean",
+        "--if-exists",
+        "--no-owner",
+        "--no-privileges",
+        "--no-password",
+    ]
+    if schema:
+        command.extend(["--schema", schema])
+    command.extend(["--dbname", database_name, str(backup)])
     result = runner(
-        [
-            executable,
-            "--exit-on-error",
-            "--clean",
-            "--if-exists",
-            "--no-owner",
-            "--no-privileges",
-            "--no-password",
-            "--dbname",
-            database_name,
-            str(backup),
-        ],
+        command,
         env=pg_environment,
         capture_output=True,
         text=True,
@@ -69,6 +72,7 @@ def main():
     parser.add_argument("--backup", required=True)
     parser.add_argument("--confirm-restore", required=True)
     parser.add_argument("--allow-production", action="store_true")
+    parser.add_argument("--schema", choices=("public",))
     args = parser.parse_args()
     try:
         restore_database(
@@ -77,6 +81,7 @@ def main():
             environment=os.getenv("APP_ENV", ""),
             confirmation=args.confirm_restore,
             allow_production=args.allow_production,
+            schema=args.schema,
         )
     except (DatabaseToolError, OSError):
         print("restore_failed: operacao abortada; confira ambiente, confirmacao, arquivo e ferramentas.", file=sys.stderr)

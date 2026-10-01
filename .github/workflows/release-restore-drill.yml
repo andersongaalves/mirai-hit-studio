@@ -212,10 +212,13 @@ jobs:
                     | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
                         --decrypt --output "$decrypted_file" "$encrypted_file"
                   pg_restore --list "$decrypted_file" >/dev/null
+                  non_public_schemas="$(pg_restore --list "$decrypted_file" \
+                    | awk '$4 == "SCHEMA" && $6 != "public" {count++} END {print count + 0}')"
                   echo "decrypted_file=$decrypted_file" >> "$GITHUB_OUTPUT"
                   echo "object_name=$(basename "$object_key")" >> "$GITHUB_OUTPUT"
                   echo "backup_timestamp=$backup_timestamp" >> "$GITHUB_OUTPUT"
                   echo "encrypted_size=$encrypted_size" >> "$GITHUB_OUTPUT"
+                  echo "non_public_schemas=$non_public_schemas" >> "$GITHUB_OUTPUT"
 
             - name: Restore into disposable PostgreSQL 17
               working-directory: backend
@@ -227,7 +230,8 @@ jobs:
                   set -euo pipefail
                   python -m scripts.restore_database \
                     --backup "${{ steps.archive.outputs.decrypted_file }}" \
-                    --confirm-restore RESTORE
+                    --confirm-restore RESTORE \
+                    --schema public
                   python -m scripts.validate_release_database --expect-data \
                     --snapshot "$RUNNER_TEMP/mirai-restore-before.json"
 
@@ -274,6 +278,7 @@ jobs:
                     echo "- Clean bootstrap: passed"
                     echo "- Downgrade/upgrade: passed"
                     echo "- SHA-256 and GPG: passed"
+                    echo "- Supabase-managed non-public schemas in archive: \`${{ steps.archive.outputs.non_public_schemas }}\`"
                     echo "- Restore and application smoke: passed"
                   } >> "$GITHUB_STEP_SUMMARY"
 
