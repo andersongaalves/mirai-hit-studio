@@ -1,5 +1,7 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Literal
+
 from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -50,6 +52,7 @@ class Settings(BaseSettings):
     MERCADO_PAGO_PUBLIC_KEY: str | None = None
     MERCADO_PAGO_WEBHOOK_SECRET: str | None = None
     MERCADO_PAGO_TIMEOUT_SECONDS: float = 10.0
+    MERCADO_PAGO_3DS_VALIDATION: Literal["never", "on_fraud_risk"] = "on_fraud_risk"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -188,6 +188,9 @@ with Session(engine) as db:
     payload = session.calls[0][2]['json']
     method = payload['transactions']['payments'][0]['payment_method']
     assert payload['total_amount'] == '150.25'
+    assert payload['config']['online']['transaction_security'] == {
+        'validation': 'on_fraud_risk', 'liability_shift': 'required'
+    }
     assert method == {'id': 'visa', 'type': 'credit_card', 'token': card_token, 'installments': 2}
     payment = db.get(PagamentoModel, result.payment_id)
     assert payment.status == 'aprovado' and payment.provider_order_id == 'ORD-1'
@@ -197,6 +200,26 @@ with Session(engine) as db:
         payment.provider_reference, payment.provider_idempotency_key,
     ])
     assert card_token not in persisted and 'access-token-sentinel' not in persisted
+
+never_session = FakeSession([FakeResponse(201, order(
+    status='processed', detail='accredited', method='visa', pix=False,
+))])
+MercadoPagoClient(
+    access_token='test-token', session=never_session,
+    transaction_security_validation='never',
+).create_card(
+    amount=Decimal('50.00'), external_reference='opaque-never',
+    idempotency_key='stable-never', payer=MercadoPagoPayer(email='test@testuser.com'),
+    card_token='temporary-never-token', payment_method_id='visa', installments=1,
+)
+assert 'config' not in never_session.calls[0][2]['json']
+
+try:
+    MercadoPagoClient(access_token='test-token', transaction_security_validation='invalid')
+except MercadoPagoValidationError:
+    pass
+else:
+    raise AssertionError('invalid 3DS validation accepted')
 
 for invalid in [0, -1, 25, True]:
     client = MercadoPagoClient(access_token='test-token', session=FakeSession([]))

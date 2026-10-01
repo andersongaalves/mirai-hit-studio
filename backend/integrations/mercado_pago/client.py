@@ -161,13 +161,27 @@ def _datetime(value) -> datetime | None:
 
 
 class MercadoPagoClient:
-    def __init__(self, access_token=None, *, timeout=None, session=None):
+    def __init__(
+        self,
+        access_token=None,
+        *,
+        timeout=None,
+        session=None,
+        transaction_security_validation=None,
+    ):
         self._access_token = access_token if access_token is not None else getattr(
             settings, "MERCADO_PAGO_ACCESS_TOKEN", None
         )
         self._timeout = timeout if timeout is not None else getattr(
             settings, "MERCADO_PAGO_TIMEOUT_SECONDS", 10.0
         )
+        self._transaction_security_validation = (
+            transaction_security_validation
+            if transaction_security_validation is not None
+            else getattr(settings, "MERCADO_PAGO_3DS_VALIDATION", "on_fraud_risk")
+        )
+        if self._transaction_security_validation not in {"never", "on_fraud_risk"}:
+            raise MercadoPagoValidationError()
         self._session = session or requests.Session()
 
     def ensure_configured(self):
@@ -268,7 +282,10 @@ class MercadoPagoClient:
             "payer": payer.payload(),
             "transactions": {"payments": [payment]},
         }
-        if transaction_security:
+        if (
+            transaction_security
+            and self._transaction_security_validation == "on_fraud_risk"
+        ):
             payload["config"] = {
                 "online": {
                     "transaction_security": {
