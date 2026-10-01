@@ -1,6 +1,6 @@
 # Mirai Hit Studio - Production Infrastructure I.4
 
-Audit date: 2026-09-29/30 (America/Sao_Paulo).
+Audit date: 2026-09-29 to 2026-10-01 (America/Sao_Paulo).
 
 ## Status
 
@@ -17,8 +17,8 @@ are not configured or cannot yet be verified. No secret value is recorded here.
 | Backend | Render | Python/Uvicorn, service URL `mirai-hit-studio.onrender.com` | runtime env | health healthy after cold start |
 | Database | Supabase PostgreSQL 17.6 | Alembic `93c2cf108202` | `DATABASE_URL` | connected, at head and Data API restricted |
 | Generative AI | Groq Responses API | `openai/gpt-oss-20b` | `AI_API_KEY` | production smoke and telemetry passed |
-| Email | Resend | sending domain plus inbound webhook | `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` | outbound domain present; inbound incomplete |
-| Payments | Mercado Pago | checkout and signed webhook | MP access/public/webhook keys | production endpoints currently unavailable (503) |
+| Email | Resend | sending domain plus inbound webhook | `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` | outbound and inbound validated |
+| Payments | Mercado Pago | Orders API checkout and signed webhook | MP access/public/webhook keys | TEST sandbox validated; production credentials not used |
 | Documents | private Supabase Storage adapter | bucket `propostas-pdf` | server-only Storage credentials | production persistence validated |
 | Analytics | consent-gated frontend adapter | provider ID configured outside this audit | provider-specific | no PII or admin metrics added |
 
@@ -132,19 +132,40 @@ console, not hardcoded.
 
 ## Mercado Pago
 
-The current production checkout config and webhook both return 503. Local configuration
-also has no access token, public key or webhook secret, so no sandbox or real payment was
-attempted. Provider test credentials may be added later for a controlled sandbox smoke;
-real cards and real charges are outside I.4.
+Gate E is closed using credentials explicitly identified as TEST. The Access Token and
+webhook secret remained server-only in Render; the Public Key was exposed only through the
+checkout configuration endpoint. No production credential or real payment instrument was
+used, and real money moved was BRL 0.
 
-### Action required in Mercado Pago and Render
+The following controlled Orders API scenarios were validated against the deployed checkout:
 
-In Your integrations, activate and identify test credentials explicitly; configure the
-test webhook URL `https://mirai-hit-studio.onrender.com/webhooks/mercado-pago` and its
-secret, then save the existing Mercado Pago environment names directly in Render. Do not
-paste values into chat. Only proven test credentials may exercise official test buyer and
-card flows for approved, rejected, webhook and reconciliation states. Ambiguous or
-production credentials must not be used for I.4 testing.
+- Pix TEST, proposal 61: payment 73 became `aprovado` and charge 62 became `paga`.
+- Card TEST `APRO`, proposal 64: payment 76 became `aprovado` and charge 65 became `paga`.
+- Card TEST `OTHE`, proposal 66: the provider returned the deterministic HTTP 402 rejection;
+  payment 78 became `recusado`, charge 67 remained `pendente`, the full BRL 50 balance
+  remained available and no automatic retry or reconciliation was scheduled.
+- A deterministic provider rejection now preserves sanitized provider status/detail/code
+  for operational logging and returns a coherent public rejected result instead of 503.
+
+The registered TEST webhook is
+`https://api.miraihitstudio.com.br/webhooks/mercado-pago` for `Order (Mercado Pago)`.
+An unsigned request returned 401 without persistence. A signed simulation returned 200 and
+created event 66 as `processed`, linked to payment 76. Processing performed an authoritative
+Orders API GET before reconciling PostgreSQL; the simulator payload was not treated as
+financial truth. The current official signature contract signs `data.id` with its original
+case, covered by the focused webhook suite and deployed in commit `dd322b0`.
+
+Finance Admin was checked against the three TEST fixtures and showed the same approved,
+paid, rejected and pending states stored in PostgreSQL. The financial schema persists no
+PAN, CVV or card token. Duplicate delivery, invalid-signature and reconciliation behavior
+remain covered by focused tests; an exact provider retry was not manufactured in the live
+simulator. External refund was not forced in Gate E because I.2 already covers the domain
+flow with a fake provider.
+
+`MERCADO_PAGO_3DS_VALIDATION=never` was used only to make the official deterministic TEST
+card scenarios reproducible. Before replacing TEST credentials with production credentials,
+restore `MERCADO_PAGO_3DS_VALIDATION=on_fraud_risk` and repeat the production-readiness
+check. No production charge is authorized by this sandbox validation.
 
 ## Cloudflare Pages and edge
 
@@ -254,6 +275,7 @@ bodies, phone numbers or payment tokens.
 - AI unit/evals: 81 passed, 2 opt-in skipped; offline evals 35/35.
 - Mercado Pago/webhooks: 16/16 after updating the obsolete expected Alembic head.
 - Checkout: 9/9.
+- Exact-case Mercado Pago webhook signature regression: 10/10.
 - Security plus budget idempotency: 5/5.
 - Frontend contracting, checkout, routing, Chat, Inbox and XSS suites: passed.
 - Ruff, compileall and `configure_mappers()`: passed.
@@ -273,6 +295,10 @@ bodies, phone numbers or payment tokens.
 - CORS: official apex preflight returned 200 with the expected origin; an unrelated
   origin returned 400 without an allow-origin header.
 - PostgreSQL remains at the single repository head `93c2cf108202` after deploy.
+- Mercado Pago TEST checkout passed Pix, approved card and deterministic rejected card
+  scenarios. The signed `Order (Mercado Pago)` webhook returned 200 and reconciled the
+  approved order through an authoritative provider lookup; Finance Admin matched PostgreSQL.
+- Mercado Pago signature hotfix `dd322b0` passed deploy and the live signed webhook smoke.
 - Data API hardening commit `06bff80` passed `build`, `deploy`,
   `report-build-status` and Cloudflare Pages checks. Connected I.2 and I.3 suites passed
   after the privilege change; final health, public routes, checkout shell, Admin auth
@@ -285,7 +311,8 @@ bodies, phone numbers or payment tokens.
 2. Gate B - private PDF Storage: confirmed.
 3. Gate C - automated external PostgreSQL backup: confirmed.
 4. Gate D - Resend inbound, signed webhook and threaded controlled reply: confirmed.
-5. Gate E - configure/test Mercado Pago sandbox with explicitly identified test credentials.
+5. Gate E - Mercado Pago TEST sandbox, signed webhook, authoritative reconciliation and
+   Finance Admin: confirmed.
 6. Gate F - configure the Cloudflare `www` to apex 308 redirect and verify path/query.
 7. Inspect Render and provider logs for the controlled smokes; public behavior and safe
    database telemetry passed, but dashboard log access was unavailable in this run.

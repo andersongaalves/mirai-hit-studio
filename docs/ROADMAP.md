@@ -130,9 +130,10 @@ criptografia AES-256, checksum e armazenamento privado no Cloudflare R2 com rete
 30 dias. Supabase Free continua sem PITR e o restore drill permanece reservado para I.6.
 Estado dos gates: A Render/runtime concluido; B PDF Storage concluido; C backup externo
 concluido; D Resend inbound concluido com webhook assinado, processamento HTTP 200 e
-resposta automatica no mesmo thread; E Mercado Pago sandbox pendente; F redirect `www`
-pendente. I.4 permanece parcialmente concluida e I.5 nao foi iniciada. Ver
-`PRODUCTION_INFRA_I4.md`.
+resposta automatica no mesmo thread; E Mercado Pago TEST concluido com Pix, cartao
+aprovado/recusado, webhook assinado, consulta autoritativa, reconciliacao, PostgreSQL e
+Finance Admin; F redirect `www` pendente. I.4 permanece parcialmente concluida e I.5 nao
+foi iniciada. Ver `PRODUCTION_INFRA_I4.md`.
 
 ## Proxima subfase
 
