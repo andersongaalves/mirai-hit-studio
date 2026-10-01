@@ -219,6 +219,7 @@ jobs:
                   echo "backup_timestamp=$backup_timestamp" >> "$GITHUB_OUTPUT"
                   echo "encrypted_size=$encrypted_size" >> "$GITHUB_OUTPUT"
                   echo "non_public_schemas=$non_public_schemas" >> "$GITHUB_OUTPUT"
+                  echo "restore_drill_archive object=$(basename "$object_key") timestamp=$backup_timestamp bytes=$encrypted_size non_public_schemas=$non_public_schemas"
 
             - name: Restore into disposable PostgreSQL 17
               working-directory: backend
