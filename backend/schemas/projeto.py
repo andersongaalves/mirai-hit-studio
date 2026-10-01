@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from schemas.validation import http_url
 
-
 ProjetoVertical = Literal["artists", "creators", "media_games"]
 ProjetoCaseType = Literal["client_case", "demo", "concept_project", "study"]
 SEGMENTO_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
@@ -24,6 +23,8 @@ class ProjetoBase(BaseModel):
     vertical: ProjetoVertical | None = None
     segmentos_json: list[str] = Field(default_factory=list, max_length=20)
     case_type: ProjetoCaseType | None = None
+    show_mix_comparison_on_landing: bool = False
+    landing_order: int | None = Field(default=None, ge=1, le=4)
 
     _urls = field_validator("link_audio", "link_capa")(http_url)
 
@@ -55,4 +56,17 @@ class ProjetoUpdate(ProjetoBase):
 
 class ProjetoResponse(ProjetoBase):
     id: int
+    audio_before_url: str | None = None
+    audio_after_url: str | None = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProjetoMixComparisonPublic(BaseModel):
+    id: int
+    titulo: str
+    artista: str
+    link_capa: str
+    link_audio: str
+    audio_before_url: str
+    audio_after_url: str
+    landing_order: int

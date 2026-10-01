@@ -1020,6 +1020,40 @@
                                     rows="3"
                                 ></textarea>
                             </div>
+
+                            <fieldset class="portfolio-mix-comparison">
+                                <legend>Comparação A/B</legend>
+                                <div class="portfolio-mix-comparison__grid">
+                                    <div class="admin-form-field portfolio-audio-field">
+                                        <label for="proj_audio_before">Áudio antes</label>
+                                        <input id="proj_audio_before" type="file" accept="audio/mpeg,.mp3" />
+                                        <audio id="proj_audio_before_preview" controls preload="metadata" hidden></audio>
+                                        <button id="proj_audio_before_remove" class="btn-small btn-danger" type="button" hidden>Remover áudio antes</button>
+                                    </div>
+                                    <div class="admin-form-field portfolio-audio-field">
+                                        <label for="proj_audio_after">Áudio depois</label>
+                                        <input id="proj_audio_after" type="file" accept="audio/mpeg,.mp3" />
+                                        <audio id="proj_audio_after_preview" controls preload="metadata" hidden></audio>
+                                        <button id="proj_audio_after_remove" class="btn-small btn-danger" type="button" hidden>Remover áudio depois</button>
+                                    </div>
+                                </div>
+                                <div class="portfolio-mix-comparison__settings">
+                                    <label class="admin-checkbox" for="proj_mix_landing">
+                                        <input id="proj_mix_landing" type="checkbox" />
+                                        Exibir comparação na landing
+                                    </label>
+                                    <div class="admin-form-field">
+                                        <label for="proj_mix_order">Ordem</label>
+                                        <select id="proj_mix_order">
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                            <option value="3">3</option>
+                                            <option value="4">4</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <small id="proj_mix_help" class="admin-field-help">É necessário adicionar os áudios Antes e Depois para destacar este projeto.</small>
+                            </fieldset>
                         </div>
 
                         <div
