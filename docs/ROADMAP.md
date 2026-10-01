@@ -2,16 +2,16 @@
 
 ## Status
 
-Fase atual: I.4 parcialmente concluida; deploy controlado e smokes publicos aprovados,
-com gates externos de infraestrutura pendentes.
+Fase atual: I.5 concluida; regressao global e smokes de release aprovados,
+com a limpeza final de release reservada para I.6.
 
-Ultimo checkpoint enviado: CP-H.
+Ultimo checkpoint enviado: CP-I.5.
 
-Checkpoint atual: bloco I em andamento.
+Checkpoint atual: I.5 concluida.
 
-Proximo checkpoint: definido pelo bloco I apos conclusao dos gates de release.
+Proximo checkpoint: CP-I.6 apos clean bootstrap, restore drill e checklist final.
 
-Proximo push: somente apos a proxima entrega versionada do bloco I.
+Proximo push: apos I.6.
 
 Ultimo deploy auditado: `b44f3d6` (`chore: prepara infraestrutura de producao`).
 
@@ -133,8 +133,17 @@ concluido; D Resend inbound concluido com webhook assinado, processamento HTTP 2
 resposta automatica no mesmo thread; E Mercado Pago TEST concluido com Pix, cartao
 aprovado/recusado, webhook assinado, consulta autoritativa, reconciliacao, PostgreSQL e
 Finance Admin; F redirect `www` para apex concluido com 308 unico e preservacao de
-path/query. I.5 nao foi iniciada. Ver `PRODUCTION_INFRA_I4.md`.
+path/query. I.5 foi concluida. Ver `PRODUCTION_INFRA_I4.md`.
 
 ## Proxima subfase
 
-I.5 - regressao global de lancamento e seguranca implantada.
+I.5 concluida - regressao global da v2.0 executada. Backend, frontend, migrations,
+fluxo comercial, pagamentos, IA, e-mail, seguranca, SEO, redirects, acessibilidade,
+performance, mobile e producao passaram os smokes. Foram corrigidos somente fixtures
+de teste desatualizadas para o case exato da assinatura Mercado Pago, a head Alembic
+`a7d4e9c2b610` e o carregamento do CSS administrativo nos testes responsivos. Ruff
+global continua com apontamentos legados fora do escopo; os arquivos alterados nesta
+regressao passam a checagem focada. CSP permanece report-only ate revisao de violacoes.
+
+I.6 - clean bootstrap, downgrade decision/validation, restore drill, cleanup final,
+checklist de release, smoke final e tag `v2.0.0`.

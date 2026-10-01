@@ -326,6 +326,29 @@ bodies, phone numbers or payment tokens.
 - Supabase RLS, API security and backup documentation/changelog.
 - Mercado Pago test credentials, test accounts and signed webhook documentation.
 
-I.5 remains responsible for global launch regression, enforced CSP decision and full
-deployed Lighthouse/security review. I.6 remains responsible for restore drill and final
-release cleanup.
+### I.5 global release regression
+
+I.5 passed on 2026-10-01 without application-runtime changes. The backend regression
+completed with 169 tests passing and 12 skipped; the browser contract that initially
+could not find the temporary Playwright runtime was rerun and passed, for 170 passed
+and 12 skipped across the executed set. Public/admin/checkout/Chat/analytics, security,
+SEO, accessibility, responsive and proposal flows passed in the existing browser suite.
+
+The local performance regression used Edge headless and the existing H.3 harness. It
+covered Home, Artists, Creators, Media & Games, Portfolio, contracting and Checkout on
+mobile and desktop. No severe LCP, CLS, JS, network or console regression was found.
+
+Production smokes confirmed `/health` 200, public indexable routes 200, canonical apex
+URLs, `www` to apex in one 308 hop, query preservation, checkout noindex, admin noindex,
+expected CORS behavior and essential security headers. No payment was executed and real
+money moved during I.5 was BRL 0.
+
+The only test changes align stale fixtures with the exact-case Mercado Pago signature,
+the current Alembic head `a7d4e9c2b610`, and the administrative stylesheet used by
+responsive admin fixtures. No migration, runtime application code, or production data
+was changed. The full Ruff baseline still reports legacy findings outside this release
+regression; focused checks for the changed Python test files pass. CSP remains
+report-only and is a deliberate release follow-up pending violation review.
+
+I.6 remains responsible for clean bootstrap, downgrade validation, the encrypted R2
+restore drill and final release cleanup/tagging.

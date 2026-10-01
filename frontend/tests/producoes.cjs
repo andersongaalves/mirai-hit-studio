@@ -22,7 +22,7 @@ async function staticResponse(route) {
     }
 }
 
-const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/main.css"></head><body>
+const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/pages/admin.css"></head><body>
 <input id="producoes-search"><select id="producoes-status-filter"><option value="todos">Todos</option><option value="aguardando_inicio">Aguardando</option><option value="em_producao">Produção</option><option value="revisao">Revisão</option><option value="finalizado">Finalizado</option><option value="entregue">Entregue</option></select><select id="producoes-prazo-filter"><option value="todos">Todos</option><option value="atrasado">Atrasado</option><option value="proximo">Próximo</option><option value="sem_prazo">Sem prazo</option></select><button id="producoes-clear-filters" class="hidden">Limpar filtros</button>
 <p id="producoes-summary"></p>
 <div id="producoes-list"></div>

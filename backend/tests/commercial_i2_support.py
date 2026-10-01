@@ -80,7 +80,7 @@ def signed_webhook(http, identifier, secret, event_id=None, *, request_id=None,
                    timestamp=None, **body_fields):
     request_id = request_id or 'i2-' + uuid4().hex
     timestamp = timestamp or str(int(time.time()))
-    manifest = f'id:{identifier.lower()};request-id:{request_id};ts:{timestamp};'
+    manifest = f'id:{identifier};request-id:{request_id};ts:{timestamp};'
     digest = hmac.new(secret.encode(), manifest.encode(), hashlib.sha256).hexdigest()
     return http.post('/webhooks/mercado-pago', params={'data.id': identifier, 'type': 'order'},
                      headers={'x-request-id': request_id, 'x-signature': f'ts={timestamp},v1={digest}'},
