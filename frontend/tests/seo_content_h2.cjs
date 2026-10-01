@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const frontend = path.resolve(__dirname, "..");
 const pages = [
-    { file: "index.html", title: "Produção musical e áudio | Mirai Hit Studio", h1: "Produção musical e áudio com identidade para artistas, criadores e projetos digitais", terms: ["artistas", "criadores", "projetos digitais"] },
+    { file: "index.html", title: "Produção musical e áudio | Mirai Hit Studio", h1: "Criando o som do futuro.", terms: ["artistas", "criadores", "projetos digitais"] },
     { file: "artists.html", title: "Produção musical, mixagem e masterização para artistas | Mirai Hit Studio", h1: "Produção musical para artistas", terms: ["instrumental", "mixagem", "masterização"] },
     { file: "creators.html", title: "Identidade sonora e música para criadores | Mirai Hit Studio", h1: "Música e identidade sonora para criadores", terms: ["trilhas", "intros", "stingers"] },
     { file: "media-games.html", title: "Trilha sonora e sound design para games | Mirai Hit Studio", h1: "Trilha sonora e design sonoro para mídia e games", terms: ["trilha sonora", "sound design", "games"] },
@@ -18,7 +18,8 @@ for (const page of pages) {
     const html = pageHtml.get(page.file);
     const title = html.match(/<title>([^<]+)<\/title>/i)?.[1];
     const description = html.match(/<meta name="description" content="([^"]+)"/i)?.[1];
-    const h1s = [...html.matchAll(/<h1(?:\s[^>]*)?>([^<]+)<\/h1>/gi)].map((match) => match[1].trim());
+    const h1s = [...html.matchAll(/<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/gi)]
+        .map((match) => match[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
 
     assert.equal(title, page.title, `${page.file} must have its canonical content title`);
     assert.ok(description && description.length >= 70, `${page.file} must have a useful description`);
