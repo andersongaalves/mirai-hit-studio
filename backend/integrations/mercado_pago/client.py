@@ -16,6 +16,13 @@ API_BASE_URL = "https://api.mercadopago.com"
 SAFE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 PAYMENT_METHOD_PATTERN = re.compile(r"^[a-z0-9_-]{1,40}$")
 PROVIDER_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,200}$")
+PROVIDER_CODE_PATTERN = re.compile(r"[^A-Za-z0-9_.-]+")
+EMAIL_PATTERN = re.compile(r"\b[^\s@]+@[^\s@]+\b")
+LONG_NUMBER_PATTERN = re.compile(r"(?<!\d)(?:\d[ -]?){9,19}(?!\d)")
+SENSITIVE_VALUE_PATTERN = re.compile(
+    r"(?i)\b(access[_ -]?token|authorization|card[_ -]?token|token|pan|cvv)\b"
+    r"\s*[:=]\s*[^\s,;]+"
+)
 
 
 class MercadoPagoError(Exception):
@@ -111,7 +118,7 @@ class PixPaymentData:
 
 @dataclass(frozen=True)
 class ProviderPaymentResult:
-    provider_id: str
+    provider_id: str | None
     external_reference: str | None
     currency: str | None
     status: PagamentoStatus
@@ -122,6 +129,72 @@ class ProviderPaymentResult:
     approved_at: datetime | None
     pix: PixPaymentData | None = None
     challenge_url: str | None = None
+    provider_code: str | None = None
+    provider_message: str | None = None
+
+
+@dataclass(frozen=True)
+class _ProviderFailure:
+    deterministic: bool
+    code: str | None
+    message: str | None
+    status_detail: str | None
+
+
+def _safe_provider_code(value) -> str | None:
+    if not isinstance(value, (str, int)):
+        return None
+    safe = PROVIDER_CODE_PATTERN.sub("_", str(value).strip())[:100]
+    return safe or None
+
+
+def _safe_provider_message(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    safe = " ".join(value.split())
+    safe = SENSITIVE_VALUE_PATTERN.sub(r"\1=[redacted]", safe)
+    safe = EMAIL_PATTERN.sub("[redacted-email]", safe)
+    safe = LONG_NUMBER_PATTERN.sub("[redacted-number]", safe)
+    return safe[:240] or None
+
+
+def _provider_failure(data) -> _ProviderFailure:
+    if not isinstance(data, dict):
+        return _ProviderFailure(False, None, None, None)
+    errors = data.get("errors")
+    error = errors[0] if isinstance(errors, list) and errors else errors
+    error = error if isinstance(error, dict) else {}
+    details = error.get("details")
+    detail = details[0] if isinstance(details, list) and details else details
+    detail = detail if isinstance(detail, dict) else {}
+    code = _safe_provider_code(
+        data.get("code") or error.get("code") or detail.get("code") or data.get("error")
+    )
+    message = _safe_provider_message(
+        error.get("message") or detail.get("message") or data.get("message")
+    )
+    status_detail = _safe_provider_code(
+        data.get("status_detail")
+        or error.get("status_detail")
+        or detail.get("status_detail")
+        or detail.get("code")
+    )
+    normalized = {
+        str(_safe_provider_code(value) or "").lower()
+        for value in (
+            data.get("status"),
+            data.get("code"),
+            data.get("error"),
+            error.get("code"),
+            detail.get("code"),
+            status_detail,
+        )
+    }
+    deterministic = bool(
+        normalized & {"failed", "rejected"}
+        or any(value.startswith("cc_rejected_") for value in normalized)
+    )
+    return _ProviderFailure(deterministic, code, message, status_detail)
 
 
 def map_provider_status(status, status_detail=None) -> PagamentoStatus:
@@ -300,7 +373,13 @@ class MercadoPagoClient:
             json=payload,
             idempotency_key=idempotency_key,
         )
-        return self._parse_result(data)
+        return self._parse_result(
+            data,
+            fallback_external_reference=external_reference,
+            fallback_amount=amount_string,
+            fallback_method=payment.get("payment_method", {}).get("id"),
+            allow_unidentified_rejection=True,
+        )
 
     def _request(self, method, path, *, json=None, idempotency_key=None):
         self.ensure_configured()
@@ -345,7 +424,9 @@ class MercadoPagoClient:
             if not isinstance(data, dict):
                 raise MercadoPagoInvalidResponse(http_status=status)
             return data
-        if status == 402 and isinstance(data, dict) and data.get("id"):
+        if status == 402 and isinstance(data, dict) and (
+            data.get("id") or _provider_failure(data).deterministic
+        ):
             return data
         if status in {400, 402, 422}:
             raise MercadoPagoValidationError(http_status=status)
@@ -360,9 +441,18 @@ class MercadoPagoClient:
             raise MercadoPagoUnavailable(http_status=status)
         raise MercadoPagoError(http_status=status)
 
-    def _parse_result(self, data) -> ProviderPaymentResult:
+    def _parse_result(
+        self,
+        data,
+        *,
+        fallback_external_reference=None,
+        fallback_amount=None,
+        fallback_method=None,
+        allow_unidentified_rejection=False,
+    ) -> ProviderPaymentResult:
+        failure = _provider_failure(data)
         try:
-            provider_id = data["id"]
+            provider_id = data.get("id")
             payments = data.get("transactions", {}).get("payments", [])
             payment = payments[0] if payments else {}
             order_status = data.get("status")
@@ -379,19 +469,31 @@ class MercadoPagoClient:
                 status_detail = payment_detail
             else:
                 provider_status = payment_status or order_status
-                status_detail = payment_detail or order_detail
-            amount = _money(payment.get("amount", data.get("total_amount")))
+                if failure.deterministic and str(provider_status or "").lower() not in {
+                    "failed",
+                    "rejected",
+                }:
+                    provider_status = "failed"
+                status_detail = payment_detail or order_detail or failure.status_detail
+            amount = _money(
+                payment.get("amount", data.get("total_amount", fallback_amount))
+            )
             method_data = payment.get("payment_method") or {}
-            method = method_data.get("id")
+            method = method_data.get("id") or fallback_method
         except (KeyError, IndexError, TypeError, AttributeError):
             raise MercadoPagoInvalidResponse() from None
-        if (
-            not isinstance(provider_id, str)
-            or not PROVIDER_ID_PATTERN.fullmatch(provider_id)
-            or provider_status is None
-        ):
-            raise MercadoPagoInvalidResponse()
         normalized_status = map_provider_status(provider_status, status_detail)
+        valid_provider_id = isinstance(provider_id, str) and PROVIDER_ID_PATTERN.fullmatch(
+            provider_id
+        )
+        unidentified_rejection = (
+            allow_unidentified_rejection
+            and failure.deterministic
+            and normalized_status == PagamentoStatus.RECUSADO
+            and provider_id is None
+        )
+        if not (valid_provider_id or unidentified_rejection) or provider_status is None:
+            raise MercadoPagoInvalidResponse()
         pix = None
         if method == "pix":
             pix = PixPaymentData(
@@ -416,8 +518,10 @@ class MercadoPagoClient:
                 challenge_url = candidate_url
         return ProviderPaymentResult(
             provider_id=provider_id,
-            external_reference=str(data.get("external_reference"))[:64]
-            if data.get("external_reference") is not None
+            external_reference=str(
+                data.get("external_reference", fallback_external_reference)
+            )[:64]
+            if data.get("external_reference", fallback_external_reference) is not None
             else None,
             currency=str(
                 data.get("currency")
@@ -443,4 +547,6 @@ class MercadoPagoClient:
             else None,
             pix=pix,
             challenge_url=challenge_url,
+            provider_code=failure.code,
+            provider_message=failure.message,
         )

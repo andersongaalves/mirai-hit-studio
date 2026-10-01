@@ -102,6 +102,7 @@ assert map_provider_status('future_status') == PagamentoStatus.PENDENTE
 
 cases = [
     (400, MercadoPagoValidationError, {}),
+    (402, MercadoPagoValidationError, {}),
     (401, MercadoPagoAuthError, {}),
     (403, MercadoPagoAuthError, {}),
     (409, MercadoPagoConflict, {}),

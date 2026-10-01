@@ -194,7 +194,10 @@ def enviar_cartao(
         error.payment_id = payment.id
         _log_error(error, payment, request_id)
         raise
-    return PaymentExecution(payment.id, _persistir_resultado(db, payment.id, result))
+    persisted = _persistir_resultado(db, payment.id, result)
+    if persisted.status == PagamentoStatus.RECUSADO:
+        _log_rejection(persisted, payment, request_id)
+    return PaymentExecution(payment.id, persisted)
 
 
 def consultar_order(provider_id: str, *, client: MercadoPagoClient | None = None):
@@ -308,8 +311,12 @@ def _persistir_resultado(db: Session, payment_id: int, result: ProviderPaymentRe
     if payment.provider_order_id and payment.provider_order_id != result.provider_id:
         db.rollback()
         raise financial_service.FinanceiroConflito("Tentativa vinculada a outro pagamento provider.")
+    if result.provider_id is None and result.status != PagamentoStatus.RECUSADO:
+        db.rollback()
+        raise financial_service.FinanceiroConflito("Resultado provider sem identificador.")
     try:
-        payment.provider_order_id = result.provider_id
+        if result.provider_id:
+            payment.provider_order_id = result.provider_id
         payment.status = result.status.value
         if result.method:
             payment.metodo = result.method
@@ -491,5 +498,24 @@ def _log_error(error: MercadoPagoError, payment: PagamentoModel, request_id: str
         payment.id,
         payment.cobranca_id,
         error.http_status,
+        request_id,
+    )
+
+
+def _log_rejection(
+    result: ProviderPaymentResult,
+    payment: PagamentoModel,
+    request_id: str | None,
+):
+    logger.info(
+        "mercado_pago_payment_rejected payment_id=%s cobranca_id=%s provider_order_id=%s "
+        "provider_status=%s status_detail=%s provider_code=%s provider_message=%s request_id=%s",
+        payment.id,
+        payment.cobranca_id,
+        result.provider_id,
+        result.provider_status,
+        result.status_detail,
+        result.provider_code,
+        result.provider_message,
         request_id,
     )

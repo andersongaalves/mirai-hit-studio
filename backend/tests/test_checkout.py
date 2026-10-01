@@ -249,21 +249,42 @@ with Session(engine) as db:
     retry = accepted_charge(db, 3)
     class RetrySession(FakeSession):
         def request(self, method, url, **kwargs):
-            reference = kwargs['json']['external_reference']
-            status, detail, provider_id = (
-                ('rejected', 'cc_rejected_other_reason', 'ORD-rejected')
-                if not self.calls else ('processed', 'accredited', 'ORD-approved')
-            )
             self.calls.append((method, url, kwargs))
-            return FakeResponse(402 if status == 'rejected' else 201, order(
-                amount='150.25', status=status, detail=detail, method='visa', pix=False,
-                provider_id=provider_id, external_reference=reference))
+            if len(self.calls) == 1:
+                return FakeResponse(402, {'status': 402, 'code': 'failed', 'errors': [{
+                    'code': 'failed',
+                    'message': 'Payment failed for buyer@example.com card 1234567890123',
+                    'details': [{'code': 'cc_rejected_other_reason'}],
+                }]})
+            reference = kwargs['json']['external_reference']
+            return FakeResponse(201, order(
+                amount='150.25', status='processed', detail='accredited', method='visa', pix=False,
+                provider_id='ORD-approved', external_reference=reference))
     retry_provider = MercadoPagoClient(access_token='secret', session=RetrySession([]))
     retry_client = checkout_app(db, retry_provider)
     payload = {'payment_option':'integral', 'card_token':'token-one',
                'payment_method_id':'visa', 'installments':1}
-    first = retry_client.post(f'/checkout/{retry.referencia_externa}/card', json=payload)
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    previous_level = mp_service.logger.level
+    mp_service.logger.setLevel(logging.INFO)
+    mp_service.logger.addHandler(handler)
+    try:
+        first = retry_client.post(f'/checkout/{retry.referencia_externa}/card', json=payload)
+    finally:
+        mp_service.logger.removeHandler(handler)
+        mp_service.logger.setLevel(previous_level)
     assert first.status_code == 200 and first.json()['status'] == 'rejected'
+    first_attempt = db.query(PagamentoModel).filter(PagamentoModel.cobranca_id == retry.id).one()
+    assert first_attempt.status == 'recusado' and first_attempt.provider_order_id is None
+    assert retry.status == 'pendente' and first_attempt.reconciliation_status is None
+    safe_log = stream.getvalue()
+    assert 'provider_status=failed' in safe_log
+    assert 'status_detail=cc_rejected_other_reason' in safe_log
+    assert 'provider_code=failed' in safe_log
+    assert '[redacted-email]' in safe_log and '[redacted-number]' in safe_log
+    assert 'buyer@example.com' not in safe_log and '1234567890123' not in safe_log
+    assert len(retry_provider._session.calls) == 1
     payload['card_token'] = 'token-two'
     second = retry_client.post(f'/checkout/{retry.referencia_externa}/card', json=payload)
     assert second.status_code == 200 and second.json()['status'] == 'approved'
