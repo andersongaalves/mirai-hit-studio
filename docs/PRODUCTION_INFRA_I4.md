@@ -352,3 +352,39 @@ report-only and is a deliberate release follow-up pending violation review.
 
 I.6 remains responsible for clean bootstrap, downgrade validation, the encrypted R2
 restore drill and final release cleanup/tagging.
+
+### I.6 release recovery validation
+
+I.6 passed on 2026-10-01 in GitHub Actions run `36884031702` against commit `5313f61`.
+The run used two isolated PostgreSQL 17 databases and never connected to the production
+database. Clean bootstrap created the current model schema, stamped the single Alembic
+head `a7d4e9c2b610`, and left `alembic upgrade head` as a no-op. The latest nullable
+`propostas.pdf_sha256` migration was downgraded one revision and upgraded back to head
+on the empty disposable database. This downgrade is safe for the tested empty release
+schema; it is not the data rollback strategy for production.
+
+The drill selected encrypted object `mirai_2026-10-01_100403.dump.gpg`, timestamp
+`2026-10-01T10:05:02Z`, with 85,732 encrypted bytes. SHA-256 verification, GPG AES-256
+decryption and `pg_restore` 17.11 archive inspection passed. The archive contained eight
+non-public Supabase-managed schemas, so the application schema `public` was restored to
+vanilla PostgreSQL 17 through the guarded `APP_ENV=test` restore path. The original R2
+object and its 30-day lifecycle were not modified.
+
+The restored database matched Alembic head and SQLAlchemy metadata. Foreign keys,
+uniques, indexes, validated constraints, AI RLS and `Numeric(12,2)` finance columns
+passed. Sanitized counts were: one user, three clients, twelve budgets, nine proposals,
+eleven productions, eight charges, eight payments, sixteen audit logs and seven services.
+Approved-payment/charge consistency passed. Application `/health` and public service
+reads succeeded; aggregate snapshots before and after were identical, so the smoke added
+no rows. The complete run took about 88 seconds.
+
+Cleanup removed both disposable databases, the decrypted dump, encrypted local copy,
+checksum, snapshots, logs and temporary credentials with the ephemeral runner. No dump,
+SQL export, `.env`, credential or customer data entered Git. Production was not written,
+no external provider action was invoked and real money moved was BRL 0.
+
+For v2.0, rollback of a serious data incident is: verified encrypted backup -> restore
+to a new isolated database -> consistency and application smoke -> controlled cutover.
+Historical Alembic downgrades are not assumed to be universally lossless and must not be
+improvised on production. Known release follow-ups remain CSP enforcement after report
+review and the pre-existing global Ruff baseline; neither was expanded during I.6.

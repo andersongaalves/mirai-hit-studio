@@ -2,16 +2,15 @@
 
 ## Status
 
-Fase atual: I.5 concluida; regressao global e smokes de release aprovados,
-com a limpeza final de release reservada para I.6.
+Fase atual: I.6 concluida; recuperacao, bootstrap e candidata de release validados.
 
-Ultimo checkpoint enviado: CP-I.5.
+Ultimo checkpoint enviado: CP-I.6.
 
-Checkpoint atual: I.5 concluida.
+Checkpoint atual: candidata `v2.0.0` pronta para tag.
 
-Proximo checkpoint: CP-I.6 apos clean bootstrap, restore drill e checklist final.
+Proximo checkpoint: nenhum; release `v2.0.0`.
 
-Proximo push: apos I.6.
+Proximo push: somente trabalho posterior ao release.
 
 Ultimo deploy auditado: `b44f3d6` (`chore: prepara infraestrutura de producao`).
 
@@ -145,5 +144,10 @@ de teste desatualizadas para o case exato da assinatura Mercado Pago, a head Ale
 global continua com apontamentos legados fora do escopo; os arquivos alterados nesta
 regressao passam a checagem focada. CSP permanece report-only ate revisao de violacoes.
 
-I.6 - clean bootstrap, downgrade decision/validation, restore drill, cleanup final,
-checklist de release, smoke final e tag `v2.0.0`.
+I.6 concluida - clean bootstrap e downgrade/upgrade da ultima revision passaram em
+PostgreSQL 17 descartavel. O backup real criptografado do R2 teve SHA-256 e GPG
+validados, o schema de aplicacao `public` foi restaurado em outro banco descartavel e
+a aplicacao passou em `/health` e leitura publica sem alterar as contagens. Cleanup do
+runner passou; producao permaneceu sem escrita. Rollback de dados da v2.0 usa restore
+verificado em banco novo e cutover controlado, nao downgrade destrutivo improvisado.
+Run de evidencia: `36884031702`; head Alembic: `a7d4e9c2b610`.

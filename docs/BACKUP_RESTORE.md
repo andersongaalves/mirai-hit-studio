@@ -34,6 +34,18 @@ $env:APP_ENV = "test"
 python -m scripts.restore_database --backup D:\backups\mirai\mirai_YYYY-MM-DD_HHMMSS.dump --confirm-restore RESTORE
 ```
 
+Para um dump completo originado no Supabase e um PostgreSQL 17 descartavel sem os
+servicos gerenciados do provedor, restaure somente o schema da aplicacao:
+
+```powershell
+$env:APP_ENV = "test"
+python -m scripts.restore_database --backup D:\backups\mirai\mirai_YYYY-MM-DD_HHMMSS.dump --confirm-restore RESTORE --schema public
+```
+
+O filtro `public` evita tentar recriar schemas gerenciados como `auth` e `storage` em
+PostgreSQL vanilla. Ele nao substitui a politica separada de restore dos PDFs no
+Supabase Storage nem deve ser usado para afirmar recuperacao desses objetos.
+
 Depois valide:
 
 ```powershell
@@ -70,3 +82,13 @@ Se qualquer checagem falhar, aborte. Nao tente reparar automaticamente um restor
 - Verificar retencao, criptografia e acesso no storage externo.
 
 Backup existente sem restore testado possui valor limitado. Banco e object storage devem ter rotinas independentes.
+
+## Drill automatizado da release
+
+O workflow manual `.github/workflows/release-restore-drill.yml` usa dois bancos
+PostgreSQL 17 efemeros: um para clean bootstrap/downgrade e outro para restaurar o
+backup real mais recente de `daily/`. Antes do restore ele exige checksum SHA-256,
+descriptografia GPG e leitura do custom archive pelo `pg_restore` 17. O smoke final
+verifica schema, constraints, indices, precisao financeira, RLS, consistencia agregada,
+`/health` e leitura de servicos sem imprimir linhas ou PII. Bancos e arquivos temporarios
+sao removidos mesmo em falha; o objeto original do R2 nunca e alterado.
