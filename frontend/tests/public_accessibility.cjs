@@ -16,7 +16,7 @@ const aliases = {
 };
 const contentTypes = {
     '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript',
-    '.png': 'image/png', '.webp': 'image/webp', '.ttf': 'font/ttf',
+    '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ttf': 'font/ttf',
 };
 
 async function staticResponse(route) {
