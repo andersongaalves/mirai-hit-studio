@@ -76,7 +76,7 @@ def _validate_schema(connection):
 
     for table_name, table in Base.metadata.tables.items():
         columns = {item["name"]: item for item in inspector.get_columns(table_name, schema="public")}
-        if set(table.columns) - set(columns):
+        if {column.name for column in table.columns} - set(columns):
             raise ReleaseDatabaseError("release_schema_missing_columns")
 
         actual_foreign_keys = {
