@@ -120,7 +120,7 @@ I.3 concluida - E2E IA e e-mail validado com Groq live, tool calling, guardrails
 grounded context e jornadas conectadas. Resend live inbound/outbound foi transferido
 para I.4 por depender da infraestrutura publica e do signing secret.
 
-I.4 parcialmente concluida - release candidate e deploy em `main` validados; site,
+I.4 concluida - release candidate e deploy em `main` validados; site,
 backend, PostgreSQL, CORS, Checkout shell e Groq em producao passaram nos smokes.
 Data API foi restringida pela migration `93c2cf108202`, com regressao conectada aprovada.
 O painel Render foi confirmado e o adapter privado de PDFs no Supabase Storage foi
@@ -132,9 +132,9 @@ Estado dos gates: A Render/runtime concluido; B PDF Storage concluido; C backup 
 concluido; D Resend inbound concluido com webhook assinado, processamento HTTP 200 e
 resposta automatica no mesmo thread; E Mercado Pago TEST concluido com Pix, cartao
 aprovado/recusado, webhook assinado, consulta autoritativa, reconciliacao, PostgreSQL e
-Finance Admin; F redirect `www` pendente. I.4 permanece parcialmente concluida e I.5 nao
-foi iniciada. Ver `PRODUCTION_INFRA_I4.md`.
+Finance Admin; F redirect `www` para apex concluido com 308 unico e preservacao de
+path/query. I.5 nao foi iniciada. Ver `PRODUCTION_INFRA_I4.md`.
 
 ## Proxima subfase
 
-I.4 - concluir gates externos de infraestrutura e integracoes de producao.
+I.5 - regressao global de lancamento e seguranca implantada.

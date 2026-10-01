@@ -6,8 +6,7 @@ Audit date: 2026-09-29 to 2026-10-01 (America/Sao_Paulo).
 
 The release candidate is reproducible, the I.1-I.3 gates pass and commit `b44f3d6`
 was pushed to `main`. Public post-deploy smokes passed for the site, backend and Groq.
-I.4 remains partially complete because provider-dashboard and DNS gates listed below
-are not configured or cannot yet be verified. No secret value is recorded here.
+All I.4 external gates are now confirmed. No secret value is recorded here.
 
 ## Production inventory
 
@@ -175,8 +174,8 @@ check. No production charge is authorized by this sandbox validation.
   return 200.
 - `/checkout/test-token-routing-123` preserves the path and returns `X-Robots-Tag:
   noindex, nofollow, noarchive`.
-- `www` still returns 200 instead of a permanent redirect. Configure a Cloudflare Bulk
-  Redirect with 308, subpath matching, preserved path suffix and preserved query string.
+- `www` performs one permanent 308 redirect to the HTTPS apex while preserving path and
+  query string.
 - HTML uses revalidation. Static CSS/JS/images return a four-hour browser TTL and ETag.
   Cloudflare serves Brotli for textual assets and advertises HTTP/3 via `alt-svc`; the
   audit client negotiated HTTP/1.1. No custom immutable cache rule was added because
@@ -185,13 +184,14 @@ check. No production charge is authorized by this sandbox validation.
 - CSP remains report-only. HSTS, nosniff, frame denial, referrer and permissions policy
   headers are present. CSP enforcement remains an I.5 decision after violation review.
 
-### Action required in Cloudflare
+### Gate F validation
 
-Create one hostname redirect rule matching only `www.miraihitstudio.com.br`, targeting
-the HTTPS apex with status 308 and preserving path and query. Verify `www /`,
-`www /artists` and `www /creators?x=1` each perform exactly one redirect to the equivalent
-apex URL. The final smoke still returns 200 from `www`, so this gate remains open.
-Canonicals and sitemap already use the apex and must not change.
+The Cloudflare Single Redirect Rule matches only `www.miraihitstudio.com.br` and targets
+the HTTPS apex with status 308. Live GET traces for `/`, `/artists` and
+`/creators?source=test` each performed exactly one hop and ended at 200 on the equivalent
+apex URL. The query string remained intact, direct apex requests had zero redirects and
+canonicals remained on the apex without `.html`. A synthetic checkout URL also performed
+one hop, preserved its token-shaped path and query, and ended at 200 without a payment.
 
 ## CORS, health and failure isolation
 
@@ -303,9 +303,10 @@ bodies, phone numbers or payment tokens.
   `report-build-status` and Cloudflare Pages checks. Connected I.2 and I.3 suites passed
   after the privilege change; final health, public routes, checkout shell, Admin auth
   surface, deterministic Chat, Groq Chat and CORS smokes passed.
-- `www` still returns 200 instead of redirecting to the apex domain.
+- Cloudflare Gate F returned one 308 hop from `www` to apex for root, Artists, Creators
+  with query string and a synthetic checkout path; every final response was 200.
 
-## External gates before I.4 completion
+## External gates
 
 1. Gate A - Render/runtime: confirmed.
 2. Gate B - private PDF Storage: confirmed.
@@ -313,7 +314,7 @@ bodies, phone numbers or payment tokens.
 4. Gate D - Resend inbound, signed webhook and threaded controlled reply: confirmed.
 5. Gate E - Mercado Pago TEST sandbox, signed webhook, authoritative reconciliation and
    Finance Admin: confirmed.
-6. Gate F - configure the Cloudflare `www` to apex 308 redirect and verify path/query.
+6. Gate F - Cloudflare `www` to apex 308 redirect with path/query preservation: confirmed.
 7. Inspect Render and provider logs for the controlled smokes; public behavior and safe
    database telemetry passed, but dashboard log access was unavailable in this run.
 
