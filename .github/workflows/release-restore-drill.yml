@@ -1,0 +1,294 @@
+name: Release restore drill
+
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: release-restore-drill
+    cancel-in-progress: false
+
+jobs:
+    restore-drill:
+        runs-on: ubuntu-latest
+        timeout-minutes: 40
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_DB: postgres
+                    POSTGRES_USER: mirai_i6
+                    POSTGRES_PASSWORD: mirai_i6_disposable
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U mirai_i6 -d postgres"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 12
+        env:
+            PGHOST: 127.0.0.1
+            PGPORT: "5432"
+            PGUSER: mirai_i6
+            PGPASSWORD: mirai_i6_disposable
+            AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+            AWS_DEFAULT_REGION: auto
+            R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+            R2_BUCKET: ${{ vars.R2_BACKUP_BUCKET }}
+            BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+            API_NAME: Mirai release drill
+            API_VERSION: "2.0"
+            DEBUG: "false"
+            HOST: 127.0.0.1
+            PORT: "8001"
+            LOG_LEVEL: WARNING
+            SECRET_KEY: release-drill-only-secret-not-used-outside-runner
+            ALGORITHM: HS256
+            ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+            REFRESH_TOKEN_EXPIRE_DAYS: "7"
+            ALLOWED_ORIGINS: http://localhost:4173
+            BACKUP_FOLDER: /tmp/mirai-release-drill
+            BACKUP_KEEP_DAYS: "1"
+            EMAIL_FROM: release-drill@example.invalid
+            ADMIN_EMAIL: release-drill@example.invalid
+            PUBLIC_API_URL: http://127.0.0.1:8001
+            PUBLIC_FRONTEND_URL: http://localhost:4173
+            AI_ENABLED: "false"
+            AI_EMAIL_ENABLED: "false"
+
+        steps:
+            - name: Check out release candidate
+              uses: actions/checkout@v4
+
+            - name: Validate external backup configuration
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  for name in BACKUP_ENCRYPTION_PASSPHRASE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY R2_ENDPOINT R2_BUCKET; do
+                    if [[ -z "${!name:-}" ]]; then
+                      echo "restore_drill_configuration_missing: ${name}" >&2
+                      exit 1
+                    fi
+                  done
+                  if [[ ${#BACKUP_ENCRYPTION_PASSPHRASE} -lt 32 ]]; then
+                    echo "restore_drill_passphrase_invalid" >&2
+                    exit 1
+                  fi
+
+            - name: Install PostgreSQL 17 client and GPG
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+                  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+                    | gpg --dearmor \
+                    | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg >/dev/null
+                  . /etc/os-release
+                  echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+                    | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+                  sudo apt-get update -qq
+                  sudo apt-get install -y --no-install-recommends postgresql-client-17 gnupg
+                  echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version-file: backend/.python-version
+                  cache: pip
+                  cache-dependency-path: backend/requirements.txt
+
+            - name: Install backend dependencies
+              working-directory: backend
+              run: python -m pip install --disable-pip-version-check -r requirements.txt
+
+            - name: Verify toolchain
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  pg_restore_version="$(pg_restore --version)"
+                  pg_restore_major="$(sed -nE 's/^pg_restore \(PostgreSQL\) ([0-9]+).*/\1/p' <<< "$pg_restore_version")"
+                  if [[ "$pg_restore_major" != "17" ]]; then
+                    echo "restore_drill_pg_restore_version_invalid" >&2
+                    exit 1
+                  fi
+                  pg_dump --version
+                  pg_restore --version
+                  gpg --version | head -n 1
+                  aws --version
+
+            - name: Create disposable databases
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  psql --dbname postgres --set ON_ERROR_STOP=1 <<'SQL'
+                  CREATE ROLE anon NOLOGIN;
+                  CREATE ROLE authenticated NOLOGIN;
+                  CREATE DATABASE mirai_bootstrap_i6;
+                  CREATE DATABASE mirai_restore_i6;
+                  SQL
+
+            - name: Validate clean bootstrap and one-step downgrade
+              working-directory: backend
+              shell: bash
+              env:
+                  DATABASE_URL: postgresql+psycopg2://mirai_i6:mirai_i6_disposable@127.0.0.1:5432/mirai_bootstrap_i6
+              run: |
+                  set -euo pipefail
+                  python -m scripts.bootstrap_database
+                  python -m scripts.validate_release_database
+                  python -m alembic upgrade head
+                  python -m alembic downgrade 93c2cf108202
+                  if psql --dbname mirai_bootstrap_i6 --tuples-only --no-align \
+                    --command "SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='propostas' AND column_name='pdf_sha256'" \
+                    | grep -q 1; then
+                      echo "restore_drill_downgrade_column_present" >&2
+                      exit 1
+                  fi
+                  python -m alembic upgrade head
+                  python -m scripts.validate_release_database
+
+            - name: Smoke application on clean bootstrap
+              working-directory: backend
+              shell: bash
+              env:
+                  DATABASE_URL: postgresql+psycopg2://mirai_i6:mirai_i6_disposable@127.0.0.1:5432/mirai_bootstrap_i6
+              run: |
+                  set -euo pipefail
+                  python -m uvicorn main:app --host 127.0.0.1 --port 8001 \
+                    >"$RUNNER_TEMP/mirai-bootstrap-api.log" 2>&1 &
+                  api_pid=$!
+                  echo "$api_pid" > "$RUNNER_TEMP/mirai-bootstrap-api.pid"
+                  for attempt in {1..30}; do
+                    if curl --fail --silent http://127.0.0.1:8001/health >/dev/null; then
+                      break
+                    fi
+                    if ! kill -0 "$api_pid" 2>/dev/null; then
+                      echo "restore_drill_bootstrap_app_stopped" >&2
+                      exit 1
+                    fi
+                    sleep 1
+                  done
+                  curl --fail --silent http://127.0.0.1:8001/health | grep -q 'healthy'
+                  curl --fail --silent http://127.0.0.1:8001/servicos \
+                    | python -c "import json,sys; assert isinstance(json.load(sys.stdin), list)"
+                  kill "$api_pid"
+                  wait "$api_pid" || true
+                  rm -f "$RUNNER_TEMP/mirai-bootstrap-api.pid" "$RUNNER_TEMP/mirai-bootstrap-api.log"
+
+            - name: Download and verify latest encrypted backup
+              id: archive
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  drill_dir="$RUNNER_TEMP/mirai-release-drill"
+                  mkdir -p "$drill_dir"
+                  latest="$(aws s3api list-objects-v2 --bucket "$R2_BUCKET" --prefix daily/ \
+                    --endpoint-url "$R2_ENDPOINT" \
+                    --query "reverse(sort_by(Contents[?ends_with(Key, '.dump.gpg')], &LastModified))[0].[Key,LastModified,Size]" \
+                    --output text)"
+                  IFS=$'\t' read -r object_key backup_timestamp encrypted_size <<< "$latest"
+                  if [[ ! "$object_key" =~ ^daily/mirai_[0-9_-]+\.dump\.gpg$ ]] \
+                    || [[ -z "$backup_timestamp" ]] || [[ "$encrypted_size" -le 0 ]]; then
+                    echo "restore_drill_backup_selection_failed" >&2
+                    exit 1
+                  fi
+                  encrypted_file="$drill_dir/$(basename "$object_key")"
+                  checksum_file="${encrypted_file}.sha256"
+                  aws s3 cp "s3://${R2_BUCKET}/${object_key}" "$encrypted_file" \
+                    --endpoint-url "$R2_ENDPOINT" --only-show-errors
+                  aws s3 cp "s3://${R2_BUCKET}/${object_key}.sha256" "$checksum_file" \
+                    --endpoint-url "$R2_ENDPOINT" --only-show-errors
+                  expected_sha="$(awk 'NR == 1 {print $1}' "$checksum_file")"
+                  actual_sha="$(sha256sum "$encrypted_file" | awk '{print $1}')"
+                  if [[ ! "$expected_sha" =~ ^[a-f0-9]{64}$ ]] || [[ "$actual_sha" != "$expected_sha" ]]; then
+                    echo "restore_drill_checksum_mismatch" >&2
+                    exit 1
+                  fi
+                  decrypted_file="$drill_dir/restore.dump"
+                  printf '%s' "$BACKUP_ENCRYPTION_PASSPHRASE" \
+                    | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+                        --decrypt --output "$decrypted_file" "$encrypted_file"
+                  pg_restore --list "$decrypted_file" >/dev/null
+                  echo "decrypted_file=$decrypted_file" >> "$GITHUB_OUTPUT"
+                  echo "object_name=$(basename "$object_key")" >> "$GITHUB_OUTPUT"
+                  echo "backup_timestamp=$backup_timestamp" >> "$GITHUB_OUTPUT"
+                  echo "encrypted_size=$encrypted_size" >> "$GITHUB_OUTPUT"
+
+            - name: Restore into disposable PostgreSQL 17
+              working-directory: backend
+              shell: bash
+              env:
+                  APP_ENV: test
+                  DATABASE_URL: postgresql+psycopg2://mirai_i6:mirai_i6_disposable@127.0.0.1:5432/mirai_restore_i6
+              run: |
+                  set -euo pipefail
+                  python -m scripts.restore_database \
+                    --backup "${{ steps.archive.outputs.decrypted_file }}" \
+                    --confirm-restore RESTORE
+                  python -m scripts.validate_release_database --expect-data \
+                    --snapshot "$RUNNER_TEMP/mirai-restore-before.json"
+
+            - name: Smoke application on restored database
+              working-directory: backend
+              shell: bash
+              env:
+                  DATABASE_URL: postgresql+psycopg2://mirai_i6:mirai_i6_disposable@127.0.0.1:5432/mirai_restore_i6
+              run: |
+                  set -euo pipefail
+                  python -m uvicorn main:app --host 127.0.0.1 --port 8001 \
+                    >"$RUNNER_TEMP/mirai-restore-api.log" 2>&1 &
+                  api_pid=$!
+                  echo "$api_pid" > "$RUNNER_TEMP/mirai-restore-api.pid"
+                  for attempt in {1..30}; do
+                    if curl --fail --silent http://127.0.0.1:8001/health >/dev/null; then
+                      break
+                    fi
+                    if ! kill -0 "$api_pid" 2>/dev/null; then
+                      echo "restore_drill_restored_app_stopped" >&2
+                      exit 1
+                    fi
+                    sleep 1
+                  done
+                  curl --fail --silent http://127.0.0.1:8001/health | grep -q 'healthy'
+                  curl --fail --silent http://127.0.0.1:8001/servicos \
+                    | python -c "import json,sys; assert isinstance(json.load(sys.stdin), list)"
+                  python -m scripts.validate_release_database --expect-data \
+                    --snapshot "$RUNNER_TEMP/mirai-restore-after.json"
+                  cmp "$RUNNER_TEMP/mirai-restore-before.json" "$RUNNER_TEMP/mirai-restore-after.json"
+                  kill "$api_pid"
+                  wait "$api_pid" || true
+                  rm -f "$RUNNER_TEMP/mirai-restore-api.pid" "$RUNNER_TEMP/mirai-restore-api.log"
+
+            - name: Publish sanitized drill summary
+              shell: bash
+              run: |
+                  {
+                    echo "### Release restore drill"
+                    echo "- Backup: \`${{ steps.archive.outputs.object_name }}\`"
+                    echo "- Timestamp: \`${{ steps.archive.outputs.backup_timestamp }}\`"
+                    echo "- Encrypted bytes: \`${{ steps.archive.outputs.encrypted_size }}\`"
+                    echo "- PostgreSQL: \`17\`"
+                    echo "- Clean bootstrap: passed"
+                    echo "- Downgrade/upgrade: passed"
+                    echo "- SHA-256 and GPG: passed"
+                    echo "- Restore and application smoke: passed"
+                  } >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Remove disposable databases and temporary material
+              if: always()
+              shell: bash
+              run: |
+                  set +e
+                  for pid_file in "$RUNNER_TEMP/mirai-bootstrap-api.pid" "$RUNNER_TEMP/mirai-restore-api.pid"; do
+                    if [[ -f "$pid_file" ]]; then
+                      kill "$(cat "$pid_file")" 2>/dev/null || true
+                    fi
+                  done
+                  dropdb --if-exists --force mirai_bootstrap_i6 >/dev/null 2>&1
+                  dropdb --if-exists --force mirai_restore_i6 >/dev/null 2>&1
+                  rm -rf "$RUNNER_TEMP/mirai-release-drill"
+                  rm -f "$RUNNER_TEMP"/mirai-*-api.log "$RUNNER_TEMP"/mirai-*-api.pid
+                  rm -f "$RUNNER_TEMP"/mirai-restore-*.json
