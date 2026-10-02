@@ -78,7 +78,14 @@ class SupabasePortfolioAudioStorage:
     def _ensure_public_bucket(self):
         bucket_path = "bucket/" + quote(self.bucket, safe="")
         response = self._request("GET", bucket_path)
-        if response.status_code == 404:
+        missing = response.status_code == 404
+        if response.status_code == 400:
+            try:
+                error = response.json()
+            except ValueError:
+                error = {}
+            missing = str(error.get("statusCode")) == "404"
+        if missing:
             response = self._request(
                 "POST",
                 "bucket",

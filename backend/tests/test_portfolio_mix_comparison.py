@@ -204,6 +204,31 @@ class PortfolioMixComparisonTests(unittest.TestCase):
 
 
 class PortfolioAudioStorageTests(unittest.TestCase):
+    def test_provider_400_not_found_creates_public_bucket(self):
+        state = {"exists": False}
+
+        def handler(request):
+            if request.method == "GET":
+                if state["exists"]:
+                    return httpx.Response(200, json={"public": True})
+                return httpx.Response(400, json={"statusCode": "404", "error": "Bucket not found"})
+            if request.method == "POST" and request.url.path.endswith("/bucket"):
+                payload = request.read().decode()
+                self.assertIn('"public":true', payload.replace(" ", ""))
+                self.assertIn("audio/mpeg", payload)
+                state["exists"] = True
+                return httpx.Response(200)
+            return httpx.Response(404)
+
+        storage = SupabasePortfolioAudioStorage(
+            base_url="https://project.supabase.co",
+            service_key="server-only-secret",
+            bucket="portfolio-audio",
+            transport=httpx.MockTransport(handler),
+        )
+        storage._ensure_public_bucket()
+        self.assertTrue(state["exists"])
+
     def test_public_bucket_upload_delete_and_opaque_key(self):
         requests = []
 
