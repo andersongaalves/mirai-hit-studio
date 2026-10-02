@@ -87,3 +87,7 @@ export function postNewsletter(payload) {
 export function getProjetos() {
     return getAPI("projetos");
 }
+
+export function getMixComparisons() {
+    return getAPI("projetos/public/mix-comparisons");
+}

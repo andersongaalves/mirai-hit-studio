@@ -11,7 +11,7 @@ function ensureChatStyles() {
     if (current) return chatStylesPromise || Promise.resolve();
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = "/css/chat.css";
+    stylesheet.href = "css/chat.css";
     stylesheet.dataset.siteChatStyles = "true";
     chatStylesPromise = new Promise((resolve, reject) => {
         stylesheet.addEventListener("load", resolve, { once: true });
@@ -36,10 +36,14 @@ export async function initSiteChat({ open = false, replaceLauncher = null } = {}
     const view = createChatView();
     // Keep the launcher above the consent banner without depending on its decision.
     const positionLauncher = () => {
-        const banner = document.getElementById("analytics-consent-dialog");
+        const banner = document.getElementById("analytics-consent-dialog")
+            || document.getElementById("analytics-preferences");
         const rect = banner?.getBoundingClientRect();
-        const overlaps = rect && rect.left < view.launcher.getBoundingClientRect().right;
-        view.launcher.style.bottom = `${overlaps ? Math.max(16, innerHeight - rect.top + 12) : 16}px`;
+        const launcherRect = view.launcher.getBoundingClientRect();
+        const sharesColumn = rect
+            && rect.left < launcherRect.right
+            && rect.right > launcherRect.left;
+        view.launcher.style.bottom = `${sharesColumn ? Math.max(16, innerHeight - rect.top + 12) : 16}px`;
     };
     const resize = new ResizeObserver(positionLauncher);
     resize.observe(document.body);

@@ -26,8 +26,8 @@ async function loadModule(elementId, path, callback) {
 
 async function initApp() {
     try {
-        initAnalytics();
         await initComponents();
+        initAnalytics();
 
         await loadModule(
             "btn-newsletter",

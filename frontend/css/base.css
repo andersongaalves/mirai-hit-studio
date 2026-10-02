@@ -55,9 +55,10 @@ a {
     left: var(--space-3);
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-sm);
-    color: #071018;
+    color: var(--color-on-accent);
     background: var(--color-accent);
-    font-family: var(--font-titulos);
+    font-family: var(--font-texto);
+    font-weight: 700;
     transform: translateY(-180%);
 }
 

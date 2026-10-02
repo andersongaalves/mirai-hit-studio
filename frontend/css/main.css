@@ -1,5 +1,5 @@
 /* Ficheiro: css/main.css */
-@import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@600&family=Rajdhani:wght@700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700&family=Rajdhani:wght@700&display=swap");
 @import url("variables.css"); /* Cores e Fontes primeiro de tudo */
 @import url("base.css"); /* Resets, body, títulos e .container */
 @import url("layout.css"); /* Nav e Footer */

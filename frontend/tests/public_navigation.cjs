@@ -62,6 +62,13 @@ async function staticResponse(route) {
         const event = await page.evaluate(() => window.dataLayer.find(item => item[0] === "event" && item[1] === "view_vertical"));
         assert.deepEqual(event[2], { vertical: "artists" });
 
+        await page.evaluate(() => window.scrollTo(0, 300));
+        await page.waitForFunction(() => document.querySelector(".site-header")?.classList.contains("is-scrolled"));
+        const stickyHeader = await page.locator(".site-header").boundingBox();
+        assert.ok(Math.abs(stickyHeader.y) <= 1, `header follows scrolling (${stickyHeader.y})`);
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForFunction(() => !document.querySelector(".site-header")?.classList.contains("is-scrolled"));
+
         await page.setViewportSize({ width: 1024, height: 800 });
         assert.equal(await page.locator(".site-nav__links").isVisible(), true);
         for (const target of ["/creators", "/media-games", "/portfolio"]) {

@@ -1,8 +1,12 @@
 function positionLauncher(launcher) {
-    const banner = document.getElementById("analytics-consent-dialog");
+    const banner = document.getElementById("analytics-consent-dialog")
+        || document.getElementById("analytics-preferences");
     const rect = banner?.getBoundingClientRect();
-    const overlaps = rect && rect.left < launcher.getBoundingClientRect().right;
-    launcher.style.bottom = `${overlaps ? Math.max(16, innerHeight - rect.top + 12) : 16}px`;
+    const launcherRect = launcher.getBoundingClientRect();
+    const sharesColumn = rect
+        && rect.left < launcherRect.right
+        && rect.right > launcherRect.left;
+    launcher.style.bottom = `${sharesColumn ? Math.max(16, innerHeight - rect.top + 12) : 16}px`;
 }
 
 export function initSiteChatLauncher() {

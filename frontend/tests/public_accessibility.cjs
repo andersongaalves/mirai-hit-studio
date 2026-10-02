@@ -120,7 +120,9 @@ function apiResponse(route) {
             assert.deepEqual(structure.unlabeled, [], `${pathname}: form labels`);
             assert.deepEqual(structure.imagesWithoutAlt, [], `${pathname}: image alt`);
             assert.deepEqual(structure.tinyTargets, [], `${pathname}: target size`);
-            assert.notEqual(await page.locator('#analytics-preferences').evaluate(element => getComputedStyle(element).position), 'fixed', 'privacy preferences must not cover payment controls');
+            const privacyPosition = await page.locator('#analytics-preferences').evaluate(element => getComputedStyle(element).position);
+            if (publicPaths.includes(pathname)) assert.equal(privacyPosition, 'fixed', `${pathname}: privacy follows scrolling`);
+            else assert.notEqual(privacyPosition, 'fixed', 'privacy preferences must not cover payment controls');
 
             for (const width of widths) {
                 await page.setViewportSize({ width, height: 900 });
@@ -135,7 +137,11 @@ function apiResponse(route) {
                     await page.screenshot({ path: path.join(process.env.VISUAL_OUTPUT, `mirai-j-${name}-${width}.png`), animations: 'disabled' });
                 }
             }
-            if (['/', '/artists', '/creators', '/media-games'].includes(pathname)) {
+            if (pathname === '/') {
+                await page.setViewportSize({ width: 375, height: 700 });
+                const heroBottom = await page.locator('.home-hero').evaluate(element => element.getBoundingClientRect().bottom);
+                assert.ok(Math.abs(heroBottom - 700) <= 1, `/: hero must fill the visible viewport (${heroBottom})`);
+            } else if (['/artists', '/creators', '/media-games'].includes(pathname)) {
                 await page.setViewportSize({ width: 375, height: 700 });
                 const heroBottom = await page.locator('.public-hero').evaluate(element => element.getBoundingClientRect().bottom);
                 assert.ok(heroBottom <= 668, `${pathname}: next section must be visible (${heroBottom})`);

@@ -1,11 +1,13 @@
 import * as UI from "../ui.js";
 import { $ } from "../utils/dom.js";
+import { initMixComparison } from "./mix_comparison.js";
 
 export async function initHome() {
     if (!$("home-portfolio-track")) {
         return;
     }
 
+    await initMixComparison();
     await UI.renderizarPortfolio();
 
     document.querySelectorAll("[data-carousel-direction]").forEach((button) => {

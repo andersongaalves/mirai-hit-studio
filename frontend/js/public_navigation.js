@@ -1,4 +1,32 @@
 const BREAKPOINT = 900;
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const LOCAL_ROUTE_FILES = {
+    "/": "index.html",
+    "/artists": "artists.html",
+    "/creators": "creators.html",
+    "/media-games": "media-games.html",
+    "/portfolio": "portfolio.html",
+    "/orcamento": "calculadora.html",
+};
+
+
+function adaptLinksForLocalStaticPreview() {
+    const isLocalHtmlPreview = LOCAL_HOSTS.has(window.location.hostname)
+        && window.location.pathname.toLowerCase().endsWith(".html");
+    if (!isLocalHtmlPreview) return;
+
+    document.querySelectorAll('a[href^="/"]').forEach(link => {
+        const target = new URL(link.getAttribute("href"), window.location.origin);
+        const route = target.pathname.replace(/\/$/, "") || "/";
+        const filename = LOCAL_ROUTE_FILES[route];
+        if (!filename) return;
+
+        const localTarget = new URL(filename, window.location.href);
+        localTarget.search = target.search;
+        localTarget.hash = target.hash;
+        link.href = localTarget.href;
+    });
+}
 
 
 function normalizedPath() {
@@ -10,17 +38,22 @@ function normalizedPath() {
         "/portfolio.html": "/portfolio",
         "/calculadora.html": "/orcamento",
     };
-    const path = window.location.pathname.replace(/\/$/, "") || "/";
+    const pathname = window.location.pathname.replace(/\/$/, "") || "/";
+    const path = LOCAL_HOSTS.has(window.location.hostname) && pathname.toLowerCase().endsWith(".html")
+        ? `/${pathname.split("/").pop()}`
+        : pathname;
     return aliases[path] || path;
 }
 
 
 export function initPublicNavigation() {
     const nav = document.querySelector(".site-nav");
+    const header = nav?.closest(".site-header");
     const toggle = document.getElementById("site-nav-toggle");
     const links = document.getElementById("site-nav-links");
     if (!nav || !toggle || !links || nav.dataset.initialized === "true") return;
     nav.dataset.initialized = "true";
+    adaptLinksForLocalStaticPreview();
 
     const close = ({ restoreFocus = false } = {}) => {
         links.classList.remove("is-open");
@@ -45,6 +78,12 @@ export function initPublicNavigation() {
     window.addEventListener("resize", () => {
         if (window.innerWidth > BREAKPOINT) close();
     });
+
+    const updateHeaderAppearance = () => {
+        header?.classList.toggle("is-scrolled", window.scrollY > 12);
+    };
+    window.addEventListener("scroll", updateHeaderAppearance, { passive: true });
+    updateHeaderAppearance();
 
     const activePath = normalizedPath();
     nav.querySelectorAll("[data-public-path]").forEach(link => {

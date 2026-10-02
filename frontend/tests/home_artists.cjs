@@ -110,7 +110,7 @@ async function staticResponse(route) {
             await page.screenshot({ path: path.join(process.env.VISUAL_OUTPUT, "artists-g2-mobile.png") });
         }
 
-        assert.deepEqual([...loadedHeroes].sort(), ["/img/mirai-artists-hero.webp"]);
+        assert.deepEqual([...loadedHeroes].sort(), ["/img/mirai-artists-hero.webp", "/img/mirai-studio-hero.webp"]);
         assert.deepEqual(errors, []);
         console.log("PASS: Home and Artists content, honest portfolio state, hero assets and responsive structure.");
     } finally {

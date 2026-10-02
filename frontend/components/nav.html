@@ -1,32 +1,29 @@
 <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
-<nav class="site-nav" aria-label="Navegação principal">
-    <a href="/" class="logo" aria-label="Mirai Hit Studio - Início">
-        <div class="logo-nav-container">
-            <span class="main-brand">
-                <span class="mirai">MIRAI </span><span class="hit">HIT</span>
-            </span>
-            <div class="brand-subline">
-                <span class="line-deco"></span>
-                <span class="studio">STUDIO</span>
-                <span class="line-deco"></span>
-            </div>
+<header class="site-header">
+    <nav class="site-nav" aria-label="Navegação principal">
+        <a class="site-brand" href="/" data-public-path="/" aria-label="Mirai Hit Studio - Início">
+            <img src="assets/mirai-logo-header-lettering.svg" alt="Mirai Hit" width="119" height="14" />
+            <span class="site-brand__studio">Studio</span>
+        </a>
+        <button
+            id="site-nav-toggle"
+            class="site-nav__toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="site-nav-links"
+            aria-label="Abrir menu"
+        >
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </button>
+        <div id="site-nav-links" class="site-nav__links">
+            <a href="/" data-public-path="/">Início</a>
+            <a href="/artists" data-public-path="/artists">Artistas</a>
+            <a href="/creators" data-public-path="/creators">Criadores</a>
+            <a href="/media-games" data-public-path="/media-games">Media &amp; Games</a>
+            <a href="/portfolio" data-public-path="/portfolio">Portfólio</a>
+            <a href="/orcamento" class="btn-cta site-nav__cta" data-public-path="/orcamento">Começar projeto</a>
         </div>
-    </a>
-    <button
-        id="site-nav-toggle"
-        class="site-nav__toggle"
-        type="button"
-        aria-expanded="false"
-        aria-controls="site-nav-links"
-    >
-        Menu
-    </button>
-    <div id="site-nav-links" class="site-nav__links">
-        <a href="/" data-public-path="/">Início</a>
-        <a href="/artists" data-public-path="/artists">Artistas</a>
-        <a href="/creators" data-public-path="/creators">Criadores</a>
-        <a href="/media-games" data-public-path="/media-games">Media &amp; Games</a>
-        <a href="/portfolio" data-public-path="/portfolio">Portfólio</a>
-        <a href="/orcamento" class="btn-cta site-nav__cta" data-public-path="/orcamento">Solicitar orçamento</a>
-    </div>
-</nav>
+    </nav>
+</header>

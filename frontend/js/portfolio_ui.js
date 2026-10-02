@@ -31,7 +31,7 @@ export function obterCapaInteligente(linkAudio, linkCapa) {
     );
     return match?.[1]
         ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`
-        : "/img/logo-principal.webp";
+        : new URL("../img/logo-principal.webp", import.meta.url).href;
 }
 
 function element(tag, className, text) {

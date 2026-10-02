@@ -20,50 +20,75 @@
         <meta name="twitter:description" content="Som com identidade para artistas, criadores e projetos digitais." />
         <meta name="twitter:image" content="https://miraihitstudio.com.br/img/mirai-studio-hero.webp" />
         <link rel="canonical" href="https://miraihitstudio.com.br/" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <link rel="icon" type="image/svg+xml" href="/assets/mirai-logo-symbol.svg" />
-        <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
-        <link rel="apple-touch-icon" href="/assets/favicon.png" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Michroma&display=swap" rel="stylesheet" />
+        <link rel="manifest" href="site.webmanifest" />
+        <link rel="icon" type="image/svg+xml" href="assets/mirai-logo-symbol.svg" />
+        <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png" />
+        <link rel="apple-touch-icon" href="assets/favicon.png" />
         <link rel="stylesheet" href="css/main.css" />
         <link rel="stylesheet" href="css/pages/home.css" />
-        <link rel="preload" as="image" href="/assets/mirai-logo-symbol.svg" fetchpriority="high" />
+        <link rel="stylesheet" href="css/pages/mix-comparison.css" />
+        <link rel="preload" as="image" href="assets/mirai-logo-symbol.svg" fetchpriority="high" />
     </head>
     <body class="public-page home-page">
-        <a class="home-skip-link skip-link" href="#main-content">Ir para o conteúdo</a>
-        <header class="home-header">
-            <nav class="site-nav home-nav" aria-label="Navegação principal">
-                <a class="home-brand" href="/" data-public-path="/" aria-label="Mirai Hit Studio — início">
-                    <img class="home-brand__symbol" src="/assets/mirai-logo-header-symbol.svg" alt="" width="38" height="37" />
-                    <span class="home-brand__name">
-                        <img src="/assets/mirai-logo-header-lettering.svg" alt="Mirai Hit" width="118" height="24" />
-                        <span>Studio</span>
-                    </span>
-                </a>
-                <button class="site-nav__toggle home-nav__toggle" id="site-nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav-links" aria-label="Abrir menu">
-                    <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
-                </button>
-                <div class="site-nav__links home-nav__links" id="site-nav-links">
-                    <a href="#servicos">Serviços</a>
-                    <a href="/artists" data-public-path="/artists">Artistas</a>
-                    <a href="/creators" data-public-path="/creators">Criadores</a>
-                    <a href="/media-games" data-public-path="/media-games">Media &amp; Games</a>
-                    <a href="/portfolio" data-public-path="/portfolio">Portfólio</a>
-                    <a class="home-nav__cta" href="/orcamento" data-public-path="/orcamento">Começar projeto</a>
-                </div>
-            </nav>
-        </header>
+        <div id="nav-placeholder"></div>
 
         <main id="main-content" tabindex="-1">
             <section class="home-hero public-hero" aria-labelledby="home-title">
                 <div class="home-hero__identity" aria-hidden="true">
-                    <img class="home-hero__symbol" src="/assets/mirai-logo-symbol.svg" alt="" width="276" height="266" />
-                    <img class="home-hero__lettering" src="/assets/mirai-logo-lettering.svg" alt="" width="562" height="116" />
+                    <img class="home-hero__symbol" src="assets/mirai-logo-symbol.svg" alt="" width="276" height="266" />
+                    <img class="home-hero__lettering" src="assets/mirai-logo-lettering.svg" alt="" width="562" height="116" />
                     <span class="home-hero__studio">Studio</span>
                 </div>
                 <h1 class="home-hero__tagline" id="home-title">Criando o <span>som</span> do futuro.</h1>
+                <a class="home-hero__listen" id="mix-hero-link" href="#mix-comparison" hidden>Ouça a diferença <span aria-hidden="true">↓</span></a>
+            </section>
+
+            <section class="mix-showcase" id="mix-comparison" aria-labelledby="mix-comparison-title" hidden>
+                <div class="home-container">
+                    <header class="mix-showcase__heading">
+                        <p class="home-kicker">Ouça a diferença</p>
+                        <h2 id="mix-comparison-title">Resultado não se explica. Se escuta.</h2>
+                        <p>Compare a mesma música antes e depois da mixagem.</p>
+                    </header>
+
+                    <div class="mix-showcase__feature">
+                        <div class="mix-showcase__cover" id="mix-cover-wrap" hidden>
+                            <img id="mix-cover" alt="" width="640" height="640" loading="lazy" decoding="async" />
+                        </div>
+
+                        <div class="mix-player">
+                            <div class="mix-player__identity">
+                                <p class="mix-player__position" id="mix-position"></p>
+                                <h3 id="mix-title"></h3>
+                                <p id="mix-artist"></p>
+                                <a class="mix-player__external" id="mix-external-link" target="_blank" rel="noopener noreferrer" hidden>Ouvir lançamento <span aria-hidden="true">↗</span></a>
+                            </div>
+
+                            <div class="mix-player__versions" role="group" aria-label="Versão da mixagem">
+                                <button type="button" data-mix-version="before" aria-pressed="true"><span>Antes</span><small>Original</small></button>
+                                <button type="button" data-mix-version="after" aria-pressed="false"><span>Depois</span><small>Mix Mirai</small></button>
+                            </div>
+
+                            <div class="mix-player__controls">
+                                <button class="mix-player__play" id="mix-play" type="button" aria-label="Reproduzir versão Antes">
+                                    <span aria-hidden="true">▶</span>
+                                </button>
+                                <div class="mix-player__timeline">
+                                    <label class="sr-only" for="mix-progress">Posição da reprodução</label>
+                                    <input id="mix-progress" type="range" min="0" max="0" step="0.01" value="0" />
+                                    <div class="mix-player__times" aria-hidden="true"><span id="mix-current-time">0:00</span><span id="mix-duration">0:00</span></div>
+                                </div>
+                            </div>
+
+                            <p class="mix-player__status sr-only" id="mix-status" aria-live="polite"></p>
+                            <audio id="mix-audio-before" preload="metadata"></audio>
+                            <audio id="mix-audio-after" preload="metadata"></audio>
+                        </div>
+                    </div>
+
+                    <div class="mix-showcase__selector" id="mix-project-selector" role="group" aria-label="Escolher comparação"></div>
+                    <a class="home-button mix-showcase__cta" href="/orcamento">Quero esse cuidado no meu projeto</a>
+                </div>
             </section>
 
             <section class="home-services" id="servicos" aria-labelledby="services-title">
@@ -76,17 +101,17 @@
                         <a class="home-service vertical-card" href="/artists">
                             <span class="home-service__number">01</span>
                             <span class="home-service__content"><strong>Artistas</strong><small>Produção, vocal, mixagem e masterização para músicas com identidade.</small></span>
-                            <img src="/assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
+                            <img src="assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
                         </a>
                         <a class="home-service vertical-card" href="/creators">
                             <span class="home-service__number">02</span>
                             <span class="home-service__content"><strong>Criadores</strong><small>Temas, intros e sound branding para conteúdo que precisa ser reconhecido.</small></span>
-                            <img src="/assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
+                            <img src="assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
                         </a>
                         <a class="home-service vertical-card" href="/media-games">
                             <span class="home-service__number">03</span>
                             <span class="home-service__content"><strong>Media &amp; Games</strong><small>Trilha e áudio sob medida para narrativas, mundos e experiências digitais.</small></span>
-                            <img src="/assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
+                            <img src="assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
                         </a>
                     </div>
                     <div class="home-capabilities" aria-label="Principais capacidades">
@@ -98,7 +123,7 @@
             <section class="home-portfolio" aria-labelledby="portfolio-title">
                 <div class="home-container home-section-heading home-section-heading--row">
                     <div><p class="home-kicker">Portfólio</p><h2 id="portfolio-title">Trabalhos publicados</h2></div>
-                    <a class="home-text-link" href="/portfolio">Ver portfólio completo <img src="/assets/mirai-arrow-light.svg" alt="" width="42" height="19" /></a>
+                    <a class="home-text-link" href="/portfolio">Ver portfólio completo <img src="assets/mirai-arrow-light.svg" alt="" width="42" height="19" /></a>
                 </div>
                 <div class="carousel-container home-carousel">
                     <button class="carousel-btn left-btn" type="button" aria-label="Projetos anteriores" aria-controls="home-portfolio-track" data-carousel-direction="-1">&#10094;</button>
@@ -127,7 +152,7 @@
                         <p class="home-kicker">Seu próximo som começa aqui</p>
                         <h2 id="home-cta-title">Pronto para dar vida ao seu universo?</h2>
                         <p>Conte o que você está criando. A gente transforma intenção em uma direção sonora clara.</p>
-                        <a class="home-button home-button--dark" href="/orcamento">Começar um projeto <img src="/assets/mirai-arrow-dark.svg" alt="" width="44" height="20" /></a>
+                        <a class="home-button home-button--dark" href="/orcamento">Começar um projeto <img src="assets/mirai-arrow-dark.svg" alt="" width="44" height="20" /></a>
                     </div>
                     <form class="home-newsletter" id="newsletter-form" novalidate>
                         <label for="newsletter-email">Novidades do estúdio, sem ruído.</label>
@@ -141,17 +166,8 @@
             </section>
         </main>
 
-        <footer class="home-footer">
-            <div class="home-container home-footer__inner">
-                <a class="home-footer__brand" href="/" aria-label="Mirai Hit Studio — início">
-                    <img src="/assets/mirai-logo-footer.svg" alt="Mirai Hit Studio" width="194" height="65" />
-                </a>
-                <p>Produção musical e áudio com identidade.</p>
-                <nav aria-label="Links do rodapé"><a href="/portfolio">Portfólio</a><a href="/orcamento">Orçamento</a><a href="https://www.instagram.com/miraihitstudio/" target="_blank" rel="noopener noreferrer">Instagram</a></nav>
-                <small>&copy; 2026 Mirai Hit Studio.</small>
-            </div>
-        </footer>
-        <script type="module" src="/js/main.js"></script>
+        <div id="footer-placeholder"></div>
+        <script type="module" src="js/main.js"></script>
         <script type="application/ld+json">
             {
                 "@context": "https://schema.org",

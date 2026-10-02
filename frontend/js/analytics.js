@@ -86,9 +86,13 @@ function sanitizeProperties(eventName, properties = {}) {
 
 function closeDialog() {
     document.getElementById("analytics-consent-dialog")?.remove();
+    const preferences = document.getElementById("analytics-preferences");
+    if (preferences) preferences.hidden = false;
 }
 
 function showDialog() {
+    const preferences = document.getElementById("analytics-preferences");
+    if (preferences) preferences.hidden = true;
     if (document.getElementById("analytics-consent-dialog")) return;
     const dialog = document.createElement("section");
     dialog.id = "analytics-consent-dialog";
@@ -101,7 +105,7 @@ function showDialog() {
     title.id = "analytics-consent-title";
     title.textContent = "Preferencias de privacidade";
     const text = document.createElement("p");
-    text.textContent = "Usamos metricas opcionais para entender quais paginas e servicos ajudam mais. Voce pode aceitar ou recusar sem afetar o uso do site.";
+    text.textContent = "Usamos metricas opcionais para melhorar o site. Aceitar ou recusar nao afeta o uso.";
     const actions = document.createElement("div");
     actions.className = "analytics-consent-actions";
     const reject = document.createElement("button");
@@ -127,8 +131,11 @@ function ensurePreferencesButton() {
     button.type = "button";
     button.className = "analytics-preferences";
     button.textContent = "Privacidade";
+    button.setAttribute("aria-controls", "analytics-consent-dialog");
+    button.setAttribute("aria-haspopup", "dialog");
     button.addEventListener("click", showDialog);
-    document.body.appendChild(button);
+    const footerNavigation = document.querySelector("footer nav");
+    (footerNavigation || document.body).appendChild(button);
 }
 
 function bindPortfolioListener() {

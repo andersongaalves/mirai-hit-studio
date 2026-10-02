@@ -1,16 +1,17 @@
 :root {
-    --cor-fundo: #111827;
-    --cor-ciano: #00d4ff;
-    --cor-roxo: #b22af0;
-    --cor-branco: #f9fafb;
+    --cor-fundo: #06101f;
+    --cor-ciano: #00d5ed;
+    --cor-roxo: #d430ef;
+    --cor-branco: #f5f7ff;
+    --cor-azul-transicao: #008bff;
     --cor-sucesso: #4ade80;
     --cor-aviso: #fbbf24;
     --cor-perigo: #f87171;
-    --cor-texto-secundario: #aab3c2;
+    --cor-texto-secundario: #aeb9cb;
     --cor-cinza-claro: var(--cor-texto-secundario);
     --cor-borda-sutil: rgba(255, 255, 255, 0.1);
-    --cor-superficie: #171f2e;
-    --cor-superficie-elevada: #1c2636;
+    --cor-superficie: #0a1729;
+    --cor-superficie-elevada: #102039;
 
     /* Aliases semanticos para componentes novos, preservando a API visual atual. */
     --color-background: var(--cor-fundo);
@@ -24,12 +25,13 @@
     --color-success: var(--cor-sucesso);
     --color-warning: var(--cor-aviso);
     --color-danger: var(--cor-perigo);
-    --color-on-accent: #071018;
-    --color-accent-hover: #73e9ff;
+    --color-transition: var(--cor-azul-transicao);
+    --color-on-accent: var(--cor-fundo);
+    --color-accent-hover: #6deaf8;
     --font-logo: "Ethnocentric", sans-serif;
     --font-titulos: "Oxanium", sans-serif;
     --font-subtitulos: "Rajdhani", sans-serif;
-    --font-texto: "Calibri", "Segoe UI", Arial, sans-serif;
+    --font-texto: "Calibri", sans-serif;
     --spacing-xs: 8px;
     --spacing-sm: 16px;
     --spacing-md: 32px;
@@ -58,7 +60,7 @@
     --border-accent: 1px solid var(--cor-ciano);
     --shadow-sm: 0 8px 16px rgba(0, 0, 0, 0.24);
     --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.42);
-    --shadow-glow: 0 0 16px rgba(0, 212, 255, 0.32);
+    --shadow-glow: 0 0 12px rgba(0, 213, 237, 0.18);
     --transition-fast: 160ms ease;
 }
 
