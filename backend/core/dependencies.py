@@ -44,6 +44,17 @@ def require_producer(user=Depends(get_current_user)):
     return user
 
 
+def require_client(user=Depends(get_current_user)):
+    if (
+        not getattr(user, "ativo", False)
+        or getattr(user, "role", None) != "cliente"
+        or getattr(user, "is_admin", False)
+        or getattr(user, "cliente_id", None) is None
+    ):
+        raise HTTPException(status_code=403, detail="Permissao de cliente necessaria.")
+    return user
+
+
 def require_ai_operator(user=Depends(get_current_user)):
     """Keep the cross-client AI inbox restricted to administrators."""
     return require_admin(user)

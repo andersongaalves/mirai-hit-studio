@@ -28,7 +28,7 @@ from routers.financeiro import router as financeiro_router
 from routers.ai_chat import router as ai_chat_router
 from routers.ai_inbox import router as ai_inbox_router
 from routers.portal_produtor import router as portal_produtor_router
-
+from routers.portal_cliente import router as portal_cliente_router
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,7 @@ app.include_router(financeiro_router)
 app.include_router(ai_chat_router)
 app.include_router(ai_inbox_router)
 app.include_router(portal_produtor_router)
+app.include_router(portal_cliente_router)
 
 
 @app.get("/")

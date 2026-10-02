@@ -1,9 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
-from database import get_db
 from core.dependencies import require_admin
-from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioResponse, UsuarioUpdate
+from database import get_db
+from schemas.usuario import (
+    UsuarioCreate,
+    UsuarioPasswordUpdate,
+    UsuarioResponse,
+    UsuarioUpdate,
+)
 from services import usuario_service
 
 router = APIRouter(prefix="/usuarios", tags=["Usuários"])
@@ -14,6 +19,8 @@ def _erro(error):
         raise HTTPException(status_code=404, detail=str(error)) from None
     if isinstance(error, usuario_service.UsuarioConflito):
         raise HTTPException(status_code=409, detail=str(error)) from None
+    if isinstance(error, usuario_service.UsuarioInvalido):
+        raise HTTPException(status_code=422, detail=str(error)) from None
     raise error
 
 
@@ -21,7 +28,7 @@ def _erro(error):
 def listar_usuarios(
     busca: str = Query(default="", max_length=50),
     ativo: bool | None = None,
-    role: str | None = Query(default=None, pattern="^(admin|produtor)$"),
+    role: str | None = Query(default=None, pattern="^(admin|produtor|cliente)$"),
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
@@ -33,7 +40,7 @@ def listar_produtores_ativos(
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
-    return usuario_service.listar(db, ativo=True)
+    return usuario_service.listar(db, ativo=True, role="produtor")
 
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)

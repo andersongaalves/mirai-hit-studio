@@ -23,3 +23,4 @@ class ClienteModel(Base):
 
     orcamentos = relationship("OrcamentoModel", back_populates="cliente")
     cobrancas = relationship("CobrancaModel", back_populates="cliente")
+    usuario = relationship("UsuarioModel", back_populates="cliente", uselist=False)

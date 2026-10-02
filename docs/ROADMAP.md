@@ -12,9 +12,9 @@ Proximo checkpoint: nenhum; release `v2.0.0`.
 
 Proximo push: somente trabalho posterior ao release.
 
-Portais - Backend Fase 1: BLOCKED parcial. O isolamento do produtor foi preparado sem
-schema novo; autenticacao do cliente aguarda aprovacao de um vinculo persistente entre
-Usuario e Cliente. Detalhes em `docs/PORTALS_BACKEND_PHASE1.md`.
+Portais - Backend Fase 1: concluida. Produtor e Cliente usam identidade autenticada e
+ownership no backend; anexos privados e repasses permanecem dependencias das proximas
+fases. Detalhes em `docs/PORTALS_BACKEND_PHASE1.md`.
 
 Ultimo deploy auditado: `b44f3d6` (`chore: prepara infraestrutura de producao`).
 

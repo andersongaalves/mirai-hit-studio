@@ -35,6 +35,13 @@ def username_em_uso(db: Session, username: str, ignorar_id: int | None = None):
     return query.first() is not None
 
 
+def cliente_em_uso(db: Session, cliente_id: int, ignorar_id: int | None = None):
+    query = db.query(UsuarioModel).filter(UsuarioModel.cliente_id == cliente_id)
+    if ignorar_id is not None:
+        query = query.filter(UsuarioModel.id != ignorar_id)
+    return query.first() is not None
+
+
 def bloquear_admins_ativos(db: Session):
     return (
         db.query(UsuarioModel)

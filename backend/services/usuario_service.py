@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from core.security import get_password_hash
 from crud import crud_usuario
+from models.cliente import ClienteModel
 from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioUpdate
 from services import audit_service
 
@@ -13,6 +14,31 @@ class UsuarioNaoEncontrado(Exception):
 
 class UsuarioConflito(Exception):
     pass
+
+
+class UsuarioInvalido(Exception):
+    pass
+
+
+def _validar_vinculo_cliente(
+    db: Session,
+    *,
+    role: str,
+    cliente_id: int | None,
+    usuario_id: int | None = None,
+):
+    if role != "cliente":
+        if cliente_id is not None:
+            raise UsuarioInvalido(
+                "Somente usuarios clientes podem possuir cliente vinculado."
+            )
+        return
+    if cliente_id is None:
+        raise UsuarioInvalido("Usuario cliente exige um cliente vinculado.")
+    if db.get(ClienteModel, cliente_id) is None:
+        raise UsuarioInvalido("Cliente vinculado nao encontrado.")
+    if crud_usuario.cliente_em_uso(db, cliente_id, usuario_id):
+        raise UsuarioConflito("Cliente ja possui uma conta vinculada.")
 
 
 def _buscar(db: Session, usuario_id: int):
@@ -37,6 +63,7 @@ def criar(db: Session, dados: UsuarioCreate, ator, request_id: str | None = None
         raise UsuarioConflito("Nome de usuario ja cadastrado.")
     role = payload.pop("role")
     password = payload.pop("password")
+    _validar_vinculo_cliente(db, role=role, cliente_id=payload.get("cliente_id"))
     try:
         usuario = crud_usuario.criar_sem_commit(db, {
             **payload,
@@ -59,7 +86,9 @@ def criar(db: Session, dados: UsuarioCreate, ator, request_id: str | None = None
         return usuario
     except IntegrityError:
         db.rollback()
-        raise UsuarioConflito("Nome de usuario ja cadastrado.") from None
+        raise UsuarioConflito(
+            "Nome de usuario ou cliente vinculado ja cadastrado."
+        ) from None
     except Exception:
         db.rollback()
         raise
@@ -77,6 +106,15 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
 
     proximo_role = payload.get("role", usuario.role)
     proximo_ativo = payload.get("ativo", usuario.ativo)
+    if "role" in payload and proximo_role != "cliente":
+        payload["cliente_id"] = None
+    proximo_cliente_id = payload.get("cliente_id", usuario.cliente_id)
+    _validar_vinculo_cliente(
+        db,
+        role=proximo_role,
+        cliente_id=proximo_cliente_id,
+        usuario_id=usuario.id,
+    )
     perde_admin = usuario.role == "admin" and usuario.is_admin and (
         proximo_role != "admin" or not proximo_ativo
     )
@@ -112,7 +150,9 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
         return usuario
     except IntegrityError:
         db.rollback()
-        raise UsuarioConflito("Nome de usuario ja cadastrado.") from None
+        raise UsuarioConflito(
+            "Nome de usuario ou cliente vinculado ja cadastrado."
+        ) from None
     except Exception:
         db.rollback()
         raise

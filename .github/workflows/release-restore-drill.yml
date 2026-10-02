@@ -140,9 +140,9 @@ jobs:
                   python -m scripts.bootstrap_database
                   python -m scripts.validate_release_database
                   python -m alembic upgrade head
-                  python -m alembic downgrade 93c2cf108202
+                  python -m alembic downgrade c1e7a4b9d302
                   if psql --dbname mirai_bootstrap_i6 --tuples-only --no-align \
-                    --command "SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='propostas' AND column_name='pdf_sha256'" \
+                    --command "SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='usuarios' AND column_name='cliente_id'" \
                     | grep -q 1; then
                       echo "restore_drill_downgrade_column_present" >&2
                       exit 1
@@ -233,6 +233,7 @@ jobs:
                     --backup "${{ steps.archive.outputs.decrypted_file }}" \
                     --confirm-restore RESTORE \
                     --schema public
+                  python -m alembic upgrade head
                   python -m scripts.validate_release_database --expect-data \
                     --snapshot "$RUNNER_TEMP/mirai-restore-before.json"
 

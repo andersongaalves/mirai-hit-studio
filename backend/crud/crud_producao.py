@@ -104,6 +104,34 @@ def buscar_por_produtor(db: Session, producao_id: int, produtor_id: int):
     )
 
 
+def listar_por_cliente(
+    db: Session,
+    cliente_id: int,
+    *,
+    status: tuple[str, ...] | None = None,
+):
+    query = (
+        db.query(ProducaoModel)
+        .join(OrcamentoModel, ProducaoModel.orcamento_id == OrcamentoModel.id)
+        .filter(OrcamentoModel.cliente_id == cliente_id)
+    )
+    if status:
+        query = query.filter(ProducaoModel.status.in_(status))
+    return query.order_by(ProducaoModel.id.desc()).all()
+
+
+def buscar_por_cliente(db: Session, producao_id: int, cliente_id: int):
+    return (
+        db.query(ProducaoModel)
+        .join(OrcamentoModel, ProducaoModel.orcamento_id == OrcamentoModel.id)
+        .filter(
+            ProducaoModel.id == producao_id,
+            OrcamentoModel.cliente_id == cliente_id,
+        )
+        .first()
+    )
+
+
 def atualizar_status(db: Session, producao_id: int, status: str):
 
     producao = db.query(ProducaoModel).filter(ProducaoModel.id == producao_id).first()

@@ -1,10 +1,16 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
 
-
-UsuarioRole = Literal["admin", "produtor"]
+UsuarioRole = Literal["admin", "produtor", "cliente"]
 
 
 def validar_username(value: str) -> str:
@@ -46,6 +52,7 @@ class UsuarioCreate(BaseModel):
     username: str = Field(min_length=1, max_length=50)
     password: str = Field(min_length=8, max_length=72)
     role: UsuarioRole = "produtor"
+    cliente_id: int | None = Field(default=None, gt=0)
 
     @field_validator("username")
     @classmethod
@@ -57,6 +64,14 @@ class UsuarioCreate(BaseModel):
     def password_valido(cls, value: str) -> str:
         return validar_senha(value)
 
+    @model_validator(mode="after")
+    def vinculo_cliente_valido(self):
+        if self.role == "cliente" and self.cliente_id is None:
+            raise ValueError("client_link_required")
+        if self.role != "cliente" and self.cliente_id is not None:
+            raise ValueError("client_link_forbidden")
+        return self
+
 
 class UsuarioUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -64,6 +79,7 @@ class UsuarioUpdate(BaseModel):
     username: str | None = Field(default=None, min_length=1, max_length=50)
     role: UsuarioRole | None = None
     ativo: StrictBool | None = None
+    cliente_id: int | None = Field(default=None, gt=0)
 
     @field_validator("username")
     @classmethod
@@ -98,6 +114,7 @@ class UsuarioResponse(BaseModel):
     role: str
     is_admin: bool
     ativo: bool
+    cliente_id: int | None
     created_at: datetime
     updated_at: datetime
 
