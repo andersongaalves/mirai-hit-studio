@@ -6,6 +6,7 @@ import test_bootstrap_database as isolated
 
 SETUP = '''
 import asyncio
+import types
 from datetime import datetime, timezone
 
 import httpx
@@ -13,11 +14,15 @@ from fastapi import FastAPI
 from sqlalchemy.orm import Session
 
 from models import OrcamentoModel, ProducaoModel, PropostaModel, UsuarioModel
-from routers.producao import router, get_current_user, get_db
+from core.dependencies import get_current_user
+from routers.producao import router, get_db
 
 bootstrap(engine)
 with Session(engine) as db:
     db.add(UsuarioModel(id=1, username='produtor', password_hash='unused', role='produtor'))
+    db.add(UsuarioModel(
+        id=99, username='admin', password_hash='unused', role='admin', is_admin=True,
+    ))
     db.add(OrcamentoModel(
         id=1, nome_cliente='Cliente Teste', email='cliente@example.com',
         servico='Mixagem', valor_total=500,
@@ -40,7 +45,8 @@ def session():
     with Session(engine) as db:
         yield db
 app.dependency_overrides[get_db] = session
-app.dependency_overrides[get_current_user] = lambda: object()
+app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(
+    id=99, username='admin', role='admin', is_admin=True, ativo=True)
 '''
 
 

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 
 from schemas.producao import (
     ProducaoCreate,
@@ -32,7 +32,7 @@ router = APIRouter(prefix="/producoes", tags=["Produções"])
 
 @router.post("", response_model=ProducaoResponse)
 def criar_producao(
-    dados: ProducaoCreate, db: Session = Depends(get_db), user=Depends(get_current_user)
+    dados: ProducaoCreate, db: Session = Depends(get_db), user=Depends(require_admin)
 ):
     if dados.produtor_id and not db.get(UsuarioModel, dados.produtor_id):
         raise HTTPException(status_code=422, detail="Produtor não encontrado")
@@ -62,7 +62,7 @@ def criar_producao(
 
 
 @router.get("", response_model=list[ProducaoResponse])
-def listar_producoes(db: Session = Depends(get_db), user=Depends(get_current_user)):
+def listar_producoes(db: Session = Depends(get_db), user=Depends(require_admin)):
 
     return crud_producao.listar(db)
 
@@ -71,7 +71,7 @@ def listar_producoes(db: Session = Depends(get_db), user=Depends(get_current_use
 def obter_producao(
     producao_id: int,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     producao = crud_producao.buscar(db, producao_id)
     if not producao:
@@ -90,7 +90,7 @@ def atualizar_status(
     dados: ProducaoStatusUpdate,
     request: Request,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     atual = db.get(ProducaoModel, producao_id)
@@ -121,7 +121,7 @@ def atualizar_etapas(
     producao_id: int,
     dados: ProducaoEtapasUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     producao = crud_producao.atualizar_etapas(db, producao_id, dados.etapas)
@@ -138,7 +138,7 @@ def alterar_prazo(
     producao_id: int,
     dados: ProducaoPrazoUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     producao = crud_producao.atualizar_prazo(db, producao_id, dados.prazo_entrega)
@@ -155,7 +155,7 @@ def atualizar_observacoes(
     producao_id: int,
     dados: ProducaoObservacoesUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     producao = crud_producao.atualizar_observacoes(
         db, producao_id, dados.observacoes

@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 from database import get_db
 from schemas.proposta import PropostaCreate, PropostaResponse, PropostaUpdate
 from services import proposta_service as service
@@ -14,7 +14,7 @@ from services import proposta_documento_service as documentos
 from services.documento_storage import DocumentoIndisponivel
 from services import proposta_comercial_service as comercial
 
-router = APIRouter(tags=["Propostas"], dependencies=[Depends(get_current_user)])
+router = APIRouter(tags=["Propostas"], dependencies=[Depends(require_admin)])
 logger = logging.getLogger(__name__)
 IdPath = Annotated[int, Path(gt=0)]
 Db = Annotated[Session, Depends(get_db)]
@@ -75,7 +75,7 @@ def documento(proposta_id: IdPath, db: Db):
 
 
 @router.post("/propostas/{proposta_id}/enviar", response_model=PropostaResponse)
-def enviar(proposta_id: IdPath, request: Request, db: Db, user=Depends(get_current_user)):
+def enviar(proposta_id: IdPath, request: Request, db: Db, user=Depends(require_admin)):
     return _responder(
         comercial.enviar,
         db,
@@ -86,7 +86,7 @@ def enviar(proposta_id: IdPath, request: Request, db: Db, user=Depends(get_curre
 
 
 @router.post("/propostas/{proposta_id}/aprovar", response_model=PropostaResponse)
-def aprovar(proposta_id: IdPath, request: Request, db: Db, user=Depends(get_current_user)):
+def aprovar(proposta_id: IdPath, request: Request, db: Db, user=Depends(require_admin)):
     return _responder(
         comercial.aprovar,
         db,

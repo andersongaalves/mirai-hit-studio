@@ -7,6 +7,7 @@ import test_bootstrap_database as isolated
 
 SETUP = r'''
 import asyncio
+import types
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -25,7 +26,8 @@ def session():
     with Session(engine) as db:
         yield db
 app.dependency_overrides[get_db] = session
-app.dependency_overrides[get_current_user] = lambda: object()
+app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(
+    id=1, username='admin', role='admin', is_admin=True, ativo=True)
 '''
 
 

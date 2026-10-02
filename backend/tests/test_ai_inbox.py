@@ -193,6 +193,9 @@ class AIInboxTests(unittest.TestCase):
             app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(
                 id=3, role='visitor', ativo=True, is_admin=False)
             assert client.get('/admin/ai/conversations').status_code == 403
+            app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(
+                id=2, role='produtor', ativo=True, is_admin=False)
+            assert client.get('/admin/ai/conversations').status_code == 403
             app.dependency_overrides[get_current_user] = lambda: actor
             response = client.get('/admin/ai/conversations')
             assert response.status_code == 200 and response.json()['items'] == []

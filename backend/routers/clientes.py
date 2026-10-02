@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 from database import get_db
 from schemas.cliente import ClienteCreate, ClienteDetail, ClienteResponse, ClienteSummary, ClienteUpdate
 from services import cliente_service
@@ -25,7 +25,7 @@ def listar_clientes(
     busca: str = Query(default="", max_length=150),
     ativo: bool | None = None,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     return cliente_service.listar(db, busca.strip(), ativo)
 
@@ -34,7 +34,7 @@ def listar_clientes(
 def obter_cliente(
     cliente_id: int,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     try:
         return cliente_service.buscar(db, cliente_id)
@@ -46,7 +46,7 @@ def obter_cliente(
 def criar_cliente(
     dados: ClienteCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     try:
         return cliente_service.criar(db, dados)
@@ -59,7 +59,7 @@ def atualizar_cliente(
     cliente_id: int,
     dados: ClienteUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     try:
         return cliente_service.atualizar(db, cliente_id, dados)

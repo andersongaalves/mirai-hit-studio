@@ -50,7 +50,10 @@ async def check():
             assert decode_token(create_refresh_token({'sub': 'admin'}), 'refresh')['sub'] == 'admin'
             for url in ['/usuarios', '/orcamentos', '/producoes', '/propostas/999']:
                 assert (await client.get(url)).status_code == 401, url
-            assert (await client.get('/usuarios', headers=bearer('common'))).status_code == 403
+            for url in ['/usuarios', '/usuarios/produtores', '/clientes', '/orcamentos',
+                        '/producoes', '/propostas/999', '/dashboard', '/financeiro/resumo',
+                        '/admin/ai/conversations']:
+                assert (await client.get(url, headers=bearer('common'))).status_code == 403, url
             for method, url in [('put', '/config'), ('post', '/servicos'), ('post', '/projetos')]:
                 assert (await client.request(method, url, json={})).status_code == 401
                 assert (await client.request(method, url, json={}, headers=bearer('common'))).status_code == 403
@@ -62,7 +65,7 @@ async def check():
                 cfg['desconto'] = discount
                 assert (await client.put('/config', json=cfg, headers=bearer('admin'))).status_code == 200
                 assert (await client.get('/config')).json()['desconto'] == discount
-            assert (await client.patch('/orcamentos/1/produtor', json={'produtor_id':999}, headers=bearer('common'))).status_code == 422
+            assert (await client.patch('/orcamentos/1/produtor', json={'produtor_id':999}, headers=bearer('common'))).status_code == 403
             result = await client.post('/auth/login', json={'username':'admin', 'password':'password-test'})
             assert result.status_code == 200, result.text
             assert decode_token(result.json()['access_token'])['sub'] == 'admin'

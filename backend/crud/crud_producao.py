@@ -84,6 +84,26 @@ def buscar(db: Session, producao_id: int):
     return _resposta(producao, produtor, email, proposta)
 
 
+def listar_por_produtor(db: Session, produtor_id: int):
+    return (
+        db.query(ProducaoModel)
+        .filter(ProducaoModel.produtor_id == produtor_id)
+        .order_by(ProducaoModel.id.desc())
+        .all()
+    )
+
+
+def buscar_por_produtor(db: Session, producao_id: int, produtor_id: int):
+    return (
+        db.query(ProducaoModel)
+        .filter(
+            ProducaoModel.id == producao_id,
+            ProducaoModel.produtor_id == produtor_id,
+        )
+        .first()
+    )
+
+
 def atualizar_status(db: Session, producao_id: int, status: str):
 
     producao = db.query(ProducaoModel).filter(ProducaoModel.id == producao_id).first()

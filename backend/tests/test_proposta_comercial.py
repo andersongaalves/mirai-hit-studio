@@ -203,7 +203,8 @@ with Session(engine) as db:
         self.run_case('''
 import asyncio, json
 from fastapi import FastAPI
-from routers.propostas import router, get_db, get_current_user
+from core.dependencies import get_current_user
+from routers.propostas import router, get_db
 from routers.orcamentos import router as budgets_router
 app = FastAPI()
 app.include_router(router)
@@ -212,7 +213,8 @@ def session():
     with Session(engine) as db:
         yield db
 app.dependency_overrides[get_db] = session
-app.dependency_overrides[get_current_user] = lambda: object()
+app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(
+    id=1, username='admin', role='admin', is_admin=True, ativo=True)
 with Session(engine) as db:
     p = service.criar_por_orcamento(db, 1)
 async def request(method, path, data=None):

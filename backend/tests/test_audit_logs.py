@@ -64,7 +64,8 @@ async def check():
         assert (await client.patch(f'/usuarios/{target}/senha', headers=bearer('admin'), json={'nova_senha':'another-secret'})).status_code == 200
         assert (await client.patch(f'/usuarios/{target}', headers=bearer('admin'), json={'ativo':False})).status_code == 200
         assert (await client.patch(f'/usuarios/{target}', headers=bearer('admin'), json={'ativo':True})).status_code == 200
-        assert (await client.patch('/producoes/1/status', headers=bearer('produtor'), json={'status':'em_producao'})).status_code == 200
+        assert (await client.patch('/producoes/1/status', headers=bearer('produtor'), json={'status':'em_producao'})).status_code == 403
+        assert (await client.patch('/producoes/1/status', headers=bearer('admin'), json={'status':'em_producao'})).status_code == 200
 
         assert (await client.get('/audit-logs')).status_code == 401
         assert (await client.get('/audit-logs', headers=bearer('produtor'))).status_code == 403

@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from core.config import settings
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 from database import get_db
 from integrations.mercado_pago import MercadoPagoClient, MercadoPagoError, MercadoPagoNotConfigured
 from schemas.checkout import (
@@ -58,7 +58,7 @@ def config():
 def link(
     proposta_id: Annotated[int, Path(gt=0)],
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     base_url = getattr(settings, "PUBLIC_FRONTEND_URL", "http://localhost:4173")
     return CheckoutLinkResponse(

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
-from core.dependencies import get_current_user, require_admin
+from core.dependencies import require_admin
 from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioResponse, UsuarioUpdate
 from services import usuario_service
 
@@ -31,7 +31,7 @@ def listar_usuarios(
 @router.get("/produtores", response_model=list[UsuarioResponse])
 def listar_produtores_ativos(
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
     return usuario_service.listar(db, ativo=True)
 

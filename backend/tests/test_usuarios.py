@@ -53,7 +53,7 @@ async def check():
         assert (await client.get('/usuarios')).status_code == 401
         assert (await client.get('/usuarios', headers=bearer('produtor'))).status_code == 403
         produtores = await client.get('/usuarios/produtores', headers=bearer('produtor'))
-        assert produtores.status_code == 200 and len(produtores.json()) == 2
+        assert produtores.status_code == 403
         listed = await client.get('/usuarios', headers=bearer('admin'))
         assert listed.status_code == 200 and len(listed.json()) == 2
         assert all('password' not in key for item in listed.json() for key in item)

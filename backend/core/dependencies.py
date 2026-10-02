@@ -29,14 +29,21 @@ def get_current_user(token=Depends(security), db=Depends(get_db)):
 
 def require_admin(user=Depends(get_current_user)):
     # Both fields exist with privileged defaults: deny inconsistent legacy records.
-    if not user.is_admin or user.role != "admin":
+    if (not getattr(user, "ativo", False)
+            or not getattr(user, "is_admin", False)
+            or getattr(user, "role", None) != "admin"):
         raise HTTPException(status_code=403, detail="Permissao administrativa necessaria.")
     return user
 
 
-def require_ai_operator(user=Depends(get_current_user)):
-    """Allow the internal roles that operate the AI inbox."""
-    if (not user.ativo or user.role not in {"admin", "produtor"}
-            or (user.role == "admin" and not user.is_admin)):
-        raise HTTPException(status_code=403, detail="Permissao operacional necessaria.")
+def require_producer(user=Depends(get_current_user)):
+    if (not getattr(user, "ativo", False)
+            or getattr(user, "role", None) != "produtor"
+            or getattr(user, "is_admin", False)):
+        raise HTTPException(status_code=403, detail="Permissao de produtor necessaria.")
     return user
+
+
+def require_ai_operator(user=Depends(get_current_user)):
+    """Keep the cross-client AI inbox restricted to administrators."""
+    return require_admin(user)

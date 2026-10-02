@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from core.dependencies import get_current_user
+from core.dependencies import require_admin
 from schemas.orcamento import (
     OrcamentoCreate,
     OrcamentoResponse,
@@ -75,7 +75,7 @@ def criar_orcamento(
 )
 def listar_orcamentos(
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     return crud_orcamento.listar(db)
@@ -84,7 +84,7 @@ def listar_orcamentos(
 def deletar_orcamento(
     orcamento_id: int,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     orcamento = crud_orcamento.buscar_por_id(
@@ -114,7 +114,7 @@ def atualizar_status(
     orcamento_id: int,
     dados: OrcamentoStatusUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     try:
@@ -139,7 +139,7 @@ def atualizar_status(
 def enviar_proposta(
     orcamento_id: int,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     raise HTTPException(status_code=409, detail="Use o envio real pelo editor de propostas.")
@@ -152,7 +152,7 @@ def alterar_produtor(
     orcamento_id: int,
     dados: OrcamentoProdutorUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     if dados.produtor_id is not None and db.get(UsuarioModel, dados.produtor_id) is None:
@@ -180,7 +180,7 @@ def alterar_observacoes(
     orcamento_id: int,
     dados: OrcamentoObservacoesUpdate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_admin),
 ):
 
     orcamento = crud_orcamento.atualizar_observacoes(
