@@ -1,26 +1,23 @@
-.quote-main { padding: 72px 0 96px; }
+.quote-main { padding: 80px 0 96px; }
 
-.quote-header {
-    max-width: 900px;
-    margin-bottom: var(--space-10);
-}
+.quote-header { margin-bottom: var(--space-10); }
 
 .quote-header h1 {
     max-width: 760px;
     margin-bottom: var(--space-4);
-    font-size: 3.25rem;
+    font-size: 3rem;
     line-height: 1.08;
 }
 
 .quote-header > p:last-child {
     max-width: 680px;
     color: var(--color-text-secondary);
-    font-size: 1.1rem;
+    font-size: 1.375rem;
 }
 
 .quote-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
     gap: var(--space-8);
     align-items: start;
 }
@@ -134,14 +131,14 @@
     padding: var(--space-5);
     overflow-wrap: anywhere;
     border: var(--border-subtle);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    background: var(--color-surface-elevated);
+    background: var(--color-surface);
 }
 
 .radio-card label:hover { border-color: rgba(0, 212, 255, 0.55); }
 .radio-card input:focus-visible + label { outline: 2px solid var(--color-accent); outline-offset: 3px; }
-.radio-card input:checked + label { border-color: var(--color-accent); box-shadow: var(--shadow-glow); }
+.radio-card input:checked + label { border-color: var(--color-accent); background: var(--color-surface-elevated); }
 
 .service-title { color: var(--color-text-primary); font-family: var(--font-subtitulos); font-size: 1.15rem; font-weight: 700; }
 .service-subtitle { margin-top: var(--space-2); color: var(--color-text-secondary); }
@@ -157,8 +154,8 @@
 .result-panel {
     padding: var(--space-6);
     border: var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-elevated);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
 }
 
 .form-group { margin-bottom: var(--space-5); text-align: left; }
@@ -174,7 +171,7 @@
     border: var(--border-subtle);
     border-radius: var(--radius-sm);
     color: var(--color-text-primary);
-    background: #0b111d;
+    background: var(--color-background);
     font: inherit;
 }
 
@@ -217,7 +214,7 @@
     top: 96px;
     padding: var(--space-6);
     border-left: 1px solid var(--color-accent);
-    background: #0e1522;
+    background: var(--color-surface);
 }
 
 .quote-context ol { margin-top: var(--space-5); list-style: none; }

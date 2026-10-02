@@ -44,7 +44,11 @@ async function staticResponse(route) {
         assert.equal(await page.getByText(/grandes marcas|grandes canais/i).count(), 0);
         const event = await page.evaluate(() => window.dataLayer.find(item => item[0] === "event" && item[1] === "view_vertical"));
         assert.deepEqual(event[2], { vertical: "creators" });
-        assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector(".creators-hero")).backgroundImage.includes("mirai-creators-hero.webp")));
+        assert.equal(await page.locator(".creators-hero .public-hero__visual--modules span").count(), 5);
+        assert.equal(await page.locator(".creators-hero .public-hero__visual--modules span").first().evaluate(element => getComputedStyle(element).animationName), "module-drift");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        assert.equal(await page.locator(".creators-hero .public-hero__visual--modules span").first().evaluate(element => getComputedStyle(element).animationName), "none");
+        await page.emulateMedia({ reducedMotion: "no-preference" });
 
         for (const width of [320, 375, 390, 414, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 900 });

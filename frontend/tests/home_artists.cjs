@@ -46,7 +46,7 @@ async function staticResponse(route) {
         const loadedHeroes = new Set();
         page.on("pageerror", error => errors.push(error.message));
         page.on("response", response => {
-            if (response.url().includes("mirai-") && response.url().endsWith("-hero.webp")) {
+            if (response.url().endsWith("mirai-studio-hero.webp") || response.url().endsWith("mirai-visual-disc.svg")) {
                 assert.equal(response.status(), 200);
                 loadedHeroes.add(new URL(response.url()).pathname);
             }
@@ -110,7 +110,17 @@ async function staticResponse(route) {
             await page.screenshot({ path: path.join(process.env.VISUAL_OUTPUT, "artists-g2-mobile.png") });
         }
 
-        assert.deepEqual([...loadedHeroes].sort(), ["/img/mirai-artists-hero.webp", "/img/mirai-studio-hero.webp"]);
+        assert.deepEqual([...loadedHeroes].sort(), ["/assets/mirai-visual-disc.svg", "/img/mirai-studio-hero.webp"]);
+        for (const [asset, selector] of [
+            ["disc", 'path[id^="Vinyl depth"]'],
+            ["spatial", 'rect[id^="Spatial layer"]'],
+        ]) {
+            await page.goto(`http://localhost:4173/assets/mirai-visual-${asset}.svg`);
+            assert.notEqual(await page.locator(selector).first().evaluate(element => getComputedStyle(element).animationName), "none");
+            await page.emulateMedia({ reducedMotion: "reduce" });
+            assert.equal(await page.locator(selector).first().evaluate(element => getComputedStyle(element).animationName), "none");
+            await page.emulateMedia({ reducedMotion: "no-preference" });
+        }
         assert.deepEqual(errors, []);
         console.log("PASS: Home and Artists content, honest portfolio state, hero assets and responsive structure.");
     } finally {

@@ -1,0 +1,32 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="600" height="450" viewBox="0 0 600 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+<style>
+@media (prefers-reduced-motion: no-preference) {
+  rect[id^="Spatial layer"] { animation: spatial-drift 6s ease-in-out infinite; }
+  rect:nth-of-type(2n) { animation-delay: -3s; }
+  circle[id^="Sound point"] { animation: sound-pulse 3s ease-in-out infinite; }
+  circle:nth-of-type(3n) { animation-delay: -1s; }
+  circle:nth-of-type(3n + 1) { animation-delay: -2s; }
+}
+@keyframes spatial-drift { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
+@keyframes sound-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+</style>
+<g id="Visual / spatial" clip-path="url(#clip0_0_24)">
+<rect id="Spatial layer 0" x="90" y="60" width="410" height="121.5" rx="4" transform="rotate(25 90 60)" fill="#00D5ED"/>
+<rect id="Spatial layer 1" x="116" y="102" width="410" height="121.5" rx="4" transform="rotate(25 116 102)" fill="#D430EF"/>
+<rect id="Spatial layer 2" x="142" y="144" width="410" height="121.5" rx="4" transform="rotate(25 142 144)" fill="#00D5ED"/>
+<rect id="Spatial layer 3" x="168" y="186" width="410" height="121.5" rx="4" transform="rotate(25 168 186)" fill="#D430EF"/>
+<rect id="Spatial layer 4" x="194" y="228" width="410" height="121.5" rx="4" transform="rotate(25 194 228)" fill="#00D5ED"/>
+<circle id="Sound point 0" cx="106" cy="126" r="6" fill="#00D5ED"/>
+<circle id="Sound point 1" cx="164" cy="196" r="6" fill="#00D5ED"/>
+<circle id="Sound point 2" cx="222" cy="266" r="6" fill="#00D5ED"/>
+<circle id="Sound point 3" cx="280" cy="126" r="6" fill="#00D5ED"/>
+<circle id="Sound point 4" cx="338" cy="196" r="6" fill="#00D5ED"/>
+<circle id="Sound point 5" cx="396" cy="266" r="6" fill="#00D5ED"/>
+<circle id="Sound point 6" cx="454" cy="126" r="6" fill="#00D5ED"/>
+</g>
+<defs>
+<clipPath id="clip0_0_24">
+<rect width="600" height="450" fill="white"/>
+</clipPath>
+</defs>
+</svg>

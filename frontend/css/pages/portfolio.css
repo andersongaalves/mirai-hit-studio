@@ -1,27 +1,40 @@
 .portfolio-hero {
-    min-height: 280px;
+    min-height: 0;
     display: grid;
-    align-items: end;
-    padding-block: var(--space-8);
-    border-bottom: var(--border-subtle);
-    background-color: #080d15;
-    background-image: url("../../img/mirai-studio-hero.webp");
-    background-position: center 56%;
-    background-size: cover;
-    box-shadow: inset 0 0 0 1000px rgba(3, 8, 15, 0.72);
+    align-items: center;
+    padding-block: 96px;
+    background: var(--color-background);
+}
+
+.portfolio-page .public-container { width: min(calc(100% - 48px), 1264px); }
+
+.portfolio-hero__layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 64px;
+}
+
+.portfolio-hero__visual {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: contain;
+    background: transparent;
 }
 
 .portfolio-hero h1 {
-    max-width: 760px;
-    margin-bottom: var(--space-4);
+    max-width: 600px;
+    margin-bottom: var(--space-5);
     font-size: 3.5rem;
-    line-height: 1.05;
+    line-height: 1.12;
 }
 
-.portfolio-hero > .public-container > p:last-child {
-    max-width: 650px;
-    color: #d5dce7;
-    font-size: 1.1rem;
+.portfolio-hero__layout > div > p:last-child {
+    max-width: 560px;
+    color: var(--color-text-secondary);
+    font-size: 1.5rem;
 }
 
 .portfolio-note {
@@ -31,12 +44,10 @@
 }
 
 .portfolio-filters {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-4);
     margin-top: var(--space-8);
-    padding: var(--space-4);
-    border: var(--border-subtle);
-    border-radius: var(--radius-md);
 }
 
 .portfolio-filter-group {
@@ -56,10 +67,10 @@
 .filter-btn {
     min-height: 44px;
     padding: var(--space-2) var(--space-3);
-    border: var(--border-subtle);
-    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    border-radius: 0;
     color: var(--color-text-primary);
-    background: transparent;
+    background: var(--color-background);
     font-family: var(--font-titulos);
     font-size: var(--font-size-small);
     cursor: pointer;
@@ -68,8 +79,8 @@
 .filter-btn:hover,
 .filter-btn[aria-pressed="true"] {
     border-color: var(--color-accent);
-    color: var(--color-accent);
-    background: rgba(0, 212, 255, 0.08);
+    color: var(--color-on-accent);
+    background: var(--color-accent);
 }
 
 .portfolio-grid {
@@ -82,9 +93,9 @@
 .portfolio-card {
     min-width: 0;
     overflow: hidden;
-    border: var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-elevated);
+    border: 0;
+    border-radius: 0;
+    background: var(--color-background);
 }
 
 .portfolio-card__cover {
@@ -147,21 +158,22 @@
 .portfolio-empty {
     grid-column: 1 / -1;
     padding: var(--space-10) var(--space-5);
-    border: var(--border-subtle);
-    border-radius: var(--radius-md);
+    border-top: var(--border-subtle);
     color: var(--color-text-secondary);
-    text-align: center;
+    text-align: left;
 }
 
 @media (max-width: 900px) {
+    .portfolio-hero { padding-block: 58px; }
+    .portfolio-hero__layout { grid-template-columns: 1fr; gap: 28px; }
     .portfolio-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 600px) {
-    .portfolio-hero { min-height: 390px; background-position: 58% center; }
     .portfolio-hero h1 { font-size: 2.35rem; }
+    .portfolio-hero__layout > div > p:last-child { font-size: 1.2rem; }
     .portfolio-grid { grid-template-columns: 1fr; }
-    .portfolio-filter-group { align-items: stretch; flex-direction: column; }
+    .portfolio-filter-group { align-items: center; }
     .portfolio-filter-label { min-width: 0; }
-    .filter-btn { width: 100%; text-align: left; }
+    .filter-btn { width: auto; text-align: center; }
 }
