@@ -19,7 +19,7 @@
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 10 / 9;
     object-fit: contain;
     background: transparent;
 }
