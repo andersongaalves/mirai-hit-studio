@@ -17,8 +17,8 @@ adicionou somente o vinculo autenticavel necessario entre `usuarios` e `clientes
 | Status/prazo | Existe | Os mesmos campos de Producao sao projetados nos portais. |
 | Admin | Existe | Rotas operacionais permanecem administrativas. |
 | Financeiro do cliente | Existe | Projecao read-only limitada a cobrancas e pagamentos do proprio cliente. |
-| Repasse do produtor | Ausente | Nao existe entidade com semantica de valor devido/pago ao produtor. |
-| Arquivos privados da producao | Ausente | Storage existe para PDF de proposta e audio publico, sem metadados de anexos da producao. |
+| Repasse do produtor | Implementado na Fase 2 | Obrigacao manual, unica por Producao, com produtor preservado como snapshot. |
+| Arquivos privados da producao | Implementado na Fase 2 | Metadados versionados e objetos opacos em bucket privado dedicado. |
 | Auditoria | Existe | O provisionamento reutiliza o gerenciamento administrativo auditado de Usuarios. |
 
 `projetos` representa o Portfolio publico e nao foi tratado como historico privado de
@@ -67,7 +67,48 @@ status reais `finalizado` e `entregue`; nenhuma tabela ou maquina de estados foi
 coerencia entre papel e vinculo. A coluna e nullable e preserva contas Admin e Produtor.
 Upgrade, downgrade de uma revision e novo upgrade sao validados em banco descartavel.
 
-## Lacunas deliberadamente nao simuladas
+## Fase 2 - Portal do Produtor
+
+A Fase 2 adiciona exatamente as duas estruturas autorizadas pela lacuna comprovada na
+Fase 1. A migration incremental `24ef7f883a03`, descendente de `d3b8e1f4a720`, cria:
+
+- `producao_arquivos`: arquivos privados de uma Producao, tipo controlado, autoria,
+  MIME, tamanho, SHA-256, chave opaca unica, grupo/numero de versao, substituicao sem
+  sobrescrita, visibilidade separada para produtor e cliente e timestamps;
+- `repasses_produtor`: uma obrigacao por Producao, produtor persistido como snapshot,
+  `Numeric(12,2)`, BRL, estados `definido`, `liberado` e `pago`, datas coerentes,
+  referencia opcional e comprovante referenciado em `producao_arquivos`.
+
+O bucket privado padrao e `producao-arquivos` (configuravel por
+`PRODUCAO_STORAGE_BUCKET`). O backend usa a credencial privilegiada somente no servidor,
+valida ownership antes de acessar o objeto e entrega o conteudo por streaming autenticado.
+Nem a credencial nem `object_key` sao retornadas ao browser. Upload usa chave nova e
+`upsert=false`; falha do banco depois do upload executa compensacao no Storage.
+
+O Portal do Produtor reutiliza o login JWT e oferece dashboard, lista/detalhe, transicoes
+operacionais permitidas, arquivos visiveis, envio de previa/entrega e recebimentos
+read-only. O Admin gerencia arquivos/visibilidade e define, libera, registra ou corrige o
+repasse com auditoria. Reatribuicao da Producao revoga os arquivos pelo ownership atual,
+mas nao transfere o repasse historico: consultas financeiras usam `produtor_id` gravado no
+acordo.
+
+Endpoints adicionados ao portal:
+
+- `PATCH /portal/produtor/producoes/{id}/status`
+- `GET|POST /portal/produtor/producoes/{id}/arquivos`
+- `GET /portal/produtor/arquivos/{id}/conteudo`
+- `GET /portal/produtor/repasses`
+- `GET /portal/produtor/repasses/{id}/comprovante`
+
+As mutacoes administrativas ficam sob `/producoes/{id}/arquivos` e
+`/producoes/{id}/repasse`, protegidas por `require_admin`. Pagamentos do cliente,
+Mercado Pago e checkout nao foram alterados. Repasse continua manual via Pix: nao ha
+split, Pix Out, parcelas, estorno ou transferencia automatica.
+
+A migration passou por bootstrap, downgrade, upgrade, constraints, RLS e smoke de app em
+PostgreSQL 17.11 descartavel. O cluster, fixtures e binarios temporarios foram removidos.
+
+## Lacunas deliberadamente nao simuladas na Fase 1
 
 - **Arquivos:** nao ha relacao persistida entre Producao e objetos privados. PDFs de
   propostas nao representam materiais, previas ou entregas; audio do Portfolio e publico.
@@ -86,6 +127,6 @@ Upgrade, downgrade de uma revision e novo upgrade sao validados em banco descart
 - uma migration incremental;
 - nenhuma alteracao de Mercado Pago, Storage, frontend ou fluxo publico.
 
-Conclusao: o backend minimo dos Portais do Produtor e do Cliente esta pronto. Anexos
-privados de Producao e repasses ao produtor permanecem dependencias explicitas das fases
-seguintes e nao foram simulados com JSON, audit logs ou dados financeiros do cliente.
+Conclusao: o backend dos dois portais permanece compartilhado com o Admin e a Fase 2 do
+Produtor passou a representar arquivos privados e repasses sem reutilizar entidades com
+semantica incorreta. A interface do Cliente para arquivos continua reservada a Fase 3.

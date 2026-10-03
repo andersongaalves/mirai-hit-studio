@@ -1319,6 +1319,23 @@
 .producao-add-etapa { margin-top: var(--space-3); }
 .producao-add-etapa input { flex: 1; }
 
+.admin-help { color: var(--color-text-secondary); }
+.producao-arquivos { display: grid; gap: var(--space-2); margin-bottom: var(--space-4); }
+.producao-arquivo-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); border: var(--border-subtle); padding: var(--space-3); }
+.producao-arquivo-row__info { display: grid; min-width: 0; gap: var(--space-1); }
+.producao-arquivo-row__info :where(strong, span) { overflow-wrap: anywhere; }
+.producao-arquivo-row__info span { color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.producao-arquivo-row__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.producao-operacao-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: var(--space-3); }
+.producao-operacao-form label { display: grid; gap: var(--space-2); }
+.producao-operacao-form .producao-check { display: flex; align-items: center; min-height: 44px; }
+.producao-repasse-resumo { margin-bottom: var(--space-4); }
+
+@media (max-width: 720px) {
+    .producao-arquivo-row, .producao-operacao-form { grid-template-columns: 1fr; }
+    .producao-arquivo-row__actions { align-items: flex-start; flex-direction: column; }
+}
+
 @media (max-width: 768px) {
     .financeiro-table-view { display: none; }
 

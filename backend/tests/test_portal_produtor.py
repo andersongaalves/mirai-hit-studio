@@ -15,6 +15,7 @@ from core.config import settings
 from core.security import create_access_token
 from database import get_db
 from models import ClienteModel, OrcamentoModel, ProducaoModel, UsuarioModel
+from models.audit_log import AuditLogModel
 from routers.portal_produtor import router as portal_router
 from routers.producao import router as producao_router
 
@@ -87,6 +88,75 @@ async def check():
         assert (await client.get('/portal/produtor/producoes', headers={'Authorization': 'Bearer invalid'})).status_code == 401
         expired = jwt.encode({'sub': 'producer-a', 'exp': 1, 'type': 'access'}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
         assert (await client.get('/portal/produtor/producoes', headers={'Authorization': 'Bearer ' + expired})).status_code == 401
+asyncio.run(check())
+''')
+
+    def test_producer_progress_uses_real_transitions_and_audit(self):
+        self.run_case(r'''
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        started = await client.patch(
+            '/portal/produtor/producoes/1/status',
+            json={'status': 'em_producao'},
+            headers=bearer('producer-a'),
+        )
+        assert started.status_code == 200, started.text
+        assert started.json()['status'] == 'em_producao'
+
+        review = await client.patch(
+            '/portal/produtor/producoes/1/status',
+            json={'status': 'revisao'},
+            headers=bearer('producer-a'),
+        )
+        assert review.status_code == 200, review.text
+
+        resumed = await client.patch(
+            '/portal/produtor/producoes/1/status',
+            json={'status': 'em_producao'},
+            headers=bearer('producer-a'),
+        )
+        assert resumed.status_code == 200, resumed.text
+
+        forbidden = await client.patch(
+            '/portal/produtor/producoes/1/status',
+            json={'status': 'entregue'},
+            headers=bearer('producer-a'),
+        )
+        assert forbidden.status_code == 409
+
+        other = await client.patch(
+            '/portal/produtor/producoes/1/status',
+            json={'status': 'revisao'},
+            headers=bearer('producer-b'),
+        )
+        missing = await client.patch(
+            '/portal/produtor/producoes/999/status',
+            json={'status': 'revisao'},
+            headers=bearer('producer-b'),
+        )
+        assert other.status_code == missing.status_code == 404
+        assert other.json() == missing.json()
+
+        assert (await client.patch(
+            '/portal/produtor/producoes/1/status',
+            json={'status': 'revisao'},
+            headers=bearer('admin'),
+        )).status_code == 403
+
+        with Session(engine) as db:
+            production = db.get(ProducaoModel, 1)
+            assert production.status == 'em_producao'
+            entries = db.query(AuditLogModel).order_by(AuditLogModel.id).all()
+            assert [entry.action for entry in entries] == [
+                'production.progress_changed',
+                'production.progress_changed',
+                'production.progress_changed',
+            ]
+            assert all(entry.actor_user_id == 2 for entry in entries)
+            assert entries[-1].metadata_json == {
+                'old_status': 'revisao',
+                'new_status': 'em_producao',
+            }
 asyncio.run(check())
 ''')
 

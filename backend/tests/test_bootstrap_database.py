@@ -1,11 +1,11 @@
 """Disposable database tests; never load the project's .env settings."""
 
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import textwrap
 import unittest
+from pathlib import Path
 
 
 class BootstrapTests(unittest.TestCase):
@@ -35,6 +35,7 @@ def reject_ddl(connection, cursor, statement, parameters, context, many):
             result = subprocess.run(
                 [sys.executable, "-B", "-c", preamble + textwrap.dedent(source)],
                 cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True,
+                check=False,
                 timeout=90,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -51,7 +52,8 @@ def reject_ddl(connection, cursor, statement, parameters, context, many):
                 'projetos', 'configuracoes', 'newsletter', 'newsletter_campaigns',
                 'newsletter_deliveries', 'audit_logs', 'cobrancas', 'pagamentos',
                 'provider_webhook_events', 'ai_conversations', 'ai_messages', 'ai_email_threads',
-                'ai_briefings', 'ai_usage_events', 'alembic_version'}
+                'ai_briefings', 'ai_usage_events', 'producao_arquivos',
+                'repasses_produtor', 'alembic_version'}
             with engine.connect() as connection:
                 assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').all() == [(head,)]
             configure_mappers()

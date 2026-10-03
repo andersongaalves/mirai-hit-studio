@@ -74,3 +74,65 @@ export function atualizarObservacoes(id, observacoes) {
         "Erro ao atualizar observações.",
     );
 }
+
+export async function buscarArquivos(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/arquivos`), "Erro ao buscar arquivos.");
+}
+
+export async function enviarArquivo(id, form) {
+    return handleResponse(await authFetch(`/producoes/${id}/arquivos`, {
+        method: "POST",
+        body: form,
+    }), "Erro ao enviar arquivo.");
+}
+
+export async function atualizarVisibilidadeArquivo(producaoId, arquivoId, payload) {
+    return handleResponse(await authFetch(`/producoes/${producaoId}/arquivos/${arquivoId}/visibilidade`, {
+        method: "PATCH",
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+    }), "Erro ao atualizar visibilidade.");
+}
+
+export async function baixarArquivo(producaoId, arquivoId) {
+    const response = await authFetch(`/producoes/${producaoId}/arquivos/${arquivoId}/conteudo`);
+    if (!response.ok) return handleResponse(response, "Erro ao baixar arquivo.");
+    const disposition = response.headers.get("content-disposition") || "";
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    return {
+        blob: await response.blob(),
+        filename: encoded ? decodeURIComponent(encoded) : "arquivo",
+    };
+}
+
+export async function buscarRepasse(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasse`), "Erro ao buscar repasse.");
+}
+
+export async function definirRepasse(id, valor) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasse`, {
+        method: "PUT",
+        headers: jsonHeaders,
+        body: JSON.stringify({ valor_combinado: valor }),
+    }), "Erro ao definir repasse.");
+}
+
+export async function liberarRepasse(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasse/liberar`, { method: "POST" }), "Erro ao liberar repasse.");
+}
+
+export async function pagarRepasse(id, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasse/pagar`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+    }), "Erro ao registrar pagamento.");
+}
+
+export async function corrigirRepasse(id, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasse/correcao`, {
+        method: "PATCH",
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+    }), "Erro ao corrigir repasse.");
+}

@@ -7,3 +7,6 @@
 
 /admin*
   X-Robots-Tag: noindex, nofollow, noarchive
+
+/produtor*
+  X-Robots-Tag: noindex, nofollow, noarchive

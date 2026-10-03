@@ -1,6 +1,7 @@
 import { $ } from "../../utils/dom.js";
 import { createButtonElement } from "./producoes_dom.js";
 import { closeAdminModal, openAdminModal } from "../admin_modal.js";
+import { carregarOperacao, limparOperacao } from "./producoes_operacao.js";
 import {
     STATUS_PRODUCAO,
     classificarPrazo,
@@ -218,6 +219,7 @@ export function abrirModalProducao(producao, handlers = {}) {
         onRequestClose: fecharModalProducao,
         initialFocus: ".producao-modal-header button",
     });
+    carregarOperacao(producaoAtual.id);
 }
 
 export function atualizarModalProducao(producao) {
@@ -228,6 +230,7 @@ export function atualizarModalProducao(producao) {
 }
 
 export function fecharModalProducao() {
+    limparOperacao();
     producaoAtual = null;
     handlersAtuais = {};
     closeAdminModal("modal-producao");

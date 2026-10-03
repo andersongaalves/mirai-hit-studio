@@ -13,8 +13,12 @@ Proximo checkpoint: nenhum; release `v2.0.0`.
 Proximo push: somente trabalho posterior ao release.
 
 Portais - Backend Fase 1: concluida. Produtor e Cliente usam identidade autenticada e
-ownership no backend; anexos privados e repasses permanecem dependencias das proximas
-fases. Detalhes em `docs/PORTALS_BACKEND_PHASE1.md`.
+ownership no backend.
+
+Portais - Fase 2 Produtor: concluida. Dashboard, andamento, arquivos privados versionados,
+entregas, repasses manuais e integracao operacional do Admin usam os mesmos registros e
+autorizacao do backend. A Fase 3 do Cliente nao foi iniciada. Detalhes em
+`docs/PORTALS_BACKEND_PHASE1.md`.
 
 Ultimo deploy auditado: `b44f3d6` (`chore: prepara infraestrutura de producao`).
 

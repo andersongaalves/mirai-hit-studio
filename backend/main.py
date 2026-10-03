@@ -1,34 +1,34 @@
 import logging
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from core.config import settings
-from core.http_security import SecurityMiddleware, cors_origins
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from routers.auth import router as auth_router
-from routers.config import router as config_router
-from routers.orcamentos import router as orcamentos_router
-from routers.projetos import router as projetos_router
-from routers.servicos import router as servicos_router
-from services.startup_service import startup_database
-from routers.newsletter import router as newsletter_router
-from routers.usuarios import router as usuarios_router
-from routers.producao import router as producao_router
-from routers.propostas import router as propostas_router
-from routers.clientes import router as clientes_router
-from routers.dashboard import router as dashboard_router
-from routers.audit_logs import router as audit_logs_router
-from routers.webhooks import router as webhooks_router
-from routers.checkout import router as checkout_router
-from routers.financeiro import router as financeiro_router
+from core.config import settings
+from core.http_security import SecurityMiddleware, cors_origins
 from routers.ai_chat import router as ai_chat_router
 from routers.ai_inbox import router as ai_inbox_router
-from routers.portal_produtor import router as portal_produtor_router
+from routers.audit_logs import router as audit_logs_router
+from routers.auth import router as auth_router
+from routers.checkout import router as checkout_router
+from routers.clientes import router as clientes_router
+from routers.config import router as config_router
+from routers.dashboard import router as dashboard_router
+from routers.financeiro import router as financeiro_router
+from routers.newsletter import router as newsletter_router
+from routers.orcamentos import router as orcamentos_router
 from routers.portal_cliente import router as portal_cliente_router
+from routers.portal_operacao_admin import router as portal_operacao_admin_router
+from routers.portal_produtor import router as portal_produtor_router
+from routers.producao import router as producao_router
+from routers.projetos import router as projetos_router
+from routers.propostas import router as propostas_router
+from routers.servicos import router as servicos_router
+from routers.usuarios import router as usuarios_router
+from routers.webhooks import router as webhooks_router
+from services.startup_service import startup_database
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +82,7 @@ app.include_router(ai_chat_router)
 app.include_router(ai_inbox_router)
 app.include_router(portal_produtor_router)
 app.include_router(portal_cliente_router)
+app.include_router(portal_operacao_admin_router)
 
 
 @app.get("/")

@@ -12,3 +12,4 @@ from .financeiro import CobrancaModel, PagamentoModel, ProviderWebhookEventModel
 from .ai import AIConversationModel, AIEmailThreadModel, AIMessageModel
 from .ai_briefing import AIBriefingModel
 from .ai_usage import AIUsageEventModel
+from .portal_produtor import ProducaoArquivoModel, RepasseProdutorModel

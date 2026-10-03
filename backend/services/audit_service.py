@@ -20,6 +20,10 @@ ALLOWED_METADATA = {
     "new_mode",
     "new_assigned_user_id",
     "channel",
+    "old_amount",
+    "new_amount",
+    "reference_changed",
+    "receipt_changed",
 }
 
 

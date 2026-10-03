@@ -26,7 +26,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
 <input id="producoes-search"><select id="producoes-status-filter"><option value="todos">Todos</option><option value="aguardando_inicio">Aguardando</option><option value="em_producao">Produção</option><option value="revisao">Revisão</option><option value="finalizado">Finalizado</option><option value="entregue">Entregue</option></select><select id="producoes-prazo-filter"><option value="todos">Todos</option><option value="atrasado">Atrasado</option><option value="proximo">Próximo</option><option value="sem_prazo">Sem prazo</option></select><button id="producoes-clear-filters" class="hidden">Limpar filtros</button>
 <p id="producoes-summary"></p>
 <div id="producoes-list"></div>
-<div id="modal-producao" class="hidden" aria-labelledby="prod_titulo"><div class="modal-content producao-modal-content"><div class="producao-modal-header"><div><span id="prod_id"></span><h2 id="prod_titulo"></h2></div><button aria-label="Fechar detalhes">Fechar</button></div><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><div class="producao-add-etapa"><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button></div><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div></div>
+<div id="modal-producao" class="hidden" aria-labelledby="prod_titulo"><div class="modal-content producao-modal-content"><div class="producao-modal-header"><div><span id="prod_id"></span><h2 id="prod_titulo"></h2></div><button aria-label="Fechar detalhes">Fechar</button></div><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><div class="producao-add-etapa"><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button></div><div id="prod_arquivos"></div><form id="prod_arquivo_form"><select id="prod_arquivo_tipo"><option value="material">Material</option></select><input id="prod_arquivo_input" type="file"><select id="prod_arquivo_substitui"></select><input id="prod_arquivo_produtor" type="checkbox"><input id="prod_arquivo_cliente" type="checkbox"><button id="prod_arquivo_enviar">Enviar arquivo</button></form><div id="prod_repasse_resumo"></div><input id="prod_repasse_valor" type="number"><input id="prod_repasse_referencia"><select id="prod_repasse_comprovante"></select><button id="prod_repasse_salvar">Definir repasse</button><button id="prod_repasse_liberar" class="hidden">Liberar repasse</button><button id="prod_repasse_pagar" class="hidden">Registrar pagamento</button><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div></div>
 <script type="module">localStorage.setItem('access_token','test-token'); const module = await import('/js/admin/producoes/producoes.js'); window.productionModule = module; await module.initProducoes();</script>
 </body></html>`;
 
@@ -45,6 +45,8 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         { id: 2, titulo: 'Trilha', cliente: 'Creator', cliente_email: null, servico: 'Tema', status: 'em_producao', produtor_id: null, produtor_nome: null, orcamento_id: 11, proposta_id: null, proposta_numero: null, observacoes: '', etapas: JSON.stringify([{ nome: 'Briefing', feito: true }, { nome: 'Produção', feito: false }]), prazo_entrega: new Date(now + 2 * 86400000).toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         { id: 3, titulo: 'Finalizada', cliente: 'Artista', cliente_email: null, servico: 'Master', status: 'finalizado', produtor_id: 1, produtor_nome: 'Ana', orcamento_id: 12, proposta_id: null, proposta_numero: null, observacoes: '', etapas: '[]', prazo_entrega: new Date(now - 20 * 86400000).toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ];
+    let payout = null;
+    const files = [{ id: 8, producao_id: 1, tipo: 'material', nome_exibicao: '<b>material</b>.pdf', tamanho_bytes: 800, versao: 1, visivel_produtor: true, visivel_cliente: false }];
 
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -62,6 +64,26 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
             return route.fulfill(failList
                 ? { status: 500, json: { detail: 'Falha sintética' } }
                 : { json: productions });
+        }
+        const filesMatch = url.pathname.match(/^\/producoes\/(\d+)\/arquivos$/);
+        if (filesMatch && route.request().method() === 'GET') return route.fulfill({ json: files });
+        const payoutMatch = url.pathname.match(/^\/producoes\/(\d+)\/repasse$/);
+        if (payoutMatch && route.request().method() === 'GET') return route.fulfill({ json: payout });
+        if (payoutMatch && route.request().method() === 'PUT') {
+            payout = { id: 4, producao_id: 1, produtor_id: 1, valor_combinado: route.request().postDataJSON().valor_combinado, moeda: 'BRL', status: 'definido', liberado_em: null, pago_em: null, referencia_pagamento: null, comprovante_arquivo_id: null };
+            return route.fulfill({ json: payout });
+        }
+        if (url.pathname === '/producoes/1/repasse/liberar' && route.request().method() === 'POST') {
+            payout = { ...payout, status: 'liberado', liberado_em: new Date().toISOString() };
+            return route.fulfill({ json: payout });
+        }
+        if (url.pathname === '/producoes/1/repasse/pagar' && route.request().method() === 'POST') {
+            payout = { ...payout, ...route.request().postDataJSON(), status: 'pago', pago_em: new Date().toISOString() };
+            return route.fulfill({ json: payout });
+        }
+        if (url.pathname === '/producoes/1/repasse/correcao' && route.request().method() === 'PATCH') {
+            payout = { ...payout, ...route.request().postDataJSON() };
+            return route.fulfill({ json: payout });
         }
         const match = url.pathname.match(/^\/producoes\/(\d+)(?:\/(status|etapas|prazo|observacoes))?$/);
         if (!match) return route.fulfill({ status: 404, json: { detail: 'Não encontrado' } });
@@ -127,6 +149,21 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         assert.equal(await page.locator('#modal-producao img').count(), 0);
         assert.equal(await page.locator('#prod_cliente').textContent(), '<script>cliente</script>');
         assert.equal(await page.locator('#prod_proposta').textContent(), 'PROP-20 (#20)');
+        await page.waitForFunction(() => document.getElementById('prod_arquivos').textContent.includes('<b>material</b>'));
+        assert.equal(await page.locator('#prod_arquivos b, #prod_arquivos script').count(), 0);
+        await page.locator('#prod_repasse_valor').fill('250.00');
+        await page.locator('#prod_repasse_salvar').click();
+        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('250,00'));
+        assert.equal(payout.produtor_id, 1);
+        await page.locator('#prod_repasse_liberar').click();
+        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('liberado'));
+        await page.locator('#prod_repasse_referencia').fill('PIX-SYNTHETIC');
+        await page.locator('#prod_repasse_pagar').click();
+        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('pago'));
+        await page.locator('#prod_repasse_valor').fill('275.00');
+        await page.locator('#prod_repasse_salvar').click();
+        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('275,00'));
+        assert.equal(payout.referencia_pagamento, 'PIX-SYNTHETIC');
         await page.keyboard.press('Escape');
         await page.waitForFunction(() => document.getElementById('modal-producao').classList.contains('hidden'));
         assert.equal(await desktopOpener.evaluate((element) => element === document.activeElement), true);

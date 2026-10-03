@@ -1423,6 +1423,44 @@
                         </section>
 
                         <section class="producao-detail-block">
+                            <h3>Arquivos privados</h3>
+                            <p class="admin-help">Materiais, prévias, entregas e comprovantes ficam em Storage privado e são baixados somente após autorização.</p>
+                            <div id="prod_arquivos" class="producao-arquivos" aria-live="polite"></div>
+                            <form id="prod_arquivo_form" class="producao-operacao-form">
+                                <label>Tipo
+                                    <select id="prod_arquivo_tipo">
+                                        <option value="material">Material</option>
+                                        <option value="referencia">Referência</option>
+                                        <option value="previa">Prévia</option>
+                                        <option value="entrega">Entrega</option>
+                                        <option value="comprovante">Comprovante</option>
+                                    </select>
+                                </label>
+                                <label>Arquivo<input id="prod_arquivo_input" type="file" required /></label>
+                                <label>Histórico<select id="prod_arquivo_substitui"><option value="">Nova versão independente</option></select></label>
+                                <label class="producao-check"><input id="prod_arquivo_produtor" type="checkbox" /> Visível ao produtor</label>
+                                <label class="producao-check"><input id="prod_arquivo_cliente" type="checkbox" /> Visível ao cliente</label>
+                                <button id="prod_arquivo_enviar" class="btn-small" type="submit">Enviar arquivo</button>
+                            </form>
+                        </section>
+
+                        <section class="producao-detail-block">
+                            <h3>Repasse do produtor</h3>
+                            <p class="admin-help">Obrigação manual via Pix. O produtor vinculado é preservado como snapshot ao definir o valor.</p>
+                            <div id="prod_repasse_resumo" class="producao-repasse-resumo" aria-live="polite"></div>
+                            <div class="producao-operacao-form">
+                                <label>Valor combinado (R$)<input id="prod_repasse_valor" type="number" min="0.01" step="0.01" /></label>
+                                <label>Referência do pagamento<input id="prod_repasse_referencia" maxlength="160" /></label>
+                                <label>Comprovante<select id="prod_repasse_comprovante"><option value="">Sem comprovante</option></select></label>
+                            </div>
+                            <div class="admin-form-actions">
+                                <button id="prod_repasse_salvar" class="btn-small" type="button">Definir repasse</button>
+                                <button id="prod_repasse_liberar" class="btn-small hidden" type="button">Liberar repasse</button>
+                                <button id="prod_repasse_pagar" class="btn-small hidden" type="button">Registrar pagamento</button>
+                            </div>
+                        </section>
+
+                        <section class="producao-detail-block">
                             <h3>Produção</h3>
                             <div class="producao-detail-grid">
                                 <label class="admin-form-field">Status<select id="prod_status"></select></label>
