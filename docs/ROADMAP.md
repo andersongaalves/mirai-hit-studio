@@ -17,7 +17,12 @@ ownership no backend.
 
 Portais - Fase 2 Produtor: concluida. Dashboard, andamento, arquivos privados versionados,
 entregas, repasses manuais e integracao operacional do Admin usam os mesmos registros e
-autorizacao do backend. A Fase 3 do Cliente nao foi iniciada. Detalhes em
+autorizacao do backend.
+
+Portais - Fase 3 Cliente: concluida. Dashboard, projetos ativos/finalizados, materiais,
+previas, entregas e financeiro read-only reutilizam Producoes, `producao_arquivos` e o
+financeiro existentes, com ownership no backend. Solicitacoes textuais de revisao ficam
+pendentes de persistencia aprovada; a Fase 4 nao foi iniciada. Detalhes em
 `docs/PORTALS_BACKEND_PHASE1.md`.
 
 Ultimo deploy auditado: `b44f3d6` (`chore: prepara infraestrutura de producao`).

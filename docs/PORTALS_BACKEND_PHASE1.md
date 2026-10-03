@@ -108,13 +108,46 @@ split, Pix Out, parcelas, estorno ou transferencia automatica.
 A migration passou por bootstrap, downgrade, upgrade, constraints, RLS e smoke de app em
 PostgreSQL 17.11 descartavel. O cluster, fixtures e binarios temporarios foram removidos.
 
-## Lacunas deliberadamente nao simuladas na Fase 1
+## Fase 3 - Portal do Cliente
 
-- **Arquivos:** nao ha relacao persistida entre Producao e objetos privados. PDFs de
-  propostas nao representam materiais, previas ou entregas; audio do Portfolio e publico.
-  Nenhuma rota de arquivo foi criada.
-- **Repasse:** cobranca e pagamento representam recebimento do cliente, nao obrigacao com
-  o produtor. Nenhum saldo de produtor foi calculado.
+O Portal do Cliente reutiliza a identidade `Usuario -> Cliente`, as Producoes existentes,
+o financeiro comercial e `producao_arquivos`. Nenhuma tabela ou migration foi criada; a
+head permanece `24ef7f883a03`.
+
+Rotas da interface, compativeis com Clean URLs:
+
+- `/cliente`
+- `/cliente/projetos`
+- `/cliente/projetos/{id}`
+
+Endpoints de arquivos adicionados ao portal:
+
+- `GET|POST /portal/cliente/producoes/{id}/arquivos`
+- `GET /portal/cliente/arquivos/{id}/conteudo`
+
+O dashboard e a lista usam somente status, prazos e datas existentes. Producoes
+`finalizado` e `entregue` formam o historico, sem duplicar registros. O detalhe apresenta
+etapas derivadas da maquina de estados atual, materiais, referencias, previas, entregas e
+financeiro do proprio cliente. Cobrancas pendentes reutilizam o checkout existente;
+Mercado Pago, webhooks e a semantica de Pagamento nao foram alterados.
+
+Uploads do cliente aceitam apenas `material` e `referencia`, preservam versoes imutaveis e
+so permitem substituir um arquivo anteriormente enviado pela mesma conta. Listagem,
+streaming e download exigem ownership atual e visibilidade para cliente. `object_key` e
+identificadores internos de autoria nao chegam ao browser. Arquivos `comprovante`, usados
+no repasse ao produtor, sao excluidos da projecao e nao podem ser tornados visiveis ao
+cliente.
+
+Solicitacao textual de revisao nao foi implementada: nao existe entidade persistente
+adequada para comentario, decisao e limite contratado. A interface exibe o status real de
+revisao e as previas liberadas, mas nao simula a solicitacao em audit log ou observacoes.
+Esse recurso depende de aprovacao estrutural futura.
+
+## Lacunas atuais
+
+- **Revisoes do cliente:** falta persistencia de solicitacoes, comentarios e limites.
+- **Data de conclusao:** Producao nao possui campo dedicado; o portal nao rotula
+  `updated_at` como data de conclusao.
 
 ## Resultado de seguranca
 
@@ -123,10 +156,12 @@ PostgreSQL 17.11 descartavel. O cluster, fixtures e binarios temporarios foram r
 - isolamento mutuo entre Admin, Produtor e Cliente;
 - tokens invalidos/expirados recusados;
 - projecoes sem campos administrativos ou financeiros internos;
-- zero novas tabelas;
-- uma migration incremental;
-- nenhuma alteracao de Mercado Pago, Storage, frontend ou fluxo publico.
+- zero novas tabelas ou migrations na Fase 3;
+- comprovantes e repasses do produtor nunca sao expostos ao cliente;
+- nenhuma alteracao de Mercado Pago, configuracao do bucket ou fluxo publico;
+- frontend novo restrito ao Portal do Cliente, sem alterar a landing.
 
 Conclusao: o backend dos dois portais permanece compartilhado com o Admin e a Fase 2 do
 Produtor passou a representar arquivos privados e repasses sem reutilizar entidades com
-semantica incorreta. A interface do Cliente para arquivos continua reservada a Fase 3.
+semantica incorreta. A Fase 3 entrega a interface funcional do Cliente sobre esses mesmos
+registros, com isolamento por ownership e sem iniciar o design definitivo da Fase 4.

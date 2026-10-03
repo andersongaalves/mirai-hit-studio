@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex,nofollow,noarchive" />
+        <title>Portal do Cliente | Mirai Hit Studio</title>
+        <link rel="stylesheet" href="/css/main.css" />
+        <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="stylesheet" href="/css/pages/cliente.css" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
+    </head>
+    <body class="producer-body client-body">
+        <a class="skip-link" href="#client-content">Ir para o conteúdo</a>
+
+        <main class="producer-entry" id="client-content">
+            <section id="login-panel" class="producer-login" aria-labelledby="login-title">
+                <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
+                <div>
+                    <p class="producer-eyebrow">Portal do Cliente</p>
+                    <h1 id="login-title">Acompanhe seus projetos</h1>
+                </div>
+                <form id="client-login-form" class="producer-login__form">
+                    <label for="username">Usuário</label>
+                    <input id="username" name="username" autocomplete="username" required />
+                    <label for="password">Senha</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required />
+                    <button class="btn-cta" type="submit">Entrar</button>
+                    <p id="login-error" class="producer-message producer-message--error hidden" role="alert"></p>
+                </form>
+            </section>
+
+            <div id="admin-area" class="producer-shell hidden">
+                <header class="producer-header">
+                    <a class="producer-brand" href="/cliente" data-route="dashboard" aria-label="Portal do Cliente, início">
+                        <img src="/img/logo-horizontal.png" alt="" width="184" height="57" />
+                        <span>Portal do Cliente</span>
+                    </a>
+                    <div class="producer-account">
+                        <span id="client-username"></span>
+                        <button id="client-logout" class="btn-outline" type="button">Sair</button>
+                    </div>
+                </header>
+
+                <nav class="producer-nav" aria-label="Portal do Cliente">
+                    <a href="/cliente" data-route="dashboard">Visão geral</a>
+                    <a href="/cliente/projetos" data-route="projects">Meus projetos</a>
+                </nav>
+
+                <div id="client-alert" class="producer-message hidden" role="status"></div>
+
+                <section id="client-loading" class="producer-state" aria-live="polite">
+                    <span class="producer-spinner" aria-hidden="true"></span>
+                    <p>Carregando seus projetos...</p>
+                </section>
+
+                <section id="client-dashboard" class="producer-view hidden" aria-labelledby="dashboard-title">
+                    <div class="producer-page-heading">
+                        <div>
+                            <p class="producer-eyebrow">Visão geral</p>
+                            <h1 id="dashboard-title">Olá, <span id="client-greeting"></span></h1>
+                        </div>
+                        <a class="btn-cta" href="/cliente/projetos" data-route="projects">Ver projetos</a>
+                    </div>
+                    <div id="client-metrics" class="producer-metrics" aria-label="Resumo dos projetos"></div>
+                    <section class="producer-section" aria-labelledby="actions-title">
+                        <div class="producer-section__heading">
+                            <h2 id="actions-title">Andamento e pendências</h2>
+                            <span>Informações registradas pela equipe</span>
+                        </div>
+                        <div id="client-actions" class="producer-list"></div>
+                    </section>
+                </section>
+
+                <section id="client-projects" class="producer-view hidden" aria-labelledby="projects-title">
+                    <div class="producer-page-heading">
+                        <div>
+                            <p class="producer-eyebrow">Produções</p>
+                            <h1 id="projects-title">Meus projetos</h1>
+                        </div>
+                    </div>
+                    <div class="producer-filters client-filters">
+                        <label for="client-status-filter">Situação</label>
+                        <select id="client-status-filter">
+                            <option value="todos">Todos</option>
+                            <option value="ativos">Em andamento</option>
+                            <option value="concluidos">Concluídos</option>
+                            <option value="revisao">Em avaliação</option>
+                        </select>
+                        <label for="client-order">Ordenar</label>
+                        <select id="client-order">
+                            <option value="recente">Atualização recente</option>
+                            <option value="prazo">Prazo mais próximo</option>
+                        </select>
+                    </div>
+                    <div id="client-list" class="producer-list"></div>
+                </section>
+
+                <section id="client-detail" class="producer-view hidden" aria-labelledby="detail-title">
+                    <button id="client-detail-back" class="producer-back" type="button">← Voltar para projetos</button>
+                    <div id="client-detail-content"></div>
+                </section>
+            </div>
+        </main>
+
+        <script type="module" src="/js/cliente/index.js"></script>
+    </body>
+</html>

@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
+from schemas.producao_arquivo import TipoArquivoProducao
+
 
 class ProducaoClienteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -41,3 +43,22 @@ class FinanceiroClienteResponse(BaseModel):
     proposta_numero: str | None
     proposta_status: str | None
     cobranca: CobrancaClienteResponse | None
+    checkout_url: str | None
+
+
+class ProducaoArquivoClienteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    producao_id: int
+    tipo: TipoArquivoProducao
+    nome_exibicao: str
+    mime_type: str
+    tamanho_bytes: int
+    sha256: str
+    grupo_versao: str
+    versao: int
+    substitui_arquivo_id: int | None
+    enviado_por_mim: bool
+    created_at: datetime
+    updated_at: datetime

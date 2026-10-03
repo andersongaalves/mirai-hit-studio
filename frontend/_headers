@@ -10,3 +10,6 @@
 
 /produtor*
   X-Robots-Tag: noindex, nofollow, noarchive
+
+/cliente*
+  X-Robots-Tag: noindex, nofollow, noarchive

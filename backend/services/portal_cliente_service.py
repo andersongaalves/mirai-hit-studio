@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 
+from core.config import settings
 from crud import crud_producao
 from models.orcamento import OrcamentoModel
-from services import financial_service
+from services import checkout_service, financial_service
 
 PRODUCOES_FINALIZADAS = ("finalizado", "entregue")
 
@@ -41,15 +42,20 @@ def buscar_financeiro(db: Session, producao_id: int, cliente_id: int):
         "proposta_numero": proposta.numero if proposta else None,
         "proposta_status": proposta.status if proposta else None,
         "cobranca": None,
+        "checkout_url": None,
     }
     if cobranca is None:
         return resposta
+    if cobranca.cliente_id is not None and cobranca.cliente_id != cliente_id:
+        raise financial_service.FinanceiroConflito("Cobranca vinculada a outro cliente.")
 
+    status = financial_service.status_calculado(cobranca)
+    saldo = financial_service.saldo_pendente(cobranca)
     resposta["cobranca"] = {
-        "status": financial_service.status_calculado(cobranca).value,
+        "status": status.value,
         "valor_total": cobranca.valor_total,
         "valor_pago": financial_service.valor_pago(cobranca),
-        "saldo_pendente": financial_service.saldo_pendente(cobranca),
+        "saldo_pendente": saldo,
         "moeda": cobranca.moeda,
         "vencimento": cobranca.vencimento,
         "pagamentos": [
@@ -64,4 +70,13 @@ def buscar_financeiro(db: Session, producao_id: int, cliente_id: int):
             for pagamento in cobranca.pagamentos
         ],
     }
+    if saldo > 0 and status.value not in {"paga", "cancelada"}:
+        try:
+            resposta["checkout_url"] = checkout_service.link_por_proposta(
+                db,
+                proposta.id,
+                getattr(settings, "PUBLIC_FRONTEND_URL", "http://localhost:4173"),
+            )
+        except (checkout_service.CheckoutNaoEncontrado, checkout_service.CheckoutIndisponivel):
+            resposta["checkout_url"] = None
     return resposta

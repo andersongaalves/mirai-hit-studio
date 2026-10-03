@@ -7,6 +7,7 @@ from uuid import uuid4
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
 from models.producao import ProducaoModel
 from services import audit_service
@@ -19,6 +20,7 @@ from services.producao_arquivo_storage import (
 
 logger = logging.getLogger(__name__)
 PRODUCER_UPLOAD_TYPES = {"previa", "entrega"}
+CLIENT_UPLOAD_TYPES = {"material", "referencia"}
 ALL_FILE_TYPES = {"material", "referencia", "previa", "entrega", "comprovante"}
 
 
@@ -53,7 +55,7 @@ def _validate_upload(data, mime_type, file_type):
         raise ProducaoArquivoError("Tamanho de arquivo nao permitido.")
 
 
-def _version(db, production_id, file_type, replaces_id):
+def _version(db, production_id, file_type, replaces_id, replacement_actor_id=None):
     if replaces_id is None:
         return str(uuid4()), 1, None
     previous = db.get(ProducaoArquivoModel, replaces_id)
@@ -61,6 +63,10 @@ def _version(db, production_id, file_type, replaces_id):
         previous is None
         or previous.producao_id != production_id
         or previous.tipo != file_type
+        or (
+            replacement_actor_id is not None
+            and previous.remetente_usuario_id != replacement_actor_id
+        )
     ):
         raise ProducaoArquivoNotFound("Arquivo anterior nao encontrado.")
     replacement = (
@@ -85,15 +91,19 @@ def upload(
     visible_to_producer: bool,
     visible_to_client: bool,
     replaces_id: int | None = None,
+    replacement_actor_id: int | None = None,
     storage=None,
     request_id=None,
 ):
     _validate_upload(data, mime_type, file_type)
+    if file_type == "comprovante" and visible_to_client:
+        raise ProducaoArquivoError("Comprovantes de repasse nao podem ser visiveis ao cliente.")
     group_id, version, previous = _version(
         db,
         production.id,
         file_type,
         replaces_id,
+        replacement_actor_id,
     )
     storage = storage or new_production_file_storage()
     try:
@@ -206,6 +216,48 @@ def get_for_producer(db, file_id, producer_id):
     return model
 
 
+def list_for_client(db, production_id, client_id):
+    production = (
+        db.query(ProducaoModel.id)
+        .join(OrcamentoModel, ProducaoModel.orcamento_id == OrcamentoModel.id)
+        .filter(
+            ProducaoModel.id == production_id,
+            OrcamentoModel.cliente_id == client_id,
+        )
+        .first()
+    )
+    if not production:
+        raise ProducaoArquivoNotFound("Producao nao encontrada.")
+    return (
+        db.query(ProducaoArquivoModel)
+        .filter(
+            ProducaoArquivoModel.producao_id == production_id,
+            ProducaoArquivoModel.visivel_cliente.is_(True),
+            ProducaoArquivoModel.tipo != "comprovante",
+        )
+        .order_by(ProducaoArquivoModel.created_at.desc(), ProducaoArquivoModel.id.desc())
+        .all()
+    )
+
+
+def get_for_client(db, file_id, client_id):
+    model = (
+        db.query(ProducaoArquivoModel)
+        .join(ProducaoModel, ProducaoArquivoModel.producao_id == ProducaoModel.id)
+        .join(OrcamentoModel, ProducaoModel.orcamento_id == OrcamentoModel.id)
+        .filter(
+            ProducaoArquivoModel.id == file_id,
+            ProducaoArquivoModel.visivel_cliente.is_(True),
+            ProducaoArquivoModel.tipo != "comprovante",
+            OrcamentoModel.cliente_id == client_id,
+        )
+        .first()
+    )
+    if model is None:
+        raise ProducaoArquivoNotFound("Arquivo nao encontrado.")
+    return model
+
+
 def read(model, storage=None):
     storage = storage or new_production_file_storage()
     try:
@@ -215,6 +267,8 @@ def read(model, storage=None):
 
 
 def update_visibility(db, *, model, actor, producer, client, request_id=None):
+    if model.tipo == "comprovante" and client:
+        raise ProducaoArquivoConflict("Comprovantes de repasse nao podem ser visiveis ao cliente.")
     model.visivel_produtor = producer
     model.visivel_cliente = client
     audit_service.record(

@@ -124,6 +124,7 @@ async def check():
         assert data['cobranca']['valor_pago'] == '500.00'
         assert data['cobranca']['saldo_pendente'] == '500.00'
         assert data['cobranca']['pagamentos'][0]['status'] == 'aprovado'
+        assert data['checkout_url'] == 'http://localhost:4173/checkout/test-reference'
         forbidden = ('provider', 'provider_order_id', 'provider_reference', 'referencia_externa', 'reconciliation', 'observacoes', 'produtor')
         assert not any(term in financial.text for term in forbidden)
 

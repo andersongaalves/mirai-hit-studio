@@ -1,3 +1,5 @@
 /orcamento /calculadora.html 200
 /produtor /portal-produtor 200
 /produtor/* /portal-produtor 200
+/cliente /portal-cliente 200
+/cliente/* /portal-cliente 200
