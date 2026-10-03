@@ -21,6 +21,19 @@ const project = {
     show_mix_comparison_on_landing: true,
     landing_order: 2,
 };
+const legacyProject = {
+    id: 8,
+    titulo: "Projeto legado",
+    artista: "Artista legado",
+    categoria: "Produção",
+    vertical: null,
+    segmentos_json: [],
+    case_type: null,
+    link_audio: "",
+    link_capa: "",
+    descricao: "Antes da classificação A/B",
+    destaque: true,
+};
 
 async function staticResponse(route) {
     const pathname = new URL(route.request().url()).pathname;
@@ -41,6 +54,7 @@ async function staticResponse(route) {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const errors = [];
     const writes = [];
+    let projects = [project, legacyProject];
     page.on("pageerror", error => errors.push(error.message));
 
     await page.route("**/*", async route => {
@@ -49,10 +63,28 @@ async function staticResponse(route) {
         if (url.origin === "http://localhost:4173") return staticResponse(route);
         if (url.origin !== "http://localhost:8000") return route.fulfill({ status: 200, body: "" });
         if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "session", user: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } } });
-        if (url.pathname === "/projetos/admin") return route.fulfill({ json: [project] });
-        if (url.pathname === "/projetos/7" && request.method() === "PUT") {
-            writes.push({ path: url.pathname, method: request.method(), payload: request.postDataJSON() });
-            return route.fulfill({ json: { ...project, ...request.postDataJSON() } });
+        if (url.pathname === "/projetos/admin") return route.fulfill({ json: projects });
+        if (/\/projetos\/(7|8)/.test(url.pathname) && request.method() === "PUT") {
+            const payload = request.postDataJSON();
+            writes.push({ path: url.pathname, method: request.method(), payload });
+            if (payload.titulo === "x") {
+                return route.fulfill({
+                    status: 422,
+                    json: { detail: [{ loc: ["body", "titulo"], msg: "String should have at least 3 characters", type: "string_too_short" }] },
+                });
+            }
+            if (payload.titulo === "xx") {
+                return route.fulfill({
+                    status: 422,
+                    json: { detail: [
+                        { loc: ["body", "titulo"], msg: "String should have at least 3 characters", type: "string_too_short" },
+                        { loc: ["body", "segmentos_json"], msg: "Value error, invalid_segment", type: "value_error" },
+                    ] },
+                });
+            }
+            const id = Number(url.pathname.split("/").pop());
+            projects = projects.map(item => item.id === id ? { ...item, ...payload } : item);
+            return route.fulfill({ json: projects.find(item => item.id === id) });
         }
         if (/\/projetos\/7\/audio\/(before|after)/.test(url.pathname)) {
             writes.push({ path: url.pathname, method: request.method() });
@@ -94,9 +126,50 @@ async function staticResponse(route) {
         assert.equal(writes[0].payload.show_mix_comparison_on_landing, false);
         assert.equal(writes[3].payload.show_mix_comparison_on_landing, true);
         assert.equal(writes[3].payload.landing_order, 1);
+        assert.deepEqual(Object.keys(writes[3].payload).sort(), ["landing_order", "show_mix_comparison_on_landing"]);
         assert.equal(await page.locator(".portfolio-mix-comparison").evaluate(element => element.scrollWidth <= element.clientWidth), true);
+
+        await page.waitForTimeout(50);
+        const beforeLegacyEdit = writes.length;
+        await page.evaluate(() => window.editarProjeto(8));
+        await page.locator("#proj_titulo").fill("Projeto legado editado");
+        await page.getByRole("button", { name: "Salvar Projeto" }).click();
+        await page.waitForTimeout(100);
+        assert.equal(
+            await page.locator("#modal-projeto").evaluate(element => element.classList.contains("hidden")),
+            true,
+            `legacy save failed: ${await page.locator(".notification-message").allTextContents()}`,
+        );
+        assert.deepEqual(writes.slice(beforeLegacyEdit).map(item => item.payload), [
+            { titulo: "Projeto legado editado" },
+        ]);
+        assert.equal(projects.find(item => item.id === 8).destaque, true);
+        assert.equal(projects.find(item => item.id === 8).vertical, null);
+
+        await page.waitForTimeout(50);
+        await page.evaluate(() => window.editarProjeto(8));
+        await page.locator("#proj_titulo").fill("x");
+        await page.getByRole("button", { name: "Salvar Projeto" }).click();
+        let message = page.locator(".notification.error .notification-message").last();
+        await message.waitFor();
+        assert.match(await message.textContent(), /Título: texto abaixo do tamanho mínimo/);
+        assert.doesNotMatch(await message.textContent(), /\[object Object\]/);
+        assert.equal(await page.locator("#proj_titulo").inputValue(), "x");
+        assert.equal(await page.locator("#modal-projeto").evaluate(element => element.classList.contains("hidden")), false);
+
+        await page.locator("#proj_titulo").fill("xx");
+        await page.locator("#proj_segmentos").fill("bad segment");
+        await page.getByRole("button", { name: "Salvar Projeto" }).click();
+        message = page.locator(".notification.error .notification-message").last();
+        await page.waitForFunction(() => document.querySelectorAll(".notification.error").length >= 2);
+        const multipleMessage = await message.textContent();
+        assert.match(multipleMessage, /Título:/);
+        assert.match(multipleMessage, /Segmentos:/);
+        assert.doesNotMatch(multipleMessage, /\[object Object\]/);
+        assert.equal(await page.locator("#proj_titulo").inputValue(), "xx");
+        assert.equal(await page.locator("#proj_segmentos").inputValue(), "bad segment");
         assert.deepEqual(errors, []);
-        console.log("PASS: Portfolio A/B Admin upload, previews, highlight ordering and mobile structure.");
+        console.log("PASS: Portfolio Admin legacy edits, A/B preservation and readable validation errors.");
     } finally {
         await browser.close();
     }

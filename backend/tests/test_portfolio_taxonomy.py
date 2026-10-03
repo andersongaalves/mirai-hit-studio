@@ -35,6 +35,66 @@ class PortfolioTaxonomyTests(unittest.TestCase):
                         assert admin_list.status_code == 200
                         assert admin_list.json()[0]['vertical'] is None
                         assert admin_list.json()[0]['segmentos_json'] == []
+                        legacy_id = admin_list.json()[0]['id']
+
+                        title_only = await client.put(
+                            f'/projetos/{legacy_id}', json={'titulo': 'Legado editado'}, headers=headers)
+                        assert title_only.status_code == 200, title_only.text
+                        assert title_only.json()['titulo'] == 'Legado editado'
+                        assert title_only.json()['artista'] == 'Interno'
+                        assert title_only.json()['vertical'] is None
+                        assert title_only.json()['segmentos_json'] == []
+                        assert title_only.json()['show_mix_comparison_on_landing'] is False
+
+                        description_only = await client.put(
+                            f'/projetos/{legacy_id}', json={'descricao': 'Descricao atualizada'}, headers=headers)
+                        assert description_only.status_code == 200, description_only.text
+                        assert description_only.json()['titulo'] == 'Legado editado'
+                        assert description_only.json()['descricao'] == 'Descricao atualizada'
+
+                        urls_only = await client.put(
+                            f'/projetos/{legacy_id}',
+                            json={
+                                'link_audio': 'https://example.com/legacy-v2.mp3',
+                                'link_capa': 'https://example.com/legacy-v2.webp',
+                            },
+                            headers=headers,
+                        )
+                        assert urls_only.status_code == 200, urls_only.text
+                        assert urls_only.json()['link_audio'].endswith('legacy-v2.mp3')
+                        assert urls_only.json()['link_capa'].endswith('legacy-v2.webp')
+
+                        classification = await client.put(
+                            f'/projetos/{legacy_id}',
+                            json={
+                                'categoria': 'Masterizacao',
+                                'vertical': 'artists',
+                                'segmentos_json': ['rock', 'pop'],
+                                'case_type': 'client_case',
+                            },
+                            headers=headers,
+                        )
+                        assert classification.status_code == 200, classification.text
+                        assert classification.json()['categoria'] == 'Masterizacao'
+                        assert classification.json()['segmentos_json'] == ['rock', 'pop']
+
+                        invalid = await client.put(
+                            f'/projetos/{legacy_id}', json={'titulo': 'x'}, headers=headers)
+                        assert invalid.status_code == 422
+                        assert {tuple(item['loc']) for item in invalid.json()['detail']} == {('body', 'titulo')}
+
+                        multiple_invalid = await client.put(
+                            f'/projetos/{legacy_id}',
+                            json={
+                                'titulo': 'x',
+                                'vertical': 'unknown',
+                                'segmentos_json': ['bad segment'],
+                            },
+                            headers=headers,
+                        )
+                        assert multiple_invalid.status_code == 422
+                        assert {item['loc'][-1] for item in multiple_invalid.json()['detail']} == {
+                            'titulo', 'vertical', 'segmentos_json'}
 
                         payload = {
                             'titulo': 'Demo sonora', 'artista': 'Mirai Hit Studio',
@@ -50,7 +110,8 @@ class PortfolioTaxonomyTests(unittest.TestCase):
                         assert created.json()['case_type'] == 'demo'
                         public = await client.get('/projetos')
                         assert public.status_code == 200
-                        assert [item['titulo'] for item in public.json()] == ['Demo sonora']
+                        assert {item['titulo'] for item in public.json()} == {
+                            'Legado editado', 'Demo sonora'}
 
                         for field, value in [
                             ('vertical', 'unknown'),

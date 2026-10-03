@@ -83,6 +83,14 @@ class PortfolioMixComparisonTests(unittest.TestCase):
                         assert highlighted.status_code == 200, highlighted.text
                         assert highlighted.json()['landing_order'] == 1
 
+                        title_only = await client.put(
+                            f'/projetos/{project_id}', json={'titulo': 'Mix test editado'}, headers=headers)
+                        assert title_only.status_code == 200, title_only.text
+                        assert title_only.json()['show_mix_comparison_on_landing'] is True
+                        assert title_only.json()['landing_order'] == 1
+                        assert title_only.json()['audio_before_url'].endswith('.mp3')
+                        assert title_only.json()['audio_after_url'].endswith('.mp3')
+
                         public = await client.get('/projetos/public/mix-comparisons')
                         assert public.status_code == 200, public.text
                         assert [item['id'] for item in public.json()] == [project_id]

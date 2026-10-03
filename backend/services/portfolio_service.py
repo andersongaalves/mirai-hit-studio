@@ -69,10 +69,22 @@ def configure_landing_comparison(db, project: ProjetoModel, enabled: bool, order
 
 
 def apply_project_data(db, project: ProjetoModel, data: dict) -> None:
-    enabled = data.pop("show_mix_comparison_on_landing", False)
-    order = data.pop("landing_order", None)
+    comparison_changed = bool(
+        {"show_mix_comparison_on_landing", "landing_order"}.intersection(data)
+    )
+    classification_changed = bool({"vertical", "case_type"}.intersection(data))
+    enabled = data.pop(
+        "show_mix_comparison_on_landing",
+        project.show_mix_comparison_on_landing or False,
+    )
+    order = data.pop("landing_order", project.landing_order)
     for field, value in data.items():
         setattr(project, field, value)
+
+    if not comparison_changed and not (
+        classification_changed and project.show_mix_comparison_on_landing
+    ):
+        return
 
     if enabled and not is_publishable(project):
         configure_landing_comparison(db, project, False, None)

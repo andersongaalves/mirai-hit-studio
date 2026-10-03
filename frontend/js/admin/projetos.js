@@ -208,6 +208,8 @@ export function editarProjeto(id) {
 
     bindAudioControls();
     resetAudioState();
+    $("proj_audio_before").value = "";
+    $("proj_audio_after").value = "";
 
     $("proj_id").value = projeto.id;
 
@@ -253,11 +255,11 @@ export function fecharModal() {
 
 function projetoPayload(showComparison, order) {
     return {
-        titulo: $("proj_titulo").value,
+        titulo: $("proj_titulo").value.trim(),
 
-        artista: $("proj_artista").value,
+        artista: $("proj_artista").value.trim(),
 
-        categoria: $("proj_categoria").value,
+        categoria: $("proj_categoria").value.trim(),
 
         vertical: $("proj_vertical").value || null,
 
@@ -268,9 +270,9 @@ function projetoPayload(showComparison, order) {
 
         case_type: $("proj_case_type").value || null,
 
-        link_audio: $("proj_audio").value,
+        link_audio: $("proj_audio").value.trim(),
 
-        link_capa: $("proj_capa").value,
+        link_capa: $("proj_capa").value.trim(),
 
         descricao: $("proj_descricao").value,
 
@@ -282,9 +284,83 @@ function projetoPayload(showComparison, order) {
     };
 }
 
+function projetoChanges(payload, project) {
+    const original = {
+        titulo: project.titulo,
+        artista: project.artista,
+        categoria: project.categoria,
+        vertical: project.vertical || null,
+        segmentos_json: Array.isArray(project.segmentos_json) ? project.segmentos_json : [],
+        case_type: project.case_type || null,
+        link_audio: project.link_audio,
+        link_capa: project.link_capa,
+        descricao: project.descricao,
+        destaque: Boolean(project.destaque),
+        show_mix_comparison_on_landing: Boolean(project.show_mix_comparison_on_landing),
+        landing_order: project.show_mix_comparison_on_landing
+            ? project.landing_order || 1
+            : null,
+    };
+
+    return Object.fromEntries(Object.entries(payload).filter(([field, value]) => (
+        JSON.stringify(value) !== JSON.stringify(original[field])
+    )));
+}
+
+const PROJECT_FIELD_LABELS = {
+    titulo: "Título",
+    artista: "Artista",
+    categoria: "Categoria",
+    vertical: "Vertical",
+    segmentos_json: "Segmentos",
+    case_type: "Tipo do projeto",
+    link_audio: "Link do áudio",
+    link_capa: "Link da capa",
+    descricao: "Descrição",
+    destaque: "Destaque",
+    show_mix_comparison_on_landing: "Comparação A/B",
+    landing_order: "Ordem da comparação A/B",
+};
+
+function validationErrorMessage(error) {
+    const type = String(error?.type || "");
+    const message = String(error?.msg || "");
+    if (type === "missing") return "campo obrigatório.";
+    if (type === "string_too_short") return "texto abaixo do tamanho mínimo.";
+    if (type === "string_too_long") return "texto acima do tamanho máximo.";
+    if (type === "literal_error") return "selecione uma opção válida.";
+    if (type === "less_than_equal" || type === "greater_than_equal") {
+        return "valor fora do intervalo permitido.";
+    }
+    if (message.includes("duplicate_segment")) return "remova segmentos duplicados.";
+    if (message.includes("invalid_segment")) {
+        return "use slugs em minúsculas, com letras, números ou sublinhado.";
+    }
+    if (message.includes("invalid_url") || message.includes("url")) {
+        return "informe uma URL HTTP ou HTTPS válida.";
+    }
+    return "valor inválido.";
+}
+
+function responseDetail(detail, fallback) {
+    if (typeof detail === "string" && detail.trim()) return detail.trim();
+    if (!Array.isArray(detail)) return fallback;
+
+    const messages = detail.map((error) => {
+        const location = Array.isArray(error?.loc)
+            ? error.loc.filter((part) => part !== "body")
+            : [];
+        const field = location.find((part) => typeof part === "string");
+        const label = PROJECT_FIELD_LABELS[field] || "Formulário";
+        return `${label}: ${validationErrorMessage(error)}`;
+    });
+    const unique = [...new Set(messages)];
+    return unique.length ? unique.join(" ") : fallback;
+}
+
 async function responseError(response, fallback) {
     const body = await response.json().catch(() => null);
-    return new Error(body?.detail || fallback);
+    return new Error(responseDetail(body?.detail, fallback));
 }
 
 async function uploadAudio(projectId, slot, file) {
@@ -301,6 +377,9 @@ async function uploadAudio(projectId, slot, file) {
 
 export async function salvarProjeto() {
     const originalId = $("proj_id").value;
+    const originalProject = originalId
+        ? projetos.find((item) => item.id === Number(originalId))
+        : null;
     const beforeFile = selectedAudio("before");
     const afterFile = selectedAudio("after");
     const wantsHighlight = $("proj_mix_landing").checked;
@@ -308,28 +387,45 @@ export async function salvarProjeto() {
     const hasUploads = Boolean(beforeFile || afterFile);
 
     try {
-        let response = await authFetch(
-            originalId ? `/projetos/${originalId}` : "/projetos",
-
-            {
-                method: originalId ? "PUT" : "POST",
-
-                body: JSON.stringify(projetoPayload(wantsHighlight && !hasUploads, order)),
-            },
-        );
-
-        if (!response.ok) {
-            throw await responseError(response, "Erro ao salvar projeto.");
+        if (originalId && !originalProject) {
+            throw new Error("O projeto não está mais disponível. Atualize a lista e tente novamente.");
         }
 
-        let project = await response.json();
+        const requestedPayload = projetoPayload(wantsHighlight, order);
+        const initialPayload = originalProject
+            ? projetoChanges(requestedPayload, originalProject)
+            : { ...requestedPayload };
+        if (hasUploads && wantsHighlight) {
+            initialPayload.show_mix_comparison_on_landing = false;
+            initialPayload.landing_order = null;
+        }
+
+        let project = originalProject;
+        let response;
+        if (!originalId || Object.keys(initialPayload).length) {
+            response = await authFetch(
+                originalId ? `/projetos/${originalId}` : "/projetos",
+                {
+                    method: originalId ? "PUT" : "POST",
+                    body: JSON.stringify(initialPayload),
+                },
+            );
+            if (!response.ok) {
+                throw await responseError(response, "Erro ao salvar projeto.");
+            }
+            project = await response.json();
+        }
+
         await uploadAudio(project.id, "before", beforeFile);
         await uploadAudio(project.id, "after", afterFile);
 
         if (hasUploads && wantsHighlight) {
             response = await authFetch(`/projetos/${project.id}`, {
                 method: "PUT",
-                body: JSON.stringify(projetoPayload(true, order)),
+                body: JSON.stringify({
+                    show_mix_comparison_on_landing: true,
+                    landing_order: order,
+                }),
             });
             if (!response.ok) throw await responseError(response, "Erro ao destacar comparação.");
             project = await response.json();

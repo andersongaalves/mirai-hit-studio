@@ -51,7 +51,36 @@ class ProjetoCreate(ProjetoBase):
 
 
 class ProjetoUpdate(ProjetoBase):
-    pass
+    titulo: str | None = Field(default=None, min_length=3, max_length=150)
+    artista: str | None = Field(default=None, min_length=1, max_length=150)
+    categoria: str | None = Field(default=None, min_length=1, max_length=100)
+    link_audio: str | None = Field(default=None, max_length=500)
+    link_capa: str | None = Field(default=None, max_length=500)
+    descricao: str | None = Field(default=None, max_length=20000)
+    destaque: bool | None = None
+    vertical: ProjetoVertical | None = None
+    segmentos_json: list[str] | None = Field(default=None, max_length=20)
+    case_type: ProjetoCaseType | None = None
+    show_mix_comparison_on_landing: bool | None = None
+    landing_order: int | None = Field(default=None, ge=1, le=4)
+
+    @field_validator(
+        "titulo",
+        "artista",
+        "categoria",
+        "link_audio",
+        "link_capa",
+        "descricao",
+        "destaque",
+        "segmentos_json",
+        "show_mix_comparison_on_landing",
+        mode="before",
+    )
+    @classmethod
+    def reject_explicit_null(cls, value):
+        if value is None:
+            raise ValueError("field_cannot_be_null")
+        return value
 
 
 class ProjetoResponse(ProjetoBase):

@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 import models
 from core.dependencies import require_admin
 from database import get_db
-from schemas.projeto import ProjetoCreate, ProjetoMixComparisonPublic, ProjetoResponse
+from schemas.projeto import (
+    ProjetoCreate,
+    ProjetoMixComparisonPublic,
+    ProjetoResponse,
+    ProjetoUpdate,
+)
 from services.portfolio_audio_storage import (
     HTTPAudioValidationError,
     PortfolioAudioStorageError,
@@ -118,13 +123,13 @@ def criar_projeto(proj: ProjetoCreate, db: Session = Depends(get_db), user=Depen
 @router.put("/{id}", response_model=ProjetoResponse)
 def atualizar_projeto(
     id: int,
-    proj_atualizado: ProjetoCreate,
+    proj_atualizado: ProjetoUpdate,
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
     project = _project_or_404(db, id)
     try:
-        apply_project_data(db, project, proj_atualizado.model_dump())
+        apply_project_data(db, project, proj_atualizado.model_dump(exclude_unset=True))
         db.commit()
         db.refresh(project)
         return _response(project)
