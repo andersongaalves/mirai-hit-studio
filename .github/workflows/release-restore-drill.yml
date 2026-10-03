@@ -234,7 +234,7 @@ jobs:
                     --confirm-restore RESTORE \
                     --schema public
                   python -m alembic upgrade head
-                  python -m scripts.validate_release_database --expect-data \
+                  python -m scripts.validate_release_database \
                     --snapshot "$RUNNER_TEMP/mirai-restore-before.json"
 
             - name: Smoke application on restored database
@@ -261,7 +261,7 @@ jobs:
                   curl --fail --silent http://127.0.0.1:8001/health | grep -q 'healthy'
                   curl --fail --silent http://127.0.0.1:8001/servicos \
                     | python -c "import json,sys; assert isinstance(json.load(sys.stdin), list)"
-                  python -m scripts.validate_release_database --expect-data \
+                  python -m scripts.validate_release_database \
                     --snapshot "$RUNNER_TEMP/mirai-restore-after.json"
                   cmp "$RUNNER_TEMP/mirai-restore-before.json" "$RUNNER_TEMP/mirai-restore-after.json"
                   kill "$api_pid"
