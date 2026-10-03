@@ -1,5 +1,6 @@
 """Producer files and payouts with synthetic identities and Storage."""
 
+import json
 import unittest
 
 import httpx
@@ -76,6 +77,34 @@ class MemoryStorage:
 
 
 class StorageAdapterTests(unittest.TestCase):
+    def test_creates_private_bucket_for_supabase_missing_bucket_response(self):
+        requests = []
+        created = False
+
+        def handler(request):
+            nonlocal created
+            requests.append(request)
+            if request.method == "GET" and "/bucket/" in request.url.path:
+                if not created:
+                    return httpx.Response(400, json={"code": "NoSuchBucket", "message": "Bucket not found"})
+                return httpx.Response(200, json={"public": False})
+            if request.method == "POST" and request.url.path.endswith("/bucket"):
+                payload = json.loads(request.content)
+                self.assertEqual(payload["id"], "producao-arquivos")
+                self.assertIs(payload["public"], False)
+                created = True
+                return httpx.Response(200, json={"name": payload["name"]})
+            return httpx.Response(404)
+
+        storage = SupabaseProducaoArquivoStorage(
+            base_url="https://project.supabase.co",
+            service_key="synthetic-secret",
+            bucket="producao-arquivos",
+            transport=httpx.MockTransport(handler),
+        )
+        storage.ensure_private_bucket()
+        self.assertEqual([request.method for request in requests], ["GET", "POST", "GET"])
+
     def test_private_bucket_immutable_object_and_server_auth(self):
         requests = []
 

@@ -69,7 +69,13 @@ class SupabaseProducaoArquivoStorage:
     def ensure_private_bucket(self):
         bucket_path = "bucket/" + quote(self.bucket, safe="")
         response = self._request("GET", bucket_path)
-        if response.status_code == 404:
+        missing_bucket = response.status_code == 404
+        if response.status_code == 400:
+            try:
+                missing_bucket = response.json().get("code") == "NoSuchBucket"
+            except ValueError:
+                missing_bucket = False
+        if missing_bucket:
             response = self._request(
                 "POST",
                 "bucket",
