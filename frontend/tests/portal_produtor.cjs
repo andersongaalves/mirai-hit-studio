@@ -67,6 +67,10 @@ async function staticResponse(route) {
 }
 
 (async () => {
+    const redirects = await fs.readFile(path.join(root, '_redirects'), 'utf8');
+    assert.match(redirects, /^\/produtor \/portal-produtor 200$/m);
+    assert.match(redirects, /^\/produtor\/\* \/portal-produtor 200$/m);
+
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' });
     const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
     const page = await context.newPage();
