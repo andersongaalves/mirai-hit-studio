@@ -123,6 +123,16 @@ async function staticResponse(route) {
         assert.match(metrics, /Projetos em andamento1/);
         assert.match(metrics, /Projetos concluídos1/);
         assert.match(metrics, /Pagamentos pendentes1/);
+        if (process.env.VISUAL_OUTPUT) {
+            for (const width of [390, 1440]) {
+                await page.setViewportSize({ width, height: 900 });
+                await page.screenshot({
+                    path: path.join(process.env.VISUAL_OUTPUT, `client-dashboard-${width}.png`),
+                    fullPage: true,
+                    animations: 'disabled',
+                });
+            }
+        }
 
         await page.getByRole('link', { name: 'Meus projetos' }).click();
         await page.waitForURL('**/cliente/projetos');
@@ -146,6 +156,16 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
         await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Nova versão'));
         assert.equal(uploads, 1);
+        if (process.env.VISUAL_OUTPUT) {
+            for (const width of [390, 1440]) {
+                await page.setViewportSize({ width, height: 900 });
+                await page.screenshot({
+                    path: path.join(process.env.VISUAL_OUTPUT, `client-detail-${width}.png`),
+                    fullPage: true,
+                    animations: 'disabled',
+                });
+            }
+        }
 
         for (const width of [320, 375, 390, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 800 });

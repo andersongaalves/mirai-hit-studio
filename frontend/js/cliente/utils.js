@@ -3,7 +3,7 @@ export const FINAL_STATUSES = new Set(["finalizado", "entregue"]);
 export const STATUS = {
     aguardando_inicio: { label: "Aguardando início", variant: "neutral" },
     em_producao: { label: "Em produção", variant: "info" },
-    revisao: { label: "Aguardando avaliação", variant: "warning" },
+    revisao: { label: "Aguardando avaliação", variant: "review" },
     finalizado: { label: "Finalizado", variant: "success" },
     entregue: { label: "Entregue", variant: "success" },
 };

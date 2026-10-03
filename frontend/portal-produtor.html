@@ -30,89 +30,100 @@
             </section>
 
             <div id="admin-area" class="producer-shell hidden">
-                <header class="producer-header">
-                    <a class="producer-brand" href="/produtor" data-route="dashboard" aria-label="Portal do Produtor, início">
-                        <img src="/img/logo-horizontal.png" alt="" width="184" height="57" />
-                        <span>Portal do Produtor</span>
-                    </a>
+                <aside class="producer-sidebar">
+                    <header class="producer-header">
+                        <a class="producer-brand" href="/produtor" data-route="dashboard" aria-label="Portal do Produtor, início">
+                            <img src="/img/logo-horizontal.png" alt="" width="184" height="57" />
+                            <span>Portal do Produtor</span>
+                        </a>
+                    </header>
+
+                    <nav class="producer-nav" aria-label="Portal do Produtor">
+                        <a href="/produtor" data-route="dashboard">Visão geral</a>
+                        <a href="/produtor/producoes" data-route="producoes">Minhas produções</a>
+                        <a href="/produtor/financeiro" data-route="financeiro">Recebimentos</a>
+                    </nav>
+
                     <div class="producer-account">
                         <span id="producer-username"></span>
                         <button id="producer-logout" class="btn-outline" type="button">Sair</button>
                     </div>
-                </header>
+                </aside>
 
-                <nav class="producer-nav" aria-label="Portal do Produtor">
-                    <a href="/produtor" data-route="dashboard">Visão geral</a>
-                    <a href="/produtor/producoes" data-route="producoes">Minhas produções</a>
-                    <a href="/produtor/financeiro" data-route="financeiro">Recebimentos</a>
-                </nav>
+                <div class="producer-workspace">
+                    <div id="producer-alert" class="producer-message hidden" role="status"></div>
 
-                <div id="producer-alert" class="producer-message hidden" role="status"></div>
-
-                <section id="producer-loading" class="producer-state" aria-live="polite">
-                    <span class="producer-spinner" aria-hidden="true"></span>
-                    <p>Carregando suas produções...</p>
-                </section>
-
-                <section id="producer-dashboard" class="producer-view hidden" aria-labelledby="dashboard-title">
-                    <div class="producer-page-heading">
-                        <div>
-                            <p class="producer-eyebrow">Visão operacional</p>
-                            <h1 id="dashboard-title">Olá, <span id="producer-greeting"></span></h1>
-                        </div>
-                        <a class="btn-cta" href="/produtor/producoes" data-route="producoes">Ver produções</a>
-                    </div>
-                    <div id="producer-metrics" class="producer-metrics" aria-label="Resumo das produções"></div>
-                    <section class="producer-section" aria-labelledby="deadlines-title">
-                        <div class="producer-section__heading">
-                            <h2 id="deadlines-title">Próximos prazos</h2>
-                            <span>Produções ativas com prazo definido</span>
-                        </div>
-                        <div id="producer-deadlines"></div>
+                    <section id="producer-loading" class="producer-state" aria-live="polite">
+                        <span class="producer-spinner" aria-hidden="true"></span>
+                        <p>Carregando suas produções...</p>
                     </section>
-                </section>
 
-                <section id="producer-productions" class="producer-view hidden" aria-labelledby="productions-title">
-                    <div class="producer-page-heading">
-                        <div>
-                            <p class="producer-eyebrow">Operação</p>
-                            <h1 id="productions-title">Minhas produções</h1>
+                    <section id="producer-dashboard" class="producer-view hidden" aria-labelledby="dashboard-title">
+                        <div class="producer-page-heading">
+                            <div>
+                                <p class="producer-eyebrow">Visão operacional</p>
+                                <h1 id="dashboard-title">Olá, <span id="producer-greeting"></span>.</h1>
+                                <p class="producer-lead">O que precisa da sua atenção hoje.</p>
+                            </div>
+                            <a class="btn-cta" href="/produtor/producoes" data-route="producoes">Ver produções</a>
                         </div>
-                    </div>
-                    <div class="producer-filters">
-                        <label for="producer-status-filter">Status</label>
-                        <select id="producer-status-filter">
-                            <option value="todos">Todos</option>
-                            <option value="aguardando_inicio">Aguardando início</option>
-                            <option value="em_producao">Em produção</option>
-                            <option value="revisao">Em revisão</option>
-                            <option value="finalizado">Finalizadas</option>
-                            <option value="entregue">Entregues</option>
-                        </select>
-                        <label for="producer-order">Ordenar</label>
-                        <select id="producer-order">
-                            <option value="prazo">Prazo mais próximo</option>
-                            <option value="recente">Atualização recente</option>
-                        </select>
-                    </div>
-                    <div id="producer-list" class="producer-list"></div>
-                </section>
+                        <div id="producer-metrics" class="producer-metrics" aria-label="Resumo das produções"></div>
+                        <section class="producer-section" aria-labelledby="deadlines-title">
+                            <div class="producer-section__heading">
+                                <div>
+                                    <p class="producer-eyebrow">Próximas ações</p>
+                                    <h2 id="deadlines-title">Prazos e pendências</h2>
+                                </div>
+                                <span>Ordenado pelo que exige ação primeiro.</span>
+                            </div>
+                            <div id="producer-deadlines"></div>
+                        </section>
+                    </section>
 
-                <section id="producer-detail" class="producer-view hidden" aria-labelledby="detail-title">
-                    <button id="producer-detail-back" class="producer-back" type="button">← Voltar para produções</button>
-                    <div id="producer-detail-content"></div>
-                </section>
-
-                <section id="producer-financeiro" class="producer-view hidden" aria-labelledby="finance-title">
-                    <div class="producer-page-heading">
-                        <div>
-                            <p class="producer-eyebrow">Financeiro</p>
-                            <h1 id="finance-title">Meus recebimentos</h1>
+                    <section id="producer-productions" class="producer-view hidden" aria-labelledby="productions-title">
+                        <div class="producer-page-heading">
+                            <div>
+                                <p class="producer-eyebrow">Operação</p>
+                                <h1 id="productions-title">Minhas produções</h1>
+                                <p class="producer-lead">Trabalhos, prazos e próximas ações em um só lugar.</p>
+                            </div>
                         </div>
-                    </div>
-                    <p class="producer-help">Valores registrados manualmente pela administração. Um repasse por produção nesta versão.</p>
-                    <div id="producer-payouts" class="producer-list"></div>
-                </section>
+                        <div class="producer-filters">
+                            <label for="producer-status-filter">Status</label>
+                            <select id="producer-status-filter">
+                                <option value="todos">Todos</option>
+                                <option value="aguardando_inicio">Aguardando início</option>
+                                <option value="em_producao">Em produção</option>
+                                <option value="revisao">Em revisão</option>
+                                <option value="finalizado">Finalizadas</option>
+                                <option value="entregue">Entregues</option>
+                            </select>
+                            <label for="producer-order">Ordenar</label>
+                            <select id="producer-order">
+                                <option value="prazo">Prazo mais próximo</option>
+                                <option value="recente">Atualização recente</option>
+                            </select>
+                        </div>
+                        <div id="producer-list" class="producer-list"></div>
+                    </section>
+
+                    <section id="producer-detail" class="producer-view hidden" aria-labelledby="detail-title">
+                        <button id="producer-detail-back" class="producer-back" type="button">← Voltar para produções</button>
+                        <div id="producer-detail-content"></div>
+                    </section>
+
+                    <section id="producer-financeiro" class="producer-view hidden" aria-labelledby="finance-title">
+                        <div class="producer-page-heading">
+                            <div>
+                                <p class="producer-eyebrow">Financeiro</p>
+                                <h1 id="finance-title">Meus recebimentos</h1>
+                                <p class="producer-lead">Acompanhe valores combinados, liberações e comprovantes.</p>
+                            </div>
+                        </div>
+                        <p class="producer-help">Valores registrados manualmente pela administração. Um repasse por produção nesta versão.</p>
+                        <div id="producer-payouts" class="producer-list"></div>
+                    </section>
+                </div>
             </div>
         </main>
 

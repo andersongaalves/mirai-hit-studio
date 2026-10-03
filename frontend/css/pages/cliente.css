@@ -1,13 +1,60 @@
+.client-body .producer-shell { display: block; }
+
+.client-body .producer-sidebar {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+    align-items: center;
+    width: 100%;
+    height: auto;
+    padding: 18px clamp(24px, 5vw, 72px);
+    border-right: 0;
+    border-bottom: var(--border-subtle);
+    background: rgba(6, 16, 31, 0.94);
+    backdrop-filter: blur(16px);
+}
+
+.client-body .producer-header { min-height: 0; border: 0; }
+.client-body .producer-brand img { width: 126px; }
+.client-body .producer-nav { display: flex; gap: var(--space-2); margin: 0; }
+.client-body .producer-nav a { padding-inline: 16px; }
+.client-body .producer-nav a::before { display: none; }
+
+.client-body .producer-nav a[aria-current="page"] {
+    background: rgba(0, 213, 237, 0.11);
+    box-shadow: none;
+}
+
+.client-body .producer-account {
+    align-items: center;
+    justify-content: flex-end;
+    flex-direction: row;
+    margin: 0;
+}
+
+.client-body .producer-workspace {
+    width: min(100%, 1280px);
+    padding-top: 56px;
+}
+
+.client-body .producer-metrics {
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    max-width: 920px;
+}
+
+.client-body .producer-section { margin-top: 36px; }
+
 .client-finance-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-3);
     margin-top: var(--space-4);
 }
 
 .client-finance-item {
     min-width: 0;
-    border: var(--border-subtle);
     padding: var(--space-4);
 }
 
@@ -24,14 +71,76 @@
 }
 
 .client-file-group + .client-file-group { margin-top: var(--space-5); }
-.client-file-group h3 { margin-bottom: var(--space-3); text-align: left; font-size: var(--font-size-h3); }
+.client-file-group h3 { font-size: 1.1rem; }
 .client-player { width: 100%; margin-top: var(--space-3); }
-.client-file__actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: var(--space-2); }
-.client-file__actions .btn-outline { min-height: 40px; padding: 8px 16px; }
-.client-next-action { margin-top: var(--space-3); color: var(--color-text-secondary); }
-.client-payment-action { width: fit-content; margin-top: var(--space-4); }
 
-@media (max-width: 720px) {
+.client-file__actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.client-file__actions .btn-outline {
+    min-height: 40px;
+    padding: 8px 16px;
+}
+
+.client-next-action {
+    margin-top: var(--space-2);
+    color: var(--color-accent);
+    font-size: var(--font-size-small);
+}
+
+.client-payment-action {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: var(--space-4);
+}
+
+.client-body .producer-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    gap: var(--space-5);
+}
+
+.client-body .producer-detail > :where(h1, .producer-detail__meta, .producer-detail__grid) {
+    grid-column: 1 / -1;
+}
+
+.client-body .producer-detail > .producer-files { margin-top: 0; }
+.client-body .producer-detail > .producer-files:last-child { border-top-color: var(--color-accent-secondary); }
+.client-body .producer-detail > .producer-files:last-child .client-finance-grid { grid-template-columns: 1fr; }
+
+@media (max-width: 1024px) {
+    .client-body .producer-sidebar { padding-inline: 28px; }
+    .client-body .producer-metrics { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+    .client-body .producer-detail { grid-template-columns: 1fr; }
+    .client-body .producer-detail > * { grid-column: 1; }
+}
+
+@media (max-width: 767px) {
+    .client-body .producer-sidebar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 14px 16px 0;
+    }
+
+    .client-body .producer-header { min-height: 54px; }
+    .client-body .producer-brand img { width: 116px; }
+    .client-body .producer-nav {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin-top: var(--space-2);
+    }
+
+    .client-body .producer-nav a { padding-inline: 12px; }
+    .client-body .producer-account { grid-column: 2; grid-row: 1; }
+    .client-body .producer-workspace { padding-top: 28px; }
+    .client-body .producer-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
     .client-file__actions { width: 100%; }
     .client-file__actions .btn-outline { flex: 1 1 auto; }
+}
+
+@media (max-width: 390px) {
+    .client-body .producer-metrics { grid-template-columns: 1fr; }
 }

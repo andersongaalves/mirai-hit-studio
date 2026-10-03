@@ -131,6 +131,16 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.producer-metric').count(), 5);
         assert.match(await page.locator('#producer-metrics').textContent(), /Produções ativas2/);
         assert.match(await page.locator('#producer-metrics').textContent(), /Em revisão1/);
+        if (process.env.VISUAL_OUTPUT) {
+            for (const width of [390, 1440]) {
+                await page.setViewportSize({ width, height: 900 });
+                await page.screenshot({
+                    path: path.join(process.env.VISUAL_OUTPUT, `producer-dashboard-${width}.png`),
+                    fullPage: true,
+                    animations: 'disabled',
+                });
+            }
+        }
 
         await page.getByRole('link', { name: 'Minhas produções' }).click();
         await page.waitForURL('**/produtor/producoes');
@@ -152,6 +162,16 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Confirmar início' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         assert.equal(productions[0].status, 'em_producao');
+        if (process.env.VISUAL_OUTPUT) {
+            for (const width of [390, 1440]) {
+                await page.setViewportSize({ width, height: 900 });
+                await page.screenshot({
+                    path: path.join(process.env.VISUAL_OUTPUT, `producer-detail-${width}.png`),
+                    fullPage: true,
+                    animations: 'disabled',
+                });
+            }
+        }
 
         await page.getByRole('link', { name: 'Recebimentos' }).click();
         await page.waitForURL('**/produtor/financeiro');
@@ -168,7 +188,7 @@ async function staticResponse(route) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });
                 await page.screenshot({
-                    path: path.join(process.env.VISUAL_OUTPUT, `producer-${width}.png`),
+                    path: path.join(process.env.VISUAL_OUTPUT, `producer-finance-${width}.png`),
                     fullPage: true,
                     animations: 'disabled',
                 });

@@ -1,7 +1,7 @@
 export const STATUS = {
     aguardando_inicio: { label: "Aguardando início", variant: "neutral" },
     em_producao: { label: "Em produção", variant: "info" },
-    revisao: { label: "Em revisão", variant: "warning" },
+    revisao: { label: "Em revisão", variant: "review" },
     finalizado: { label: "Finalizada", variant: "success" },
     entregue: { label: "Entregue", variant: "success" },
 };

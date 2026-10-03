@@ -185,9 +185,12 @@ function financePanel(finance) {
         return panel;
     }
     const charge = finance.cobranca;
+    const readableStatus = String(charge.status || "Não informado")
+        .replaceAll("_", " ")
+        .replace(/^./, character => character.toUpperCase());
     const grid = element("div", "client-finance-grid");
     [
-        ["Situação", charge.status],
+        ["Situação", readableStatus],
         ["Valor cobrado", formatMoney(charge.valor_total)],
         ["Valor pago", formatMoney(charge.valor_pago)],
         ["Saldo pendente", formatMoney(charge.saldo_pendente)],
