@@ -50,7 +50,7 @@ let payouts = [{
 async function staticResponse(route) {
     const url = new URL(route.request().url());
     let pathname = decodeURIComponent(url.pathname);
-    if (pathname === '/produtor' || pathname.startsWith('/produtor/')) pathname = '/produtor.html';
+    if (pathname === '/produtor' || pathname.startsWith('/produtor/')) pathname = '/portal-produtor.html';
     const file = path.resolve(root, '.' + pathname);
     assert.ok(file.startsWith(root + path.sep));
     try {
