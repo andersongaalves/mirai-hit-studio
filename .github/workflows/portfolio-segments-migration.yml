@@ -40,8 +40,21 @@ jobs:
             DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
             MIRAI_PORTALS_E2E_DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
             MIRAI_PORTALS_E2E_ALLOW: POSTGRES_17_DISPOSABLE_ONLY
+            API_NAME: Mirai segments migration E2E
+            API_VERSION: "2.0"
+            DEBUG: "false"
+            HOST: 127.0.0.1
+            PORT: "8000"
+            LOG_LEVEL: WARNING
             SECRET_KEY: migration-e2e-only-secret
             ALGORITHM: HS256
+            ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+            REFRESH_TOKEN_EXPIRE_DAYS: "7"
+            ALLOWED_ORIGINS: http://localhost:4173
+            BACKUP_FOLDER: /tmp/mirai-segments-e2e
+            BACKUP_KEEP_DAYS: "1"
+            EMAIL_FROM: migration-e2e@example.invalid
+            ADMIN_EMAIL: migration-e2e@example.invalid
 
         steps:
             - name: Check out source
