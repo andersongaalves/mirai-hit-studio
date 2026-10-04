@@ -1,0 +1,82 @@
+name: Portfolio segments migration PostgreSQL 17
+
+on:
+    workflow_dispatch:
+    push:
+        branches: [main]
+        paths:
+            - ".github/workflows/portfolio-segments-migration.yml"
+            - "backend/migrations/versions/*portfolio_segment*"
+            - "backend/models/config.py"
+            - "backend/tests/test_portfolio_segments_postgres.py"
+
+permissions:
+    contents: read
+
+concurrency:
+    group: portfolio-segments-migration-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    migration-cycle:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_DB: mirai_portals_e2e
+                    POSTGRES_USER: mirai_e2e
+                    POSTGRES_PASSWORD: mirai_e2e_disposable
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U mirai_e2e -d mirai_portals_e2e"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 12
+        env:
+            APP_ENV: test
+            DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
+            MIRAI_PORTALS_E2E_DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
+            MIRAI_PORTALS_E2E_ALLOW: POSTGRES_17_DISPOSABLE_ONLY
+            SECRET_KEY: migration-e2e-only-secret
+            ALGORITHM: HS256
+
+        steps:
+            - name: Check out source
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version-file: backend/.python-version
+                  cache: pip
+                  cache-dependency-path: |
+                      backend/requirements.txt
+                      backend/requirements-test.txt
+
+            - name: Install dependencies
+              run: |
+                  set -euo pipefail
+                  python -m pip install --disable-pip-version-check -r backend/requirements-test.txt
+                  python -m pip install --disable-pip-version-check ruff==0.16.9
+
+            - name: Prepare disposable PostgreSQL 17
+              working-directory: backend
+              run: |
+                  set -euo pipefail
+                  python -m scripts.bootstrap_database
+
+            - name: Validate migration cycle and historical backfill
+              working-directory: backend
+              run: |
+                  set -euo pipefail
+                  python -m unittest discover -s tests -p 'test_portfolio_segments_postgres.py' -v
+
+            - name: Run focused static checks
+              run: |
+                  set -euo pipefail
+                  ruff check backend/tests/test_portfolio_segments_postgres.py
+                  ruff check backend/migrations/versions/5b7c9d1e4f62_add_portfolio_segment_catalog.py
+                  git diff --check
