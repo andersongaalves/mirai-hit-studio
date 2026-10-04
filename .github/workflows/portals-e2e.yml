@@ -151,20 +151,27 @@ jobs:
               shell: bash
               run: |
                   set -euo pipefail
-                  python -m unittest discover -s tests -p 'test_portal_produtor.py' -v
-                  python -m unittest discover -s tests -p 'test_portal_produtor_operacao.py' -v
-                  python -m unittest discover -s tests -p 'test_portal_cliente.py' -v
-                  python -m unittest discover -s tests -p 'test_portal_cliente_operacao.py' -v
-                  set +e
-                  segment_output=$(python -m unittest discover -s tests -p 'test_portfolio_segments_postgres.py' -v 2>&1)
-                  segment_status=$?
-                  set -e
-                  printf '%s\n' "$segment_output"
-                  if [ "$segment_status" -ne 0 ]; then
-                    segment_summary=$(printf '%s\n' "$segment_output" | tail -n 20 | tr '\n' ' ' | sed 's/%/%25/g')
-                    echo "::error title=Portfolio segment migration test::$segment_summary"
-                    exit "$segment_status"
-                  fi
+                  run_regression() {
+                    local pattern="$1"
+                    local output
+                    local status
+                    set +e
+                    output=$(python -m unittest discover -s tests -p "$pattern" -v 2>&1)
+                    status=$?
+                    set -e
+                    printf '%s\n' "$output"
+                    if [ "$status" -ne 0 ]; then
+                      local summary
+                      summary=$(printf '%s\n' "$output" | tail -n 20 | tr '\n' ' ' | sed 's/%/%25/g')
+                      echo "::error title=$pattern::$summary"
+                      exit "$status"
+                    fi
+                  }
+                  run_regression 'test_portal_produtor.py'
+                  run_regression 'test_portal_produtor_operacao.py'
+                  run_regression 'test_portal_cliente.py'
+                  run_regression 'test_portal_cliente_operacao.py'
+                  run_regression 'test_portfolio_segments_postgres.py'
 
             - name: Run isolated browser auth regression
               shell: bash
