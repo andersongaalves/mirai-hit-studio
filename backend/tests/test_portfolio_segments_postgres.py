@@ -32,7 +32,14 @@ class PortfolioSegmentsPostgreSQLTests(unittest.TestCase):
                 17,
             )
 
-        command.downgrade(config, "24ef7f883a03")
+        columns = {
+            column["name"] for column in inspect(engine).get_columns("configuracoes")
+        }
+        if "portfolio_segments_json" in columns:
+            command.downgrade(config, "24ef7f883a03")
+        else:
+            # A migration-only rollout intentionally precedes the dependent model.
+            command.stamp(config, "24ef7f883a03")
         try:
             with engine.begin() as connection:
                 connection.execute(text("INSERT INTO configuracoes (id) VALUES (1)"))
