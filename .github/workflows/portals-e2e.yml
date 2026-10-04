@@ -162,8 +162,15 @@ jobs:
                   tail = "\n".join(text.splitlines()[-100:])
                   tail = re.sub(r"postgresql(?:\+psycopg2)?://\S+", "<database-url-redacted>", tail)
                   tail = re.sub(r"(?i)(password|secret|token)=\S+", r"\1=<redacted>", tail)
-                  escaped = tail.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-                  print(f"::error file=backend/tests/test_portals_postgres_e2e.py,title=Portals E2E failed::{escaped}")
+                  tail = tail[-12_000:]
+                  for index in range(0, len(tail), 3_000):
+                      chunk = tail[index:index + 3_000]
+                      escaped = chunk.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+                      part = index // 3_000 + 1
+                      print(
+                          "::error file=backend/tests/test_portals_postgres_e2e.py,"
+                          f"title=Portals E2E failed ({part})::{escaped}"
+                      )
                   PY
                     rm -f "$log_file"
                     exit "$status"
