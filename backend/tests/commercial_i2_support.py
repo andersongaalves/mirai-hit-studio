@@ -120,7 +120,13 @@ def local_frontend_server(directory, port=0):
 
     class Handler(SimpleHTTPRequestHandler):
         def do_GET(self):
-            if re.fullmatch(r'/checkout/[0-9a-f-]{36}', self.path, re.IGNORECASE):
+            if self.path == '/admin':
+                self.path = '/admin.html'
+            elif self.path == '/produtor' or self.path.startswith('/produtor/'):
+                self.path = '/portal-produtor.html'
+            elif self.path == '/cliente' or self.path.startswith('/cliente/'):
+                self.path = '/portal-cliente.html'
+            elif re.fullmatch(r'/checkout/[0-9a-f-]{36}', self.path, re.IGNORECASE):
                 self.path = '/checkout.html'
             return super().do_GET()
 
