@@ -64,8 +64,20 @@ jobs:
 
             - name: Prepare disposable PostgreSQL 17
               working-directory: backend
+              env:
+                  PGPASSWORD: mirai_e2e_disposable
               run: |
                   set -euo pipefail
+                  psql --host 127.0.0.1 --username mirai_e2e --dbname mirai_portals_e2e --set ON_ERROR_STOP=1 <<'SQL'
+                  DO $$ BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+                      CREATE ROLE anon NOLOGIN;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+                      CREATE ROLE authenticated NOLOGIN;
+                    END IF;
+                  END $$;
+                  SQL
                   python -m scripts.bootstrap_database
 
             - name: Validate migration cycle and historical backfill
