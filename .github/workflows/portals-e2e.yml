@@ -149,33 +149,8 @@ jobs:
               working-directory: backend
               shell: bash
               run: |
-                  set -uo pipefail
-                  log_file="$(mktemp)"
-                  python -m unittest discover -s tests -p 'test_portals_postgres_e2e.py' -v 2>&1 | tee "$log_file"
-                  status="${PIPESTATUS[0]}"
-                  if [[ "$status" -ne 0 ]]; then
-                    python - "$log_file" <<'PY'
-                  import re
-                  import sys
-
-                  text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-                  tail = "\n".join(text.splitlines()[-100:])
-                  tail = re.sub(r"postgresql(?:\+psycopg2)?://\S+", "<database-url-redacted>", tail)
-                  tail = re.sub(r"(?i)(password|secret|token)=\S+", r"\1=<redacted>", tail)
-                  tail = tail[-12_000:]
-                  for index in range(0, len(tail), 3_000):
-                      chunk = tail[index:index + 3_000]
-                      escaped = chunk.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-                      part = index // 3_000 + 1
-                      print(
-                          "::error file=backend/tests/test_portals_postgres_e2e.py,"
-                          f"title=Portals E2E failed ({part})::{escaped}"
-                      )
-                  PY
-                    rm -f "$log_file"
-                    exit "$status"
-                  fi
-                  rm -f "$log_file"
+                  set -euo pipefail
+                  python -m unittest discover -s tests -p 'test_portals_postgres_e2e.py' -v
 
             - name: Run focused static checks
               shell: bash

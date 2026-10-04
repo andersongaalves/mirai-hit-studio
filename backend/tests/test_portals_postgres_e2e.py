@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import unittest
+import uuid
 from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -33,15 +34,17 @@ class MemoryStorage:
         self.objects = {}
         self.deleted = []
         self.counter = 0
+        self.namespace = uuid.uuid4().hex
 
     def clear(self):
         self.objects.clear()
         self.deleted.clear()
         self.counter = 0
+        self.namespace = uuid.uuid4().hex
 
     def save(self, data, mime_type):
         self.counter += 1
-        key = f"arquivos/{self.counter:032x}/{self.counter + 100:032x}"
+        key = f"arquivos/{self.namespace}/{self.counter:032x}"
         self.objects[key] = {"data": bytes(data), "mime_type": mime_type}
         return key
 
@@ -149,6 +152,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             AuditLogModel,
             ClienteModel,
             CobrancaModel,
+            ConfigModel,
             OrcamentoModel,
             PagamentoModel,
             ProducaoArquivoModel,
@@ -172,6 +176,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 UsuarioModel,
                 ClienteModel,
                 ServicoModel,
+                ConfigModel,
             ):
                 db.execute(delete(model))
 
@@ -180,6 +185,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         from models import (
             ClienteModel,
             CobrancaModel,
+            ConfigModel,
             OrcamentoModel,
             PagamentoModel,
             ProducaoModel,
@@ -190,6 +196,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
         password = "Portals-E2E-only!"
         with self.SessionLocal.begin() as db:
+            db.add(ConfigModel(id=1))
             client_a = ClienteModel(nome="E2E Cliente A", email="client-a@example.com")
             client_b = ClienteModel(nome="E2E Cliente B", email="client-b@example.com")
             provision = ClienteModel(nome="E2E Provision", email="provision@example.com")

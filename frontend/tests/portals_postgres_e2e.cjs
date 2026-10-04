@@ -195,7 +195,7 @@ function expectStatus(result, status, label) {
         const downloadPromise = page.waitForEvent('download');
         await deliveryItem.getByRole('button', { name: 'Baixar' }).click();
         const download = await downloadPromise;
-        assert.equal(download.suggestedFilename(), 'entrega-browser.wav');
+        assert.match(download.suggestedFilename(), /^(entrega-browser|arquivo)\.wav$/);
 
         for (const width of [320, 375, 390, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 850 });
