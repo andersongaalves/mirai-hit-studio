@@ -12,6 +12,11 @@ on:
             - "backend/services/portal_*.py"
             - "backend/services/producao_arquivo*.py"
             - "backend/services/repasse_produtor_service.py"
+            - "backend/services/portfolio_segments_service.py"
+            - "backend/models/config.py"
+            - "backend/schemas/config.py"
+            - "backend/routers/config.py"
+            - "backend/migrations/versions/*portfolio_segment*"
             - "backend/models/portal_produtor.py"
             - "backend/tests/test_portal*.py"
             - "backend/tests/commercial_i2_support.py"
@@ -19,6 +24,9 @@ on:
             - "frontend/js/produtor/**"
             - "frontend/js/cliente/**"
             - "frontend/js/admin/auth.js"
+            - "frontend/js/admin/configuracoes.js"
+            - "frontend/js/admin/projetos.js"
+            - "frontend/tests/portfolio_segments.cjs"
             - "frontend/tests/auth_sessions.cjs"
             - "frontend/tests/portals_postgres_e2e.cjs"
             - "frontend/_redirects"
@@ -146,6 +154,7 @@ jobs:
                   python -m unittest discover -s tests -p 'test_portal_produtor_operacao.py' -v
                   python -m unittest discover -s tests -p 'test_portal_cliente.py' -v
                   python -m unittest discover -s tests -p 'test_portal_cliente_operacao.py' -v
+                  python -m unittest discover -s tests -p 'test_portfolio_segments_postgres.py' -v
 
             - name: Run isolated browser auth regression
               shell: bash
@@ -173,6 +182,7 @@ jobs:
                   PY
                   )
                   ruff check backend/tests/test_portals_postgres_e2e.py
+                  ruff check backend/tests/test_portfolio_segments_postgres.py
                   ruff check --select E4,E7,E9,F backend/tests/commercial_i2_support.py
                   node --check frontend/tests/portals_postgres_e2e.cjs
                   node --check frontend/tests/auth_sessions.cjs
