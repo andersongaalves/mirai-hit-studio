@@ -1,19 +1,25 @@
 """Portfolio taxonomy and public/admin visibility in a disposable database."""
 
-import test_bootstrap_database as isolated
 import textwrap
 import unittest
 
+import test_bootstrap_database as isolated
 
 SETUP = """
 import asyncio
 from unittest.mock import patch
 from sqlalchemy.orm import Session
-from models import ProjetoModel, UsuarioModel
+from models import ConfigModel, ProjetoModel, UsuarioModel
 from core.security import create_access_token, get_password_hash
 bootstrap(engine)
 with Session(engine) as db:
     db.add(UsuarioModel(username='admin', password_hash=get_password_hash('password-test'), is_admin=True, role='admin'))
+    db.add(ConfigModel(id=1, portfolio_segments_json=[
+        {'id':'rock','label':'Rock','active':True,'order':1,'retired':False},
+        {'id':'pop','label':'Pop','active':True,'order':2,'retired':False},
+        {'id':'games','label':'Games','active':True,'order':3,'retired':False},
+        {'id':'animation','label':'Animation','active':True,'order':4,'retired':False},
+    ]))
     db.add(ProjetoModel(titulo='Legado', artista='Interno', categoria='Mixagem', link_audio='https://example.com/legacy.mp3', link_capa='https://example.com/legacy.webp', descricao='Nao classificado', destaque=False))
     db.commit()
 import main

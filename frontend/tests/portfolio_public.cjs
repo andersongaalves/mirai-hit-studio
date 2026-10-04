@@ -35,6 +35,12 @@ async function staticResponse(route) {
             const url = new URL(route.request().url());
             if (url.origin === "http://localhost:4173") return staticResponse(route);
             if (url.origin === "http://localhost:8000" && url.pathname === "/projetos") return route.fulfill({ json: projects });
+            if (url.origin === "http://localhost:8000" && url.pathname === "/config/portfolio-segments/public") {
+                return route.fulfill({ json: [
+                    { id: "rap", label: "Rap/Geek" },
+                    { id: "games", label: "Games" },
+                ] });
+            }
             if (url.origin === "https://www.googletagmanager.com") return route.fulfill({ contentType: "text/javascript", body: "" });
             if (url.origin === "https://example.com" || url.origin === "https://img.youtube.com") return route.fulfill({ status: 200, body: "" });
             return route.fulfill({ status: 404, body: "" });
@@ -48,6 +54,7 @@ async function staticResponse(route) {
         assert.equal(await page.locator(".portfolio-filter-group").count(), 2);
         assert.equal(await page.locator("script").filter({ hasText: "alert(1)" }).count(), 0);
         assert.match(await page.locator(".portfolio-card").first().textContent(), /<script>alert\(1\)<\/script>/);
+        assert.match(await page.locator(".portfolio-card").first().textContent(), /Rap\/Geek/);
         assert.equal(await page.locator("audio").getAttribute("autoplay"), null);
         assert.equal(await page.locator("audio").getAttribute("preload"), "none");
         assert.ok((await page.locator(".portfolio-card__cover").first().getAttribute("src")).includes("logo-principal.webp"));

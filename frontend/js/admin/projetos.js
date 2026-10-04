@@ -12,8 +12,16 @@ import { closeAdminModal, openAdminModal } from "./admin_modal.js";
 // ===========================
 
 let projetos = [];
+let segmentCatalog = [];
 let audioState = { beforeUrl: null, afterUrl: null, objectUrls: [] };
-document.addEventListener("admin:logout", () => { projetos = []; });
+document.addEventListener("admin:logout", () => { projetos = []; segmentCatalog = []; });
+document.addEventListener("portfolio-segments:changed", event => {
+    segmentCatalog = Array.isArray(event.detail?.segments) ? event.detail.segments : [];
+    const current = selectedSegmentIds();
+    if ($("modal-projeto") && !$("modal-projeto").classList.contains("hidden")) {
+        renderSegmentPicker(current);
+    }
+});
 
 // ===========================
 // LOAD
@@ -21,9 +29,13 @@ document.addEventListener("admin:logout", () => { projetos = []; });
 
 export async function carregarPortfolio() {
     try {
-        const response = await authFetch("/projetos/admin");
-        if (!response.ok) throw new Error("Erro ao carregar projetos.");
+        const [response, segmentResponse] = await Promise.all([
+            authFetch("/projetos/admin"),
+            authFetch("/config/portfolio-segments"),
+        ]);
+        if (!response.ok || !segmentResponse.ok) throw new Error("Erro ao carregar projetos.");
         projetos = await response.json();
+        segmentCatalog = (await segmentResponse.json()).segments || [];
 
         renderizarProjetos();
     } catch (error) {
@@ -221,9 +233,7 @@ export function editarProjeto(id) {
 
     $("proj_vertical").value = projeto.vertical || "";
 
-    $("proj_segmentos").value = Array.isArray(projeto.segmentos_json)
-        ? projeto.segmentos_json.join(", ")
-        : "";
+    renderSegmentPicker(Array.isArray(projeto.segmentos_json) ? projeto.segmentos_json : []);
 
     $("proj_case_type").value = projeto.case_type || "";
 
@@ -263,10 +273,7 @@ function projetoPayload(showComparison, order) {
 
         vertical: $("proj_vertical").value || null,
 
-        segmentos_json: $("proj_segmentos").value
-            .split(",")
-            .map((segmento) => segmento.trim().toLowerCase())
-            .filter(Boolean),
+        segmentos_json: selectedSegmentIds(),
 
         case_type: $("proj_case_type").value || null,
 
@@ -505,8 +512,6 @@ function limparFormulario() {
 
         "proj_vertical",
 
-        "proj_segmentos",
-
         "proj_case_type",
 
         "proj_audio",
@@ -518,6 +523,9 @@ function limparFormulario() {
         $(id).value = "";
     });
 
+    $("proj_segmentos_busca").value = "";
+    renderSegmentPicker([]);
+
     $("proj_destaque").checked = false;
     $("proj_audio_before").value = "";
     $("proj_audio_after").value = "";
@@ -527,3 +535,68 @@ function limparFormulario() {
     setAudioPreview("after", null);
     syncComparisonControls();
 }
+
+function selectedSegmentIds() {
+    return [...document.querySelectorAll("#proj_segmentos_opcoes input:checked")]
+        .map(input => input.value);
+}
+
+function filterSegmentOptions() {
+    const query = $("proj_segmentos_busca").value.trim().toLocaleLowerCase("pt-BR");
+    document.querySelectorAll(".portfolio-segment-option").forEach(option => {
+        option.hidden = Boolean(query) && !option.dataset.search.includes(query);
+    });
+}
+
+function renderSegmentPicker(selected) {
+    const container = $("proj_segmentos_opcoes");
+    const status = $("proj_segmentos_status");
+    if (!container || !status) return;
+    const selectedSet = new Set(selected);
+    const known = new Set(segmentCatalog.map(segment => segment.id));
+    const options = [...segmentCatalog];
+    selectedSet.forEach(segmentId => {
+        if (!known.has(segmentId)) {
+            options.push({
+                id: segmentId,
+                label: segmentId.replaceAll("_", " "),
+                active: false,
+                usage_count: 1,
+            });
+        }
+    });
+    container.replaceChildren();
+    options.forEach(segment => {
+        const option = document.createElement("label");
+        option.className = "portfolio-segment-option";
+        option.dataset.search = `${segment.label} ${segment.id}`.toLocaleLowerCase("pt-BR");
+        if (!segment.active) option.classList.add("portfolio-segment-option--inactive");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = segment.id;
+        checkbox.checked = selectedSet.has(segment.id);
+        checkbox.disabled = !segment.active && !checkbox.checked;
+        checkbox.addEventListener("change", () => {
+            if (!segment.active && !checkbox.checked) checkbox.disabled = true;
+            status.textContent = `${selectedSegmentIds().length} selecionado(s).`;
+        });
+        const text = document.createElement("span");
+        text.textContent = segment.active ? segment.label : `${segment.label} (inativo)`;
+        option.append(checkbox, text);
+        container.append(option);
+    });
+    status.textContent = options.length
+        ? `${selectedSet.size} selecionado(s).`
+        : "Cadastre segmentos em Configurações para classificá-los.";
+    filterSegmentOptions();
+}
+
+$("proj_segmentos_busca")?.addEventListener("input", filterSegmentOptions);
+$("proj_segmentos_busca")?.addEventListener("keydown", event => {
+    if (event.key !== "ArrowDown") return;
+    const first = document.querySelector(".portfolio-segment-option:not([hidden]) input:not(:disabled)");
+    if (first) {
+        event.preventDefault();
+        first.focus();
+    }
+});

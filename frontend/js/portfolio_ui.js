@@ -49,7 +49,7 @@ function isDirectAudio(url) {
     }
 }
 
-function createProjectCard(project) {
+function createProjectCard(project, segmentLabels = {}) {
     const card = element("article", "portfolio-card");
     const cover = element("img", "portfolio-card__cover");
     cover.src = obterCapaInteligente(project.link_audio, project.link_capa);
@@ -72,7 +72,11 @@ function createProjectCard(project) {
     const description = element("p", "portfolio-card__description", project.descricao || "Material publicado no portfólio Mirai.");
     const segments = element("div", "portfolio-card__segments");
     (Array.isArray(project.segmentos_json) ? project.segmentos_json : []).forEach(segment => {
-        segments.append(element("span", "portfolio-card__segment", segment.replaceAll("_", " ")));
+        segments.append(element(
+            "span",
+            "portfolio-card__segment",
+            segmentLabels[segment] || segment.replaceAll("_", " "),
+        ));
     });
 
     const audioURL = safeURL(project.link_audio);
@@ -101,7 +105,7 @@ function createProjectCard(project) {
     return card;
 }
 
-export function renderizarProjetos(projects) {
+export function renderizarProjetos(projects, segmentLabels = {}) {
     const container = $("render-portfolio");
     if (!container) return;
     const published = Array.isArray(projects) ? projects.filter(isPublicProject) : [];
@@ -112,7 +116,7 @@ export function renderizarProjetos(projects) {
         return;
     }
 
-    published.forEach(project => container.append(createProjectCard(project)));
+    published.forEach(project => container.append(createProjectCard(project, segmentLabels)));
 }
 
 function createFilterGroup(label, kind, options, selected, onChange) {

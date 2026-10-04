@@ -5,17 +5,19 @@ import unittest
 
 import httpx
 import test_bootstrap_database as isolated
-
 from services.portfolio_audio_storage import SupabasePortfolioAudioStorage
 
 SETUP = """
 import asyncio
 from unittest.mock import patch
 from sqlalchemy.orm import Session
-from models import UsuarioModel
+from models import ConfigModel, UsuarioModel
 from core.security import create_access_token, get_password_hash
 bootstrap(engine)
 with Session(engine) as db:
+    db.add(ConfigModel(id=1, portfolio_segments_json=[{
+        'id': 'rock', 'label': 'Rock', 'active': True, 'order': 1, 'retired': False,
+    }]))
     db.add(UsuarioModel(username='admin', password_hash=get_password_hash('password-test'), is_admin=True, role='admin'))
     db.commit()
 import main

@@ -1,9 +1,9 @@
 """Transactional portfolio rules shared by project routes."""
 
 from fastapi import HTTPException
-from sqlalchemy import text
-
 from models import ProjetoModel
+from services.portfolio_segments_service import validate_project_segments
+from sqlalchemy import text
 
 PUBLIC_VERTICALS = ("artists", "creators", "media_games")
 PUBLIC_CASE_TYPES = ("client_case", "demo", "concept_project", "study")
@@ -69,6 +69,12 @@ def configure_landing_comparison(db, project: ProjetoModel, enabled: bool, order
 
 
 def apply_project_data(db, project: ProjetoModel, data: dict) -> None:
+    if "segmentos_json" in data:
+        validate_project_segments(
+            db,
+            current=project.segmentos_json or [],
+            proposed=data["segmentos_json"],
+        )
     comparison_changed = bool(
         {"show_mix_comparison_on_landing", "landing_order"}.intersection(data)
     )

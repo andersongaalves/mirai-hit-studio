@@ -34,6 +34,13 @@ const legacyProject = {
     descricao: "Antes da classificação A/B",
     destaque: true,
 };
+const segmentCatalog = {
+    revision: "a".repeat(64),
+    segments: [
+        { id: "rock", label: "Rock", active: true, order: 1, usage_count: 1 },
+        { id: "legacy_mix", label: "Legacy Mix", active: false, order: 2, usage_count: 0 },
+    ],
+};
 
 async function staticResponse(route) {
     const pathname = new URL(route.request().url()).pathname;
@@ -64,6 +71,7 @@ async function staticResponse(route) {
         if (url.origin !== "http://localhost:8000") return route.fulfill({ status: 200, body: "" });
         if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "session", user: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } } });
         if (url.pathname === "/projetos/admin") return route.fulfill({ json: projects });
+        if (url.pathname === "/config/portfolio-segments") return route.fulfill({ json: segmentCatalog });
         if (/\/projetos\/(7|8)/.test(url.pathname) && request.method() === "PUT") {
             const payload = request.postDataJSON();
             writes.push({ path: url.pathname, method: request.method(), payload });
@@ -158,7 +166,7 @@ async function staticResponse(route) {
         assert.equal(await page.locator("#modal-projeto").evaluate(element => element.classList.contains("hidden")), false);
 
         await page.locator("#proj_titulo").fill("xx");
-        await page.locator("#proj_segmentos").fill("bad segment");
+        await page.locator('#proj_segmentos_opcoes input[value="rock"]').check();
         await page.getByRole("button", { name: "Salvar Projeto" }).click();
         message = page.locator(".notification.error .notification-message").last();
         await page.waitForFunction(() => document.querySelectorAll(".notification.error").length >= 2);
@@ -167,7 +175,7 @@ async function staticResponse(route) {
         assert.match(multipleMessage, /Segmentos:/);
         assert.doesNotMatch(multipleMessage, /\[object Object\]/);
         assert.equal(await page.locator("#proj_titulo").inputValue(), "xx");
-        assert.equal(await page.locator("#proj_segmentos").inputValue(), "bad segment");
+        assert.equal(await page.locator('#proj_segmentos_opcoes input[value="rock"]').isChecked(), true);
         assert.deepEqual(errors, []);
         console.log("PASS: Portfolio Admin legacy edits, A/B preservation and readable validation errors.");
     } finally {

@@ -1,10 +1,9 @@
-from sqlalchemy import Column, Integer, Float
-
 from database import Base
+from sqlalchemy import JSON, Column, Float, Integer, text
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class ConfigModel(Base):
-
     __tablename__ = "configuracoes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -20,3 +19,9 @@ class ConfigModel(Base):
     val_extra_revisao = Column(Float, default=30.0)
     val_prazo_urgente = Column(Float, default=40.0)
     val_prazo_express = Column(Float, default=80.0)
+    portfolio_segments_json = Column(
+        JSON().with_variant(JSONB(), "postgresql"),
+        nullable=False,
+        default=list,
+        server_default=text("'[]'"),
+    )

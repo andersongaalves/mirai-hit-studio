@@ -88,6 +88,10 @@ export function getProjetos() {
     return getAPI("projetos");
 }
 
+export function getPortfolioSegments() {
+    return getAPI("config/portfolio-segments/public");
+}
+
 export function getMixComparisons() {
     return getAPI("projetos/public/mix-comparisons");
 }

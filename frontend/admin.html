@@ -381,11 +381,41 @@
                             </div>
                         </header>
 
+                        <section class="portfolio-segment-settings" aria-labelledby="portfolio-segments-title">
+                            <div class="portfolio-segment-settings__header">
+                                <div>
+                                    <h2 id="portfolio-segments-title">Segmentos do Portfólio</h2>
+                                    <p>Organize os gêneros disponíveis no cadastro de projetos.</p>
+                                </div>
+                                <form id="portfolio-segment-add" class="portfolio-segment-add">
+                                    <label for="portfolio-segment-label">Novo segmento</label>
+                                    <div>
+                                        <input
+                                            id="portfolio-segment-label"
+                                            type="text"
+                                            minlength="2"
+                                            maxlength="80"
+                                            autocomplete="off"
+                                            placeholder="Ex: Brazilian Phonk"
+                                        />
+                                        <button type="submit" class="btn-cta">Adicionar</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <p id="portfolio-segments-status" class="admin-field-help" aria-live="polite"></p>
+                            <div id="portfolio-segments-list" class="portfolio-segment-list"></div>
+                        </section>
+
+                        <div class="admin-section-divider">
+                            <h2>Parâmetros financeiros</h2>
+                        </div>
+
                         <div class="form-group">
                             <label>Desconto Global para Combos (%)</label
                             ><input type="number" id="cfg_desconto" />
                         </div>
                         <div
+                            class="config-financial-grid"
                             style="
                                 display: grid;
                                 grid-template-columns: 1fr 1fr;
@@ -947,13 +977,22 @@
 
                             <div class="form-group">
                                 <label for="proj_segmentos">Segmentos</label>
-                                <input
-                                    type="text"
-                                    id="proj_segmentos"
-                                    class="form-control"
-                                    placeholder="Ex: rap, trap, geek_music"
-                                />
-                                <small>Use slugs separados por vírgula.</small>
+                                <div id="proj_segmentos" class="portfolio-segment-picker">
+                                    <input
+                                        type="search"
+                                        id="proj_segmentos_busca"
+                                        class="form-control"
+                                        placeholder="Buscar segmento"
+                                        autocomplete="off"
+                                    />
+                                    <div
+                                        id="proj_segmentos_opcoes"
+                                        class="portfolio-segment-picker__options"
+                                        role="group"
+                                        aria-label="Segmentos disponíveis"
+                                    ></div>
+                                    <small id="proj_segmentos_status" aria-live="polite"></small>
+                                </div>
                             </div>
 
                             <div class="form-group">

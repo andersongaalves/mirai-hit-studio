@@ -69,6 +69,9 @@ const root = path.resolve(__dirname, '..');
                     }
                     data = config;
                 }
+                if (url.pathname === '/config/portfolio-segments') {
+                    data = { segments: [], revision: '0'.repeat(64) };
+                }
                 if (key === 'POST /orcamentos') {
                     payloads.push(request.postDataJSON());
                     data = { id: payloads.length };
@@ -146,7 +149,7 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => Promise.all([window.fazerLogin(), window.fazerLogin()]));
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /audit-logs', 'GET /clientes', 'GET /config', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos/admin', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores'];
+        const expected = ['GET /audit-logs', 'GET /clientes', 'GET /config', 'GET /config/portfolio-segments', 'GET /config/portfolio-segments', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos/admin', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores'];
         assert.deepEqual(calls.filter(call => call.startsWith('GET')).sort(), expected);
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));

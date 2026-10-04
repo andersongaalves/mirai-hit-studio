@@ -49,6 +49,9 @@ async function staticResponse(route) {
             return route.fulfill({ json: { access_token: 'synthetic-admin-session', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } } });
         }
         if (url.pathname === '/config') return route.fulfill({ json: {} });
+        if (url.pathname === '/config/portfolio-segments') {
+            return route.fulfill({ json: { segments: [], revision: '0'.repeat(64) } });
+        }
         if (url.pathname === '/servicos') return route.fulfill({ json: [] });
         if (url.pathname === '/projetos/admin') return route.fulfill({ json: [] });
         if (url.pathname === '/orcamentos') return route.fulfill({ json: [] });
