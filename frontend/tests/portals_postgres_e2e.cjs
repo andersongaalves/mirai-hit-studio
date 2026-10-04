@@ -19,6 +19,12 @@ async function login(page, path, username) {
     await page.locator('#password').fill(password);
     await page.getByRole('button', { name: 'Entrar' }).click();
     await page.locator('#admin-area').waitFor({ state: 'visible' });
+    const loadingSelector = path.startsWith('/produtor')
+        ? '#producer-loading'
+        : path.startsWith('/cliente')
+            ? '#client-loading'
+            : null;
+    if (loadingSelector) await page.locator(loadingSelector).waitFor({ state: 'hidden' });
 }
 
 async function resetSession(page) {
