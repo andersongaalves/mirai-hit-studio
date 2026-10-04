@@ -155,7 +155,16 @@ jobs:
                   python -m unittest discover -s tests -p 'test_portal_produtor_operacao.py' -v
                   python -m unittest discover -s tests -p 'test_portal_cliente.py' -v
                   python -m unittest discover -s tests -p 'test_portal_cliente_operacao.py' -v
-                  python -m unittest discover -s tests -p 'test_portfolio_segments_postgres.py' -v
+                  set +e
+                  segment_output=$(python -m unittest discover -s tests -p 'test_portfolio_segments_postgres.py' -v 2>&1)
+                  segment_status=$?
+                  set -e
+                  printf '%s\n' "$segment_output"
+                  if [ "$segment_status" -ne 0 ]; then
+                    segment_summary=$(printf '%s\n' "$segment_output" | tail -n 20 | tr '\n' ' ' | sed 's/%/%25/g')
+                    echo "::error title=Portfolio segment migration test::$segment_summary"
+                    exit "$segment_status"
+                  fi
 
             - name: Run isolated browser auth regression
               shell: bash
