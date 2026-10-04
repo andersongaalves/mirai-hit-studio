@@ -19,6 +19,7 @@ on:
             - "backend/migrations/versions/*portfolio_segment*"
             - "backend/models/portal_produtor.py"
             - "backend/tests/test_portal*.py"
+            - "backend/tests/test_portfolio_segments*.py"
             - "backend/tests/commercial_i2_support.py"
             - "frontend/portal-*.html"
             - "frontend/js/produtor/**"
