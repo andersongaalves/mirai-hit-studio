@@ -33,7 +33,12 @@ async function resetSession(page) {
 
 async function api(page, method, path, body = undefined) {
     const result = await page.evaluate(async ({ apiRoot, method, path, body }) => {
-        const token = localStorage.getItem('access_token');
+        const context = location.pathname.startsWith('/produtor')
+            ? 'produtor'
+            : location.pathname.startsWith('/cliente')
+                ? 'cliente'
+                : 'admin';
+        const token = localStorage.getItem(`mirai.auth.${context}.access_token`);
         const response = await fetch(apiRoot + path, {
             method,
             headers: {

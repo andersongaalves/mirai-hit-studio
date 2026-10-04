@@ -60,7 +60,7 @@ const root = path.resolve(__dirname, '..');
         await page.goto('http://localhost:4173/admin.html');
         await page.waitForFunction(() => typeof window.fecharEditorProposta === 'function');
         await page.evaluate(() => {
-            localStorage.setItem('access_token', 'synthetic-only');
+            localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only');
             document.getElementById('login-panel').classList.add('hidden');
         });
         const state = () => page.evaluate(async () => (await import('/js/admin/propostas/proposta_state.js')).propostaState);

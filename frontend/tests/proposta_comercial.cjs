@@ -58,7 +58,7 @@ const root = path.resolve(__dirname, '..');
         });
         await page.goto('http://localhost:4173/admin.html');
         await page.waitForFunction(() => typeof window.fecharEditorProposta === 'function');
-        await page.evaluate(() => localStorage.setItem('access_token', 'synthetic-only'));
+        await page.evaluate(() => localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only'));
         await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);
         const state = () => page.evaluate(async () => (await import('/js/admin/propostas/proposta_state.js')).propostaState);
         const action = name => page.evaluate(async name => (await import('/js/admin/propostas/propostas.js'))[name](), name);

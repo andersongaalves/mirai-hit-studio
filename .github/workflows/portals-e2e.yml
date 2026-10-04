@@ -18,6 +18,8 @@ on:
             - "frontend/portal-*.html"
             - "frontend/js/produtor/**"
             - "frontend/js/cliente/**"
+            - "frontend/js/admin/auth.js"
+            - "frontend/tests/auth_sessions.cjs"
             - "frontend/tests/portals_postgres_e2e.cjs"
             - "frontend/_redirects"
 
@@ -145,6 +147,10 @@ jobs:
                   python -m unittest discover -s tests -p 'test_portal_cliente.py' -v
                   python -m unittest discover -s tests -p 'test_portal_cliente_operacao.py' -v
 
+            - name: Run isolated browser auth regression
+              shell: bash
+              run: node frontend/tests/auth_sessions.cjs
+
             - name: Run PostgreSQL 17 and real-browser E2E
               working-directory: backend
               shell: bash
@@ -169,6 +175,8 @@ jobs:
                   ruff check backend/tests/test_portals_postgres_e2e.py
                   ruff check --select E4,E7,E9,F backend/tests/commercial_i2_support.py
                   node --check frontend/tests/portals_postgres_e2e.cjs
+                  node --check frontend/tests/auth_sessions.cjs
+                  node --check frontend/js/admin/auth.js
                   git diff --check
 
             - name: Verify synthetic cleanup

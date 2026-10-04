@@ -155,6 +155,10 @@ Esse recurso depende de aprovacao estrutural futura.
 - autorizacao e ownership no backend;
 - isolamento mutuo entre Admin, Produtor e Cliente;
 - tokens invalidos/expirados recusados;
+- sessoes de Admin, Produtor e Cliente isoladas no navegador, com logout e falhas 401
+  restritos ao perfil afetado;
+- access token JWT com duracao definida por `ACCESS_TOKEN_EXPIRE_MINUTES` (60 minutos no
+  exemplo de ambiente); o frontend nao implementa renovacao por refresh token;
 - projecoes sem campos administrativos ou financeiros internos;
 - zero novas tabelas ou migrations na Fase 3;
 - comprovantes e repasses do produtor nunca sao expostos ao cliente;

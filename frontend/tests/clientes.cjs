@@ -23,7 +23,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
 <input id="clientes-search"><select id="clientes-status-filter"><option value="todos">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select><button id="clientes-clear-filters" class="hidden">Limpar filtros</button>
 <p id="clientes-summary"></p><div id="clientes-list"></div>
 <div id="modal-cliente" class="hidden" aria-labelledby="cliente-modal-title"><div class="modal-content cliente-modal-content"><div class="cliente-modal-header"><h2 id="cliente-modal-title"></h2><button aria-label="Fechar cliente">Fechar</button></div><input id="cliente-nome"><input id="cliente-email"><input id="cliente-telefone"><textarea id="cliente-observacoes"></textarea><input id="cliente-ativo" type="checkbox"><div id="cliente-history-block"><div id="cliente-historico"></div></div><button id="cliente-save">Salvar cliente</button></div></div>
-<script type="module">localStorage.setItem('access_token','test-token'); const module = await import('/js/admin/clientes/clientes.js'); window.crmModule = module; await module.initClientes();</script>
+<script type="module">localStorage.setItem('mirai.auth.admin.access_token','test-token'); const module = await import('/js/admin/clientes/clientes.js'); window.crmModule = module; await module.initClientes();</script>
 </body></html>`;
 
 (async () => {
