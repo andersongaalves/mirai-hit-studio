@@ -190,9 +190,9 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
         password = "Portals-E2E-only!"
         with self.SessionLocal.begin() as db:
-            client_a = ClienteModel(nome="E2E Cliente A", email="client-a@example.test")
-            client_b = ClienteModel(nome="E2E Cliente B", email="client-b@example.test")
-            provision = ClienteModel(nome="E2E Provision", email="provision@example.test")
+            client_a = ClienteModel(nome="E2E Cliente A", email="client-a@example.com")
+            client_b = ClienteModel(nome="E2E Cliente B", email="client-b@example.com")
+            provision = ClienteModel(nome="E2E Provision", email="provision@example.com")
             db.add_all([client_a, client_b, provision])
             db.flush()
             admin = UsuarioModel(
@@ -239,6 +239,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                     subtitulo="Servico sintetico",
                     valor_base=1000.0,
                     categoria="avulso",
+                    parametros="",
                 )
             )
             db.flush()
