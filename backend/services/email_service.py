@@ -1,14 +1,12 @@
-from pathlib import Path
-from datetime import datetime
 import base64
 import logging
+from datetime import datetime
+from pathlib import Path
 
 import resend
-
+from core.config import settings
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup, escape
-
-from core.config import settings
 
 resend.api_key = settings.RESEND_API_KEY
 logger = logging.getLogger(__name__)
@@ -22,6 +20,20 @@ templates = Environment(
 
 
 class EmailService:
+
+    @classmethod
+    def enviar_convite_cliente(cls, cliente, activation_url: str, *, idempotency_key: str):
+        html = cls.render(
+            "email_convite_cliente.html",
+            nome=cliente.nome,
+            activation_url=activation_url,
+        )
+        return resend.Emails.send({
+            "from": settings.EMAIL_FROM,
+            "to": cliente.email,
+            "subject": "Ative seu acesso ao Portal Mirai",
+            "html": html,
+        }, {"idempotency_key": idempotency_key})
 
     @classmethod
     def enviar_proposta(cls, proposta, pdf, valor):

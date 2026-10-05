@@ -7,11 +7,13 @@ import os
 import subprocess
 import unittest
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 from alembic.config import Config
@@ -150,6 +152,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
     def _cleanup(cls):
         from models import (
             AuditLogModel,
+            AuthRateLimitModel,
+            ClienteAcessoModel,
             ClienteModel,
             CobrancaModel,
             ConfigModel,
@@ -166,6 +170,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         with cls.SessionLocal.begin() as db:
             for model in (
                 AuditLogModel,
+                AuthRateLimitModel,
+                ClienteAcessoModel,
                 RepasseProdutorModel,
                 ProducaoArquivoModel,
                 PagamentoModel,
@@ -270,7 +276,14 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 cliente_id=client_a.id,
                 produtor_id=producer_a.id,
             )
-            db.add_all([flow_budget, other_budget, completed_budget])
+            invite_budget = OrcamentoModel(
+                nome_cliente=provision.nome,
+                email=provision.email,
+                servico="Mixagem",
+                cliente_id=provision.id,
+                status="aprovado",
+            )
+            db.add_all([flow_budget, other_budget, completed_budget, invite_budget])
             db.flush()
             proposal = PropostaModel(
                 orcamento_id=flow_budget.id,
@@ -282,6 +295,18 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 totais_json={},
             )
             db.add(proposal)
+            db.flush()
+            invite_proposal = PropostaModel(
+                orcamento_id=invite_budget.id,
+                numero="E2E-PROP-INVITE",
+                status="aceita",
+                cliente_snapshot={},
+                itens_json=[],
+                pagamentos_json=[],
+                totais_json={},
+                aprovada_em=datetime.now(timezone.utc),
+            )
+            db.add(invite_proposal)
             db.flush()
             charge = CobrancaModel(
                 proposta_id=proposal.id,
@@ -333,9 +358,56 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 "client_b_id": client_b.id,
                 "provision_client_id": provision.id,
                 "flow_budget_id": flow_budget.id,
+                "invite_proposal_id": invite_proposal.id,
                 "other_production_id": other_production.id,
                 "completed_production_id": completed.id,
             }
+
+    def test_client_invite_postgresql17_concurrency_and_activation(self):
+        from models import ClienteAcessoModel, UsuarioModel
+        from services.email_service import EmailService
+
+        admin = self._login("e2e-admin")
+        path = f"/propostas/{self.ids['invite_proposal_id']}/acesso-cliente/convidar"
+        with patch.object(
+            EmailService,
+            "enviar_convite_cliente",
+            return_value={"id": "postgres-e2e-invite"},
+        ) as email:
+            def send(_):
+                with httpx.Client(base_url=self.api_url, timeout=30, trust_env=False) as client:
+                    return client.post(path, headers=admin).status_code
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                statuses = sorted(executor.map(send, range(2)))
+
+        self.assertEqual(statuses, [200, 409])
+        self.assertEqual(email.call_count, 1)
+        token = parse_qs(urlparse(email.call_args.args[1]).query)["token"][0]
+        with self.SessionLocal() as db:
+            rows = db.query(ClienteAcessoModel).all()
+            self.assertEqual(len(rows), 1)
+            self.assertNotEqual(rows[0].token_hash, token)
+
+        validated = self.http.post("/cliente-acessos/validar", json={"token": token})
+        self.assertEqual(validated.status_code, 200, validated.text)
+        self.assertEqual(validated.json()["estado"], "valido")
+        activated = self.http.post("/cliente-acessos/ativar", json={
+            "token": token,
+            "username": "e2e-invited-client",
+            "password": self.ids["password"],
+        })
+        self.assertEqual(activated.status_code, 200, activated.text)
+        login = self._login("e2e-invited-client")
+        self.assertTrue(login["Authorization"].startswith("Bearer "))
+        with self.SessionLocal() as db:
+            user = db.scalar(select(UsuarioModel).where(UsuarioModel.username == "e2e-invited-client"))
+            self.assertEqual(user.cliente_id, self.ids["provision_client_id"])
+            self.assertEqual(user.role, "cliente")
+            self.assertFalse(user.is_admin)
+            access = db.query(ClienteAcessoModel).one()
+            self.assertEqual(access.usuario_id, user.id)
+            self.assertIsNotNone(access.token_consumed_at)
 
     def _login(self, username):
         response = self.http.post(

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex,nofollow,noarchive" />
+        <meta name="referrer" content="no-referrer" />
+        <title>Ativar acesso | Mirai Hit Studio</title>
+        <link rel="stylesheet" href="/css/main.css" />
+        <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
+    </head>
+    <body class="producer-body">
+        <a class="skip-link" href="#activation-content">Ir para o conteúdo</a>
+        <main class="producer-entry" id="activation-content">
+            <section class="producer-login" aria-labelledby="activation-title">
+                <a href="/" aria-label="Mirai Hit Studio, página inicial">
+                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
+                </a>
+                <div>
+                    <p class="producer-eyebrow">Portal do Cliente</p>
+                    <h1 id="activation-title">Ative seu acesso</h1>
+                    <p id="activation-lead" class="producer-lead">Validando seu convite...</p>
+                </div>
+                <form id="activation-form" class="producer-login__form hidden">
+                    <label for="activation-username">Nome de usuário</label>
+                    <input id="activation-username" name="username" autocomplete="username" maxlength="50" required />
+                    <label for="activation-password">Senha</label>
+                    <input id="activation-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+                    <label for="activation-confirm">Confirmar senha</label>
+                    <input id="activation-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+                    <button class="btn-cta" type="submit">Ativar acesso</button>
+                </form>
+                <p id="activation-message" class="producer-message hidden" role="status"></p>
+                <a id="activation-login" class="btn-cta hidden" href="/acesso">Entrar na sua conta</a>
+            </section>
+        </main>
+        <script type="module" src="/js/ativar.js"></script>
+    </body>
+</html>

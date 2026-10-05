@@ -37,6 +37,20 @@ export const salvarProposta = (id, payload) => request(`/propostas/${id}`, {
 export const gerarDocumento = id => request(`/propostas/${id}/gerar-documento`, { method: "POST" });
 export const enviarProposta = id => request(`/propostas/${id}/enviar`, { method: "POST" });
 export const aprovarProposta = id => request(`/propostas/${id}/aprovar`, { method: "POST" });
+
+async function accessRequest(path, options = {}) {
+    const response = await responseFor(path, options);
+    const data = await response.json().catch(() => null);
+    if (!data?.estado || !Number.isInteger(data?.cliente_id)) {
+        throw new Error("Resposta de acesso do cliente inválida.");
+    }
+    return data;
+}
+
+export const buscarAcessoCliente = id => accessRequest(`/propostas/${id}/acesso-cliente`);
+export const convidarCliente = id => accessRequest(`/propostas/${id}/acesso-cliente/convidar`, { method: "POST" });
+export const reenviarConviteCliente = id => accessRequest(`/propostas/${id}/acesso-cliente/reenviar`, { method: "POST" });
+export const revogarConviteCliente = id => accessRequest(`/propostas/${id}/acesso-cliente/revogar`, { method: "POST" });
 export async function buscarPreview(id) {
     const response = await responseFor(`/propostas/${id}/preview`);
     if (!response.headers.get("content-type")?.includes("text/html")) throw new Error("Preview inválido.");

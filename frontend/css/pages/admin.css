@@ -784,6 +784,36 @@
     overflow-wrap: anywhere;
 }
 
+.proposta-client-access {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 16px;
+    border: var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+}
+
+.proposta-client-access p {
+    margin: 6px 0 0;
+    color: var(--color-text-secondary);
+}
+
+.proposta-client-access__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+    .proposta-client-access { align-items: stretch; flex-direction: column; }
+    .proposta-client-access__actions { justify-content: stretch; }
+    .proposta-client-access__actions .btn-small { width: 100%; }
+}
+
 .proposta-tabs {
     display: flex;
     flex-wrap: wrap;

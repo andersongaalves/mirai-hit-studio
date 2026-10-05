@@ -22,6 +22,96 @@ import {
 
 let contexto = 0;
 let orcamentoCarregando = null;
+let acessoCliente = null;
+let acessoProcessando = false;
+
+const acessoLabels = Object.freeze({
+    sem_acesso: "Sem acesso",
+    convite_pendente: "Convite pendente",
+    convite_expirado: "Convite expirado",
+    convite_revogado: "Convite revogado",
+    conta_ativa: "Conta ativa",
+    conta_desativada: "Conta desativada",
+    conflito: "Conciliação necessária",
+});
+
+function renderizarAcessoCliente() {
+    const section = $("proposta-client-access");
+    if (!section) return;
+    const visible = propostaState.proposta?.status === "aceita";
+    section.classList.toggle("hidden", !visible);
+    if (!visible) return;
+    const status = $("proposta-client-access-status");
+    const invite = $("btn-convidar-cliente");
+    const resend = $("btn-reenviar-convite");
+    const revoke = $("btn-revogar-convite");
+    [invite, resend, revoke].forEach(button => {
+        button?.classList.add("hidden");
+        if (button) button.disabled = acessoProcessando;
+    });
+    if (!acessoCliente) {
+        if (status) status.textContent = "Carregando situação do acesso...";
+        return;
+    }
+    const sent = acessoCliente.last_sent_at
+        ? ` Último envio: ${new Date(acessoCliente.last_sent_at).toLocaleString("pt-BR")}.`
+        : "";
+    const expires = acessoCliente.expires_at
+        ? ` Expira em: ${new Date(acessoCliente.expires_at).toLocaleString("pt-BR")}.`
+        : "";
+    if (status) status.textContent = `${acessoLabels[acessoCliente.estado] || "Estado indisponível"}.${sent}${expires}`;
+    if (acessoCliente.estado === "sem_acesso") invite?.classList.remove("hidden");
+    if (["convite_pendente", "convite_expirado", "convite_revogado"].includes(acessoCliente.estado)) {
+        resend?.classList.remove("hidden");
+    }
+    if (["convite_pendente", "convite_expirado"].includes(acessoCliente.estado)) revoke?.classList.remove("hidden");
+    if (invite) invite.onclick = () => executarAcaoAcesso("convidar");
+    if (resend) resend.onclick = () => executarAcaoAcesso("reenviar");
+    if (revoke) revoke.onclick = () => executarAcaoAcesso("revogar");
+}
+
+async function carregarAcessoCliente() {
+    const proposal = propostaState.proposta;
+    acessoCliente = null;
+    renderizarAcessoCliente();
+    if (proposal?.status !== "aceita") return;
+    const atual = contexto;
+    try {
+        const data = await PropostaAPI.buscarAcessoCliente(proposal.id);
+        if (atual === contexto) acessoCliente = data;
+    } catch (error) {
+        if (atual === contexto) Notify.error(error.message);
+    } finally {
+        if (atual === contexto) renderizarAcessoCliente();
+    }
+}
+
+async function executarAcaoAcesso(action) {
+    if (acessoProcessando || propostaState.proposta?.status !== "aceita") return;
+    const messages = {
+        convidar: "Enviar um convite de acesso para o e-mail do cliente comercial?",
+        reenviar: "Invalidar o convite anterior e enviar um novo?",
+        revogar: "Revogar este convite ainda não utilizado?",
+    };
+    if (!confirm(messages[action])) return;
+    acessoProcessando = true;
+    renderizarAcessoCliente();
+    try {
+        const methods = {
+            convidar: PropostaAPI.convidarCliente,
+            reenviar: PropostaAPI.reenviarConviteCliente,
+            revogar: PropostaAPI.revogarConviteCliente,
+        };
+        acessoCliente = await methods[action](propostaState.proposta.id);
+        Notify.success(action === "revogar" ? "Convite revogado." : "Convite enviado.");
+    } catch (error) {
+        Notify.error(error.message);
+        await carregarAcessoCliente();
+    } finally {
+        acessoProcessando = false;
+        renderizarAcessoCliente();
+    }
+}
 
 function renderizarConteudoAba() {
     PropostaPreview.limparPreview();
@@ -176,6 +266,7 @@ export async function abrirEditorProposta(orcamento) {
             onRequestClose: fecharEditorProposta,
         });
         renderizarAbaAtiva();
+        await carregarAcessoCliente();
     } catch (error) {
         if (atual !== contexto) return;
         if ($("proposta-content")) $("proposta-content").textContent = error.message;
@@ -260,6 +351,8 @@ function encerrarEditor() {
     orcamentoCarregando = null;
     PropostaModal.fecharModalProposta();
     resetPropostaState();
+    acessoCliente = null;
+    acessoProcessando = false;
     $("proposta-content")?.replaceChildren();
     $("proposta-tabs")?.replaceChildren();
     atualizarStatusLocal();
@@ -284,6 +377,7 @@ async function executarAcaoComercial(acao) {
         setProposta(resposta);
         document.dispatchEvent(new CustomEvent("proposta:comercial-atualizada", { detail: { proposta: resposta } }));
         renderizarAbaAtiva();
+        if (!envio) await carregarAcessoCliente();
         Notify.success(envio ? "Proposta enviada." : "Proposta aceita. Produção disponível.");
     } catch (error) {
         if (atual === contexto) Notify.error(error.message);

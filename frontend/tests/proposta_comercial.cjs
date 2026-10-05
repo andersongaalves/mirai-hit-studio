@@ -12,6 +12,7 @@ const root = path.resolve(__dirname, '..');
         const page = await context.newPage();
         const proposal = JSON.parse(await fs.readFile(path.join(__dirname, 'fixtures/proposta.json')));
         const budget = { id: proposal.orcamento_id, nome_cliente: 'Cliente Teste', email: 'teste@example.com', servico: 'Mixagem', status: 'em_analise', valor_total: 100 };
+        const clientAccess = { proposta_id: proposal.id, cliente_id: 4, cliente_nome: 'Cliente Teste', email: 'teste@example.com', proposta_status: 'aceita', estado: 'sem_acesso', usuario_id: null, last_sent_at: null, expires_at: null, send_count: 0 };
         const productions = [], calls = [], errors = [];
         let failure = null;
         page.on('pageerror', error => errors.push(error.message));
@@ -28,6 +29,11 @@ const root = path.resolve(__dirname, '..');
                 if (url.pathname === '/producoes') return route.fulfill({ json: productions });
                 if (url.pathname === '/clientes') return route.fulfill({ json: [] });
                 if (url.pathname.endsWith('/preview')) return route.fulfill({ contentType: 'text/html', body: '<p>Documento salvo</p>' });
+                if (url.pathname.endsWith('/acesso-cliente/convidar')) {
+                    Object.assign(clientAccess, { estado: 'convite_pendente', last_sent_at: '2026-10-05T12:00:00Z', expires_at: '2026-10-07T12:00:00Z', send_count: 1 });
+                    return route.fulfill({ json: clientAccess });
+                }
+                if (url.pathname.endsWith('/acesso-cliente')) return route.fulfill({ json: clientAccess });
                 const action = url.pathname.split('/').pop();
                 if (['enviar', 'aprovar'].includes(action)) {
                     await new Promise(resolve => setTimeout(resolve, 150));
@@ -110,6 +116,11 @@ const root = path.resolve(__dirname, '..');
         await action('aprovarProposta');
         assert.equal((await state()).proposta.status, 'aceita');
         assert.equal(await approveButton.isDisabled(), true);
+        await page.waitForSelector('#btn-convidar-cliente:not(.hidden)');
+        page.once('dialog', dialog => dialog.accept());
+        await page.locator('#btn-convidar-cliente').click();
+        await page.waitForSelector('#btn-reenviar-convite:not(.hidden)');
+        assert.match(await page.locator('#proposta-client-access-status').textContent(), /Convite pendente/);
         await page.waitForFunction(async () => (await import('/js/admin/orcamentos/orcamentos_state.js')).orcamentosState.lista[0]?.status === 'aprovado');
         await page.waitForFunction(async () => (await import('/js/admin/producoes/producoes_state.js')).producoesState.lista.length === 1);
         await page.evaluate(() => window.fecharEditorProposta());

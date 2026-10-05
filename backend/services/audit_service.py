@@ -1,10 +1,8 @@
 from math import ceil
 
-from sqlalchemy.orm import Session
-
 from crud import crud_audit_log
 from models.audit_log import AuditLogModel
-
+from sqlalchemy.orm import Session
 
 ALLOWED_METADATA = {
     "old_status",
@@ -24,6 +22,9 @@ ALLOWED_METADATA = {
     "new_amount",
     "reference_changed",
     "receipt_changed",
+    "client_id",
+    "proposal_id",
+    "result",
 }
 
 
