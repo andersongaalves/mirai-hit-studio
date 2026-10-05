@@ -50,7 +50,7 @@ async function login(page, username) {
 
 (async () => {
     const redirects = await fs.readFile(path.join(root, '_redirects'), 'utf8');
-    assert.match(redirects, /^\/acesso \/acesso\.html 200$/m);
+    assert.doesNotMatch(redirects, /^\/acesso \/acesso\.html 200$/m);
 
     const browser = await chromium.launch({
         headless: true,
