@@ -4,11 +4,12 @@ import os
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 
-from alembic import command
-from scripts.bootstrap_database import migration_config
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
+
+from alembic import command
+from scripts.bootstrap_database import migration_config
 
 DATABASE_URL = os.getenv("MIRAI_PORTALS_E2E_DATABASE_URL", "")
 ACK = os.getenv("MIRAI_PORTALS_E2E_ALLOW", "")

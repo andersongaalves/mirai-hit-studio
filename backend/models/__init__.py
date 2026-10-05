@@ -13,3 +13,4 @@ from .ai import AIConversationModel, AIEmailThreadModel, AIMessageModel
 from .ai_briefing import AIBriefingModel
 from .ai_usage import AIUsageEventModel
 from .portal_produtor import ProducaoArquivoModel, RepasseProdutorModel
+from .client_access import AuthRateLimitModel, ClienteAcessoModel
