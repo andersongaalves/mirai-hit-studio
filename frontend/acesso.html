@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex,nofollow,noarchive" />
+        <title>Área de acesso | Mirai Hit Studio</title>
+        <link rel="stylesheet" href="/css/main.css" />
+        <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
+    </head>
+    <body class="producer-body">
+        <a class="skip-link" href="#access-content">Ir para o conteúdo</a>
+
+        <main class="producer-entry" id="access-content">
+            <section class="producer-login" aria-labelledby="access-title">
+                <a href="/" aria-label="Mirai Hit Studio, página inicial">
+                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
+                </a>
+                <div>
+                    <p class="producer-eyebrow">Área de acesso</p>
+                    <h1 id="access-title">Entre na sua conta</h1>
+                    <p class="producer-lead">Você será direcionado ao ambiente correto.</p>
+                </div>
+                <form id="access-login-form" class="producer-login__form">
+                    <label for="username">Usuário</label>
+                    <input id="username" name="username" autocomplete="username" required />
+                    <label for="password">Senha</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required />
+                    <button class="btn-cta" type="submit">Entrar</button>
+                    <p id="login-error" class="producer-message producer-message--error hidden" role="alert"></p>
+                </form>
+            </section>
+        </main>
+
+        <script type="module" src="/js/acesso.js"></script>
+    </body>
+</html>
