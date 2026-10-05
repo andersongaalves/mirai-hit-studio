@@ -1,3 +1,4 @@
+from database import Base
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -10,8 +11,6 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.sql import func
-
-from database import Base
 
 
 class ClienteAcessoModel(Base):
