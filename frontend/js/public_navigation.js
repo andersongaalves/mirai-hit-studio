@@ -7,6 +7,7 @@ const LOCAL_ROUTE_FILES = {
     "/media-games": "media-games.html",
     "/portfolio": "portfolio.html",
     "/orcamento": "calculadora.html",
+    "/acesso": "acesso.html",
 };
 
 
@@ -37,6 +38,7 @@ function normalizedPath() {
         "/media-games.html": "/media-games",
         "/portfolio.html": "/portfolio",
         "/calculadora.html": "/orcamento",
+        "/acesso.html": "/acesso",
     };
     const pathname = window.location.pathname.replace(/\/$/, "") || "/";
     const path = LOCAL_HOSTS.has(window.location.hostname) && pathname.toLowerCase().endsWith(".html")

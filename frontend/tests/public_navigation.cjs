@@ -9,6 +9,7 @@ const routes = {
     "/creators": "/creators.html",
     "/media-games": "/media-games.html",
     "/portfolio": "/portfolio.html",
+    "/acesso": "/acesso.html",
 };
 
 
@@ -50,7 +51,9 @@ async function staticResponse(route) {
         await page.goto("http://localhost:4173/artists");
         await page.waitForSelector(".site-nav[data-initialized='true']");
         assert.equal(await page.locator('[data-public-path="/artists"]').getAttribute("aria-current"), "page");
-        assert.deepEqual(await page.locator(".site-nav__links a").evaluateAll(links => links.map(link => link.getAttribute("href"))), ["/", "/artists", "/creators", "/media-games", "/portfolio", "/orcamento"]);
+        assert.deepEqual(await page.locator(".site-nav__links a").evaluateAll(links => links.map(link => link.getAttribute("href"))), ["/", "/artists", "/creators", "/media-games", "/portfolio", "/acesso", "/orcamento"]);
+        assert.equal(await page.locator('[data-public-path="/acesso"]').textContent(), "Entrar");
+        assert.equal(await page.locator('.site-nav__cta').textContent(), "Começar projeto");
         assert.equal(await page.locator(".site-nav__links").isVisible(), false);
         await page.locator("#site-nav-toggle").click();
         assert.equal(await page.locator("#site-nav-toggle").getAttribute("aria-expanded"), "true");
@@ -58,6 +61,16 @@ async function staticResponse(route) {
         await page.keyboard.press("Escape");
         assert.equal(await page.locator("#site-nav-toggle").getAttribute("aria-expanded"), "false");
         assert.equal(await page.evaluate(() => document.activeElement?.id), "site-nav-toggle");
+        await page.locator("#site-nav-toggle").click();
+        await page.locator('[data-public-path="/acesso"]').evaluate(link => {
+            link.addEventListener("click", event => event.preventDefault(), { once: true });
+        });
+        await page.locator('[data-public-path="/acesso"]').click();
+        assert.equal(await page.locator("#site-nav-toggle").getAttribute("aria-expanded"), "false");
+        await page.goto("http://localhost:4173/acesso");
+        assert.equal(await page.locator("#access-login-form").isVisible(), true);
+        await page.goto("http://localhost:4173/artists");
+        await page.waitForSelector(".site-nav[data-initialized='true']");
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === "event" && item[1] === "view_vertical"));
         const event = await page.evaluate(() => window.dataLayer.find(item => item[0] === "event" && item[1] === "view_vertical"));
         assert.deepEqual(event[2], { vertical: "artists" });
@@ -76,6 +89,25 @@ async function staticResponse(route) {
             await page.waitForSelector(".site-nav[data-initialized='true']");
             assert.equal(await page.locator(`[data-public-path="${target}"]`).getAttribute("aria-current"), "page");
         }
+        for (const width of [320, 375, 390, 768, 1024, 1440]) {
+            await page.setViewportSize({ width, height: 800 });
+            await page.goto("http://localhost:4173/artists");
+            await page.waitForSelector(".site-nav[data-initialized='true']");
+            assert.equal(
+                await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+                true,
+                `navigation must not overflow at ${width}px`,
+            );
+        }
+        await page.goto("http://localhost:4173/artists.html");
+        await page.waitForSelector(".site-nav[data-initialized='true']");
+        assert.match(
+            await page.locator('[data-public-path="/acesso"]').getAttribute("href"),
+            /\/acesso\.html$/,
+        );
+        assert.equal(await page.locator('.site-footer a[href$="acesso.html"]').textContent(), "Área de acesso");
+        await page.goto("http://localhost:4173/acesso.html");
+        assert.equal(await page.locator("#access-login-form").isVisible(), true);
         assert.deepEqual(errors, []);
         console.log("PASS: public routes, semantic navigation, mobile keyboard flow, active state and vertical analytics.");
     } finally { await browser.close(); }
