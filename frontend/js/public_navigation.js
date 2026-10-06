@@ -8,6 +8,7 @@ const LOCAL_ROUTE_FILES = {
     "/portfolio": "portfolio.html",
     "/orcamento": "calculadora.html",
     "/acesso": "acesso.html",
+    "/cadastro": "cadastro.html",
 };
 
 
@@ -39,6 +40,7 @@ function normalizedPath() {
         "/portfolio.html": "/portfolio",
         "/calculadora.html": "/orcamento",
         "/acesso.html": "/acesso",
+        "/cadastro.html": "/cadastro",
     };
     const pathname = window.location.pathname.replace(/\/$/, "") || "/";
     const path = LOCAL_HOSTS.has(window.location.hostname) && pathname.toLowerCase().endsWith(".html")
@@ -49,14 +51,13 @@ function normalizedPath() {
 
 
 export function initPublicNavigation() {
+    adaptLinksForLocalStaticPreview();
     const nav = document.querySelector(".site-nav");
     const header = nav?.closest(".site-header");
     const toggle = document.getElementById("site-nav-toggle");
     const links = document.getElementById("site-nav-links");
     if (!nav || !toggle || !links || nav.dataset.initialized === "true") return;
     nav.dataset.initialized = "true";
-    adaptLinksForLocalStaticPreview();
-
     const close = ({ restoreFocus = false } = {}) => {
         links.classList.remove("is-open");
         toggle.setAttribute("aria-expanded", "false");

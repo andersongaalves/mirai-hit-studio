@@ -36,6 +36,26 @@ class EmailService:
         }, {"idempotency_key": idempotency_key})
 
     @classmethod
+    def enviar_confirmacao_cadastro(
+        cls,
+        cliente,
+        activation_url: str,
+        *,
+        idempotency_key: str,
+    ):
+        html = cls.render(
+            "email_confirmacao_cadastro.html",
+            nome=cliente.nome,
+            activation_url=activation_url,
+        )
+        return resend.Emails.send({
+            "from": settings.EMAIL_FROM,
+            "to": cliente.email,
+            "subject": "Confirme sua conta Mirai Hit Studio",
+            "html": html,
+        }, {"idempotency_key": idempotency_key})
+
+    @classmethod
     def enviar_proposta(cls, proposta, pdf, valor):
         cliente = proposta.cliente_snapshot.cliente
         html = cls.render("email_proposta.html", nome=cliente.nome, numero=proposta.numero,

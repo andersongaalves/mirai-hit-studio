@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex,nofollow,noarchive" />
+        <title>Criar conta | Mirai Hit Studio</title>
+        <link rel="stylesheet" href="/css/main.css" />
+        <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
+    </head>
+    <body class="producer-body">
+        <a class="skip-link" href="#signup-content">Ir para o conteúdo</a>
+        <main class="producer-entry" id="signup-content">
+            <section class="producer-login" aria-labelledby="signup-title">
+                <a href="/" aria-label="Mirai Hit Studio, página inicial">
+                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
+                </a>
+                <div>
+                    <p class="producer-eyebrow">Portal do Cliente</p>
+                    <h1 id="signup-title">Crie sua conta</h1>
+                    <p class="producer-lead">Confirme seu e-mail antes de definir as credenciais.</p>
+                </div>
+                <form id="signup-form" class="producer-login__form">
+                    <label for="signup-name">Nome</label>
+                    <input id="signup-name" name="nome" autocomplete="name" maxlength="120" required />
+                    <label for="signup-email">E-mail</label>
+                    <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="150" required />
+                    <label for="signup-phone">Telefone <span class="producer-optional">opcional</span></label>
+                    <input id="signup-phone" name="telefone" type="tel" autocomplete="tel" maxlength="30" />
+                    <label class="producer-consent" for="signup-privacy">
+                        <input id="signup-privacy" name="privacy" type="checkbox" required />
+                        <span>Concordo com o uso destes dados para criar e proteger minha conta.</span>
+                    </label>
+                    <button class="btn-cta" type="submit">Criar conta</button>
+                    <p id="signup-error" class="producer-message producer-message--error hidden" role="alert"></p>
+                </form>
+                <div id="signup-sent" class="producer-message hidden" role="status">
+                    <p>Se os dados puderem ser utilizados, enviaremos as próximas instruções por e-mail.</p>
+                    <button id="signup-resend" class="btn-outline" type="button">Reenviar confirmação</button>
+                </div>
+                <p class="producer-login__secondary">Já tem conta? <a href="/acesso">Entrar</a></p>
+            </section>
+        </main>
+        <script type="module" src="/js/cadastro.js"></script>
+    </body>
+</html>

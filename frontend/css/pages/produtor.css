@@ -77,6 +77,32 @@
 .producer-filters select:hover,
 .producer-filters select:focus { border-color: rgba(0, 213, 237, 0.65); }
 
+.producer-login__secondary {
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.producer-login__secondary a { color: var(--color-accent); font-weight: 700; }
+.producer-optional { color: var(--color-text-secondary); font-weight: 400; }
+
+.producer-login__form .producer-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    line-height: 1.45;
+}
+
+.producer-login__form .producer-consent input {
+    flex: 0 0 auto;
+    width: 20px;
+    min-height: 20px;
+    margin-top: 2px;
+    padding: 0;
+}
+
+#signup-sent { display: grid; gap: var(--space-3); margin: 0; }
+#signup-sent.hidden { display: none; }
+
 .producer-shell {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr);

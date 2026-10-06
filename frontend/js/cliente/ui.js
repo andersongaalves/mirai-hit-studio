@@ -19,6 +19,14 @@ const element = (tag, className, text) => {
 
 const empty = message => element("div", "producer-empty", message);
 
+function emptyProjects() {
+    const state = empty("Você ainda não possui projetos vinculados.");
+    const action = element("a", "btn-cta", "Começar um projeto");
+    action.href = "/orcamento";
+    state.append(action);
+    return state;
+}
+
 function badge(production) {
     const info = statusInfo(production.status);
     return element("span", `badge badge-${info.variant}`, info.label);
@@ -71,9 +79,9 @@ export function renderDashboard(productions, finances) {
     const actions = document.getElementById("client-actions");
     actions.replaceChildren();
     const active = productions.filter(item => !FINAL_STATUSES.has(item.status)).slice(0, 4);
-    if (!active.length) actions.append(empty(productions.length
-        ? "Você não possui projetos em andamento."
-        : "Você ainda não possui projetos em andamento."));
+    if (!active.length) actions.append(productions.length
+        ? empty("Você não possui projetos em andamento.")
+        : emptyProjects());
     else active.forEach(item => actions.append(productionCard(
         item,
         finances.get(item.id),
@@ -86,9 +94,9 @@ export function renderList(productions, finances, filters, onOpen) {
     list.replaceChildren();
     const items = filterAndSort(productions, filters.status, filters.order);
     if (!items.length) {
-        list.append(empty(productions.length
-            ? "Nenhum projeto corresponde aos filtros."
-            : "Você ainda não possui projetos."));
+        list.append(productions.length
+            ? empty("Nenhum projeto corresponde aos filtros.")
+            : emptyProjects());
         return;
     }
     items.forEach(item => list.append(productionCard(item, finances.get(item.id), onOpen)));

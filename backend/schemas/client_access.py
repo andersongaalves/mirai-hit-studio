@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from schemas.usuario import validar_senha, validar_username
 
@@ -59,3 +59,45 @@ class ClientInviteActivation(ClientInviteToken):
 class ClientInviteActivationResult(BaseModel):
     activated: bool
     login_url: str
+
+
+class ClientSignupRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    nome: str = Field(min_length=1, max_length=120)
+    email: EmailStr = Field(max_length=150)
+    telefone: str | None = Field(default=None, max_length=30)
+    privacy_accepted: bool
+
+    @field_validator("nome")
+    @classmethod
+    def nome_valido(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("nome_obrigatorio")
+        return value
+
+    @field_validator("telefone")
+    @classmethod
+    def telefone_valido(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip() or None
+
+    @field_validator("privacy_accepted")
+    @classmethod
+    def privacidade_obrigatoria(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("privacy_acceptance_required")
+        return value
+
+
+class ClientSignupResend(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr = Field(max_length=150)
+
+
+class ClientSignupAccepted(BaseModel):
+    accepted: bool = True
+    message: str

@@ -1,15 +1,19 @@
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+
 from core.dependencies import require_admin
 from database import get_db
-from fastapi import APIRouter, Depends, HTTPException, Request
 from schemas.client_access import (
     ClientAccessStatus,
     ClientInviteActivation,
     ClientInviteActivationResult,
     ClientInviteToken,
     ClientInviteValidation,
+    ClientSignupAccepted,
+    ClientSignupRequest,
+    ClientSignupResend,
 )
 from services import client_access_service as service
-from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Acesso de clientes"])
 
@@ -30,6 +34,48 @@ def _error(error):
     if isinstance(error, service.ClientAccessDeliveryUnavailable):
         raise HTTPException(status_code=503, detail=str(error)) from None
     raise error
+
+
+@router.post(
+    "/auth/client-signup",
+    response_model=ClientSignupAccepted,
+    status_code=202,
+)
+def request_client_signup(
+    data: ClientSignupRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        return service.request_signup(
+            db,
+            data,
+            _source(request),
+            getattr(request.state, "request_id", None),
+        )
+    except service.ClientAccessError as error:
+        _error(error)
+
+
+@router.post(
+    "/auth/client-signup/resend",
+    response_model=ClientSignupAccepted,
+    status_code=202,
+)
+def resend_client_signup(
+    data: ClientSignupResend,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        return service.resend_signup(
+            db,
+            str(data.email),
+            _source(request),
+            getattr(request.state, "request_id", None),
+        )
+    except service.ClientAccessError as error:
+        _error(error)
 
 
 @router.get("/propostas/{proposta_id}/acesso-cliente", response_model=ClientAccessStatus)

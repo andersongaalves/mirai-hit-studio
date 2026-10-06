@@ -1,5 +1,8 @@
 import { AUTH_CONTEXTS } from "./admin/auth.js";
 import { API_URL } from "./config.js";
+import { initPublicNavigation } from "./public_navigation.js";
+
+initPublicNavigation();
 
 const form = document.getElementById("access-login-form");
 const errorElement = document.getElementById("login-error");

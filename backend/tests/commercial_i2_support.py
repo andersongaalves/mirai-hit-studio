@@ -122,6 +122,12 @@ def local_frontend_server(directory, port=0):
         def do_GET(self):
             if self.path == '/admin':
                 self.path = '/admin.html'
+            elif self.path == '/acesso':
+                self.path = '/acesso.html'
+            elif self.path == '/cadastro':
+                self.path = '/cadastro.html'
+            elif self.path == '/ativar' or self.path.startswith('/ativar?'):
+                self.path = self.path.replace('/ativar', '/ativar.html', 1)
             elif self.path == '/produtor' or self.path.startswith('/produtor/'):
                 self.path = '/portal-produtor.html'
             elif self.path == '/cliente' or self.path.startswith('/cliente/'):

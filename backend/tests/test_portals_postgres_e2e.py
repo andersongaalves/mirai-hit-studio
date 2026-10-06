@@ -12,6 +12,7 @@ from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -19,10 +20,11 @@ import httpx
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from commercial_i2_support import local_frontend_server, local_server
-from services.producao_arquivo_storage import ProducaoArquivoStorageError
 from sqlalchemy import delete, inspect, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
+
+from services.producao_arquivo_storage import ProducaoArquivoStorageError
 
 POSTGRES_URL = os.getenv("MIRAI_PORTALS_E2E_DATABASE_URL", "")
 ACK = os.getenv("MIRAI_PORTALS_E2E_ALLOW", "")
@@ -409,6 +411,169 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             self.assertEqual(access.usuario_id, user.id)
             self.assertIsNotNone(access.token_consumed_at)
 
+    def test_public_signup_postgresql17_concurrency_and_takeover_protection(self):
+        from models import ClienteAcessoModel, ClienteModel, UsuarioModel
+        from services.email_service import EmailService
+
+        payload = {
+            "nome": "E2E Public Signup",
+            "email": "public-signup@example.invalid",
+            "telefone": "11977770101",
+            "privacy_accepted": True,
+        }
+        with patch.object(
+            EmailService,
+            "enviar_confirmacao_cadastro",
+            return_value={"id": "postgres-e2e-signup"},
+        ) as email:
+            def send(_):
+                with httpx.Client(base_url=self.api_url, timeout=30, trust_env=False) as client:
+                    response = client.post("/auth/client-signup", json=payload)
+                    return response.status_code, response.json()
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(send, range(2)))
+
+        self.assertEqual([item[0] for item in results], [202, 202])
+        self.assertEqual(results[0][1], results[1][1])
+        self.assertEqual(email.call_count, 1)
+        old_token = parse_qs(urlparse(email.call_args.args[1]).query)["token"][0]
+        with self.SessionLocal() as db:
+            access = db.scalar(
+                select(ClienteAcessoModel).where(
+                    ClienteAcessoModel.email_normalizado == payload["email"]
+                )
+            )
+            self.assertIsNotNone(access)
+            self.assertEqual(access.origem, "public_signup")
+            self.assertEqual(access.token_finalidade, "verificacao")
+            self.assertNotEqual(access.token_hash, old_token)
+            signup_client_id = access.cliente_id
+            self.assertEqual(
+                db.query(ClienteModel).filter(ClienteModel.email == payload["email"]).count(),
+                1,
+            )
+
+        invalid = self.http.post("/auth/client-signup", json={
+            **payload,
+            "email": "not-an-email",
+            "role": "admin",
+            "is_admin": True,
+        })
+        self.assertEqual(invalid.status_code, 422)
+        with patch.object(
+            EmailService,
+            "enviar_confirmacao_cadastro",
+            return_value={"id": "postgres-e2e-signup-resend"},
+        ) as resent:
+            resend = self.http.post(
+                "/auth/client-signup/resend",
+                json={"email": payload["email"]},
+            )
+        self.assertEqual(resend.status_code, 202, resend.text)
+        token = parse_qs(urlparse(resent.call_args.args[1]).query)["token"][0]
+        self.assertNotEqual(token, old_token)
+        self.assertEqual(
+            self.http.post(
+                "/cliente-acessos/validar",
+                json={"token": old_token},
+            ).status_code,
+            422,
+        )
+
+        def activate(_):
+            with httpx.Client(base_url=self.api_url, timeout=30, trust_env=False) as client:
+                return client.post("/cliente-acessos/ativar", json={
+                    "token": token,
+                    "username": "e2e-public-client",
+                    "password": self.ids["password"],
+                }).status_code
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            statuses = sorted(executor.map(activate, range(2)))
+        self.assertEqual(statuses, [200, 409])
+
+        with self.SessionLocal() as db:
+            user = db.scalar(
+                select(UsuarioModel).where(UsuarioModel.username == "e2e-public-client")
+            )
+            self.assertEqual(user.cliente_id, signup_client_id)
+            self.assertEqual(user.role, "cliente")
+            self.assertFalse(user.is_admin)
+
+        before_clients = None
+        with self.SessionLocal() as db:
+            before_clients = db.query(ClienteModel).count()
+            commercial = db.get(ClienteModel, self.ids["client_a_id"])
+            commercial_email = commercial.email
+        with patch.object(EmailService, "enviar_confirmacao_cadastro") as blocked_email:
+            blocked = self.http.post("/auth/client-signup", json={
+                **payload,
+                "email": commercial_email,
+                "telefone": None,
+            })
+        self.assertEqual(blocked.status_code, 202, blocked.text)
+        self.assertEqual(blocked.json(), results[0][1])
+        self.assertEqual(blocked_email.call_count, 0)
+        with self.SessionLocal() as db:
+            self.assertEqual(db.query(ClienteModel).count(), before_clients)
+            commercial_user = db.scalar(
+                select(UsuarioModel).where(UsuarioModel.cliente_id == self.ids["client_a_id"])
+            )
+            self.assertEqual(commercial_user.username, "e2e-client-a")
+
+    def test_browser_public_signup_uses_real_backend_and_postgresql(self):
+        from models import ClienteAcessoModel, ClienteModel, UsuarioModel
+        from services.email_service import EmailService
+
+        root = Path(__file__).resolve().parents[2]
+        with TemporaryDirectory(prefix="mirai-signup-e2e-") as directory:
+            activation_file = Path(directory) / "activation-url.txt"
+
+            def capture_email(_client, activation_url, *, idempotency_key):
+                self.assertTrue(idempotency_key.startswith("client-signup/"))
+                activation_file.write_text(activation_url, encoding="utf-8")
+                return {"id": "browser-signup-message"}
+
+            env = {
+                **os.environ,
+                "E2E_PASSWORD": self.ids["password"],
+                "E2E_SIGNUP_ACTIVATION_FILE": str(activation_file),
+            }
+            with patch.object(
+                EmailService,
+                "enviar_confirmacao_cadastro",
+                side_effect=capture_email,
+            ):
+                result = subprocess.run(
+                    [
+                        os.getenv("NODE_BINARY", "node"),
+                        str(root / "frontend/tests/client_signup_postgres_e2e.cjs"),
+                    ],
+                    cwd=root,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=180,
+                    check=False,
+                )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("CLIENT_SIGNUP_E2E_PASS", result.stdout)
+        with self.SessionLocal() as db:
+            client = db.scalar(
+                select(ClienteModel).where(
+                    ClienteModel.email == "browser-signup@example.invalid"
+                )
+            )
+            user = db.scalar(select(UsuarioModel).where(UsuarioModel.cliente_id == client.id))
+            access = db.scalar(
+                select(ClienteAcessoModel).where(ClienteAcessoModel.cliente_id == client.id)
+            )
+            self.assertEqual(user.role, "cliente")
+            self.assertFalse(user.is_admin)
+            self.assertIsNotNone(access.token_consumed_at)
+            self.assertEqual(client.orcamentos, [])
+
     def _login(self, username):
         response = self.http.post(
             "/auth/login",
@@ -441,8 +606,9 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         return created.json()["id"]
 
     def test_backend_postgresql17_matrix(self):
-        from core.config import settings
         from jose import jwt
+
+        from core.config import settings
         from models import (
             AuditLogModel,
             ProducaoArquivoModel,

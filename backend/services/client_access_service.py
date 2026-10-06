@@ -3,25 +3,35 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from pydantic import EmailStr, TypeAdapter, ValidationError
+from sqlalchemy import and_, func, or_, select, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
+
 from core.config import settings
 from core.security import get_password_hash
+from crud import crud_cliente
 from models.client_access import AuthRateLimitModel, ClienteAcessoModel
 from models.cliente import ClienteModel
 from models.enums.proposta import PropostaStatus
 from models.orcamento import OrcamentoModel
 from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
-from pydantic import EmailStr, TypeAdapter, ValidationError
-from schemas.client_access import ClientAccessStatus, ClientInviteActivation
+from schemas.client_access import (
+    ClientAccessStatus,
+    ClientInviteActivation,
+    ClientSignupRequest,
+)
 from services import audit_service
-from services.cliente_service import normalizar_email
+from services.cliente_service import normalizar_email, normalizar_telefone
 from services.email_service import EmailService
-from sqlalchemy import select, text
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 INVITE_TTL = timedelta(hours=48)
+SIGNUP_RESPONSE = (
+    "Se os dados puderem ser utilizados para criar uma conta, "
+    "enviaremos as proximas instrucoes por e-mail."
+)
 
 
 class ClientAccessError(Exception):
@@ -119,6 +129,230 @@ def enforce_rate_limit(
         raise
     if count > limit:
         raise ClientAccessRateLimited("Muitas tentativas. Aguarde antes de tentar novamente.")
+
+
+def _lock_public_identity(db: Session, email: str):
+    if db.bind is None or db.bind.dialect.name != "postgresql":
+        return
+    digest = hashlib.sha256(f"client-signup:{email}".encode()).digest()
+    lock_key = int.from_bytes(digest[:8], byteorder="big", signed=True)
+    db.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": lock_key})
+
+
+def _identity_clients(db: Session, email: str, telefone: str | None):
+    clauses = [func.lower(func.trim(ClienteModel.email)) == email]
+    if telefone:
+        normalized_phone = ClienteModel.telefone
+        for character in (" ", "+", "-", "(", ")", "."):
+            normalized_phone = func.replace(normalized_phone, character, "")
+        clauses.append(normalized_phone == telefone)
+    return list(db.scalars(select(ClienteModel).where(or_(*clauses))))
+
+
+def _generic_signup_response():
+    return {"accepted": True, "message": SIGNUP_RESPONSE}
+
+
+def _deliver_signup(db, client, access_id, raw_token, token_hash, request_id):
+    base_url = settings.PUBLIC_FRONTEND_URL.rstrip("/")
+    activation_url = f"{base_url}/ativar?token={raw_token}"
+    try:
+        provider = EmailService.enviar_confirmacao_cadastro(
+            client,
+            activation_url,
+            idempotency_key=f"client-signup/{access_id}/{token_hash[:16]}",
+        )
+        if (
+            not isinstance(provider, dict)
+            or not isinstance(provider.get("id"), str)
+            or not provider["id"].strip()
+        ):
+            raise ValueError("invalid_provider_response")
+    except Exception:  # noqa: BLE001 - provider SDK errors are not stable API types.
+        logger.error("client_signup_delivery_failed request_id=%s", request_id)
+        try:
+            audit_service.record(
+                db,
+                actor=None,
+                action="client_access.signup_delivery_failed",
+                entity_type="client_access",
+                entity_id=access_id,
+                metadata={"result": "pending_resend"},
+                request_id=request_id,
+            )
+            db.commit()
+        except Exception:  # noqa: BLE001 - audit failure must not expose provider data.
+            db.rollback()
+        return _generic_signup_response()
+
+    try:
+        access = db.get(ClienteAcessoModel, access_id)
+        if access is None or access.token_hash != token_hash:
+            raise ClientAccessConflict("O cadastro mudou durante o envio.")
+        access.last_sent_at = _now()
+        access.send_count += 1
+        access.updated_at = _now()
+        db.commit()
+    except Exception:  # noqa: BLE001 - provider delivery can be uncertain.
+        db.rollback()
+        logger.error("client_signup_delivery_uncertain request_id=%s", request_id)
+    return _generic_signup_response()
+
+
+def request_signup(
+    db: Session,
+    data: ClientSignupRequest,
+    source_key: str,
+    request_id: str | None,
+):
+    email = normalizar_email(str(data.email))
+    telefone = normalizar_telefone(data.telefone)
+    enforce_rate_limit(
+        db,
+        action="signup",
+        key=f"source:{source_key}",
+        limit=10,
+        window=timedelta(hours=1),
+    )
+    enforce_rate_limit(
+        db,
+        action="signup",
+        key=f"identity:{email}",
+        limit=5,
+        window=timedelta(hours=1),
+    )
+    try:
+        _lock_public_identity(db, email)
+        existing_access = db.scalar(
+            select(ClienteAcessoModel).where(
+                ClienteAcessoModel.email_normalizado == email
+            )
+        )
+        if existing_access is not None:
+            db.rollback()
+            return _generic_signup_response()
+        existing = _identity_clients(db, email, telefone)
+        if existing:
+            audit_service.record(
+                db,
+                actor=None,
+                action="client_access.signup_reconciliation_required",
+                entity_type="client",
+                entity_id=existing[0].id,
+                metadata={"result": "reconciliation_required"},
+                request_id=request_id,
+            )
+            db.commit()
+            return _generic_signup_response()
+
+        now = _now()
+        raw_token, token_hash = _token()
+        client = crud_cliente.criar_sem_commit(db, {
+            "nome": data.nome,
+            "email": email,
+            "telefone": telefone,
+            "observacoes": "",
+            "ativo": True,
+        })
+        access = ClienteAcessoModel(
+            cliente_id=client.id,
+            email_normalizado=email,
+            origem="public_signup",
+            token_finalidade="verificacao",
+            token_hash=token_hash,
+            token_expires_at=now + INVITE_TTL,
+            privacy_accepted_at=now,
+            request_fingerprint_hash=_hash(f"source:{source_key}"),
+        )
+        db.add(access)
+        db.flush()
+        audit_service.record(
+            db,
+            actor=None,
+            action="client_access.signup_requested",
+            entity_type="client_access",
+            entity_id=access.id,
+            metadata={"client_id": client.id, "result": "pending_confirmation"},
+            request_id=request_id,
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return _generic_signup_response()
+    except Exception:
+        db.rollback()
+        raise
+    return _deliver_signup(db, client, access.id, raw_token, token_hash, request_id)
+
+
+def resend_signup(db: Session, email_value: str, source_key: str, request_id: str | None):
+    email = normalizar_email(email_value)
+    enforce_rate_limit(
+        db,
+        action="resend",
+        key=f"signup-source:{source_key}",
+        limit=8,
+        window=timedelta(hours=1),
+    )
+    enforce_rate_limit(
+        db,
+        action="resend",
+        key=f"signup-identity:{email}",
+        limit=4,
+        window=timedelta(hours=1),
+    )
+    try:
+        _lock_public_identity(db, email)
+        access = db.scalar(
+            select(ClienteAcessoModel)
+            .where(
+                ClienteAcessoModel.email_normalizado == email,
+                ClienteAcessoModel.origem == "public_signup",
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if (
+            access is None
+            or access.usuario_id is not None
+            or access.token_consumed_at is not None
+        ):
+            db.rollback()
+            return _generic_signup_response()
+        client = db.get(ClienteModel, access.cliente_id)
+        if (
+            client is None
+            or not client.ativo
+            or normalizar_email(client.email) != email
+            or _user_for_client(db, client.id) is not None
+        ):
+            db.rollback()
+            return _generic_signup_response()
+        raw_token, token_hash = _token()
+        now = _now()
+        access.token_finalidade = "verificacao"
+        access.token_hash = token_hash
+        access.token_expires_at = now + INVITE_TTL
+        access.token_consumed_at = None
+        access.token_revoked_at = None
+        access.updated_at = now
+        audit_service.record(
+            db,
+            actor=None,
+            action="client_access.signup_resent",
+            entity_type="client_access",
+            entity_id=access.id,
+            metadata={"client_id": client.id, "result": "pending_confirmation"},
+            request_id=request_id,
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return _generic_signup_response()
+    except Exception:
+        db.rollback()
+        raise
+    return _deliver_signup(db, client, access.id, raw_token, token_hash, request_id)
 
 
 def _commercial_context(db: Session, proposta_id: int, *, lock=False):
@@ -362,7 +596,16 @@ def _access_by_token(db: Session, raw_token: str, *, lock=False):
     token_hash = _hash(raw_token)
     query = select(ClienteAcessoModel).where(
         ClienteAcessoModel.token_hash == token_hash,
-        ClienteAcessoModel.token_finalidade == "convite",
+        or_(
+            and_(
+                ClienteAcessoModel.origem == "admin_invite",
+                ClienteAcessoModel.token_finalidade == "convite",
+            ),
+            and_(
+                ClienteAcessoModel.origem == "public_signup",
+                ClienteAcessoModel.token_finalidade == "verificacao",
+            ),
+        ),
     )
     if lock:
         query = query.with_for_update().execution_options(populate_existing=True)
@@ -379,7 +622,7 @@ def token_state(db: Session, raw_token: str, source_key: str):
     )
     access = _access_by_token(db, raw_token)
     if access is None:
-        raise ClientAccessInvalid("Convite invalido ou indisponivel.")
+        raise ClientAccessInvalid("Link invalido ou indisponivel.")
     if access.token_consumed_at is not None:
         return "utilizado"
     if access.token_revoked_at is not None:
@@ -400,7 +643,7 @@ def activate(db: Session, data: ClientInviteActivation, source_key: str, request
     try:
         access = _access_by_token(db, data.token, lock=True)
         if access is None:
-            raise ClientAccessInvalid("Convite invalido ou indisponivel.")
+            raise ClientAccessInvalid("Link invalido ou indisponivel.")
         access.activation_attempts += 1
         if access.token_consumed_at is not None:
             raise ClientAccessConflict("Este convite ja foi utilizado.")
@@ -435,7 +678,11 @@ def activate(db: Session, data: ClientInviteActivation, source_key: str, request
         audit_service.record(
             db,
             actor=user,
-            action="client_access.activated",
+            action=(
+                "client_access.signup_activated"
+                if access.origem == "public_signup"
+                else "client_access.activated"
+            ),
             entity_type="client_access",
             entity_id=access.id,
             metadata={"client_id": client.id, "result": "activated"},
@@ -453,10 +700,28 @@ def activate(db: Session, data: ClientInviteActivation, source_key: str, request
 
 def cleanup_expired(db: Session, *, before: datetime | None = None):
     cutoff = before or (_now() - timedelta(days=30))
+    pending_signup_client_ids = list(db.scalars(
+        select(ClienteAcessoModel.cliente_id).where(
+            ClienteAcessoModel.origem == "public_signup",
+            ClienteAcessoModel.usuario_id.is_(None),
+            ClienteAcessoModel.token_expires_at < cutoff,
+        )
+    ))
     deleted_limits = db.query(AuthRateLimitModel).filter(AuthRateLimitModel.expires_at < cutoff).delete()
     deleted_invites = db.query(ClienteAcessoModel).filter(
         ClienteAcessoModel.usuario_id.is_(None),
         ClienteAcessoModel.token_expires_at < cutoff,
     ).delete()
+    deleted_clients = 0
+    for client_id in pending_signup_client_ids:
+        client = db.get(ClienteModel, client_id)
+        if (
+            client is not None
+            and not client.orcamentos
+            and not client.cobrancas
+            and client.usuario is None
+        ):
+            db.delete(client)
+            deleted_clients += 1
     db.commit()
-    return deleted_invites, deleted_limits
+    return deleted_invites, deleted_limits, deleted_clients
