@@ -54,6 +54,25 @@ class Settings(BaseSettings):
     MERCADO_PAGO_TIMEOUT_SECONDS: float = 10.0
     MERCADO_PAGO_3DS_VALIDATION: Literal["never", "on_fraud_risk"] = "on_fraud_risk"
 
+    # Storage core. Existing product flows remain on their legacy factories until
+    # the corresponding migration phase explicitly wires them to the registry.
+    PUBLIC_IMAGE_STORAGE_BACKEND: str = "cloudinary"
+    PORTFOLIO_AUDIO_STORAGE_BACKEND: str = "supabase"
+    PRODUCTION_TEMP_STORAGE_BACKEND: str = "r2"
+    PRODUCTION_FINAL_STORAGE_BACKEND: str = "r2"
+    PROPOSAL_DOCUMENT_STORAGE_BACKEND: str = "legacy"
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: SecretStr = SecretStr("")
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: SecretStr = SecretStr("")
+    R2_TEMP_BUCKET: str = ""
+    R2_FINAL_BUCKET: str = ""
+    R2_ENDPOINT: str = ""
+    R2_REGION: str = "auto"
+    R2_PRESIGN_MAX_SECONDS: int = Field(default=900, ge=1, le=3600)
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
