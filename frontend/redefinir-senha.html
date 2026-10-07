@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex,nofollow,noarchive" />
+        <meta name="referrer" content="no-referrer" />
+        <title>Redefinir senha | Mirai Hit Studio</title>
+        <link rel="stylesheet" href="/css/main.css" />
+        <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
+    </head>
+    <body class="producer-body">
+        <a class="skip-link" href="#reset-content">Ir para o conteúdo</a>
+        <main class="producer-entry" id="reset-content">
+            <section class="producer-login" aria-labelledby="reset-title">
+                <a href="/" aria-label="Mirai Hit Studio, página inicial">
+                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
+                </a>
+                <div>
+                    <p class="producer-eyebrow">Portal do Cliente</p>
+                    <h1 id="reset-title">Crie uma nova senha</h1>
+                    <p id="reset-lead" class="producer-lead">O link será validado com segurança ao salvar.</p>
+                </div>
+                <form id="reset-form" class="producer-login__form">
+                    <label for="reset-password">Nova senha</label>
+                    <input id="reset-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+                    <label for="reset-confirm">Confirmar nova senha</label>
+                    <input id="reset-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+                    <button class="btn-cta" type="submit">Redefinir senha</button>
+                    <p id="reset-message" class="producer-message hidden" role="status"></p>
+                </form>
+                <a id="reset-login" class="btn-cta hidden" href="/acesso">Entrar na sua conta</a>
+            </section>
+        </main>
+        <script type="module" src="/js/redefinir-senha.js"></script>
+    </body>
+</html>

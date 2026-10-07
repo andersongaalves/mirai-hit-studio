@@ -1,6 +1,6 @@
 from core.dependencies import require_admin
 from database import get_db
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from schemas.client_access import (
     ClientAccessStatus,
     ClientInviteActivation,
@@ -10,6 +10,10 @@ from schemas.client_access import (
     ClientSignupAccepted,
     ClientSignupRequest,
     ClientSignupResend,
+    PasswordRecoveryAccepted,
+    PasswordRecoveryRequest,
+    PasswordResetRequest,
+    PasswordResetResult,
 )
 from services import client_access_service as service
 from sqlalchemy.orm import Session
@@ -73,6 +77,49 @@ def resend_client_signup(
             _source(request),
             getattr(request.state, "request_id", None),
         )
+    except service.ClientAccessError as error:
+        _error(error)
+
+
+@router.post(
+    "/auth/password-recovery",
+    response_model=PasswordRecoveryAccepted,
+    status_code=202,
+)
+def request_password_recovery(
+    data: PasswordRecoveryRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    try:
+        response, delivery = service.prepare_password_recovery(
+            db,
+            data,
+            _source(request),
+            getattr(request.state, "request_id", None),
+        )
+        if delivery is not None:
+            background_tasks.add_task(service.deliver_password_recovery_job, delivery)
+        return response
+    except service.ClientAccessError as error:
+        _error(error)
+
+
+@router.post("/auth/password-recovery/reset", response_model=PasswordResetResult)
+def reset_password(
+    data: PasswordResetRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        service.reset_password(
+            db,
+            data,
+            _source(request),
+            getattr(request.state, "request_id", None),
+        )
+        return {"reset": True, "login_url": "/acesso"}
     except service.ClientAccessError as error:
         _error(error)
 

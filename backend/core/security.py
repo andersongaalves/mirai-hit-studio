@@ -2,9 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import bcrypt
-from jose import JWTError, jwt
-
 from core.config import settings
+from jose import JWTError, jwt
 
 ALGORITHM = settings.ALGORITHM
 
@@ -50,6 +49,10 @@ def create_access_token(data: dict[str, Any]) -> str:
     """
     Cria um Access Token JWT.
     """
+
+    auth_version = data.get("av")
+    if type(auth_version) is not int or auth_version < 0:
+        raise ValueError("access_token_auth_version_required")
 
     payload = data.copy()
 

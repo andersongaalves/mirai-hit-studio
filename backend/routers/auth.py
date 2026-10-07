@@ -1,12 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
-from database import get_db
-from crud import crud_usuario
-from schemas.usuario import LoginRequest, LoginResponse
-from core.security import verify_password, create_access_token
 from core.dependencies import get_current_user
-from schemas.usuario import UsuarioResponse
+from core.security import create_access_token, verify_password
+from crud import crud_usuario
+from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, status
+from schemas.usuario import LoginRequest, LoginResponse, UsuarioResponse
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
@@ -28,7 +26,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             detail="Usuário ou senha incorretos",
         )
 
-    access_token = create_access_token({"sub": usuario.username})
+    access_token = create_access_token({"sub": usuario.username, "av": usuario.auth_version})
 
     return {
         "access_token": access_token,

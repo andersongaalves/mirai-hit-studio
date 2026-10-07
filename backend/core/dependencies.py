@@ -1,12 +1,11 @@
 import logging
 
+from core.security import decode_token
+from crud.crud_usuario import buscar_por_username
+from database import get_db
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer
 from jose import JWTError
-
-from core.security import decode_token
-from database import get_db
-from crud.crud_usuario import buscar_por_username
 
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
@@ -17,7 +16,14 @@ def get_current_user(token=Depends(security), db=Depends(get_db)):
     try:
         payload = decode_token(token.credentials) if token else {}
         user = buscar_por_username(db, payload["sub"]) if payload else None
-        if user is None or not user.ativo:
+        auth_version = payload.get("av")
+        if (
+            user is None
+            or not user.ativo
+            or type(auth_version) is not int
+            or auth_version < 0
+            or auth_version != user.auth_version
+        ):
             raise JWTError()
         return user
 

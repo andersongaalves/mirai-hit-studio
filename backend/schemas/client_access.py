@@ -101,3 +101,28 @@ class ClientSignupResend(BaseModel):
 class ClientSignupAccepted(BaseModel):
     accepted: bool = True
     message: str
+
+
+class PasswordRecoveryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr = Field(max_length=150)
+
+
+class PasswordRecoveryAccepted(BaseModel):
+    accepted: bool = True
+    message: str
+
+
+class PasswordResetRequest(ClientInviteToken):
+    password: str = Field(min_length=8, max_length=72)
+
+    @field_validator("password")
+    @classmethod
+    def password_valido(cls, value: str) -> str:
+        return validar_senha(value)
+
+
+class PasswordResetResult(BaseModel):
+    reset: bool
+    login_url: str

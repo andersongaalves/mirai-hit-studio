@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex,nofollow,noarchive" />
+        <meta name="referrer" content="no-referrer" />
+        <title>Recuperar senha | Mirai Hit Studio</title>
+        <link rel="stylesheet" href="/css/main.css" />
+        <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
+    </head>
+    <body class="producer-body">
+        <a class="skip-link" href="#recovery-content">Ir para o conteúdo</a>
+        <main class="producer-entry" id="recovery-content">
+            <section class="producer-login" aria-labelledby="recovery-title">
+                <a href="/" aria-label="Mirai Hit Studio, página inicial">
+                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
+                </a>
+                <div>
+                    <p class="producer-eyebrow">Portal do Cliente</p>
+                    <h1 id="recovery-title">Recupere sua senha</h1>
+                    <p class="producer-lead">Informe o e-mail verificado da sua conta de cliente.</p>
+                </div>
+                <form id="recovery-form" class="producer-login__form">
+                    <label for="recovery-email">E-mail</label>
+                    <input id="recovery-email" name="email" type="email" autocomplete="email" maxlength="150" required />
+                    <button class="btn-cta" type="submit">Enviar instruções</button>
+                    <p id="recovery-message" class="producer-message hidden" role="status"></p>
+                </form>
+                <p class="producer-login__secondary"><a href="/acesso">Voltar para o acesso</a></p>
+            </section>
+        </main>
+        <script type="module" src="/js/recuperar-senha.js"></script>
+    </body>
+</html>

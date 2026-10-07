@@ -1,3 +1,4 @@
+from database import Base
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -12,8 +13,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from database import Base
-
 
 class UsuarioModel(Base):
 
@@ -24,6 +23,10 @@ class UsuarioModel(Base):
             "(role IN ('admin', 'produtor') AND cliente_id IS NULL)",
             name="ck_usuarios_role_cliente_vinculo",
         ),
+        CheckConstraint(
+            "auth_version >= 0",
+            name="ck_usuarios_auth_version_nao_negativa",
+        ),
         UniqueConstraint("cliente_id", name="uq_usuarios_cliente_id"),
     )
 
@@ -32,6 +35,8 @@ class UsuarioModel(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
 
     password_hash = Column(String(255), nullable=False)
+
+    auth_version = Column(Integer, default=0, server_default="0", nullable=False)
 
     is_admin = Column(Boolean, default=True)
 

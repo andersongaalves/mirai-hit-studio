@@ -1,11 +1,12 @@
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from core.security import get_password_hash
 from crud import crud_usuario
 from models.cliente import ClienteModel
+from models.usuario import UsuarioModel
 from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioUpdate
 from services import audit_service
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 
 class UsuarioNaoEncontrado(Exception):
@@ -165,9 +166,17 @@ def redefinir_senha(
     ator,
     request_id: str | None = None,
 ):
-    usuario = _buscar(db, usuario_id)
     try:
+        usuario = db.scalar(
+            select(UsuarioModel)
+            .where(UsuarioModel.id == usuario_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if usuario is None:
+            raise UsuarioNaoEncontrado("Usuario nao encontrado.")
         usuario.password_hash = get_password_hash(dados.nova_senha)
+        usuario.auth_version += 1
         audit_service.record(
             db,
             actor=ator,

@@ -56,6 +56,27 @@ class EmailService:
         }, {"idempotency_key": idempotency_key})
 
     @classmethod
+    def enviar_recuperacao_senha(
+        cls,
+        cliente,
+        recovery_url: str,
+        *,
+        idempotency_key: str,
+    ):
+        html = cls.render(
+            "email_recuperacao_senha.html",
+            nome=cliente.nome,
+            recovery_url=recovery_url,
+            validity_minutes=60,
+        )
+        return resend.Emails.send({
+            "from": settings.EMAIL_FROM,
+            "to": cliente.email,
+            "subject": "Redefina sua senha da Mirai Hit Studio",
+            "html": html,
+        }, {"idempotency_key": idempotency_key})
+
+    @classmethod
     def enviar_proposta(cls, proposta, pdf, valor):
         cliente = proposta.cliente_snapshot.cliente
         html = cls.render("email_proposta.html", nome=cliente.nome, numero=proposta.numero,

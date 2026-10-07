@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from core.config import settings
 from core.security import get_password_hash
 from crud import crud_cliente
+from database import SessionLocal
 from models.client_access import AuthRateLimitModel, ClienteAcessoModel
 from models.cliente import ClienteModel
 from models.enums.proposta import PropostaStatus
@@ -17,6 +18,8 @@ from schemas.client_access import (
     ClientAccessStatus,
     ClientInviteActivation,
     ClientSignupRequest,
+    PasswordRecoveryRequest,
+    PasswordResetRequest,
 )
 from services import audit_service
 from services.cliente_service import normalizar_email, normalizar_telefone
@@ -27,9 +30,14 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 INVITE_TTL = timedelta(hours=48)
+RECOVERY_TTL = timedelta(minutes=60)
 SIGNUP_RESPONSE = (
     "Se os dados puderem ser utilizados para criar uma conta, "
     "enviaremos as proximas instrucoes por e-mail."
+)
+RECOVERY_RESPONSE = (
+    "Se existir uma conta elegível para este e-mail, enviaremos instruções "
+    "para redefinir a senha."
 )
 
 
@@ -150,6 +158,10 @@ def _identity_clients(db: Session, email: str, telefone: str | None):
 
 def _generic_signup_response():
     return {"accepted": True, "message": SIGNUP_RESPONSE}
+
+
+def _generic_recovery_response():
+    return {"accepted": True, "message": RECOVERY_RESPONSE}
 
 
 def _deliver_signup(db, client, access_id, raw_token, token_hash, request_id):
@@ -352,6 +364,287 @@ def resend_signup(db: Session, email_value: str, source_key: str, request_id: st
         db.rollback()
         raise
     return _deliver_signup(db, client, access.id, raw_token, token_hash, request_id)
+
+
+def _eligible_recovery_account(db: Session, email: str):
+    access = db.scalar(
+        select(ClienteAcessoModel)
+        .where(ClienteAcessoModel.email_normalizado == email)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if access is None or access.usuario_id is None or access.email_verified_at is None:
+        return access, None, None
+
+    user = db.scalar(
+        select(UsuarioModel)
+        .where(UsuarioModel.id == access.usuario_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    client = db.get(ClienteModel, access.cliente_id)
+    activated_lifecycle = (
+        access.token_finalidade == "recuperacao"
+        or access.token_consumed_at is not None
+    )
+    if (
+        user is None
+        or client is None
+        or not activated_lifecycle
+        or user.role != "cliente"
+        or user.is_admin
+        or not user.ativo
+        or not client.ativo
+        or user.cliente_id != access.cliente_id
+        or normalizar_email(client.email) != email
+    ):
+        return access, None, None
+    return access, user, client
+
+
+def prepare_password_recovery(
+    db: Session,
+    data: PasswordRecoveryRequest,
+    source_key: str,
+    request_id: str | None,
+):
+    email = normalizar_email(str(data.email))
+    enforce_rate_limit(
+        db,
+        action="recovery",
+        key=f"request-source:{source_key}",
+        limit=8,
+        window=timedelta(hours=1),
+    )
+    enforce_rate_limit(
+        db,
+        action="recovery",
+        key=f"request-identity:{email}",
+        limit=4,
+        window=timedelta(hours=1),
+    )
+
+    try:
+        _lock_public_identity(db, email)
+        access, user, client = _eligible_recovery_account(db, email)
+        audit_service.record(
+            db,
+            actor=None,
+            action="client_access.recovery_requested",
+            entity_type="client_access",
+            entity_id=access.id if access else None,
+            metadata={"result": "eligible" if user else "not_eligible"},
+            request_id=request_id,
+        )
+        if user is None:
+            db.commit()
+            return _generic_recovery_response(), None
+
+        raw_token, token_hash = _token()
+        now = _now()
+        access.token_finalidade = "recuperacao"
+        access.token_hash = token_hash
+        access.token_expires_at = now + RECOVERY_TTL
+        access.token_consumed_at = None
+        access.token_revoked_at = None
+        access.updated_at = now
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return _generic_recovery_response(), None
+    except Exception:
+        db.rollback()
+        raise
+
+    return _generic_recovery_response(), {
+        "access_id": access.id,
+        "client_id": client.id,
+        "raw_token": raw_token,
+        "token_hash": token_hash,
+        "request_id": request_id,
+    }
+
+
+def _deliver_password_recovery(db: Session, delivery: dict):
+    access = db.get(ClienteAcessoModel, delivery["access_id"])
+    client = db.get(ClienteModel, delivery["client_id"])
+    token_hash = delivery["token_hash"]
+    request_id = delivery["request_id"]
+    if (
+        access is None
+        or client is None
+        or access.token_hash != token_hash
+        or access.token_finalidade != "recuperacao"
+        or normalizar_email(client.email) != access.email_normalizado
+    ):
+        logger.warning("client_recovery_delivery_cancelled request_id=%s", request_id)
+        return
+
+    base_url = settings.PUBLIC_FRONTEND_URL.rstrip("/")
+    recovery_url = f"{base_url}/redefinir-senha?token={delivery['raw_token']}"
+    try:
+        provider = EmailService.enviar_recuperacao_senha(
+            client,
+            recovery_url,
+            idempotency_key=f"client-recovery/{access.id}/{token_hash[:16]}",
+        )
+        if (
+            not isinstance(provider, dict)
+            or not isinstance(provider.get("id"), str)
+            or not provider["id"].strip()
+        ):
+            raise ValueError("invalid_provider_response")
+    except Exception:  # noqa: BLE001 - provider SDK errors are not stable API types.
+        logger.error("client_recovery_delivery_failed request_id=%s", request_id)
+        try:
+            audit_service.record(
+                db,
+                actor=None,
+                action="client_access.recovery_delivery_failed",
+                entity_type="client_access",
+                entity_id=delivery["access_id"],
+                metadata={"result": "pending_retry"},
+                request_id=request_id,
+            )
+            db.commit()
+        except Exception:  # noqa: BLE001 - audit failure must not expose provider data.
+            db.rollback()
+        return
+
+    try:
+        current = db.get(ClienteAcessoModel, delivery["access_id"])
+        if (
+            current is not None
+            and current.token_hash == token_hash
+            and current.token_finalidade == "recuperacao"
+        ):
+            current.last_sent_at = _now()
+            current.send_count += 1
+            current.updated_at = _now()
+            db.commit()
+    except Exception:  # noqa: BLE001 - provider delivery can be uncertain.
+        db.rollback()
+        logger.error("client_recovery_delivery_uncertain request_id=%s", request_id)
+
+
+def deliver_password_recovery_job(delivery: dict):
+    with SessionLocal() as db:
+        _deliver_password_recovery(db, delivery)
+
+
+def request_password_recovery(
+    db: Session,
+    data: PasswordRecoveryRequest,
+    source_key: str,
+    request_id: str | None,
+):
+    response, delivery = prepare_password_recovery(
+        db,
+        data,
+        source_key,
+        request_id,
+    )
+    if delivery is not None:
+        _deliver_password_recovery(db, delivery)
+    return response
+
+
+def reset_password(
+    db: Session,
+    data: PasswordResetRequest,
+    source_key: str,
+    request_id: str | None,
+):
+    enforce_rate_limit(
+        db,
+        action="recovery",
+        key=f"reset-source:{source_key}",
+        limit=10,
+        window=timedelta(minutes=15),
+    )
+    enforce_rate_limit(
+        db,
+        action="recovery",
+        key=f"reset-token:{_hash(data.token)}",
+        limit=10,
+        window=timedelta(minutes=15),
+    )
+
+    access_id = None
+    try:
+        access = db.scalar(
+            select(ClienteAcessoModel)
+            .where(ClienteAcessoModel.token_hash == _hash(data.token))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if access is None:
+            raise ClientAccessInvalid("Link invalido ou indisponivel.")
+        access_id = access.id
+        if access.token_finalidade != "recuperacao":
+            raise ClientAccessInvalid("Link invalido ou indisponivel.")
+        if access.token_consumed_at is not None:
+            raise ClientAccessConflict("Link invalido ou indisponivel.")
+        if access.token_revoked_at is not None or _aware(access.token_expires_at) <= _now():
+            raise ClientAccessConflict("Link invalido ou indisponivel.")
+
+        user = db.scalar(
+            select(UsuarioModel)
+            .where(UsuarioModel.id == access.usuario_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        client = db.get(ClienteModel, access.cliente_id)
+        if (
+            user is None
+            or client is None
+            or access.email_verified_at is None
+            or user.role != "cliente"
+            or user.is_admin
+            or not user.ativo
+            or not client.ativo
+            or user.cliente_id != access.cliente_id
+            or normalizar_email(client.email) != access.email_normalizado
+        ):
+            raise ClientAccessConflict("Link invalido ou indisponivel.")
+
+        now = _now()
+        user.password_hash = get_password_hash(data.password)
+        user.auth_version += 1
+        access.token_consumed_at = now
+        access.updated_at = now
+        audit_service.record(
+            db,
+            actor=user,
+            action="client_access.password_reset_completed",
+            entity_type="client_access",
+            entity_id=access.id,
+            metadata={"client_id": client.id, "result": "completed"},
+            request_id=request_id,
+        )
+        db.commit()
+        return user
+    except ClientAccessError:
+        db.rollback()
+        logger.warning("client_recovery_token_rejected request_id=%s", request_id)
+        if access_id is not None:
+            try:
+                audit_service.record(
+                    db,
+                    actor=None,
+                    action="client_access.recovery_token_rejected",
+                    entity_type="client_access",
+                    entity_id=access_id,
+                    metadata={"result": "invalid_or_replayed"},
+                    request_id=request_id,
+                )
+                db.commit()
+            except Exception:  # noqa: BLE001 - rejection must remain safe if audit fails.
+                db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
 
 
 def _commercial_context(db: Session, proposta_id: int, *, lock=False):
