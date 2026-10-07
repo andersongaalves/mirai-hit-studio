@@ -1,6 +1,4 @@
 /orcamento /calculadora.html 200
-/recuperar-senha /recuperar-senha.html 200
-/redefinir-senha /redefinir-senha.html 200
 /produtor /portal-produtor 200
 /produtor/* /portal-produtor 200
 /cliente /portal-cliente 200
