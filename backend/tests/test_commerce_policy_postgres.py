@@ -384,9 +384,10 @@ class CommercePolicyPostgreSQLTests(unittest.TestCase):
         connection.execute(
             text(
                 """INSERT INTO orcamentos
-                   (id, nome_cliente, email, servico, valor_total, status, observacoes)
+                   (id, nome_cliente, email, servico, valor_total, status,
+                    observacoes, proposta_enviada)
                    VALUES (:id, 'Synthetic', 'synthetic@example.invalid', 'Mix',
-                           199.99, :status, '')"""
+                           199.99, :status, '', false)"""
             ),
             {"id": identifier, "status": "aprovado" if status == "aceita" else "proposta_enviada"},
         )
