@@ -3,11 +3,6 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from pydantic import EmailStr, TypeAdapter, ValidationError
-from sqlalchemy import and_, func, or_, select, text
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import Session
-
 from core.config import settings
 from core.security import get_password_hash
 from crud import crud_cliente
@@ -17,6 +12,7 @@ from models.enums.proposta import PropostaStatus
 from models.orcamento import OrcamentoModel
 from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from schemas.client_access import (
     ClientAccessStatus,
     ClientInviteActivation,
@@ -25,6 +21,9 @@ from schemas.client_access import (
 from services import audit_service
 from services.cliente_service import normalizar_email, normalizar_telefone
 from services.email_service import EmailService
+from sqlalchemy import and_, func, or_, select, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 INVITE_TTL = timedelta(hours=48)

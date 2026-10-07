@@ -1,8 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_admin
 from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Request
 from schemas.client_access import (
     ClientAccessStatus,
     ClientInviteActivation,
@@ -14,6 +12,7 @@ from schemas.client_access import (
     ClientSignupResend,
 )
 from services import client_access_service as service
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Acesso de clientes"])
 
