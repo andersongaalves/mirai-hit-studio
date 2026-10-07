@@ -128,6 +128,10 @@ def local_frontend_server(directory, port=0):
                 self.path = '/cadastro.html'
             elif self.path == '/ativar' or self.path.startswith('/ativar?'):
                 self.path = self.path.replace('/ativar', '/ativar.html', 1)
+            elif self.path == '/recuperar-senha':
+                self.path = '/recuperar-senha.html'
+            elif self.path == '/redefinir-senha' or self.path.startswith('/redefinir-senha?'):
+                self.path = self.path.replace('/redefinir-senha', '/redefinir-senha.html', 1)
             elif self.path == '/produtor' or self.path.startswith('/produtor/'):
                 self.path = '/portal-produtor.html'
             elif self.path == '/cliente' or self.path.startswith('/cliente/'):
