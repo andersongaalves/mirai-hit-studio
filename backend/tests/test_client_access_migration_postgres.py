@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 DATABASE_URL = os.getenv("MIRAI_PORTALS_E2E_DATABASE_URL", "")
 ACK = os.getenv("MIRAI_PORTALS_E2E_ALLOW", "")
 PREVIOUS_REVISION = "5b7c9d1e4f62"
-HEAD_REVISION = "a41b7d8de6d7"
+HEAD_REVISION = "b3e6f9a2c741"
 
 
 @unittest.skipUnless(
@@ -44,6 +44,14 @@ class ClientAccessMigrationPostgreSQLTests(unittest.TestCase):
         try:
             self._insert_existing_rows(engine)
             command.upgrade(config, "head")
+            self._assert_auth_version_migration(engine)
+            command.downgrade(config, "a41b7d8de6d7")
+            self.assertNotIn(
+                "auth_version",
+                {column["name"] for column in inspect(engine).get_columns("usuarios")},
+            )
+            command.upgrade(config, "head")
+            self._assert_auth_version_migration(engine)
             self._assert_schema_security(engine)
             self._assert_constraints(engine)
             self._assert_atomic_rate_limit(engine)
@@ -144,6 +152,29 @@ class ClientAccessMigrationPostgreSQLTests(unittest.TestCase):
                         {"role": role},
                     ).scalar_one()
                 )
+
+    def _assert_auth_version_migration(self, engine):
+        inspector = inspect(engine)
+        auth_version = next(
+            column
+            for column in inspector.get_columns("usuarios")
+            if column["name"] == "auth_version"
+        )
+        self.assertFalse(auth_version["nullable"])
+        self.assertIn(str(auth_version["default"]).strip("'()"), {"0", "0::integer"})
+        checks = {item["name"] for item in inspector.get_check_constraints("usuarios")}
+        self.assertIn("ck_usuarios_auth_version_nao_negativa", checks)
+        with engine.connect() as connection:
+            self.assertEqual(
+                connection.execute(
+                    text("SELECT auth_version FROM usuarios WHERE id = 910001")
+                ).scalar_one(),
+                0,
+            )
+        with self.assertRaises(IntegrityError), engine.begin() as connection:
+            connection.execute(
+                text("UPDATE usuarios SET auth_version = -1 WHERE id = 910001")
+            )
 
     def _assert_constraints(self, engine):
         token_hash = "a" * 64

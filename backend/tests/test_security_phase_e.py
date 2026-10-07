@@ -21,7 +21,7 @@ os.environ['RATE_LIMIT_DB'] = str(Path(config.settings.BACKUP_FOLDER) / 'limits.
 import main
 import httpx
 def bearer(name):
-    return {'Authorization': 'Bearer ' + create_access_token({'sub': name})}
+    return {'Authorization': 'Bearer ' + create_access_token({'sub': name, 'av': 0})}
 '''
 
 
@@ -35,10 +35,12 @@ async def check():
     with patch('socket.socket.connect', side_effect=AssertionError('external network')):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url='http://test') as client:
             assert (await client.get('/auth/me', headers=bearer('admin'))).json()['username'] == 'admin'
-            valid = {'sub': 'admin', 'exp': int(datetime.now(timezone.utc).timestamp()) + 300, 'type': 'access'}
+            valid = {'sub': 'admin', 'av': 0, 'exp': int(datetime.now(timezone.utc).timestamp()) + 300, 'type': 'access'}
             cases = [('', None), ('bad', None), (create_refresh_token({'sub': 'admin'}), None),
-                     (create_access_token({'sub': 'missing'}), None)]
+                     (create_access_token({'sub': 'missing', 'av': 0}), None)]
             for payload in [{**valid, 'exp': 1}, {k:v for k,v in valid.items() if k != 'sub'},
+                            {k:v for k,v in valid.items() if k != 'av'}, {**valid, 'av': '0'},
+                            {**valid, 'av': True}, {**valid, 'av': 1}, {**valid, 'av': -1},
                             {k:v for k,v in valid.items() if k != 'exp'}, {**valid, 'sub': ' '},
                             {**valid, 'type': 'other'}, {**valid, 'exp': None}]:
                 cases.append((jwt.encode(payload, 'test-only', algorithm='HS256'), None))
@@ -46,7 +48,7 @@ async def check():
             for token, _ in cases:
                 response = await client.get('/auth/me', headers={'Authorization': 'Bearer ' + token} if token else {})
                 assert response.status_code == 401, response.text
-            assert not decode_token(create_access_token({'sub': 'admin'}), 'refresh')
+            assert not decode_token(create_access_token({'sub': 'admin', 'av': 0}), 'refresh')
             assert decode_token(create_refresh_token({'sub': 'admin'}), 'refresh')['sub'] == 'admin'
             for url in ['/usuarios', '/orcamentos', '/producoes', '/propostas/999']:
                 assert (await client.get(url)).status_code == 401, url

@@ -78,7 +78,7 @@ def session():
         yield db
 app.dependency_overrides[get_db] = session
 def bearer(username):
-    return {'Authorization': 'Bearer ' + create_access_token({'sub': username})}
+    return {'Authorization': 'Bearer ' + create_access_token({'sub': username, 'av': 0})}
 '''
 
 

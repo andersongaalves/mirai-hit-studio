@@ -30,7 +30,8 @@ async def check():
          patch.object(Base.metadata, 'create_all', side_effect=AssertionError('schema forbidden')):
         event.listen(engine, 'before_cursor_execute', reject_ddl)
         import main
-        token = jwt.encode({'sub': 'test-admin', 'type': 'access', 'exp': int(time.time()) + 300},
+        token = jwt.encode({'sub': 'test-admin', 'type': 'access', 'av': 0,
+                            'exp': int(time.time()) + 300},
                            settings.SECRET_KEY, algorithm=settings.ALGORITHM)
         async def request(method, path, data=None, authenticated=True):
             body = json.dumps(data).encode() if data is not None else b''

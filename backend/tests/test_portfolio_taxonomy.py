@@ -24,7 +24,7 @@ with Session(engine) as db:
     db.commit()
 import main
 import httpx
-headers = {'Authorization': 'Bearer ' + create_access_token({'sub': 'admin'})}
+headers = {'Authorization': 'Bearer ' + create_access_token({'sub': 'admin', 'av': 0})}
 """
 
 

@@ -7,7 +7,9 @@ on:
         paths:
             - ".github/workflows/client-access-migration.yml"
             - "backend/migrations/versions/*client_access*"
+            - "backend/migrations/versions/*auth_version*"
             - "backend/models/client_access.py"
+            - "backend/models/usuario.py"
             - "backend/models/__init__.py"
             - "backend/tests/test_client_access_migration_postgres.py"
 
@@ -105,5 +107,7 @@ jobs:
                   set -euo pipefail
                   ruff check backend/tests/test_client_access_migration_postgres.py
                   ruff check backend/migrations/versions/a41b7d8de6d7_add_client_access_lifecycle.py
+                  ruff check backend/migrations/versions/b3e6f9a2c741_add_usuario_auth_version.py
                   ruff check backend/models/client_access.py
+                  ruff check backend/models/usuario.py
                   git diff --check

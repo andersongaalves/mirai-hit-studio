@@ -573,6 +573,166 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             self.assertIsNotNone(access.token_consumed_at)
             self.assertEqual(client.orcamentos, [])
 
+    def _seed_recovery_access(self):
+        from models import ClienteAcessoModel, UsuarioModel
+
+        now = datetime.now(timezone.utc)
+        with self.SessionLocal.begin() as db:
+            user = db.scalar(
+                select(UsuarioModel).where(
+                    UsuarioModel.cliente_id == self.ids["client_a_id"]
+                )
+            )
+            db.add(
+                ClienteAcessoModel(
+                    cliente_id=self.ids["client_a_id"],
+                    usuario_id=user.id,
+                    email_normalizado="client-a@example.com",
+                    origem="public_signup",
+                    token_finalidade="verificacao",
+                    token_hash="9" * 64,
+                    token_expires_at=now + timedelta(hours=1),
+                    token_consumed_at=now,
+                    email_verified_at=now,
+                    last_sent_at=now,
+                    privacy_accepted_at=now,
+                    send_count=1,
+                )
+            )
+
+    def test_password_recovery_postgresql17_concurrency_and_revocation(self):
+        from models import AuditLogModel, ClienteAcessoModel, UsuarioModel
+        from services.email_service import EmailService
+
+        self._seed_recovery_access()
+        client_a = self._login("e2e-client-a")
+        client_b = self._login("e2e-client-b")
+        admin = self._login("e2e-admin")
+        producer = self._login("e2e-producer-a")
+
+        with patch.object(
+            EmailService,
+            "enviar_recuperacao_senha",
+            return_value={"id": "postgres-e2e-recovery"},
+        ) as email:
+            requested = self.http.post(
+                "/auth/password-recovery",
+                json={"email": "client-a@example.com"},
+            )
+        self.assertEqual(requested.status_code, 202, requested.text)
+        token = parse_qs(urlparse(email.call_args.args[1]).query)["token"][0]
+        old_session = dict(client_a)
+
+        def reset(_):
+            with httpx.Client(base_url=self.api_url, timeout=30, trust_env=False) as client:
+                return client.post(
+                    "/auth/password-recovery/reset",
+                    json={"token": token, "password": "New-Recovery-E2E!"},
+                ).status_code
+
+        def concurrent_session(_):
+            with httpx.Client(base_url=self.api_url, timeout=30, trust_env=False) as client:
+                return client.get("/auth/me", headers=old_session).status_code
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            reset_futures = [executor.submit(reset, index) for index in range(2)]
+            session_future = executor.submit(concurrent_session, 0)
+            reset_results = [future.result() for future in reset_futures]
+            concurrent_status = session_future.result()
+        self.assertEqual(sorted(reset_results), [200, 409])
+        self.assertIn(concurrent_status, {200, 401})
+        self.assertEqual(self.http.get("/auth/me", headers=old_session).status_code, 401)
+        self.assertEqual(self.http.get("/auth/me", headers=admin).status_code, 200)
+        self.assertEqual(self.http.get("/auth/me", headers=producer).status_code, 200)
+        self.assertEqual(self.http.get("/auth/me", headers=client_b).status_code, 200)
+        self.assertEqual(
+            self.http.post(
+                "/auth/login",
+                json={"username": "e2e-client-a", "password": self.ids["password"]},
+            ).status_code,
+            401,
+        )
+        self.assertEqual(
+            self.http.post(
+                "/auth/login",
+                json={"username": "e2e-client-a", "password": "New-Recovery-E2E!"},
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.http.post(
+                "/auth/password-recovery/reset",
+                json={"token": token, "password": "Replay-Recovery-E2E!"},
+            ).status_code,
+            409,
+        )
+
+        with self.SessionLocal() as db:
+            user = db.scalar(
+                select(UsuarioModel).where(UsuarioModel.username == "e2e-client-a")
+            )
+            access = db.query(ClienteAcessoModel).one()
+            self.assertEqual(user.auth_version, 1)
+            self.assertIsNotNone(access.token_consumed_at)
+            self.assertEqual(
+                db.query(AuditLogModel).filter_by(
+                    action="client_access.password_reset_completed"
+                ).count(),
+                1,
+            )
+
+        with patch.object(
+            EmailService,
+            "enviar_recuperacao_senha",
+            side_effect=RuntimeError("private-provider-error"),
+        ):
+            failed_delivery = self.http.post(
+                "/auth/password-recovery",
+                json={"email": "client-a@example.com"},
+            )
+        self.assertEqual(failed_delivery.status_code, 202, failed_delivery.text)
+
+    def test_browser_password_recovery_uses_real_backend_and_postgresql(self):
+        from services.email_service import EmailService
+
+        self._seed_recovery_access()
+        root = Path(__file__).resolve().parents[2]
+        with TemporaryDirectory(prefix="mirai-recovery-e2e-") as directory:
+            recovery_file = Path(directory) / "recovery-url.txt"
+
+            def capture_email(_client, recovery_url, *, idempotency_key):
+                self.assertTrue(idempotency_key.startswith("client-recovery/"))
+                recovery_file.write_text(recovery_url, encoding="utf-8")
+                return {"id": "browser-recovery-message"}
+
+            env = {
+                **os.environ,
+                "E2E_RECOVERY_URL_FILE": str(recovery_file),
+                "E2E_RECOVERY_USERNAME": "e2e-client-a",
+                "E2E_RECOVERY_EMAIL": "client-a@example.com",
+                "E2E_OLD_PASSWORD": self.ids["password"],
+                "E2E_NEW_PASSWORD": "Browser-Recovery-E2E!",
+            }
+            with patch.object(
+                EmailService,
+                "enviar_recuperacao_senha",
+                side_effect=capture_email,
+            ):
+                result = subprocess.run(
+                    [
+                        os.getenv("NODE_BINARY", "node"),
+                        str(root / "frontend/tests/password_recovery_postgres_e2e.cjs"),
+                    ],
+                    cwd=root,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=180,
+                    check=False,
+                )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("PASSWORD_RECOVERY_POSTGRES_E2E_PASS", result.stdout)
+
     def _login(self, username):
         response = self.http.post(
             "/auth/login",

@@ -38,7 +38,7 @@ def session():
         yield db
 app.dependency_overrides[get_db] = session
 def bearer(username):
-    return {'Authorization': 'Bearer ' + create_access_token({'sub': username})}
+    return {'Authorization': 'Bearer ' + create_access_token({'sub': username, 'av': 0})}
 '''
 
 
@@ -96,6 +96,8 @@ async def check():
             'nova_senha':'reset-password',
         })
         assert reset.status_code == 200 and all('password' not in key for key in reset.json())
+        with Session(engine) as db:
+            assert db.get(UsuarioModel, identifier).auth_version == 1
         assert (await client.post('/auth/login', json={'username':'usuario_editado', 'password':'new-password'})).status_code == 401
         assert (await client.post('/auth/login', json={'username':'usuario_editado', 'password':'reset-password'})).status_code == 200
 

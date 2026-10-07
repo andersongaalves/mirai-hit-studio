@@ -31,8 +31,8 @@ with Session(engine) as db:
     db.commit()
 import main
 import httpx
-admin = {'Authorization':'Bearer ' + create_access_token({'sub':'admin'})}
-producer = {'Authorization':'Bearer ' + create_access_token({'sub':'producer'})}
+admin = {'Authorization':'Bearer ' + create_access_token({'sub':'admin', 'av':0})}
+producer = {'Authorization':'Bearer ' + create_access_token({'sub':'producer', 'av':0})}
 """
 
 

@@ -10,12 +10,17 @@ on:
             - "backend/routers/producao.py"
             - "backend/routers/usuarios.py"
             - "backend/routers/client_access.py"
+            - "backend/routers/auth.py"
+            - "backend/core/dependencies.py"
+            - "backend/core/security.py"
             - "backend/services/portal_*.py"
             - "backend/services/producao_arquivo*.py"
             - "backend/services/repasse_produtor_service.py"
             - "backend/services/portfolio_segments_service.py"
             - "backend/services/client_access_service.py"
             - "backend/models/config.py"
+            - "backend/models/usuario.py"
+            - "backend/migrations/versions/*auth_version*"
             - "backend/schemas/config.py"
             - "backend/routers/config.py"
             - "backend/models/portal_produtor.py"
@@ -23,8 +28,10 @@ on:
             - "backend/tests/test_portfolio_segments.py"
             - "backend/tests/test_client_access.py"
             - "backend/tests/test_client_signup.py"
+            - "backend/tests/test_password_recovery.py"
             - "backend/services/email_service.py"
             - "backend/templates/email_confirmacao_cadastro.html"
+            - "backend/templates/email_recuperacao_senha.html"
             - "backend/tests/commercial_i2_support.py"
             - "frontend/portal-*.html"
             - "frontend/js/produtor/**"
@@ -37,13 +44,18 @@ on:
             - "frontend/tests/client_access.cjs"
             - "frontend/tests/client_signup.cjs"
             - "frontend/tests/client_signup_postgres_e2e.cjs"
+            - "frontend/tests/password_recovery*.cjs"
             - "frontend/tests/portals_postgres_e2e.cjs"
             - "frontend/acesso.html"
             - "frontend/ativar.html"
             - "frontend/cadastro.html"
+            - "frontend/recuperar-senha.html"
+            - "frontend/redefinir-senha.html"
             - "frontend/js/acesso.js"
             - "frontend/js/ativar.js"
             - "frontend/js/cadastro.js"
+            - "frontend/js/recuperar-senha.js"
+            - "frontend/js/redefinir-senha.js"
             - "frontend/_redirects"
 
 permissions:
@@ -172,6 +184,7 @@ jobs:
                   python -m unittest discover -s tests -p 'test_portfolio_segments.py' -v
                   python -m unittest discover -s tests -p 'test_client_access.py' -v
                   python -m unittest discover -s tests -p 'test_client_signup.py' -v
+                  python -m unittest discover -s tests -p 'test_password_recovery.py' -v
 
             - name: Run isolated browser auth regression
               shell: bash
@@ -179,6 +192,7 @@ jobs:
                   node frontend/tests/auth_sessions.cjs
                   node frontend/tests/client_access.cjs
                   node frontend/tests/client_signup.cjs
+                  node frontend/tests/password_recovery.cjs
 
             - name: Run PostgreSQL 17 and real-browser E2E
               working-directory: backend
@@ -204,14 +218,19 @@ jobs:
                   ruff check backend/tests/test_portals_postgres_e2e.py
                   ruff check backend/services/portfolio_segments_service.py backend/tests/test_portfolio_segments.py
                   ruff check --ignore B008 backend/services/client_access_service.py backend/routers/client_access.py backend/schemas/client_access.py backend/tests/test_client_access.py backend/tests/test_client_signup.py
+                  ruff check --ignore B008 backend/tests/test_password_recovery.py backend/core/dependencies.py backend/routers/auth.py backend/models/usuario.py
                   ruff check --select E4,E7,E9,F backend/tests/commercial_i2_support.py
                   node --check frontend/tests/portals_postgres_e2e.cjs
                   node --check frontend/tests/auth_sessions.cjs
                   node --check frontend/tests/client_access.cjs
                   node --check frontend/tests/client_signup.cjs
                   node --check frontend/tests/client_signup_postgres_e2e.cjs
+                  node --check frontend/tests/password_recovery.cjs
+                  node --check frontend/tests/password_recovery_postgres_e2e.cjs
                   node --check frontend/js/ativar.js
                   node --check frontend/js/cadastro.js
+                  node --check frontend/js/recuperar-senha.js
+                  node --check frontend/js/redefinir-senha.js
                   node --check frontend/js/admin/auth.js
                   git diff --check
 
