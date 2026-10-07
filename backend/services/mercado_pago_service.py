@@ -3,9 +3,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from integrations.mercado_pago import (
     MercadoPagoClient,
     MercadoPagoError,
@@ -14,8 +11,9 @@ from integrations.mercado_pago import (
 )
 from models.enums.financeiro import CobrancaStatus, PagamentoStatus, PagamentoTipo
 from models.financeiro import CobrancaModel, PagamentoModel
-from services import financial_service
-
+from services import financial_service, producao_liberacao_service
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 PROVIDER = "mercado_pago"
@@ -133,7 +131,10 @@ def enviar_pix(
         error.payment_id = payment.id
         _log_error(error, payment, request_id)
         raise
-    return PaymentExecution(payment.id, _persistir_resultado(db, payment.id, result))
+    return PaymentExecution(
+        payment.id,
+        _persistir_resultado(db, payment.id, result, request_id=request_id),
+    )
 
 
 def criar_cartao(
@@ -194,7 +195,12 @@ def enviar_cartao(
         error.payment_id = payment.id
         _log_error(error, payment, request_id)
         raise
-    persisted = _persistir_resultado(db, payment.id, result)
+    persisted = _persistir_resultado(
+        db,
+        payment.id,
+        result,
+        request_id=request_id,
+    )
     if persisted.status == PagamentoStatus.RECUSADO:
         _log_rejection(persisted, payment, request_id)
     return PaymentExecution(payment.id, persisted)
@@ -235,6 +241,7 @@ def reconcile_payment(
         payment_id,
         result,
         expected_order_id=provider_order_id,
+        request_id=request_id,
     )
 
 
@@ -283,6 +290,7 @@ def reconcile_order(
         payment_id,
         result,
         expected_order_id=provider_order_id,
+        request_id=request_id,
     )
 
 
@@ -299,12 +307,21 @@ def _tentativa(db: Session, payment_id: int, metodo: str) -> PagamentoModel:
     return payment
 
 
-def _persistir_resultado(db: Session, payment_id: int, result: ProviderPaymentResult):
+def _persistir_resultado(
+    db: Session,
+    payment_id: int,
+    result: ProviderPaymentResult,
+    *,
+    request_id: str | None = None,
+):
     payment = db.scalar(
         select(PagamentoModel).where(PagamentoModel.id == payment_id).with_for_update()
     )
     if payment is None:
         raise financial_service.FinanceiroInvalido("Pagamento nao encontrado.")
+    cobranca = financial_service.bloquear_cobranca(db, payment.cobranca_id)
+    if cobranca is None:
+        raise financial_service.FinanceiroInvalido("Cobranca nao encontrada.")
     if financial_service.normalizar_valor(payment.valor) != result.amount:
         db.rollback()
         raise financial_service.FinanceiroConflito("Valor retornado pelo provider diverge da tentativa.")
@@ -324,7 +341,12 @@ def _persistir_resultado(db: Session, payment_id: int, result: ProviderPaymentRe
             payment.aprovado_em = result.approved_at or datetime.now(timezone.utc)
         elif result.status == PagamentoStatus.REEMBOLSADO:
             payment.reembolsado_em = datetime.now(timezone.utc)
-        financial_service.sincronizar_status(payment.cobranca)
+        financial_service.sincronizar_status(cobranca)
+        producao_liberacao_service.avaliar_cobranca_bloqueada(
+            db,
+            cobranca,
+            request_id=request_id,
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -339,6 +361,7 @@ def _apply_reconciliation(
     result: ProviderPaymentResult,
     *,
     expected_order_id: str,
+    request_id: str | None = None,
 ) -> ReconciliationResult:
     payment = db.scalar(
         select(PagamentoModel)
@@ -348,6 +371,10 @@ def _apply_reconciliation(
     if payment is None:
         db.rollback()
         raise financial_service.FinanceiroInvalido("Pagamento nao encontrado.")
+    cobranca = financial_service.bloquear_cobranca(db, payment.cobranca_id)
+    if cobranca is None:
+        db.rollback()
+        raise financial_service.FinanceiroInvalido("Cobranca nao encontrada.")
     reason = _identity_conflict(payment, result, expected_order_id)
     if reason:
         return _raise_conflict(db, payment, reason)
@@ -372,7 +399,12 @@ def _apply_reconciliation(
         elif incoming == PagamentoStatus.REEMBOLSADO:
             payment.reembolsado_em = datetime.now(timezone.utc)
     try:
-        financial_service.sincronizar_status(payment.cobranca)
+        financial_service.sincronizar_status(cobranca)
+        producao_liberacao_service.avaliar_cobranca_bloqueada(
+            db,
+            cobranca,
+            request_id=request_id,
+        )
         db.commit()
     except financial_service.FinanceiroConflito:
         db.rollback()

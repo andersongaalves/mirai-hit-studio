@@ -37,6 +37,7 @@ with Session(engine) as db:
     created = service.criar_por_orcamento(db, 1)
     assert created.numero == 'MHS-000001' and created.versao == 1
     assert created.status == PropostaStatus.RASCUNHO
+    assert created.politica_pagamento.value == 'entrada_50_50'
     assert created.produtor_id == 1 and created.totais.total == Decimal('150.25')
     assert len(created.pagamentos) == 3 and not any(p.habilitado for p in created.pagamentos)
     assert service.criar_por_orcamento(db, 1).model_dump() == created.model_dump()
@@ -48,12 +49,13 @@ with Session(engine) as db:
     patch_data = PropostaUpdate(objeto='Novo escopo', descricao='Comercial', produtor_id=None,
         itens=[{'descricao': 'Mix', 'quantidade': '2', 'valor_unitario': '99.90', 'desconto': '10.00'}],
         pagamentos=[{'tipo': 'integral', 'titulo': 'Completo', 'url': 'https://example.com/pay', 'habilitado': True}],
-        condicoes='Novas condicoes')
+        politica_pagamento='integral', condicoes='Novas condicoes')
     edited = service.atualizar(db, created.id, patch_data)
     assert edited.totais.model_dump() == {'subtotal': Decimal('199.80'), 'desconto': Decimal('10.00'), 'total': Decimal('189.80')}
     assert edited.numero == created.numero and edited.versao == 2
     assert edited.cliente_snapshot == created.cliente_snapshot
     assert edited.produtor_id is None
+    assert edited.politica_pagamento.value == 'integral'
     assert service.atualizar(db, created.id, patch_data).versao == 2
     assert service.atualizar(db, created.id, PropostaUpdate()).versao == 2
 with Session(engine) as db:

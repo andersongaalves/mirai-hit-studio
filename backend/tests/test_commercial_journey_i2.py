@@ -87,7 +87,7 @@ with ExitStack() as stack:
     checked(http.post(f'/propostas/{proposal_id}/aprovar', headers=headers))
     assert approved['status'] == 'aceita' and approved['aprovada_em']
     with Session(engine) as db:
-        assert db.query(ProducaoModel).filter_by(orcamento_id=budget['id']).count() == 1
+        assert db.query(ProducaoModel).filter_by(orcamento_id=budget['id']).count() == 0
         charge = db.query(CobrancaModel).filter_by(proposta_id=proposal_id).one()
         reference, charge_id = charge.referencia_externa, charge.id
     summary = checked(http.get(f'/checkout/{reference}'))
@@ -143,6 +143,7 @@ class CommercialJourneyTests(unittest.TestCase):
     assert checked(http.get(f'/checkout/{reference}'))['status'] == 'paga'
     with Session(engine) as db:
         assert db.query(PagamentoModel).count() == 1
+        assert db.query(ProducaoModel).count() == 1
 ''')
 
     def test_http_budget_to_partial_pix_to_finance(self):

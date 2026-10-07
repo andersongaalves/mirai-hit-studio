@@ -1,27 +1,31 @@
 """Commercial transitions; transaction ownership stays here."""
+import logging
 from datetime import datetime, timezone
 from io import BytesIO
-import logging
 
-from pydantic import TypeAdapter, EmailStr, ValidationError
-from pypdf import PdfReader
-from sqlalchemy.exc import IntegrityError
-
-from crud import crud_proposta, crud_producao
-from models.enums.proposta import PropostaStatus as Status
 from core.enums import OrcamentoStatus
-from services import proposta_service as service, proposta_documento_service as documentos
+from crud import crud_producao, crud_proposta
+from models.enums.proposta import PropostaStatus as Status
+from pydantic import EmailStr, TypeAdapter, ValidationError
+from pypdf import PdfReader
+from services import audit_service, financial_service, producao_liberacao_service
+from services import proposta_documento_service as documentos
+from services import proposta_service as service
 from services.documento_storage import DocumentoIndisponivel
 from services.email_service import EmailService
 from services.pdf_service import moeda
-from services import audit_service
-from services import financial_service
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
 
 class EnvioIndisponivel(Exception):
     pass
+
+
+def _dados_producao(proposta):
+    """Compatibility helper for historical callers and fixtures."""
+    return producao_liberacao_service.dados_producao(proposta)
 
 
 def _pdf_valido(data):
@@ -118,27 +122,21 @@ def enviar(db, proposta_id, actor=None, request_id=None):
         raise
 
 
-def _dados_producao(proposta):
-    cliente = proposta.cliente_snapshot.cliente.nome
-    servico = proposta.cliente_snapshot.orcamento.servico
-    titulo = proposta.objeto or f"Proposta {proposta.numero}"
-    if len(cliente) > 120 or len(servico) > 100:
-        raise service.PropostaInvalida("Nome/servico do snapshot excede o limite da producao.")
-    totals = service.calcular_totais(proposta.itens)
-    itens = "\n".join(f"- {i.descricao}: {i.quantidade} x {moeda(i.valor_unitario)}; desconto {moeda(i.desconto)}"
-                      for i in proposta.itens)
-    notes = f"Proposta {proposta.numero} | versao {proposta.versao}\n{proposta.objeto}\n{proposta.descricao}\n{itens}\nTotal: {moeda(totals.total)}\n{proposta.condicoes}"
-    return {"titulo": titulo[:150], "cliente": cliente, "servico": servico,
-            "produtor_id": proposta.produtor_id, "orcamento_id": proposta.orcamento_id,
-            "observacoes": notes, "status": "aguardando_inicio", "etapas": "[]"}
-
-
 def aprovar(db, proposta_id, actor=None, request_id=None):
     try:
         model, budget = _carregar(db, proposta_id)
         if model.status == Status.ACEITA.value:
             if not crud_producao.buscar_por_orcamento(db, model.orcamento_id):
-                raise service.PropostaConflito("Proposta aceita sem producao; requer conciliacao.")
+                try:
+                    financial_service.criar_para_proposta(
+                        db,
+                        model,
+                        cliente_id=budget.cliente_id,
+                    )
+                except financial_service.FinanceiroInvalido as error:
+                    raise service.PropostaInvalida(str(error)) from None
+                except financial_service.FinanceiroConflito as error:
+                    raise service.PropostaConflito(str(error)) from None
             response = service._resposta(model)
             db.commit()
             return response
@@ -148,8 +146,6 @@ def aprovar(db, proposta_id, actor=None, request_id=None):
             raise service.PropostaConflito("Status do orcamento incompativel com a aprovacao.")
         if crud_producao.buscar_por_orcamento(db, model.orcamento_id):
             raise service.PropostaConflito("Ja existe producao para este orcamento; requer conciliacao.")
-        resposta_atual = service._resposta(model)
-        crud_producao.criar_sem_commit(db, _dados_producao(resposta_atual))
         try:
             financial_service.criar_para_proposta(
                 db,
@@ -176,12 +172,12 @@ def aprovar(db, proposta_id, actor=None, request_id=None):
         response = service._resposta(model)
         db.commit()
         logger.info("proposal_approved")
-        logger.info("production_created")
         return response
     except IntegrityError:
         db.rollback()
-        # UNIQUE(orcamento_id) also protects writers outside this service.
-        raise service.PropostaConflito("Producao ja vinculada; consulte o estado atual antes de repetir.") from None
+        raise service.PropostaConflito(
+            "Aceite concorrente; consulte o estado atual antes de repetir."
+        ) from None
     except Exception:
         db.rollback()
         raise

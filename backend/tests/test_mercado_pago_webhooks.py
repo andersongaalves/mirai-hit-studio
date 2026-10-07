@@ -159,6 +159,7 @@ with Session(engine) as db:
     assert payment.cobranca.status == 'paga'
     assert payment.reconciliation_status is None
     assert db.scalar(select(func.count()).select_from(ProviderWebhookEventModel)) == 1
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 ''')
 
     def test_body_cannot_forge_approval(self):
@@ -210,6 +211,7 @@ with Session(engine) as db:
     payment = db.get(PagamentoModel, payment_id)
     assert payment.status == 'reembolsado' and payment.reembolsado_em is not None
     assert payment.cobranca.status == 'pendente'
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 ''')
 
     def test_partial_refund_chargeback_and_identity_mismatches_are_conflicts(self):
@@ -287,6 +289,7 @@ with Session(engine) as db:
     assert provider.calls == ['ORD-known']
 with Session(engine) as db:
     assert db.get(PagamentoModel, known_id).status == 'aprovado'
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 ''')
 
     def test_two_sessions_reconcile_idempotently(self):
@@ -309,6 +312,7 @@ with Session(engine) as db:
     assert db.scalar(select(func.count()).select_from(PagamentoModel)) == 1
     payment = db.get(PagamentoModel, payment_id)
     assert payment.status == 'aprovado' and payment.cobranca.status == 'paga'
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 ''')
 
     def test_irrelevant_event_is_ignored_and_temporary_failure_is_retried(self):

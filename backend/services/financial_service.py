@@ -1,14 +1,12 @@
 from datetime import datetime, timezone
-from decimal import Decimal, DecimalException, ROUND_DOWN, ROUND_HALF_UP
-
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal, DecimalException
 
 from models.enums.financeiro import CobrancaStatus, PagamentoStatus, PagamentoTipo
 from models.enums.proposta import PropostaStatus
 from models.financeiro import CobrancaModel, PagamentoModel
 from services import proposta_service
-
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 CENTAVO = Decimal("0.01")
 
@@ -103,6 +101,15 @@ def sincronizar_status(cobranca: CobrancaModel) -> CobrancaStatus:
 
 def buscar_por_proposta(db: Session, proposta_id: int):
     return db.scalar(select(CobrancaModel).where(CobrancaModel.proposta_id == proposta_id))
+
+
+def bloquear_cobranca(db: Session, cobranca_id: int):
+    return db.scalar(
+        select(CobrancaModel)
+        .where(CobrancaModel.id == cobranca_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
 
 
 def criar_para_proposta(db: Session, proposta, *, cliente_id=None) -> CobrancaModel:

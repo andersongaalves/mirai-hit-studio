@@ -1,0 +1,148 @@
+name: Commerce domain PostgreSQL 17
+
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - phase/3.5b1-commerce-domain
+        paths:
+            - ".github/workflows/commerce-domain.yml"
+            - "backend/migrations/versions/*payment_policy*"
+            - "backend/models/proposta.py"
+            - "backend/models/enums/proposta.py"
+            - "backend/schemas/proposta.py"
+            - "backend/services/proposta*.py"
+            - "backend/services/financial_service.py"
+            - "backend/services/mercado_pago_service.py"
+            - "backend/services/producao_liberacao_service.py"
+            - "backend/tests/test_commerce*.py"
+            - "backend/tests/test_proposta*.py"
+            - "backend/tests/test_financeiro.py"
+            - "backend/tests/test_checkout.py"
+            - "backend/tests/test_mercado_pago*.py"
+
+permissions:
+    contents: read
+
+concurrency:
+    group: commerce-domain-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    commerce-domain:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_DB: mirai_portals_e2e
+                    POSTGRES_USER: mirai_e2e
+                    POSTGRES_PASSWORD: mirai_e2e_disposable
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U mirai_e2e -d mirai_portals_e2e"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 12
+        env:
+            APP_ENV: test
+            DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
+            MIRAI_PORTALS_E2E_DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
+            MIRAI_PORTALS_E2E_ALLOW: POSTGRES_17_DISPOSABLE_ONLY
+            API_NAME: Mirai commerce domain E2E
+            API_VERSION: "2.0"
+            DEBUG: "false"
+            HOST: 127.0.0.1
+            PORT: "8000"
+            LOG_LEVEL: WARNING
+            SECRET_KEY: commerce-domain-e2e-only-secret
+            ALGORITHM: HS256
+            ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+            REFRESH_TOKEN_EXPIRE_DAYS: "7"
+            ALLOWED_ORIGINS: http://localhost:4173
+            BACKUP_FOLDER: /tmp/mirai-commerce-domain
+            BACKUP_KEEP_DAYS: "1"
+            RESEND_API_KEY: test-only
+            EMAIL_FROM: commerce-e2e@example.invalid
+            ADMIN_EMAIL: commerce-e2e@example.invalid
+            AI_ENABLED: "false"
+            AI_EMAIL_ENABLED: "false"
+
+        steps:
+            - name: Check out source
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version-file: backend/.python-version
+                  cache: pip
+                  cache-dependency-path: |
+                      backend/requirements.txt
+                      backend/requirements-test.txt
+
+            - name: Install dependencies
+              run: |
+                  set -euo pipefail
+                  python -m pip install --disable-pip-version-check -r backend/requirements-test.txt
+                  python -m pip install --disable-pip-version-check ruff==0.16.9
+
+            - name: Prepare disposable PostgreSQL 17
+              working-directory: backend
+              run: |
+                  set -euo pipefail
+                  python -m scripts.bootstrap_database
+                  python -m alembic heads
+
+            - name: Validate migration and PostgreSQL concurrency
+              working-directory: backend
+              run: |
+                  set -euo pipefail
+                  python -m unittest discover -s tests -p 'test_commerce_policy_postgres.py' -v
+
+            - name: Run focused commerce regressions
+              working-directory: backend
+              run: |
+                  set -euo pipefail
+                  python -m unittest discover -s tests -p 'test_commerce_domain.py' -v
+                  python -m unittest discover -s tests -p 'test_proposta_*.py' -v
+                  python -m unittest discover -s tests -p 'test_financeiro.py' -v
+                  python -m unittest discover -s tests -p 'test_checkout.py' -v
+                  python -m unittest discover -s tests -p 'test_mercado_pago.py' -v
+                  python -m unittest discover -s tests -p 'test_mercado_pago_webhooks.py' -v
+                  python -m unittest discover -s tests -p 'test_commercial_journey_i2.py' -v
+                  python -m unittest discover -s tests -p 'test_producao.py' -v
+                  python -m unittest discover -s tests -p 'test_portal_produtor.py' -v
+                  python -m unittest discover -s tests -p 'test_portal_cliente.py' -v
+                  python -m unittest discover -s tests -p 'test_client_access.py' -v
+                  python -m unittest discover -s tests -p 'test_client_signup.py' -v
+                  python -m unittest discover -s tests -p 'test_security_phase_e.py' -v
+                  python -m unittest discover -s tests -p 'test_password_recovery.py' -v
+                  python -m unittest discover -s tests -p 'test_storage_core.py' -v
+                  python -m unittest discover -s tests -p 'test_proposta_storage.py' -v
+
+            - name: Run focused static checks
+              run: |
+                  set -euo pipefail
+                  python -m compileall -q backend
+                  (
+                    cd backend
+                    python - <<'PY'
+                  from sqlalchemy.orm import configure_mappers
+                  import models
+                  configure_mappers()
+                  print("configure_mappers=passed")
+                  PY
+                  )
+                  ruff check backend/migrations/versions/c5f2a7d9e184_add_proposta_payment_policy.py
+                  ruff check --select E4,E7,E9,F,I backend/models/proposta.py backend/models/enums/proposta.py
+                  ruff check --select E4,E7,E9,F,I backend/schemas/proposta.py
+                  ruff check backend/services/producao_liberacao_service.py
+                  ruff check --select E4,E7,E9,F,I backend/services/proposta_comercial_service.py
+                  ruff check --select E4,E7,E9,F,I backend/services/financial_service.py
+                  ruff check --select E4,E7,E9,F,I backend/services/mercado_pago_service.py
+                  ruff check backend/tests/test_commerce_domain.py
+                  ruff check backend/tests/test_commerce_policy_postgres.py
+                  git diff --check

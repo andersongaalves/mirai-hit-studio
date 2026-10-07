@@ -1,16 +1,19 @@
 """Draft creation/editing only; no document, email or approval side effects."""
-from decimal import Decimal, DecimalException, ROUND_HALF_UP, localcontext
-
-from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from decimal import ROUND_HALF_UP, Decimal, DecimalException, localcontext
 
 from crud import crud_proposta as crud
-from models.enums.proposta import PropostaStatus
+from models.enums.proposta import PoliticaPagamento, PropostaStatus
+from pydantic import ValidationError
 from schemas.proposta import (
-    PropostaItem, PropostaPagamento, PropostaResponse, PropostaSnapshot,
-    PropostaTotais, PropostaUpdate,
+    PropostaItem,
+    PropostaPagamento,
+    PropostaResponse,
+    PropostaSnapshot,
+    PropostaTotais,
+    PropostaUpdate,
 )
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 CONDICOES_PADRAO = (
     "Esta proposta contempla os servi\u00e7os descritos neste documento.\n\n"
@@ -105,6 +108,7 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
             "produtor_id": orcamento.produtor_id, "cliente_snapshot": snapshot.model_dump(mode="json"),
             "objeto": orcamento.servico, "descricao": orcamento.detalhes or "",
             "itens_json": [item.model_dump(mode="json")], "pagamentos_json": pagamentos,
+            "politica_pagamento": PoliticaPagamento.ENTRADA_50_50.value,
             "condicoes": CONDICOES_PADRAO, "totais_json": calcular_totais([item]).model_dump(mode="json"),
         })
         resposta = _resposta(proposta)

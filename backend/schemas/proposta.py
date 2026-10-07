@@ -1,9 +1,11 @@
-"""Contracts only; financial authority belongs to the future service."""
+"""Proposal contracts; financial authority remains in backend domain services."""
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter, field_validator
-from models.enums.proposta import PropostaStatus
+
+from models.enums.proposta import PoliticaPagamento, PropostaStatus
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 from schemas.validation import http_url
 
 Money = Annotated[Decimal, Field(ge=0, allow_inf_nan=False)]
@@ -78,9 +80,17 @@ class PropostaUpdate(Contract):
     descricao: str | None = Field(default=None, max_length=50000)
     itens: list[PropostaItem] | None = Field(default=None, max_length=200)
     pagamentos: list[PropostaPagamento] | None = Field(default=None, max_length=20)
+    politica_pagamento: PoliticaPagamento | None = None
     condicoes: str | None = Field(default=None, max_length=50000)
 
-    @field_validator("objeto", "descricao", "itens", "pagamentos", "condicoes")
+    @field_validator(
+        "objeto",
+        "descricao",
+        "itens",
+        "pagamentos",
+        "politica_pagamento",
+        "condicoes",
+    )
     @classmethod
     def non_nullable_when_present(cls, value):
         if value is None:
@@ -107,6 +117,7 @@ class PropostaResponse(Contract):
     descricao: str
     itens: list[PropostaItem]
     pagamentos: list[PropostaPagamento]
+    politica_pagamento: PoliticaPagamento
     condicoes: str
     totais: PropostaTotais | None
     pdf_path: str | None = Field(max_length=500)

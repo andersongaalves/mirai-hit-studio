@@ -1,13 +1,28 @@
-from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, JSON, String, Text)
+from database import Base
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from database import Base
+from models.enums.proposta import PoliticaPagamento, PropostaStatus
 
-from models.enums.proposta import PropostaStatus
 
 class PropostaModel(Base):
     __tablename__ = "propostas"
+    __table_args__ = (
+        CheckConstraint(
+            "politica_pagamento IN ('integral', 'entrada_50_50')",
+            name="ck_propostas_politica_pagamento_valida",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -70,6 +85,13 @@ class PropostaModel(Base):
     pagamentos_json = Column(
         JSON,
         default=list,
+        nullable=False,
+    )
+
+    politica_pagamento = Column(
+        String(20),
+        default=PoliticaPagamento.ENTRADA_50_50.value,
+        server_default=PoliticaPagamento.ENTRADA_50_50.value,
         nullable=False,
     )
 

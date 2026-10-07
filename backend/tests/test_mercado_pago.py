@@ -10,6 +10,7 @@ MP_SETUP = SETUP + r'''
 import io
 import logging
 import requests
+from datetime import datetime, timezone
 from decimal import Decimal
 from sqlalchemy.orm import Session
 from models import CobrancaModel, PagamentoModel
@@ -71,7 +72,9 @@ def order(amount='150.25', status='action_required', detail='waiting_transfer',
 def charge(db, budget_id=1):
     proposal = service.criar_por_orcamento(db, budget_id)
     model = db.get(PropostaModel, proposal.id)
-    model.status = 'enviada'
+    model.status = 'aceita'
+    model.aprovada_em = datetime.now(timezone.utc)
+    db.get(OrcamentoModel, budget_id).status = 'aprovado'
     db.commit()
     result = finance.criar_para_proposta(db, model)
     db.commit()
@@ -321,7 +324,7 @@ from alembic.script import ScriptDirectory
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'b3e6f9a2c741'
+assert head == 'c5f2a7d9e184'
 command.downgrade(config, 'c4f8a2d19e73')
 columns = {column['name'] for column in inspect(engine).get_columns('pagamentos')}
 assert 'provider_idempotency_key' not in columns

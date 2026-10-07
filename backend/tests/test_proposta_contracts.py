@@ -19,7 +19,7 @@ class PropostaContracts(unittest.TestCase):
             from sqlalchemy.orm import configure_mappers
             from models import PropostaModel
             from schemas.proposta import PropostaCreate, PropostaUpdate, PropostaResponse
-            from models.enums.proposta import PropostaStatus
+            from models.enums.proposta import PoliticaPagamento, PropostaStatus
             fixture = {fixture!r}
             with patch.object(engine, 'connect', side_effect=AssertionError('database forbidden')):
                 configure_mappers()
@@ -27,6 +27,7 @@ class PropostaContracts(unittest.TestCase):
                 assert PropostaUpdate().model_dump(exclude_unset=True) == {{}}
                 assert PropostaUpdate(produtor_id=None).model_dump(exclude_unset=True) == {{'produtor_id': None}}
                 assert PropostaUpdate(descricao='').model_dump(exclude_unset=True) == {{'descricao': ''}}
+                assert PropostaUpdate(politica_pagamento='integral').politica_pagamento == PoliticaPagamento.INTEGRAL
                 valid = PropostaUpdate.model_validate({payload!r})
                 assert isinstance(valid.itens[0].valor_unitario, Decimal)
                 for field in ['id', 'orcamento_id', 'numero', 'versao', 'status', 'cliente_snapshot',
@@ -50,7 +51,8 @@ class PropostaContracts(unittest.TestCase):
                     invalid.append({{'pagamentos': [{{**payment, 'url': url}}]}})
                 invalid.extend([{{'pagamentos': [{{**payment, 'habilitado': True}}]}},
                                 {{'pagamentos': [payment, payment]}},
-                                {{'pagamentos': [{{**payment, 'tipo': ''}}]}}])
+                                {{'pagamentos': [{{**payment, 'tipo': ''}}]}},
+                                {{'politica_pagamento': 'manual'}}])
                 for data in invalid:
                     try:
                         PropostaUpdate.model_validate(data)

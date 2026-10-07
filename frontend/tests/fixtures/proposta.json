@@ -17,6 +17,7 @@
     {"tipo": "parcial_1", "titulo": "Pagamento parcial 1", "url": "https://example.com/entrada", "habilitado": true},
     {"tipo": "parcial_2", "titulo": "Pagamento parcial 2", "url": "", "habilitado": false}
   ],
+  "politica_pagamento": "entrada_50_50",
   "condicoes": "Condicoes comerciais",
   "totais": {"subtotal": "150.00", "desconto": "0.00", "total": "150.00"},
   "pdf_path": null,

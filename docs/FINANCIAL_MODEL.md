@@ -36,17 +36,21 @@ Uma cobranca representa o total contratado. O pagamento integral e um movimento 
 
 `pagamentos_json` da proposta continua sendo snapshot de apresentacao e links, nao confirmacao financeira. Checkout/provider criarao os movimentos na fase apropriada. Valores customizados futuros deverao somar exatamente o contratado.
 
-## Criacao e transacao
+## Aceite, politica e liberacao da producao
 
-A aprovacao de uma proposta cria a cobranca de forma idempotente na mesma transacao que aceita proposta/orcamento e cria a producao. `UNIQUE(proposta_id)` e o guard final contra duplicidade. Falha financeira reverte toda a aprovacao.
+O aceite de uma proposta cria ou reutiliza a cobranca na mesma transacao, mas nao cria a producao. `UNIQUE(proposta_id)` e o guard final contra cobrancas duplicadas.
+
+`propostas.politica_pagamento` e a autoridade para liberar o inicio. Em `integral`, o valor aprovado precisa atingir o total. Em `entrada_50_50`, precisa atingir a entrada calculada por `dividir_50_50()`. URLs manuais, `pagamentos_json`, texto e frontend nao participam dessa decisao.
+
+Depois que o provider ou a reconciliacao persiste o pagamento e sincroniza a cobranca, o backend avalia a regra e cria a producao na mesma transacao. A constraint unica por `orcamento_id` e o guard final. Webhooks repetidos, saldo posterior e reconciliacoes concorrentes encontram a mesma producao e nao criam outra.
 
 A cobranca copia o total calculado dos itens da proposta naquele momento; alteracoes posteriores em servico ou orcamento nao mudam o historico.
 
-Propostas aprovadas antes da F3.1 permanecem validas e podem nao possuir cobranca. Nao ha backfill automatico. Uma conciliacao explicita devera tratar legados quando houver regra operacional definida.
+Propostas historicas com producao permanecem validas e nao sao reavaliadas destrutivamente. Um reembolso posterior recalcula o financeiro, mas nunca apaga ou reverte automaticamente a producao; o caso segue para intervencao operacional quando necessario.
 
 ## Regras adiadas
 
 - Checkout e tokenizacao frontend foram concluidos em F3.4; a operacao administrativa de consulta e reconciliacao foi concluida em F3.5.
 - Acao ativa de refund e tratamento contabil completo de refund parcial/chargeback: fase futura.
-- Gates de inicio/entrega da producao: fase posterior, apos validacao operacional.
+- Entrega final continua sujeita aos gates administrativos existentes.
 - Nenhum evento `purchase` e emitido antes de confirmacao autoritativa do backend/provider.
