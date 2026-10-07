@@ -30,7 +30,7 @@ async function waitForActivationUrl() {
         await page.getByRole('link', { name: 'Criar conta' }).click();
         await page.waitForURL('**/cadastro');
         await page.getByLabel('Nome').fill('E2E Cadastro Público');
-        await page.getByLabel('E-mail').fill('browser-signup@example.invalid');
+        await page.getByLabel('E-mail').fill('browser-signup@example.com');
         await page.getByLabel(/Telefone/).fill('(11) 98888-0101');
         await page.getByLabel(/Concordo/).check();
         await page.getByRole('button', { name: 'Criar conta' }).click();

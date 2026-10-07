@@ -417,7 +417,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
         payload = {
             "nome": "E2E Public Signup",
-            "email": "public-signup@example.invalid",
+            "email": "public-signup@example.com",
             "telefone": "11977770101",
             "privacy_accepted": True,
         }
@@ -562,7 +562,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         with self.SessionLocal() as db:
             client = db.scalar(
                 select(ClienteModel).where(
-                    ClienteModel.email == "browser-signup@example.invalid"
+                    ClienteModel.email == "browser-signup@example.com"
                 )
             )
             user = db.scalar(select(UsuarioModel).where(UsuarioModel.cliente_id == client.id))
