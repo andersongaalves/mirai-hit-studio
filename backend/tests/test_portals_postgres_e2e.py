@@ -20,11 +20,10 @@ import httpx
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from commercial_i2_support import local_frontend_server, local_server
+from services.producao_arquivo_storage import ProducaoArquivoStorageError
 from sqlalchemy import delete, inspect, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
-
-from services.producao_arquivo_storage import ProducaoArquivoStorageError
 
 POSTGRES_URL = os.getenv("MIRAI_PORTALS_E2E_DATABASE_URL", "")
 ACK = os.getenv("MIRAI_PORTALS_E2E_ALLOW", "")
@@ -606,9 +605,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         return created.json()["id"]
 
     def test_backend_postgresql17_matrix(self):
-        from jose import jwt
-
         from core.config import settings
+        from jose import jwt
         from models import (
             AuditLogModel,
             ProducaoArquivoModel,
