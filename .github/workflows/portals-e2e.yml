@@ -202,6 +202,7 @@ jobs:
                   node frontend/tests/auth_sessions.cjs
                   node frontend/tests/client_access.cjs
                   node frontend/tests/portal_cliente.cjs
+                  node frontend/tests/proposta_comercial.cjs
                   node frontend/tests/client_signup.cjs
                   node frontend/tests/password_recovery.cjs
 
@@ -229,6 +230,7 @@ jobs:
                   ruff check backend/tests/test_portals_postgres_e2e.py
                   ruff check backend/services/portfolio_segments_service.py backend/tests/test_portfolio_segments.py
                   ruff check --ignore B008 backend/services/client_access_service.py backend/routers/client_access.py backend/schemas/client_access.py backend/tests/test_client_access.py backend/tests/test_client_signup.py
+                  ruff check --ignore BLE001,RUF100 backend/services/proposta_comercial_service.py backend/tests/test_portals_postgres_e2e.py
                   ruff check --ignore B008 backend/services/portal_cliente_proposta_service.py backend/routers/portal_cliente.py backend/schemas/portal_cliente.py backend/tests/test_client_proposals.py
                   ruff check --ignore B008 backend/tests/test_password_recovery.py backend/core/dependencies.py backend/routers/auth.py backend/models/usuario.py
                   ruff check --select E4,E7,E9,F backend/tests/commercial_i2_support.py
@@ -236,6 +238,7 @@ jobs:
                   node --check frontend/tests/auth_sessions.cjs
                   node --check frontend/tests/client_access.cjs
                   node --check frontend/tests/portal_cliente.cjs
+                  node --check frontend/tests/proposta_comercial.cjs
                   node --check frontend/tests/client_signup.cjs
                   node --check frontend/tests/client_signup_postgres_e2e.cjs
                   node --check frontend/tests/password_recovery.cjs

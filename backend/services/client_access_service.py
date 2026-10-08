@@ -649,12 +649,29 @@ def reset_password(
 
 
 def _commercial_context(db: Session, proposta_id: int, *, lock=False):
-    proposal_query = select(PropostaModel).where(PropostaModel.id == proposta_id)
-    if lock:
-        proposal_query = proposal_query.with_for_update().execution_options(populate_existing=True)
-    proposal = db.scalar(proposal_query)
+    proposal = db.scalar(select(PropostaModel).where(PropostaModel.id == proposta_id))
     if proposal is None:
         raise ClientAccessNotFound("Proposta nao encontrada.")
+    budget_id = proposal.orcamento_id
+    budget_query = select(OrcamentoModel).where(OrcamentoModel.id == budget_id)
+    if lock:
+        budget_query = budget_query.with_for_update().execution_options(populate_existing=True)
+    budget = db.scalar(budget_query)
+    if budget is None:
+        raise ClientAccessConflict("A contratacao vinculada nao existe.")
+    if lock:
+        proposal = db.scalar(
+            select(PropostaModel)
+            .where(PropostaModel.id == proposta_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if proposal is None:
+            raise ClientAccessNotFound("Proposta nao encontrada.")
+        if proposal.orcamento_id != budget.id:
+            raise ClientAccessConflict(
+                "A vinculacao comercial mudou durante a operacao. Tente novamente."
+            )
     if proposal.status == PropostaStatus.ENVIADA.value:
         if proposal.enviada_em is None:
             raise ClientAccessConflict("A proposta enviada possui estado inconsistente.")
@@ -663,11 +680,7 @@ def _commercial_context(db: Session, proposta_id: int, *, lock=False):
             raise ClientAccessConflict("A proposta aceita possui estado inconsistente.")
     else:
         raise ClientAccessInvalid("Somente propostas enviadas ou aceitas concedem acesso ao portal.")
-    budget_query = select(OrcamentoModel).where(OrcamentoModel.id == proposal.orcamento_id)
-    if lock:
-        budget_query = budget_query.with_for_update().execution_options(populate_existing=True)
-    budget = db.scalar(budget_query)
-    if budget is None or budget.cliente_id is None:
+    if budget.cliente_id is None:
         raise ClientAccessConflict("A contratacao nao possui cliente comercial vinculado.")
     client = db.get(ClienteModel, budget.cliente_id)
     if client is None:

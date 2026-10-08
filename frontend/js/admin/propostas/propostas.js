@@ -45,6 +45,7 @@ function renderizarAcessoCliente() {
     const invite = $("btn-convidar-cliente");
     const resend = $("btn-reenviar-convite");
     const revoke = $("btn-revogar-convite");
+    if (invite) invite.textContent = "Conceder acesso ao portal";
     [invite, resend, revoke].forEach(button => {
         button?.classList.add("hidden");
         if (button) button.disabled = acessoProcessando;
@@ -65,11 +66,17 @@ function renderizarAcessoCliente() {
         return;
     }
     if (acessoCliente.estado === "sem_acesso") invite?.classList.remove("hidden");
+    if (acessoCliente.estado === "conta_ativa") {
+        if (invite) invite.textContent = "Notificar cliente";
+        invite?.classList.remove("hidden");
+    }
     if (["convite_pendente", "convite_expirado", "convite_revogado"].includes(acessoCliente.estado)) {
         resend?.classList.remove("hidden");
     }
     if (["convite_pendente", "convite_expirado"].includes(acessoCliente.estado)) revoke?.classList.remove("hidden");
-    if (invite) invite.onclick = () => executarAcaoAcesso("convidar");
+    if (invite) invite.onclick = () => executarAcaoAcesso(
+        acessoCliente.estado === "conta_ativa" ? "notificar" : "convidar"
+    );
     if (resend) resend.onclick = () => executarAcaoAcesso("reenviar");
     if (revoke) revoke.onclick = () => executarAcaoAcesso("revogar");
 }
@@ -94,6 +101,7 @@ async function executarAcaoAcesso(action) {
     if (acessoProcessando || !["enviada", "aceita"].includes(propostaState.proposta?.status)) return;
     const messages = {
         convidar: "Enviar um convite de acesso para o e-mail do cliente comercial?",
+        notificar: "Notificar a conta ativa sobre esta proposta?",
         reenviar: "Invalidar o convite anterior e enviar um novo?",
         revogar: "Revogar este convite ainda não utilizado?",
     };
@@ -103,11 +111,14 @@ async function executarAcaoAcesso(action) {
     try {
         const methods = {
             convidar: PropostaAPI.convidarCliente,
+            notificar: PropostaAPI.convidarCliente,
             reenviar: PropostaAPI.reenviarConviteCliente,
             revogar: PropostaAPI.revogarConviteCliente,
         };
         acessoCliente = await methods[action](propostaState.proposta.id);
-        Notify.success(action === "revogar" ? "Convite revogado." : "Convite enviado.");
+        Notify.success(action === "revogar" ? "Convite revogado."
+            : action === "notificar" ? "Cliente notificado."
+            : "Convite enviado.");
     } catch (error) {
         Notify.error(error.message);
         await carregarAcessoCliente();

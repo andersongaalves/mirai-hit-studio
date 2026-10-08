@@ -23,6 +23,14 @@ const root = path.resolve(__dirname, '..');
             const request = route.request(), url = new URL(request.url());
             if (url.origin === 'http://localhost:8000') {
                 calls.push(`${request.method()} ${url.pathname}`);
+                if (url.pathname === '/__test/client-access-state') {
+                    const payload = request.postDataJSON();
+                    Object.assign(clientAccess, payload.access || {});
+                    Object.assign(proposal, payload.proposal || {});
+                    return route.fulfill({
+                        json: { ok: true }, headers: { 'access-control-allow-origin': '*' },
+                    });
+                }
                 if (url.pathname === '/orcamentos') return route.fulfill({ json: [budget] });
                 if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
                 if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
@@ -30,6 +38,7 @@ const root = path.resolve(__dirname, '..');
                 if (url.pathname === '/clientes') return route.fulfill({ json: [] });
                 if (url.pathname.endsWith('/preview')) return route.fulfill({ contentType: 'text/html', body: '<p>Documento salvo</p>' });
                 if (url.pathname.endsWith('/acesso-cliente/convidar')) {
+                    if (clientAccess.estado === 'conta_ativa') return route.fulfill({ json: clientAccess });
                     Object.assign(clientAccess, { estado: 'convite_pendente', last_sent_at: '2026-10-05T12:00:00Z', expires_at: '2026-10-07T12:00:00Z', send_count: 1 });
                     return route.fulfill({ json: clientAccess });
                 }
@@ -121,6 +130,39 @@ const root = path.resolve(__dirname, '..');
         await page.locator('#btn-convidar-cliente').click();
         await page.waitForSelector('#btn-reenviar-convite:not(.hidden)');
         assert.match(await page.locator('#proposta-client-access-status').textContent(), /Convite pendente/);
+        const setAccessState = async payload => {
+            await page.evaluate(async payload => {
+                await fetch('http://localhost:8000/__test/client-access-state', {
+                    method: 'POST', body: JSON.stringify(payload),
+                });
+            }, payload);
+            await page.evaluate(() => window.fecharEditorProposta());
+            await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);
+        };
+        await setAccessState({ access: { estado: 'conta_ativa', convite_disponivel: true, usuario_id: 44 } });
+        await page.waitForSelector('#btn-convidar-cliente:not(.hidden)');
+        assert.equal(await page.locator('#btn-convidar-cliente').textContent(), 'Notificar cliente');
+        const notificationsBefore = calls.filter(call => call.endsWith('/acesso-cliente/convidar')).length;
+        page.once('dialog', dialog => dialog.accept());
+        await page.locator('#btn-convidar-cliente').click();
+        assert.equal(calls.filter(call => call.endsWith('/acesso-cliente/convidar')).length, notificationsBefore + 1);
+        assert.match(await page.locator('#proposta-client-access-status').textContent(), /Conta ativa/);
+
+        for (const estado of ['conta_desativada', 'conflito']) {
+            await setAccessState({ access: { estado, convite_disponivel: true } });
+            assert.equal(await page.locator('#btn-convidar-cliente').isVisible(), false);
+            assert.equal(await page.locator('#btn-reenviar-convite').isVisible(), false);
+            assert.equal(await page.locator('#btn-revogar-convite').isVisible(), false);
+        }
+        await setAccessState({
+            access: { estado: 'sem_acesso', convite_disponivel: false, usuario_id: null },
+            proposal: { status: 'enviada' },
+        });
+        assert.equal(await page.locator('#btn-convidar-cliente').isVisible(), false);
+        assert.match(await page.locator('#proposta-client-access-status').textContent(), /depende da ativação/);
+        await setAccessState({ access: { estado: 'sem_acesso', convite_disponivel: true } });
+        await page.waitForSelector('#btn-convidar-cliente:not(.hidden)');
+        assert.equal(await page.locator('#btn-convidar-cliente').textContent(), 'Conceder acesso ao portal');
         await page.waitForFunction(async () => (await import('/js/admin/orcamentos/orcamentos_state.js')).orcamentosState.lista[0]?.status === 'aprovado');
         await page.waitForFunction(async () => (await import('/js/admin/producoes/producoes_state.js')).producoesState.lista.length === 1);
         await page.evaluate(() => window.fecharEditorProposta());

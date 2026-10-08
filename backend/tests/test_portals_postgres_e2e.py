@@ -573,6 +573,270 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             self.assertEqual(access.usuario_id, user.id)
             self.assertIsNotNone(access.token_consumed_at)
 
+    def _create_commercial_lock_case(self, suffix, *, active_account=False):
+        from core.security import get_password_hash
+        from models import ClienteModel, OrcamentoModel, PropostaModel, UsuarioModel
+
+        with self.SessionLocal.begin() as db:
+            client = ClienteModel(
+                nome=f"Lock Cliente {suffix}",
+                email=f"lock-{suffix}@example.com",
+            )
+            db.add(client)
+            db.flush()
+            budget = OrcamentoModel(
+                nome_cliente=client.nome,
+                email=client.email,
+                servico="Mixagem",
+                valor_total=200.0,
+                cliente_id=client.id,
+                status="proposta_enviada",
+            )
+            db.add(budget)
+            db.flush()
+            proposal = PropostaModel(
+                orcamento_id=budget.id,
+                numero=f"LOCK-{suffix}",
+                status="enviada",
+                cliente_snapshot={
+                    "cliente": {
+                        "nome": client.nome,
+                        "email": client.email,
+                        "whatsapp": None,
+                    },
+                    "orcamento": {
+                        "id": budget.id,
+                        "servico": budget.servico,
+                        "detalhes": None,
+                        "valor_total": "200.00",
+                        "link_guia": None,
+                    },
+                },
+                objeto=f"Proposta concorrente {suffix}",
+                descricao="Fixture sintética para validar a ordem dos locks.",
+                itens_json=[{
+                    "descricao": "Mixagem",
+                    "quantidade": "1",
+                    "valor_unitario": "200.00",
+                    "desconto": "0.00",
+                }],
+                pagamentos_json=[],
+                politica_pagamento="entrada_50_50",
+                condicoes="Entrada de 50% para início.",
+                totais_json={
+                    "subtotal": "200.00",
+                    "desconto": "0.00",
+                    "total": "200.00",
+                },
+                enviada_em=datetime.now(timezone.utc),
+            )
+            db.add(proposal)
+            db.flush()
+            user_id = None
+            if active_account:
+                user = UsuarioModel(
+                    username=f"lock-client-{suffix}",
+                    password_hash=get_password_hash(self.ids["password"]),
+                    role="cliente",
+                    is_admin=False,
+                    ativo=True,
+                    cliente_id=client.id,
+                )
+                db.add(user)
+                db.flush()
+                user_id = user.id
+            return {
+                "proposal_id": proposal.id,
+                "proposal_version": proposal.versao,
+                "budget_id": budget.id,
+                "client_id": client.id,
+                "user_id": user_id,
+            }
+
+    def test_commercial_lock_order_postgresql17_concurrency_matrix(self):
+        from core.config import settings
+        from models import (
+            ClienteAcessoModel,
+            CobrancaModel,
+            PropostaModel,
+            UsuarioModel,
+        )
+        from services import client_access_service as access
+        from services import portal_cliente_proposta_service as portal_proposals
+        from services import proposta_comercial_service as commercial
+        from services import proposta_service
+        from services.email_service import EmailService
+
+        expected_conflicts = (
+            access.ClientAccessError,
+            proposta_service.PropostaNaoEncontrada,
+            proposta_service.PropostaInvalida,
+            proposta_service.PropostaConflito,
+        )
+
+        def race(*operations):
+            gate = Barrier(len(operations))
+
+            def run(operation):
+                with self.SessionLocal() as db:
+                    gate.wait(timeout=10)
+                    try:
+                        operation(db)
+                        return "ok"
+                    except expected_conflicts as error:
+                        return type(error).__name__
+
+            with ThreadPoolExecutor(max_workers=len(operations)) as pool:
+                futures = [pool.submit(run, operation) for operation in operations]
+                return [future.result(timeout=20) for future in futures]
+
+        def invite(case, source):
+            def operation(db):
+                access.invite(
+                    db,
+                    case["proposal_id"],
+                    db.get(UsuarioModel, self.ids["admin_id"]),
+                    f"request-{source}",
+                    source,
+                )
+
+            return operation
+
+        def admin_accept(case, request_id):
+            def operation(db):
+                commercial.aprovar(
+                    db,
+                    case["proposal_id"],
+                    db.get(UsuarioModel, self.ids["admin_id"]),
+                    request_id,
+                )
+
+            return operation
+
+        def client_accept(case, request_id):
+            def operation(db):
+                portal_proposals.accept(
+                    db,
+                    case["proposal_id"],
+                    case["client_id"],
+                    case["proposal_version"],
+                    db.get(UsuarioModel, case["user_id"]),
+                    request_id,
+                )
+
+            return operation
+
+        def client_refuse(case, request_id):
+            def operation(db):
+                portal_proposals.refuse(
+                    db,
+                    case["proposal_id"],
+                    case["client_id"],
+                    case["proposal_version"],
+                    db.get(UsuarioModel, case["user_id"]),
+                    request_id,
+                )
+
+            return operation
+
+        def resend(case, source):
+            def operation(db):
+                access.resend(
+                    db,
+                    case["proposal_id"],
+                    db.get(UsuarioModel, self.ids["admin_id"]),
+                    f"request-{source}",
+                    source,
+                )
+
+            return operation
+
+        def assert_case(case, *, users, accesses, charges_at_most):
+            with self.SessionLocal() as db:
+                proposal = db.get(PropostaModel, case["proposal_id"])
+                self.assertIn(proposal.status, {"enviada", "aceita", "recusada"})
+                self.assertEqual(
+                    db.query(UsuarioModel).filter_by(cliente_id=case["client_id"]).count(),
+                    users,
+                )
+                self.assertEqual(
+                    db.query(ClienteAcessoModel).filter_by(cliente_id=case["client_id"]).count(),
+                    accesses,
+                )
+                self.assertLessEqual(
+                    db.query(CobrancaModel).filter_by(proposta_id=case["proposal_id"]).count(),
+                    charges_at_most,
+                )
+
+        previous = settings.COMMERCIAL_PIPELINE_V2_ENABLED
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+        try:
+            with (
+                patch.object(
+                    EmailService,
+                    "enviar_convite_cliente",
+                    return_value={"id": "lock-invite"},
+                ),
+                patch.object(
+                    EmailService,
+                    "enviar_proposta_disponivel",
+                    return_value={"id": "lock-notice"},
+                ),
+            ):
+                invite_admin = self._create_commercial_lock_case("INVITE-ADMIN")
+                self.assertEqual(
+                    race(
+                        invite(invite_admin, "invite-admin"),
+                        admin_accept(invite_admin, "accept-admin"),
+                    ),
+                    ["ok", "ok"],
+                )
+                assert_case(invite_admin, users=0, accesses=1, charges_at_most=1)
+
+                invite_client = self._create_commercial_lock_case(
+                    "INVITE-CLIENT", active_account=True
+                )
+                self.assertEqual(
+                    race(
+                        invite(invite_client, "invite-client"),
+                        client_accept(invite_client, "accept-client"),
+                    ),
+                    ["ok", "ok"],
+                )
+                assert_case(invite_client, users=1, accesses=0, charges_at_most=1)
+
+                double_invite = self._create_commercial_lock_case("DOUBLE-INVITE")
+                double_results = race(
+                    invite(double_invite, "double-a"),
+                    invite(double_invite, "double-b"),
+                )
+                self.assertEqual(double_results.count("ok"), 1)
+                self.assertEqual(double_results.count("ClientAccessConflict"), 1)
+                assert_case(double_invite, users=0, accesses=1, charges_at_most=0)
+
+                invite_refuse = self._create_commercial_lock_case(
+                    "INVITE-REFUSE", active_account=True
+                )
+                refuse_results = race(
+                    invite(invite_refuse, "invite-refuse"),
+                    client_refuse(invite_refuse, "refuse-client"),
+                )
+                self.assertIn(refuse_results[0], {"ok", "ClientAccessInvalid"})
+                self.assertEqual(refuse_results[1], "ok")
+                assert_case(invite_refuse, users=1, accesses=0, charges_at_most=0)
+
+                resend_accept = self._create_commercial_lock_case("RESEND-ACCEPT")
+                with self.SessionLocal() as db:
+                    invite(resend_accept, "resend-seed")(db)
+                resend_results = race(
+                    resend(resend_accept, "resend-race"),
+                    admin_accept(resend_accept, "resend-accept"),
+                )
+                self.assertEqual(resend_results, ["ok", "ok"])
+                assert_case(resend_accept, users=0, accesses=1, charges_at_most=1)
+        finally:
+            settings.COMMERCIAL_PIPELINE_V2_ENABLED = previous
+
     def test_public_signup_postgresql17_concurrency_and_takeover_protection(self):
         from models import ClienteAcessoModel, ClienteModel, UsuarioModel
         from services.email_service import EmailService

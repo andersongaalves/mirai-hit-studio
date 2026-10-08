@@ -41,10 +41,15 @@ def _carregar(db, proposta_id):
     found = crud_proposta.buscar_por_id(db, proposta_id)
     if found is None:
         raise service.PropostaNaoEncontrada("Proposta nao encontrada.")
-    budget = crud_proposta.bloquear_orcamento(db, found.orcamento_id)
+    budget_id = found.orcamento_id
+    budget = crud_proposta.bloquear_orcamento(db, budget_id)
     proposta = crud_proposta.buscar_por_id(db, proposta_id, bloquear=True)
     if proposta is None or budget is None:
         raise service.PropostaNaoEncontrada("Proposta ou orcamento nao encontrado.")
+    if proposta.orcamento_id != budget.id:
+        raise service.PropostaConflito(
+            "A vinculacao comercial mudou durante a operacao. Tente novamente."
+        )
     return proposta, budget
 
 
