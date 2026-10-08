@@ -27,12 +27,16 @@ IDS = (935001, 935002)
 class CommercePolicyPostgreSQLTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from core.config import settings
+
         url = make_url(DATABASE_URL)
         if url.host not in {"127.0.0.1", "localhost"}:
             raise RuntimeError("disposable localhost PostgreSQL required")
         if "portals_e2e" not in (url.database or ""):
             raise RuntimeError("disposable portals_e2e database required")
         cls.engine = create_engine(DATABASE_URL)
+        cls.previous_pipeline_v2 = settings.COMMERCIAL_PIPELINE_V2_ENABLED
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
         with cls.engine.connect() as connection:
             major = int(
                 connection.execute(text("SHOW server_version_num")).scalar_one()
@@ -42,6 +46,9 @@ class CommercePolicyPostgreSQLTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        from core.config import settings
+
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = cls.previous_pipeline_v2
         cls.engine.dispose()
 
     def tearDown(self):

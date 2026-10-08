@@ -6,9 +6,14 @@ import test_bootstrap_database as isolated
 from test_financeiro import FINANCE_SETUP
 
 DOMAIN_SETUP = FINANCE_SETUP + r'''
+from dataclasses import replace
+from core import config
 from integrations.mercado_pago import ProviderPaymentResult
 from models.enums.financeiro import PagamentoStatus
 from services import mercado_pago_service as mp_service
+from services import producao_liberacao_service as release
+
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
 
 def accepted(db, budget_id, policy='entrada_50_50'):
     proposal = service.criar_por_orcamento(db, budget_id)
@@ -51,6 +56,33 @@ with Session(engine) as db:
     commercial.aprovar(db, proposal.id)
     assert db.scalar(select(func.count()).select_from(CobrancaModel)) == 1
     assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 0
+''')
+
+    def test_legacy_mode_keeps_acceptance_operational(self):
+        self.run_case(r'''
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = False
+with Session(engine) as db:
+    proposal, charge = accepted(db, 1)
+    production = crud_producao.buscar_por_orcamento(db, proposal.orcamento_id)
+    assert production is not None
+    finance.registrar_pagamento(
+        db, charge.id, tipo='entrada', valor='75.12', status='aprovado'
+    )
+    assert release.avaliar_liberacao_producao(db, charge.id).id == production.id
+
+    response = service.criar_por_orcamento(db, 2)
+    second = db.get(PropostaModel, response.id)
+    second.status = 'aceita'
+    second.aprovada_em = datetime.now(timezone.utc)
+    db.get(OrcamentoModel, 2).status = 'aprovado'
+    db.commit()
+    second_charge = finance.criar_para_proposta(db, second)
+    finance.registrar_pagamento(
+        db, second_charge.id, tipo='entrada', valor='75.12', status='aprovado'
+    )
+    assert release.avaliar_liberacao_producao(db, second_charge.id) is None
+    assert crud_producao.buscar_por_orcamento(db, 2) is None
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 ''')
 
     def test_integral_policy_requires_the_full_approved_total(self):
@@ -157,6 +189,58 @@ with Session(engine) as db:
     mp_service._persistir_resultado(db, payment.id, result)
     assert crud_producao.buscar_por_orcamento(db, proposal.orcamento_id) is not None
     mp_service._persistir_resultado(db, payment.id, result)
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
+''')
+
+    def test_provider_identity_mismatches_never_release_production(self):
+        self.run_case(r'''
+with Session(engine) as db:
+    proposal, charge = accepted(db, 1)
+    payment = mp_service.criar_tentativa(
+        db, charge.id, tipo='entrada', metodo='pix'
+    )
+    valid = provider_result(payment)
+    mismatches = [
+        replace(valid, currency='USD'),
+        replace(valid, external_reference='wrong-reference'),
+        replace(valid, amount=valid.amount + Decimal('0.01')),
+        replace(valid, status=PagamentoStatus.PENDENTE),
+    ]
+    for result in mismatches:
+        try:
+            mp_service._persistir_resultado(db, payment.id, result)
+        except finance.FinanceiroConflito:
+            pass
+        else:
+            raise AssertionError('provider identity mismatch accepted')
+        assert db.get(PagamentoModel, payment.id).status == 'pendente'
+        assert crud_producao.buscar_por_orcamento(db, proposal.orcamento_id) is None
+
+    payment.provider = 'other-provider'
+    db.commit()
+    try:
+        mp_service._persistir_resultado(db, payment.id, valid)
+    except finance.FinanceiroConflito:
+        pass
+    else:
+        raise AssertionError('provider mismatch accepted')
+    payment = db.get(PagamentoModel, payment.id)
+    payment.provider = mp_service.PROVIDER
+    payment.provider_order_id = 'anchored-order'
+    db.commit()
+    try:
+        mp_service._persistir_resultado(db, payment.id, valid)
+    except finance.FinanceiroConflito:
+        pass
+    else:
+        raise AssertionError('provider order mismatch accepted')
+    payment = db.get(PagamentoModel, payment.id)
+    payment.provider_order_id = None
+    db.commit()
+
+    mp_service._persistir_resultado(db, payment.id, valid)
+    mp_service._persistir_resultado(db, payment.id, valid)
+    assert db.get(PagamentoModel, payment.id).status == 'aprovado'
     assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 ''')
 

@@ -38,6 +38,8 @@ with Session(engine) as db:
     assert created.numero == 'MHS-000001' and created.versao == 1
     assert created.status == PropostaStatus.RASCUNHO
     assert created.politica_pagamento.value == 'entrada_50_50'
+    assert 'condi\u00e7\u00e3o de pagamento' in created.condicoes
+    assert 'pagamento de entrada' not in created.condicoes
     assert created.produtor_id == 1 and created.totais.total == Decimal('150.25')
     assert len(created.pagamentos) == 3 and not any(p.habilitado for p in created.pagamentos)
     assert service.criar_por_orcamento(db, 1).model_dump() == created.model_dump()

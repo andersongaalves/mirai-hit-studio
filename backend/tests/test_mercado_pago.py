@@ -47,7 +47,7 @@ class FakeSession:
 
 def order(amount='150.25', status='action_required', detail='waiting_transfer',
           method='pix', provider_id='ORD-1', pix=True,
-          external_reference='opaque', currency='BRL'):
+          external_reference=None, currency='BRL'):
     payment_method = {'id': method, 'type': 'bank_transfer' if method == 'pix' else 'credit_card'}
     if pix:
         payment_method.update({
@@ -55,9 +55,8 @@ def order(amount='150.25', status='action_required', detail='waiting_transfer',
             'qr_code': 'pix-secret-code',
             'qr_code_base64': 'pix-secret-base64',
         })
-    return {
+    result = {
         'id': provider_id,
-        'external_reference': external_reference,
         'currency': currency,
         'status': status,
         'status_detail': detail,
@@ -68,6 +67,9 @@ def order(amount='150.25', status='action_required', detail='waiting_transfer',
             'status_detail': detail, 'payment_method': payment_method,
         }]},
     }
+    if external_reference is not None:
+        result['external_reference'] = external_reference
+    return result
 
 def charge(db, budget_id=1):
     proposal = service.criar_por_orcamento(db, budget_id)

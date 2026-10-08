@@ -32,6 +32,7 @@ config.settings.PUBLIC_FRONTEND_URL = 'http://localhost:4173'
 config.settings.PUBLIC_API_URL = 'http://localhost:8000'
 config.settings.AI_ENABLED = False
 config.settings.AI_PROVIDER = 'disabled'
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = False
 bootstrap(engine)
 with Session(engine) as db:
     db.add(UsuarioModel(username='i2-operator', password_hash=get_password_hash('I2-test-password!'),
@@ -87,7 +88,7 @@ with ExitStack() as stack:
     checked(http.post(f'/propostas/{proposal_id}/aprovar', headers=headers))
     assert approved['status'] == 'aceita' and approved['aprovada_em']
     with Session(engine) as db:
-        assert db.query(ProducaoModel).filter_by(orcamento_id=budget['id']).count() == 0
+        assert db.query(ProducaoModel).filter_by(orcamento_id=budget['id']).count() == 1
         charge = db.query(CobrancaModel).filter_by(proposta_id=proposal_id).one()
         reference, charge_id = charge.referencia_externa, charge.id
     summary = checked(http.get(f'/checkout/{reference}'))

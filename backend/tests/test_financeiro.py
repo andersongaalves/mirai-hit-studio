@@ -14,8 +14,9 @@ from models import ClienteModel, CobrancaModel, PagamentoModel
 from models.enums.financeiro import CobrancaStatus
 from services import financial_service as finance
 from services import proposta_comercial_service as commercial
-from services import producao_liberacao_service as release
 from crud import crud_producao
+from core import config
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = False
 '''
 
 
@@ -121,15 +122,9 @@ with Session(engine) as db:
     charge = finance.buscar_por_proposta(db, model.id)
     assert approved.status == 'aceita'
     assert charge.valor_total == Decimal('150.25') and charge.cliente_id == client.id
-    assert crud_producao.buscar_por_orcamento(db, 1) is None
+    assert crud_producao.buscar_por_orcamento(db, 1) is not None
     commercial.aprovar(db, model.id)
     assert db.scalar(select(func.count()).select_from(CobrancaModel)) == 1
-    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 0
-    finance.registrar_pagamento(
-        db, charge.id, tipo='entrada', valor='75.12', status='aprovado'
-    )
-    release.avaliar_liberacao_producao(db, charge.id)
-    db.commit()
     assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 
     failing = sent_proposal(db, 2)

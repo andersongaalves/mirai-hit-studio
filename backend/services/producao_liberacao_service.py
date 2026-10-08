@@ -1,5 +1,6 @@
 """Authoritative, idempotent release of production after approved payment."""
 
+from core.config import settings
 from crud import crud_producao, crud_proposta
 from models.enums.financeiro import CobrancaStatus
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
@@ -8,6 +9,10 @@ from services import audit_service, financial_service, proposta_service
 from services.pdf_service import moeda
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
+
+
+def pipeline_v2_habilitada() -> bool:
+    return bool(getattr(settings, "COMMERCIAL_PIPELINE_V2_ENABLED", False))
 
 
 def dados_producao(proposta):
@@ -108,6 +113,8 @@ def avaliar_cobranca_bloqueada(
     existente = crud_producao.buscar_por_orcamento(db, proposta.orcamento_id)
     if existente is not None:
         return existente
+    if not pipeline_v2_habilitada():
+        return None
     if not condicao_inicio_satisfeita(proposta, cobranca):
         return None
 

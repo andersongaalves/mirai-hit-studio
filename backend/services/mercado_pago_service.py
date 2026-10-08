@@ -322,24 +322,34 @@ def _persistir_resultado(
     cobranca = financial_service.bloquear_cobranca(db, payment.cobranca_id)
     if cobranca is None:
         raise financial_service.FinanceiroInvalido("Cobranca nao encontrada.")
-    if financial_service.normalizar_valor(payment.valor) != result.amount:
+    unidentified_rejection = (
+        result.status == PagamentoStatus.RECUSADO and result.provider_id is None
+    )
+    incoming, reason = _validated_provider_result(
+        payment,
+        result,
+        allow_unidentified_rejection=unidentified_rejection,
+    )
+    if reason:
         db.rollback()
-        raise financial_service.FinanceiroConflito("Valor retornado pelo provider diverge da tentativa.")
-    if payment.provider_order_id and payment.provider_order_id != result.provider_id:
+        raise financial_service.FinanceiroConflito(
+            "Resultado do provider diverge da tentativa; requer conciliacao."
+        )
+    next_status, outcome = _safe_transition(payment.status, incoming.value)
+    if outcome == "conflict":
         db.rollback()
-        raise financial_service.FinanceiroConflito("Tentativa vinculada a outro pagamento provider.")
-    if result.provider_id is None and result.status != PagamentoStatus.RECUSADO:
-        db.rollback()
-        raise financial_service.FinanceiroConflito("Resultado provider sem identificador.")
+        raise financial_service.FinanceiroConflito(
+            "Transicao do provider diverge da tentativa; requer conciliacao."
+        )
     try:
         if result.provider_id:
             payment.provider_order_id = result.provider_id
-        payment.status = result.status.value
+        payment.status = next_status
         if result.method:
             payment.metodo = result.method
-        if result.status == PagamentoStatus.APROVADO:
+        if next_status == PagamentoStatus.APROVADO.value and not payment.aprovado_em:
             payment.aprovado_em = result.approved_at or datetime.now(timezone.utc)
-        elif result.status == PagamentoStatus.REEMBOLSADO:
+        elif next_status == PagamentoStatus.REEMBOLSADO.value and not payment.reembolsado_em:
             payment.reembolsado_em = datetime.now(timezone.utc)
         financial_service.sincronizar_status(cobranca)
         producao_liberacao_service.avaliar_cobranca_bloqueada(
@@ -375,11 +385,11 @@ def _apply_reconciliation(
     if cobranca is None:
         db.rollback()
         raise financial_service.FinanceiroInvalido("Cobranca nao encontrada.")
-    reason = _identity_conflict(payment, result, expected_order_id)
-    if reason:
-        return _raise_conflict(db, payment, reason)
-
-    incoming, reason = _provider_state(result)
+    incoming, reason = _validated_provider_result(
+        payment,
+        result,
+        expected_order_id=expected_order_id,
+    )
     if reason:
         return _raise_conflict(db, payment, reason)
 
@@ -426,11 +436,15 @@ def _apply_reconciliation(
 def _identity_conflict(
     payment: PagamentoModel,
     result: ProviderPaymentResult,
-    expected_order_id: str,
+    expected_order_id: str | None = None,
+    *,
+    allow_unidentified_rejection: bool = False,
 ) -> str | None:
     if payment.provider != PROVIDER:
         return "provider_mismatch"
-    if result.provider_id != expected_order_id:
+    if expected_order_id is not None and result.provider_id != expected_order_id:
+        return "provider_order_id_mismatch"
+    if result.provider_id is None and not allow_unidentified_rejection:
         return "provider_order_id_mismatch"
     if payment.provider_order_id and payment.provider_order_id != result.provider_id:
         return "provider_order_id_mismatch"
@@ -438,9 +452,34 @@ def _identity_conflict(
         return "external_reference_mismatch"
     if financial_service.normalizar_valor(payment.valor) != result.amount:
         return "amount_mismatch"
+    if result.currency is None and allow_unidentified_rejection:
+        return None
     if result.currency != payment.cobranca.moeda or result.currency != "BRL":
         return "currency_mismatch"
     return None
+
+
+def _validated_provider_result(
+    payment: PagamentoModel,
+    result: ProviderPaymentResult,
+    *,
+    expected_order_id: str | None = None,
+    allow_unidentified_rejection: bool = False,
+) -> tuple[PagamentoStatus, str | None]:
+    reason = _identity_conflict(
+        payment,
+        result,
+        expected_order_id,
+        allow_unidentified_rejection=allow_unidentified_rejection,
+    )
+    if reason:
+        return PagamentoStatus.PENDENTE, reason
+    incoming, reason = _provider_state(result)
+    if reason:
+        return incoming, reason
+    if incoming != result.status:
+        return incoming, "status_mismatch"
+    return incoming, None
 
 
 def _provider_state(

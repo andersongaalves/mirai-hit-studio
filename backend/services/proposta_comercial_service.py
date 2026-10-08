@@ -125,8 +125,13 @@ def enviar(db, proposta_id, actor=None, request_id=None):
 def aprovar(db, proposta_id, actor=None, request_id=None):
     try:
         model, budget = _carregar(db, proposta_id)
+        pipeline_v2 = producao_liberacao_service.pipeline_v2_habilitada()
         if model.status == Status.ACEITA.value:
             if not crud_producao.buscar_por_orcamento(db, model.orcamento_id):
+                if not pipeline_v2:
+                    raise service.PropostaConflito(
+                        "Proposta aceita sem producao; requer conciliacao."
+                    )
                 try:
                     financial_service.criar_para_proposta(
                         db,
@@ -146,6 +151,11 @@ def aprovar(db, proposta_id, actor=None, request_id=None):
             raise service.PropostaConflito("Status do orcamento incompativel com a aprovacao.")
         if crud_producao.buscar_por_orcamento(db, model.orcamento_id):
             raise service.PropostaConflito("Ja existe producao para este orcamento; requer conciliacao.")
+        if not pipeline_v2:
+            crud_producao.criar_sem_commit(
+                db,
+                _dados_producao(service._resposta(model)),
+            )
         try:
             financial_service.criar_para_proposta(
                 db,

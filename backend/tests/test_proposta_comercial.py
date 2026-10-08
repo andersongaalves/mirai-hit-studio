@@ -8,8 +8,10 @@ from services import proposta_comercial_service as commercial
 from services.email_service import EmailService
 from crud import crud_producao
 from models import AuditLogModel, CobrancaModel, UsuarioModel
+from core import config
 import resend
 from datetime import datetime
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = False
 def normalized(value):
     # SQLite drops timezone offsets; test instants are all UTC.
     return {k: v.replace(tzinfo=None) if isinstance(v, datetime) else v for k,v in value.model_dump().items()}
@@ -51,9 +53,12 @@ with Session(engine) as db:
     assert approved.versao == p.versao and approved.pdf_path == sent.pdf_path
     assert db.get(OrcamentoModel, 1).status == 'aprovado'
     production = crud_producao.buscar_por_orcamento(db, 1)
-    assert production is None
+    assert production.cliente == 'Cliente Teste' and production.produtor_id == 1
+    assert production.titulo == 'Masterizacao revisada'
+    assert 'R$ 1.250,00' in production.observacoes and 'NAO USAR' not in production.observacoes
+    assert production.status == 'aguardando_inicio'
     assert normalized(commercial.aprovar(db, p.id, actor, 'proposal-request-002')) == normalized(approved)
-    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 0
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
     assert db.get(OrcamentoModel, 1).proposta_enviada is False
     events = db.query(AuditLogModel).order_by(AuditLogModel.id).all()
     assert [event.action for event in events] == ['proposal.sent', 'proposal.approved']
@@ -144,7 +149,7 @@ with Session(engine) as db:
     db.commit()
     with patch.object(resend.Emails, 'send', return_value={'id':'synthetic-message'}):
         sent = commercial.enviar(db, p.id)
-    with patch.object(commercial.financial_service, 'criar_para_proposta', side_effect=SQLAlchemyError('synthetic failure')):
+    with patch.object(crud_producao, 'criar_sem_commit', side_effect=SQLAlchemyError('synthetic failure')):
         try:
             commercial.aprovar(db, p.id)
         except SQLAlchemyError:
@@ -160,7 +165,7 @@ with Session(engine) as db:
     assert normalized(service.buscar(db, p.id)) == normalized(sent)
     assert crud_producao.buscar_por_orcamento(db, 1) is None
     commercial.aprovar(db, p.id)
-    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 0
+    assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
 ''')
 
     def test_database_guard_and_legacy_status(self):
@@ -187,13 +192,6 @@ with Session(engine) as db:
     with patch.object(resend.Emails, 'send', return_value={'id':'synthetic-message'}):
         commercial.enviar(db, p.id)
     commercial.aprovar(db, p.id)
-    from services import producao_liberacao_service as release
-    charge = commercial.financial_service.buscar_por_proposta(db, p.id)
-    commercial.financial_service.registrar_pagamento(
-        db, charge.id, tipo='entrada', valor='75.12', status='aprovado'
-    )
-    release.avaliar_liberacao_producao(db, charge.id)
-    db.commit()
     try:
         crud_producao.criar_sem_commit(db, commercial._dados_producao(service.buscar(db, p.id)))
     except IntegrityError:
@@ -261,7 +259,7 @@ async def check():
     status, again = await request('POST', f'/propostas/{p.id}/aprovar')
     assert status == 200 and again['aprovada_em'][:19] == accepted['aprovada_em'][:19]
     with Session(engine) as db:
-        assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 0
+        assert db.scalar(select(func.count()).select_from(ProducaoModel)) == 1
         assert db.scalar(select(func.count()).select_from(CobrancaModel)) == 1
 network_guard.stop()  # Windows creates its private event-loop socket pair here.
 asyncio.run(check())

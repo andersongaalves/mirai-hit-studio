@@ -23,6 +23,7 @@ from services import mercado_pago_webhook_service as webhook_service
 from database import get_db
 
 config.settings.MERCADO_PAGO_WEBHOOK_SECRET = 'webhook-test-secret'
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
 
 class ResultClient:
     def __init__(self, *results):

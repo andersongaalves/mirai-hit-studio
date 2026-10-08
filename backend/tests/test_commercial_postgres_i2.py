@@ -64,6 +64,7 @@ class CommercialPostgresI2Tests(unittest.TestCase):
         settings.MERCADO_PAGO_WEBHOOK_SECRET = "i2-synthetic-webhook-secret"
         settings.MERCADO_PAGO_PUBLIC_KEY = "TEST-I2-NOT-REAL"
         settings.PUBLIC_FRONTEND_URL = "http://127.0.0.1:5500"
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = False
         with engine.connect() as connection:
             if connection.execute(text("select version_num from alembic_version")).scalar_one() != "c5f2a7d9e184":
                 raise RuntimeError("I.2 database is not at expected head")
@@ -264,7 +265,7 @@ class CommercialPostgresI2Tests(unittest.TestCase):
                 select(func.count())
                 .select_from(ProducaoModel)
                 .where(ProducaoModel.orcamento_id == budget_id)
-            ) == 0
+            ) == 1
         link = self.http.get(f"/checkout/proposta/{proposal_id}/link", headers=headers).json()["checkout_url"]
         reference = link.rstrip("/").rsplit("/", 1)[-1]
         try:

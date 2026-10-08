@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     MERCADO_PAGO_WEBHOOK_SECRET: str | None = None
     MERCADO_PAGO_TIMEOUT_SECONDS: float = 10.0
     MERCADO_PAGO_3DS_VALIDATION: Literal["never", "on_fraud_risk"] = "on_fraud_risk"
+    COMMERCIAL_PIPELINE_V2_ENABLED: bool = False
 
     # Storage core. Existing product flows remain on their legacy factories until
     # the corresponding migration phase explicitly wires them to the registry.

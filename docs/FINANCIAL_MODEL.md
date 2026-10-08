@@ -44,6 +44,10 @@ O aceite de uma proposta cria ou reutiliza a cobranca na mesma transacao, mas na
 
 Depois que o provider ou a reconciliacao persiste o pagamento e sincroniza a cobranca, o backend avalia a regra e cria a producao na mesma transacao. A constraint unica por `orcamento_id` e o guard final. Webhooks repetidos, saldo posterior e reconciliacoes concorrentes encontram a mesma producao e nao criam outra.
 
+O rollout e controlado por `COMMERCIAL_PIPELINE_V2_ENABLED`, desligada por padrao. Desligada, o aceite administrativo preserva a criacao imediata da Producao e pagamentos posteriores nao acionam o novo dominio. Ligada, o aceite cria apenas a Cobranca e a liberacao financeira passa a criar a Producao.
+
+Requisito obrigatorio da Fase 3.5B.3: propostas com politica `integral` nao podem apresentar `entrada` como opcao normal de checkout. O backend continuara sendo a autoridade da modalidade; esta regra nao deve depender do frontend.
+
 A cobranca copia o total calculado dos itens da proposta naquele momento; alteracoes posteriores em servico ou orcamento nao mudam o historico.
 
 Propostas historicas com producao permanecem validas e nao sao reavaliadas destrutivamente. Um reembolso posterior recalcula o financeiro, mas nunca apaga ou reverte automaticamente a producao; o caso segue para intervencao operacional quando necessario.
