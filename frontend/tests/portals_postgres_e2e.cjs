@@ -93,7 +93,16 @@ function expectStatus(result, status, label) {
         assert.equal(catalog.status, 200);
         assert.ok(Array.isArray(catalog.body) && catalog.body.length > 0);
 
-        await login(page, `/cliente/propostas/${clientProposalId}`, 'e2e-client-a');
+        await login(page, '/cliente', 'e2e-client-a');
+        const proposalBeforeNavigation = expectStatus(
+            await api(page, 'GET', `/portal/cliente/propostas/${clientProposalId}`),
+            200,
+            'client proposal before deep link',
+        );
+        assert.equal(proposalBeforeNavigation.status, 'enviada');
+        await page.goto(`${FRONTEND}/cliente/propostas/${clientProposalId}`);
+        await page.locator('#admin-area').waitFor({ state: 'visible' });
+        await page.locator('#client-loading').waitFor({ state: 'hidden' });
         await page.locator('#proposal-detail-title').waitFor({ state: 'visible' });
         assert.match(await page.locator('#client-proposal-detail-content').textContent(), /Produção musical E2E/);
         assert.match(await page.locator('#client-proposal-detail-content').textContent(), /R\$\s*1\.200,00/);
