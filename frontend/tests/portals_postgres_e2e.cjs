@@ -38,6 +38,7 @@ async function login(page, path, username) {
 }
 
 async function resetSession(page) {
+    await page.goto(`${FRONTEND}/`);
     await page.evaluate(() => localStorage.clear());
 }
 
