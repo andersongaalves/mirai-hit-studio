@@ -1,4 +1,5 @@
 import { AUTH_CONTEXTS } from "./admin/auth.js";
+import { safeClientNext } from "./auth_next.js";
 import { API_URL } from "./config.js";
 import { initPublicNavigation } from "./public_navigation.js";
 
@@ -7,6 +8,7 @@ initPublicNavigation();
 const form = document.getElementById("access-login-form");
 const errorElement = document.getElementById("login-error");
 const submitButton = form?.querySelector("button[type='submit']");
+const requestedNext = safeClientNext(new URLSearchParams(window.location.search).get("next"));
 
 const destinations = Object.freeze({
     admin: "/admin",
@@ -53,7 +55,10 @@ form?.addEventListener("submit", async (event) => {
 
         localStorage.setItem(context.storageKey, data.access_token);
         form.elements.password.value = "";
-        window.location.assign(destinations[context.name]);
+        const destination = context.name === "cliente" && requestedNext
+            ? requestedNext
+            : destinations[context.name];
+        window.location.assign(destination);
     } catch (error) {
         showError(error instanceof Error ? error.message : "Não foi possível entrar.");
     } finally {

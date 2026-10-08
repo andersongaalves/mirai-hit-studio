@@ -255,6 +255,123 @@ export function renderDetail(production, files, finance, handlers) {
     root.append(detail);
 }
 
+const PROPOSAL_STATUS = Object.freeze({
+    enviada: { label: "Aguardando resposta", variant: "review" },
+    aceita: { label: "Aceita", variant: "success" },
+    recusada: { label: "Recusada", variant: "neutral" },
+});
+
+function proposalBadge(proposal) {
+    const info = PROPOSAL_STATUS[proposal.status] || { label: "Indisponível", variant: "neutral" };
+    return element("span", `badge badge-${info.variant}`, info.label);
+}
+
+function proposalPolicy(value) {
+    return value === "integral" ? "Pagamento integral" : "Entrada de 50% + saldo";
+}
+
+function proposalCard(proposal, onOpen) {
+    const card = element("article", "producer-card client-proposal-card");
+    const meta = element("div", "producer-card__meta");
+    meta.append(
+        proposalBadge(proposal),
+        element("span", "", proposal.numero),
+        element("span", "", proposalPolicy(proposal.politica_pagamento)),
+    );
+    const footer = element("div", "producer-card__footer");
+    footer.append(
+        element("strong", "client-proposal-total", formatMoney(proposal.totais.total)),
+    );
+    const button = element("button", "btn-outline", "Abrir proposta");
+    button.type = "button";
+    button.addEventListener("click", () => onOpen(proposal.id));
+    footer.append(button);
+    card.append(element("h3", "", proposal.objeto || proposal.servico), meta, footer);
+    return card;
+}
+
+export function renderProposalSummary(proposals, onOpen) {
+    const section = document.getElementById("client-proposal-summary");
+    const list = document.getElementById("client-proposal-actions");
+    list.replaceChildren();
+    const pending = proposals.filter(item => item.status === "enviada");
+    section.classList.toggle("hidden", !pending.length);
+    pending.slice(0, 3).forEach(item => list.append(proposalCard(item, onOpen)));
+}
+
+export function renderProposalList(proposals, onOpen) {
+    const list = document.getElementById("client-proposal-list");
+    list.replaceChildren();
+    if (!proposals.length) {
+        list.append(empty("Você ainda não possui propostas disponíveis."));
+        return;
+    }
+    proposals.forEach(item => list.append(proposalCard(item, onOpen)));
+}
+
+export function renderProposalDetail(proposal, handlers) {
+    const root = document.getElementById("client-proposal-detail-content");
+    root.replaceChildren();
+    const detail = element("article", "producer-detail client-proposal-detail");
+    const title = element("h1", "", proposal.objeto || proposal.servico);
+    title.id = "proposal-detail-title";
+    const meta = element("div", "producer-detail__meta");
+    meta.append(
+        proposalBadge(proposal),
+        element("span", "", proposal.numero),
+        element("span", "", `Versão ${proposal.versao}`),
+        element("span", "", proposalPolicy(proposal.politica_pagamento)),
+    );
+
+    const description = element("section", "producer-detail__panel client-proposal-copy");
+    description.append(
+        element("h2", "", "Proposta"),
+        element("p", "", proposal.descricao || "Sem descrição adicional."),
+    );
+    const conditions = element("section", "producer-detail__panel client-proposal-copy");
+    conditions.append(
+        element("h2", "", "Condições"),
+        element("p", "", proposal.condicoes || "Consulte a equipe Mirai."),
+    );
+
+    const items = element("section", "producer-files client-proposal-items");
+    items.append(element("h2", "", "Itens e valores"));
+    const table = element("div", "client-proposal-table");
+    proposal.itens.forEach(item => {
+        const row = element("div", "client-proposal-row");
+        const lineTotal = Number(item.quantidade) * Number(item.valor_unitario) - Number(item.desconto || 0);
+        row.append(
+            element("span", "", item.descricao),
+            element("span", "", `${item.quantidade} × ${formatMoney(item.valor_unitario)}`),
+            element("strong", "", formatMoney(lineTotal)),
+        );
+        table.append(row);
+    });
+    const total = element("div", "client-proposal-total-row");
+    total.append(element("span", "", "Total"), element("strong", "", formatMoney(proposal.totais.total)));
+    table.append(total);
+    items.append(table);
+
+    const actions = element("div", "client-proposal-actions");
+    if (proposal.documento_disponivel) {
+        const download = element("button", "btn-outline", "Baixar PDF");
+        download.type = "button";
+        download.addEventListener("click", () => handlers.onDownload(proposal, download));
+        actions.append(download);
+    }
+    if (proposal.status === "enviada") {
+        const refuse = element("button", "btn-outline", "Recusar");
+        refuse.type = "button";
+        refuse.addEventListener("click", () => handlers.onRefuse(proposal, refuse));
+        const accept = element("button", "btn-cta", "Aceitar proposta");
+        accept.type = "button";
+        accept.addEventListener("click", () => handlers.onAccept(proposal, accept));
+        actions.append(refuse, accept);
+    }
+    detail.append(title, meta, description, conditions, items, actions);
+    root.append(detail);
+}
+
 export function setAlert(message = "", error = false) {
     const alert = document.getElementById("client-alert");
     alert.textContent = message;

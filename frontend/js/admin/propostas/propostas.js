@@ -38,7 +38,7 @@ const acessoLabels = Object.freeze({
 function renderizarAcessoCliente() {
     const section = $("proposta-client-access");
     if (!section) return;
-    const visible = propostaState.proposta?.status === "aceita";
+    const visible = ["enviada", "aceita"].includes(propostaState.proposta?.status);
     section.classList.toggle("hidden", !visible);
     if (!visible) return;
     const status = $("proposta-client-access-status");
@@ -60,6 +60,10 @@ function renderizarAcessoCliente() {
         ? ` Expira em: ${new Date(acessoCliente.expires_at).toLocaleString("pt-BR")}.`
         : "";
     if (status) status.textContent = `${acessoLabels[acessoCliente.estado] || "Estado indisponível"}.${sent}${expires}`;
+    if (acessoCliente.convite_disponivel === false) {
+        if (status) status.textContent = "O acesso antecipado depende da ativação da nova pipeline comercial.";
+        return;
+    }
     if (acessoCliente.estado === "sem_acesso") invite?.classList.remove("hidden");
     if (["convite_pendente", "convite_expirado", "convite_revogado"].includes(acessoCliente.estado)) {
         resend?.classList.remove("hidden");
@@ -74,7 +78,7 @@ async function carregarAcessoCliente() {
     const proposal = propostaState.proposta;
     acessoCliente = null;
     renderizarAcessoCliente();
-    if (proposal?.status !== "aceita") return;
+    if (!["enviada", "aceita"].includes(proposal?.status)) return;
     const atual = contexto;
     try {
         const data = await PropostaAPI.buscarAcessoCliente(proposal.id);
@@ -87,7 +91,7 @@ async function carregarAcessoCliente() {
 }
 
 async function executarAcaoAcesso(action) {
-    if (acessoProcessando || propostaState.proposta?.status !== "aceita") return;
+    if (acessoProcessando || !["enviada", "aceita"].includes(propostaState.proposta?.status)) return;
     const messages = {
         convidar: "Enviar um convite de acesso para o e-mail do cliente comercial?",
         reenviar: "Invalidar o convite anterior e enviar um novo?",

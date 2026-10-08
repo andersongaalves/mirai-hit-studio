@@ -1,17 +1,48 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
-import { renderDashboard, renderDetail, renderList, setAlert, showView } from "./ui.js";
+import {
+    renderDashboard,
+    renderDetail,
+    renderList,
+    renderProposalDetail,
+    renderProposalList,
+    renderProposalSummary,
+    setAlert,
+    showView,
+} from "./ui.js";
 
 let productions = [];
+let proposals = [];
+let proposalsEnabled = false;
 let finances = new Map();
 const objectUrls = new Set();
 const filters = { status: "todos", order: "recente" };
 
 function route() {
+    const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
+    if (proposal) return { view: "proposal-detail", id: Number(proposal[1]) };
+    if (/^\/cliente\/propostas\/?$/.test(location.pathname)) return { view: "proposals" };
     const match = location.pathname.match(/^\/cliente\/projetos\/(\d+)\/?$/);
     if (match) return { view: "detail", id: Number(match[1]) };
     if (/^\/cliente\/projetos\/?$/.test(location.pathname)) return { view: "projects" };
     return { view: "dashboard" };
+}
+
+async function openProposalDetail(id) {
+    setAlert();
+    try {
+        const proposal = await api.obterProposta(id);
+        renderProposalDetail(proposal, {
+            onAccept: acceptProposal,
+            onRefuse: refuseProposal,
+            onDownload: downloadProposal,
+        });
+        showView("proposal-detail");
+    } catch (error) {
+        setAlert(error.message, true);
+        history.replaceState({}, "", "/cliente/propostas");
+        renderRoute();
+    }
 }
 
 function releaseObjectUrls() {
@@ -50,6 +81,15 @@ async function openDetail(id) {
 
 function renderRoute() {
     const current = route();
+    if (current.view === "proposal-detail") {
+        openProposalDetail(current.id);
+        return;
+    }
+    if (current.view === "proposals") {
+        renderProposalList(proposals, id => navigate(`/cliente/propostas/${id}`));
+        showView("proposals");
+        return;
+    }
     if (current.view === "detail") {
         openDetail(current.id);
         return;
@@ -60,6 +100,7 @@ function renderRoute() {
         return;
     }
     renderDashboard(productions, finances);
+    renderProposalSummary(proposals, id => navigate(`/cliente/propostas/${id}`));
     showView("dashboard");
 }
 
@@ -79,6 +120,51 @@ async function downloadFile(id, button) {
     } catch (error) {
         setAlert(error.message, true);
     } finally {
+        button.disabled = false;
+    }
+}
+
+async function downloadProposal(proposal, button) {
+    button.disabled = true;
+    try {
+        saveBlob(await api.baixarProposta(proposal.id));
+    } catch (error) {
+        setAlert(error.message, true);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function refreshProposals(selectedId = null) {
+    proposals = await api.listarPropostas();
+    if (selectedId) await openProposalDetail(selectedId);
+    else renderRoute();
+}
+
+async function acceptProposal(proposal, button) {
+    if (!confirm(`Aceitar a proposta ${proposal.numero}, versão ${proposal.versao}?`)) return;
+    button.disabled = true;
+    setAlert();
+    try {
+        await api.aceitarProposta(proposal.id, proposal.versao);
+        await refreshProposals(proposal.id);
+        setAlert("Proposta aceita. O projeto será liberado após a confirmação do pagamento.");
+    } catch (error) {
+        setAlert(error.message, true);
+        button.disabled = false;
+    }
+}
+
+async function refuseProposal(proposal, button) {
+    if (!confirm(`Recusar a proposta ${proposal.numero}, versão ${proposal.versao}?`)) return;
+    button.disabled = true;
+    setAlert();
+    try {
+        await api.recusarProposta(proposal.id, proposal.versao);
+        await refreshProposals(proposal.id);
+        setAlert("Proposta recusada.");
+    } catch (error) {
+        setAlert(error.message, true);
         button.disabled = false;
     }
 }
@@ -141,8 +227,21 @@ async function enterPortal() {
     document.getElementById("client-loading").classList.remove("hidden");
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));
     try {
-        productions = await api.listarProducoes();
+        const [loadedProductions, loadedProposals] = await Promise.all([
+            api.listarProducoes(),
+            api.listarPropostas().then(items => ({ enabled: true, items })).catch(error => {
+                if (error.status === 404) return { enabled: false, items: [] };
+                throw error;
+            }),
+        ]);
+        productions = loadedProductions;
+        proposals = loadedProposals.items;
+        proposalsEnabled = loadedProposals.enabled;
+        document.getElementById("client-proposals-link").classList.toggle("hidden", !proposalsEnabled);
         finances = await loadFinances(productions);
+        if (!proposalsEnabled && route().view.startsWith("proposal")) {
+            history.replaceState({}, "", "/cliente");
+        }
         renderRoute();
     } catch (error) {
         setAlert(error.message, true);
@@ -157,6 +256,7 @@ document.getElementById("client-login-form").addEventListener("submit", async ev
 });
 document.getElementById("client-logout").addEventListener("click", logout);
 document.getElementById("client-detail-back").addEventListener("click", () => navigate("/cliente/projetos"));
+document.getElementById("client-proposal-back").addEventListener("click", () => navigate("/cliente/propostas"));
 document.getElementById("client-status-filter").addEventListener("change", event => {
     filters.status = event.target.value;
     renderRoute();
@@ -177,6 +277,8 @@ window.addEventListener("popstate", () => {
 document.addEventListener("admin:logout", () => {
     releaseObjectUrls();
     productions = [];
+    proposals = [];
+    proposalsEnabled = false;
     finances = new Map();
     setAlert();
 });

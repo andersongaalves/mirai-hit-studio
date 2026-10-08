@@ -1,4 +1,5 @@
 import { API_URL } from "./config.js";
+import { accessPath, safeClientNext } from "./auth_next.js";
 import { initPublicNavigation } from "./public_navigation.js";
 
 initPublicNavigation();
@@ -8,6 +9,8 @@ const lead = document.getElementById("activation-lead");
 const message = document.getElementById("activation-message");
 const login = document.getElementById("activation-login");
 const token = new URLSearchParams(window.location.search).get("token") || "";
+const next = safeClientNext(new URLSearchParams(window.location.search).get("next"));
+login.href = accessPath(next);
 
 function showMessage(text, error = true) {
     message.textContent = text;
@@ -75,7 +78,8 @@ form?.addEventListener("submit", async event => {
         lead.textContent = "Conta criada com sucesso.";
         showMessage("Entre pelo acesso unificado para continuar.", false);
         login.classList.remove("hidden");
-        window.history.replaceState({}, document.title, "/ativar");
+        const cleanPath = next ? `/ativar?next=${encodeURIComponent(next)}` : "/ativar";
+        window.history.replaceState({}, document.title, cleanPath);
     } catch (error) {
         showMessage(error.message);
     } finally {

@@ -41,6 +41,7 @@
 
                     <nav class="producer-nav" aria-label="Portal do Cliente">
                         <a href="/cliente" data-route="dashboard">Visão geral</a>
+                        <a id="client-proposals-link" class="hidden" href="/cliente/propostas" data-route="proposals">Propostas</a>
                         <a href="/cliente/projetos" data-route="projects">Meus projetos</a>
                     </nav>
 
@@ -68,6 +69,16 @@
                             <a class="btn-cta" href="/cliente/projetos" data-route="projects">Ver projetos</a>
                         </div>
                         <div id="client-metrics" class="producer-metrics" aria-label="Resumo dos projetos"></div>
+                        <section id="client-proposal-summary" class="producer-section hidden" aria-labelledby="proposal-summary-title">
+                            <div class="producer-section__heading">
+                                <div>
+                                    <p class="producer-eyebrow">Propostas</p>
+                                    <h2 id="proposal-summary-title">Aguardando sua resposta</h2>
+                                </div>
+                                <a href="/cliente/propostas" data-route="proposals">Ver propostas</a>
+                            </div>
+                            <div id="client-proposal-actions" class="producer-list"></div>
+                        </section>
                         <section class="producer-section" aria-labelledby="actions-title">
                             <div class="producer-section__heading">
                                 <div>
@@ -103,6 +114,22 @@
                             </select>
                         </div>
                         <div id="client-list" class="producer-list"></div>
+                    </section>
+
+                    <section id="client-proposals" class="producer-view hidden" aria-labelledby="proposals-title">
+                        <div class="producer-page-heading">
+                            <div>
+                                <p class="producer-eyebrow">Comercial</p>
+                                <h1 id="proposals-title">Minhas propostas</h1>
+                                <p class="producer-lead">Consulte valores, condições e responda com segurança.</p>
+                            </div>
+                        </div>
+                        <div id="client-proposal-list" class="producer-list"></div>
+                    </section>
+
+                    <section id="client-proposal-detail" class="producer-view hidden" aria-labelledby="proposal-detail-title">
+                        <button id="client-proposal-back" class="producer-back" type="button">← Voltar para propostas</button>
+                        <div id="client-proposal-detail-content"></div>
                     </section>
 
                     <section id="client-detail" class="producer-view hidden" aria-labelledby="detail-title">

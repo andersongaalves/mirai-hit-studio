@@ -3,9 +3,61 @@ import { authFetch } from "../admin/auth.js";
 async function responseData(response, fallback) {
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-        throw new Error(typeof data?.detail === "string" ? data.detail : fallback);
+        const error = new Error(typeof data?.detail === "string" ? data.detail : fallback);
+        error.status = response.status;
+        throw error;
     }
     return data;
+}
+
+export async function listarPropostas() {
+    return responseData(
+        await authFetch("/portal/cliente/propostas"),
+        "Não foi possível carregar suas propostas.",
+    );
+}
+
+export async function obterProposta(id) {
+    return responseData(
+        await authFetch(`/portal/cliente/propostas/${id}`),
+        "Não foi possível carregar esta proposta.",
+    );
+}
+
+export async function aceitarProposta(id, versao) {
+    return responseData(
+        await authFetch(`/portal/cliente/propostas/${id}/aceitar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ versao }),
+        }),
+        "Não foi possível aceitar esta proposta.",
+    );
+}
+
+export async function recusarProposta(id, versao) {
+    return responseData(
+        await authFetch(`/portal/cliente/propostas/${id}/recusar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ versao }),
+        }),
+        "Não foi possível recusar esta proposta.",
+    );
+}
+
+export async function baixarProposta(id) {
+    const response = await authFetch(`/portal/cliente/propostas/${id}/documento`);
+    if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        const error = new Error(typeof data?.detail === "string" ? data.detail : "Documento indisponível.");
+        error.status = response.status;
+        throw error;
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") || "";
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    return { blob, filename: encoded ? decodeURIComponent(encoded) : `proposta-${id}.pdf` };
 }
 
 export async function listarProducoes() {
