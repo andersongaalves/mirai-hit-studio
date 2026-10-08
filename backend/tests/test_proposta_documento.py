@@ -157,6 +157,7 @@ with Session(engine) as db:
             snapshot.cliente.nome = 'Cliente Com Nome Muito Longo ' * 12
             p = p.model_copy(update={'cliente_snapshot': snapshot})
         html = pdf.renderizar_html(p, final=True)
+        assert "Entrada de 50% + saldo de 50%" in html
         data = pdf.gerar_pdf(html)
         reader = PdfReader(BytesIO(data))
         text = ''.join(page.extract_text() for page in reader.pages)

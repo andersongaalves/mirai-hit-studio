@@ -248,10 +248,10 @@ def _get_or_create_attempt(
     v2: bool = False,
     cliente_id: int | None = None,
 ):
-    # The charge lock serializes checkout submissions. Existing outbound paths remain unchanged.
-    if v2:
-        if cliente_id is None:
-            raise CheckoutConflito("Identidade do cliente requer conciliacao.")
+    # Policy enforcement and authenticated ownership are independent concerns.
+    # Public checkout is authorized by its opaque token; portal checkout is
+    # additionally scoped to the authenticated customer's current database link.
+    if cliente_id is not None:
         locked = carregar_proposta(
             db,
             cobranca.proposta_id,
@@ -321,7 +321,12 @@ def _validate_pending_attempt(
     if actual != expected:
         raise CheckoutConflito("Pagamento em processamento diverge da cobranca.")
     if v2:
-        _validar_opcao_v2(cobranca, pending.tipo)
+        try:
+            _validar_opcao_v2(cobranca, pending.tipo)
+        except CheckoutConflito:
+            raise CheckoutConflito(
+                "Pagamento em processamento requer conciliacao."
+            ) from None
 
 
 def _result_response(db: Session, payment_id: int, result: ProviderPaymentResult):

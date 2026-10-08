@@ -1,5 +1,5 @@
 // Transport allowlists: UI fields and derived amounts never enter PATCH.
-const campos = ["produtor_id", "objeto", "descricao", "itens", "pagamentos", "condicoes"];
+const campos = ["produtor_id", "objeto", "descricao", "itens", "pagamentos", "politica_pagamento", "condicoes"];
 const responseFields = ["id", "orcamento_id", "numero", "versao", "status",
     "cliente_snapshot", "totais", "pdf_path", "gerada_em", "enviada_em",
     "aprovada_em", "created_at", "updated_at", ...campos];

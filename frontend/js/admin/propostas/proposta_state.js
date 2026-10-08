@@ -76,7 +76,7 @@ export function setProposta(proposta) {
 export function atualizarCampoProposta(campo, valor) {
     if (!podeEditar()) return;
 
-    if (["produtor_id", "objeto", "descricao", "condicoes"].includes(campo)) {
+    if (["produtor_id", "objeto", "descricao", "politica_pagamento", "condicoes"].includes(campo)) {
         propostaState.proposta[campo] = campo === "produtor_id"
             ? (valor === "" ? null : Number(valor)) : valor;
     } else return;

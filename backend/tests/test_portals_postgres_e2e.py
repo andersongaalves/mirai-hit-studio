@@ -322,6 +322,14 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 valor_total=800.0,
                 status="proposta_enviada",
             )
+            admin_policy_budget = OrcamentoModel(
+                nome_cliente=client_a.nome,
+                email=client_a.email,
+                servico="Política comercial E2E",
+                cliente_id=client_a.id,
+                valor_total=350.0,
+                status="em_analise",
+            )
             db.add_all([
                 flow_budget,
                 other_budget,
@@ -329,6 +337,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 invite_budget,
                 client_proposal_budget,
                 other_proposal_budget,
+                admin_policy_budget,
             ])
             db.flush()
             proposal = PropostaModel(
@@ -470,6 +479,43 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             )
             db.add_all([client_proposal, other_client_proposal])
             db.flush()
+            admin_policy_proposal = PropostaModel(
+                orcamento_id=admin_policy_budget.id,
+                numero="E2E-PROP-POLICY",
+                status="rascunho",
+                cliente_snapshot={
+                    "cliente": {
+                        "nome": client_a.nome,
+                        "email": client_a.email,
+                        "whatsapp": None,
+                    },
+                    "orcamento": {
+                        "id": admin_policy_budget.id,
+                        "servico": admin_policy_budget.servico,
+                        "detalhes": None,
+                        "valor_total": "350.00",
+                        "link_guia": None,
+                    },
+                },
+                objeto="Política comercial E2E",
+                descricao="Rascunho sintético para persistência da política.",
+                itens_json=[{
+                    "descricao": "Produção musical",
+                    "quantidade": "1",
+                    "valor_unitario": "350.00",
+                    "desconto": "0.00",
+                }],
+                pagamentos_json=[],
+                politica_pagamento="entrada_50_50",
+                condicoes="Condição definida pela política selecionada.",
+                totais_json={
+                    "subtotal": "350.00",
+                    "desconto": "0.00",
+                    "total": "350.00",
+                },
+            )
+            db.add(admin_policy_proposal)
+            db.flush()
             pdf = b"%PDF-1.4\n% synthetic client proposal\n%%EOF\n"
             client_proposal.pdf_path = LocalDocumentoStorage().salvar(
                 pdf,
@@ -533,6 +579,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 "client_proposal_id": client_proposal.id,
                 "client_proposal_version": client_proposal.versao,
                 "other_client_proposal_id": other_client_proposal.id,
+                "admin_policy_budget_id": admin_policy_budget.id,
+                "admin_policy_proposal_id": admin_policy_proposal.id,
                 "other_production_id": other_production.id,
                 "completed_production_id": completed.id,
             }
@@ -1390,8 +1438,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             )
             self.assertEqual(blocked_entry.status_code, 409, blocked_entry.text)
             paid = self.http.post(
-                f"/portal/cliente/propostas/{proposal_id}/checkout/pix",
-                headers=client_b,
+                f"/checkout/{token}/pix",
                 json={"payment_option": "integral"},
             )
             self.assertEqual(paid.status_code, 200, paid.text)
@@ -1703,6 +1750,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             "E2E_OTHER_PRODUCTION_ID": str(self.ids["other_production_id"]),
             "E2E_CLIENT_PROPOSAL_ID": str(self.ids["client_proposal_id"]),
             "E2E_OTHER_CLIENT_PROPOSAL_ID": str(self.ids["other_client_proposal_id"]),
+            "E2E_ADMIN_POLICY_BUDGET_ID": str(self.ids["admin_policy_budget_id"]),
         }
         previous = settings.COMMERCIAL_PIPELINE_V2_ENABLED
         settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
@@ -1738,6 +1786,9 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 .count(),
                 1,
             )
+            policy_proposal = db.get(PropostaModel, self.ids["admin_policy_proposal_id"])
+            self.assertEqual(policy_proposal.politica_pagamento, "entrada_50_50")
+            self.assertGreaterEqual(policy_proposal.versao, 3)
             self.assertEqual(
                 db.query(ProducaoModel)
                 .filter(ProducaoModel.orcamento_id == proposal.orcamento_id)

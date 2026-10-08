@@ -29,6 +29,12 @@ const root = path.resolve(__dirname, '..');
                 if (/^\/propostas\/\d+\/preview$/.test(url.pathname)) {
                     return route.fulfill({ contentType: 'text/html', body: '<!doctype html><p>Preview backend</p>' });
                 }
+                if (/^\/propostas\/\d+\/acesso-cliente$/.test(url.pathname)) {
+                    return route.fulfill({ json: {
+                        estado: 'conta_ativa', cliente_id: 42,
+                        convite_disponivel: true, last_sent_at: null, expires_at: null,
+                    } });
+                }
                 const budget = url.pathname.match(/^\/propostas\/orcamento\/(\d+)$/);
                 if (budget) {
                     if (delayLoad) await new Promise(resolve => setTimeout(resolve, delayLoad));
@@ -57,7 +63,7 @@ const root = path.resolve(__dirname, '..');
                     await new Promise(resolve => setTimeout(resolve, 150));
                     if (failSave) return route.fulfill({ status: 422, json: { detail: 'Falha sintetica ao salvar' } });
                     const payload = req.postDataJSON();
-                    assert.deepEqual(Object.keys(payload).sort(), ['condicoes', 'descricao', 'itens', 'objeto', 'pagamentos', 'produtor_id']);
+                    assert.deepEqual(Object.keys(payload).sort(), ['condicoes', 'descricao', 'itens', 'objeto', 'pagamentos', 'politica_pagamento', 'produtor_id']);
                     assert.ok(payload.itens.every(value => !('subtotal' in value) && !('id' in value)));
                     Object.assign(response, payload, { versao: response.versao + 1 });
                     // Deliberately distinct from the estimate: saved totals must come from the response.
@@ -130,6 +136,10 @@ const root = path.resolve(__dirname, '..');
         await rows.nth(0).getByRole('button', { name: 'Remover' }).click();
         assert.equal(await rows.count(), 1);
         await tab('Pagamento');
+        const policy = page.locator('#proposta_politica_pagamento');
+        assert.equal(await policy.inputValue(), 'entrada_50_50');
+        await policy.selectOption('integral');
+        assert.equal((await state()).dirty, true);
         const link = page.locator('#proposta_pagamento_pagamento_completo_url');
         await link.fill('https://example.com/completo');
         assert.equal(await link.evaluate(el => el === document.activeElement), true);
@@ -153,6 +163,7 @@ const root = path.resolve(__dirname, '..');
         assert.equal(persisted.itens[0].descricao, 'Masterizacao');
         assert.equal(persisted.itens[0].valor_unitario, '123.45');
         assert.equal(persisted.pagamentos[2].habilitado, true);
+        assert.equal(persisted.politica_pagamento, 'integral');
         assert.deepEqual(persisted.cliente_snapshot, fixture.cliente_snapshot);
 
         await page.locator('#proposta_pagamento_parcial_2_disponivel').uncheck();
@@ -215,6 +226,9 @@ const root = path.resolve(__dirname, '..');
         assert.equal(calls.filter(call => call.path === '/orcamentos/44/proposta').length, 0);
         saved.get(42).status = 'enviada';
         await open(42);
+        await tab('Pagamento');
+        assert.equal(await page.locator('#proposta_politica_pagamento').inputValue(), 'integral');
+        assert.equal(await page.locator('#proposta_politica_pagamento').isDisabled(), true);
         await tab('Proposta');
         assert.equal(await page.locator('#proposta_descricao').isDisabled(), true);
         assert.equal(await page.locator('#btn-save-proposta').isDisabled(), true);

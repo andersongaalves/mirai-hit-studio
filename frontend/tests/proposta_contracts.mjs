@@ -22,7 +22,7 @@ propostaState.salvando = false;
 assert.equal(getEditorProposta().data, '2026-09-11');
 assert.equal(getEditorProposta().pagamento.valor_total, 150);
 assert.equal(propostaState.proposta.pagamento, undefined);
-const allowed = ['condicoes', 'descricao', 'itens', 'objeto', 'pagamentos', 'produtor_id'];
+const allowed = ['condicoes', 'descricao', 'itens', 'objeto', 'pagamentos', 'politica_pagamento', 'produtor_id'];
 assert.deepEqual(Object.keys(getPropostaPayload()).sort(), allowed);
 assert.deepEqual(buildPropostaPayload({ descricao: 'Patch', status: 'aceita' }), { descricao: 'Patch' });
 atualizarCampoProposta('numero', 'forged');
@@ -38,6 +38,8 @@ assert.equal(getEditorProposta().pagamento.valor_total, 175);
 assert.deepEqual(propostaState.proposta.totais, response.totais);
 atualizarCampoProposta('produtor_id', '3');
 assert.equal(getPropostaPayload().produtor_id, 3);
+atualizarCampoProposta('politica_pagamento', 'integral');
+assert.equal(getPropostaPayload().politica_pagamento, 'integral');
 atualizarPagamento('entrada', 50);
 assert.equal(getEditorProposta().pagamento.restante, 175); // Local-only fields cannot pretend to persist.
 atualizarPagamento('pagamento_parcial_2_url', 'https://example.com/final');

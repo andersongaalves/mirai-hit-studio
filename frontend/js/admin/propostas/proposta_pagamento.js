@@ -1,5 +1,5 @@
 import { $ } from "../../utils/dom.js";
-import { atualizarPagamento } from "./proposta_state.js";
+import { atualizarCampoProposta, atualizarPagamento } from "./proposta_state.js";
 import { escapeHtml } from "./proposta_utils.js";
 
 const camposValores = [
@@ -28,9 +28,18 @@ export function renderizarPagamento(
     if (!container || !proposta) return;
 
     const pagamento = proposta.pagamento ?? {};
+    const politica = proposta.politica_pagamento ?? "entrada_50_50";
 
     container.innerHTML = `
         <div class="admin-info proposta-form-grid">
+            <div class="form-group">
+                <label for="proposta_politica_pagamento">Política de pagamento</label>
+                <select id="proposta_politica_pagamento">
+                    <option value="integral" ${politica === "integral" ? "selected" : ""}>Pagamento integral</option>
+                    <option value="entrada_50_50" ${politica === "entrada_50_50" ? "selected" : ""}>Entrada de 50% + saldo de 50%</option>
+                </select>
+            </div>
+
             ${camposValores.map(([id, label, type, readonly]) => `
                 <div class="form-group">
                     <label>${label}</label>
@@ -94,8 +103,18 @@ export function renderizarPagamento(
     `;
 
     registrarCamposValores(onRefresh, onChange);
+    registrarPolitica(onChange);
     registrarCamposTexto(onChange);
     registrarParcial2(onChange);
+}
+
+function registrarPolitica(onChange) {
+    const select = $("proposta_politica_pagamento");
+    if (!select) return;
+    select.onchange = event => {
+        atualizarCampoProposta("politica_pagamento", event.target.value);
+        onChange();
+    };
 }
 
 function registrarCamposValores(onRefresh, onChange) {

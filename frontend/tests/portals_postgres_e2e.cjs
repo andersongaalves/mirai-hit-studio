@@ -10,6 +10,7 @@ const provisionClientId = Number(process.env.E2E_PROVISION_CLIENT_ID);
 const otherProductionId = Number(process.env.E2E_OTHER_PRODUCTION_ID);
 const clientProposalId = Number(process.env.E2E_CLIENT_PROPOSAL_ID);
 const otherClientProposalId = Number(process.env.E2E_OTHER_CLIENT_PROPOSAL_ID);
+const adminPolicyBudgetId = Number(process.env.E2E_ADMIN_POLICY_BUDGET_ID);
 
 for (const [name, value] of Object.entries({
     password,
@@ -19,6 +20,7 @@ for (const [name, value] of Object.entries({
     otherProductionId,
     clientProposalId,
     otherClientProposalId,
+    adminPolicyBudgetId,
 })) {
     assert.ok(value, `missing ${name}`);
 }
@@ -94,6 +96,35 @@ function expectStatus(result, status, label) {
         assert.equal(catalog.status, 200);
         assert.ok(Array.isArray(catalog.body) && catalog.body.length > 0);
 
+        await login(page, '/admin', 'e2e-admin');
+        const openPolicyEditor = () => page.evaluate(async budgetId => {
+            const controller = await import('/js/admin/propostas/propostas.js');
+            await controller.abrirEditorProposta({ id: budgetId });
+        }, adminPolicyBudgetId);
+        await openPolicyEditor();
+        await page.getByRole('button', { name: 'Pagamento', exact: true }).click();
+        const policy = page.locator('#proposta_politica_pagamento');
+        assert.equal(await policy.inputValue(), 'entrada_50_50');
+        await policy.selectOption('integral');
+        await Promise.all([
+            page.waitForResponse(response => response.request().method() === 'PATCH'
+                && /\/propostas\/\d+$/.test(new URL(response.url()).pathname)),
+            page.locator('#btn-save-proposta').click(),
+        ]);
+        assert.equal(await policy.inputValue(), 'integral');
+        await page.evaluate(() => window.fecharEditorProposta());
+        await openPolicyEditor();
+        await page.getByRole('button', { name: 'Pagamento', exact: true }).click();
+        assert.equal(await page.locator('#proposta_politica_pagamento').inputValue(), 'integral');
+        await page.locator('#proposta_politica_pagamento').selectOption('entrada_50_50');
+        await Promise.all([
+            page.waitForResponse(response => response.request().method() === 'PATCH'
+                && /\/propostas\/\d+$/.test(new URL(response.url()).pathname)),
+            page.locator('#btn-save-proposta').click(),
+        ]);
+        await page.evaluate(() => window.fecharEditorProposta());
+
+        await resetSession(page);
         await login(page, '/cliente', 'e2e-client-a');
         const proposalBeforeNavigation = expectStatus(
             await api(page, 'GET', `/portal/cliente/propostas/${clientProposalId}`),

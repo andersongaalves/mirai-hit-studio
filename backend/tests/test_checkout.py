@@ -89,6 +89,63 @@ with Session(engine) as db:
     assert db.query(PagamentoModel).filter(PagamentoModel.cobranca_id == current.id).count() == 0
 ''')
 
+    def test_public_v2_pix_card_and_split_balance_release_once(self):
+        self.run_case(r'''
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+
+class ApprovedSession(FakeSession):
+    def request(self, method, url, **kwargs):
+        payload = kwargs['json']
+        reference = payload['external_reference']
+        payment = payload['transactions']['payments'][0]
+        method_id = payment['payment_method']['id']
+        data = order(
+            amount=payload['total_amount'], status='processed', detail='accredited',
+            method=method_id, pix=method_id == 'pix',
+            provider_id=f'ORD-{len(self.calls) + 1}', external_reference=reference,
+        )
+        self.calls.append((method, url, kwargs))
+        return FakeResponse(201, data)
+
+with Session(engine) as db:
+    integral = accepted_charge(db, 1)
+    integral.proposta.politica_pagamento = 'integral'
+    split = accepted_charge(db, 2)
+    split.proposta.politica_pagamento = 'entrada_50_50'
+    db.commit()
+    provider = MercadoPagoClient(access_token='synthetic-token', session=ApprovedSession([]))
+    client = checkout_app(db, provider)
+
+    pix = client.post(
+        f'/checkout/{integral.referencia_externa}/pix',
+        json={'payment_option': 'integral'},
+    )
+    assert pix.status_code == 200, pix.text
+    assert pix.json()['status'] == 'approved'
+    assert db.query(ProducaoModel).filter_by(orcamento_id=1).count() == 1
+
+    entry = client.post(f'/checkout/{split.referencia_externa}/card', json={
+        'payment_option': 'entrada', 'card_token': 'synthetic-entry-token',
+        'payment_method_id': 'visa', 'payment_method_type': 'credit_card',
+        'installments': 1,
+    })
+    assert entry.status_code == 200, entry.text
+    assert entry.json()['status'] == 'approved'
+    assert db.query(ProducaoModel).filter_by(orcamento_id=2).count() == 1
+    summary = client.get(f'/checkout/{split.referencia_externa}')
+    assert [option['tipo'] for option in summary.json()['opcoes']] == ['saldo']
+
+    balance = client.post(f'/checkout/{split.referencia_externa}/card', json={
+        'payment_option': 'saldo', 'card_token': 'synthetic-balance-token',
+        'payment_method_id': 'visa', 'payment_method_type': 'credit_card',
+        'installments': 1,
+    })
+    assert balance.status_code == 200, balance.text
+    assert balance.json()['status'] == 'approved'
+    assert db.query(ProducaoModel).filter_by(orcamento_id=2).count() == 1
+    assert db.query(PagamentoModel).filter(PagamentoModel.cobranca_id == split.id).count() == 2
+''')
+
     def test_incompatible_pending_attempt_is_not_reused(self):
         self.run_case(r'''
 config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True

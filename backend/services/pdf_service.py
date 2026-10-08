@@ -7,6 +7,7 @@ from textwrap import wrap
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from xhtml2pdf import pisa
 
+from models.enums.proposta import PoliticaPagamento
 from services.documento_storage import DocumentoIndisponivel
 from services.proposta_service import PropostaInvalida, calcular_totais
 from services.qr_code_service import gerar_qr_code
@@ -53,11 +54,16 @@ def renderizar_html(proposta, produtor="Nao definido", final=False):
         total = calcular_totais([item])
         itens.append({"item": item, "partes": wrap(item.descricao, 240) or [""], "total": total})
     try:
+        politica_pagamento = {
+            PoliticaPagamento.INTEGRAL: "Pagamento integral",
+            PoliticaPagamento.ENTRADA_50_50: "Entrada de 50% + saldo de 50%",
+        }[PoliticaPagamento(proposta.politica_pagamento)]
         logo = "data:image/png;base64," + base64.b64encode(
             (ROOT / "frontend" / "assets" / "logo_mirai_BnW.png").read_bytes()).decode("ascii")
         return TEMPLATES.get_template("proposta.html").render(
             proposta=proposta, cliente=cliente, produtor=produtor, itens=itens,
-            totais=totais, pagamentos=pagamentos, logo=logo)
+            totais=totais, pagamentos=pagamentos, politica_pagamento=politica_pagamento,
+            logo=logo)
     except Exception:
         raise DocumentoIndisponivel("Nao foi possivel renderizar o template da proposta.") from None
 

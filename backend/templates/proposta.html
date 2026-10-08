@@ -49,6 +49,7 @@ a { color: #111; text-decoration: underline; overflow-wrap: anywhere; }
 <p class="number">Desconto: {{ totais.desconto|moeda }}</p>
 <p class="number total">Total: {{ totais.total|moeda }}</p>
 <h2>Condi&ccedil;&otilde;es comerciais</h2>
+<p><strong>Pol&iacute;tica de pagamento:</strong> {{ politica_pagamento }}</p>
 {% for line in proposta.condicoes|linhas %}<p>{{ line }}</p>{% endfor %}
 <p class="muted">Prazo, validade e observa&ccedil;&otilde;es: conforme condi&ccedil;&otilde;es comerciais acima, quando informados.</p>
 {% if pagamentos %}<h2>Pagamento</h2>{% endif %}
