@@ -89,11 +89,11 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         cls.previous_proposal_pdf_dir = os.environ.get("PROPOSTA_PDF_DIR")
         os.environ["PROPOSTA_PDF_DIR"] = cls.proposal_pdf_directory.name
 
+        from commercial_i2_support import PaymentTransport
         from core.config import settings
         from database import SessionLocal, engine
         from main import app
         from routers.portal_cliente import get_mercado_pago_client as portal_provider
-        from commercial_i2_support import PaymentTransport
         from services import producao_arquivo_service
 
         actual = make_url(str(engine.url))

@@ -133,9 +133,21 @@ def _summary(cobranca: CobrancaModel, *, v2: bool = False) -> CheckoutSummary:
     )
 
 
+def _public_pipeline_v2(cobranca: CobrancaModel) -> bool:
+    if not producao_liberacao_service.pipeline_v2_habilitada():
+        return False
+    if cobranca.proposta is None:
+        return False
+    try:
+        PoliticaPagamento(cobranca.proposta.politica_pagamento)
+    except (AttributeError, ValueError):
+        raise CheckoutConflito("Politica de pagamento requer conciliacao.") from None
+    return True
+
+
 def resumo(db: Session, token: str) -> CheckoutSummary:
     cobranca = carregar(db, token)
-    return _summary(cobranca)
+    return _summary(cobranca, v2=_public_pipeline_v2(cobranca))
 
 
 def _proposta_cobranca_query(proposta_id: int, cliente_id: int, *, lock=False):
@@ -257,6 +269,7 @@ def _get_or_create_attempt(
         .limit(1)
     )
     if pending is not None:
+        _validate_pending_attempt(locked, pending, v2=v2)
         pending_method = "pix" if pending.metodo == "pix" else "cartao"
         if pending.tipo != tipo or pending_method != metodo:
             db.rollback()
@@ -289,6 +302,25 @@ def _get_or_create_attempt(
     return payment.id, False
 
 
+def _validate_pending_attempt(
+    cobranca: CobrancaModel,
+    pending: PagamentoModel,
+    *,
+    v2: bool,
+) -> None:
+    if cobranca.moeda != "BRL" or pending.provider != mercado_pago_service.PROVIDER:
+        raise CheckoutConflito("Pagamento em processamento requer conciliacao.")
+    try:
+        expected = financial_service.valor_para_pagamento(cobranca, pending.tipo)
+        actual = financial_service.normalizar_valor(pending.valor)
+    except (financial_service.FinanceiroInvalido, financial_service.FinanceiroConflito):
+        raise CheckoutConflito("Pagamento em processamento requer conciliacao.") from None
+    if actual != expected:
+        raise CheckoutConflito("Pagamento em processamento diverge da cobranca.")
+    if v2:
+        _validar_opcao_v2(cobranca, pending.tipo)
+
+
 def _result_response(db: Session, payment_id: int, result: ProviderPaymentResult):
     payment = db.get(PagamentoModel, payment_id)
     status_name = "pending"
@@ -318,10 +350,17 @@ def _result_response(db: Session, payment_id: int, result: ProviderPaymentResult
 
 
 def criar_pix(db: Session, token: str, tipo: str, *, client=None, request_id=None):
+    cobranca = carregar(db, token)
+    pipeline_v2 = _public_pipeline_v2(cobranca)
     provider = client or MercadoPagoClient()
     provider.ensure_configured()
-    cobranca = carregar(db, token)
-    payment_id, reused = _get_or_create_attempt(db, cobranca, tipo=tipo, metodo="pix")
+    payment_id, reused = _get_or_create_attempt(
+        db,
+        cobranca,
+        tipo=tipo,
+        metodo="pix",
+        v2=pipeline_v2,
+    )
     if reused:
         return recuperar(db, token, client=provider, request_id=request_id)
     execution = mercado_pago_service.enviar_pix(
@@ -367,11 +406,16 @@ def criar_pix_proposta(
 
 
 def criar_cartao(db: Session, token: str, dados, *, client=None, request_id=None):
+    cobranca = carregar(db, token)
+    pipeline_v2 = _public_pipeline_v2(cobranca)
     provider = client or MercadoPagoClient()
     provider.ensure_configured()
-    cobranca = carregar(db, token)
     payment_id, reused = _get_or_create_attempt(
-        db, cobranca, tipo=dados.payment_option, metodo="cartao"
+        db,
+        cobranca,
+        tipo=dados.payment_option,
+        metodo="cartao",
+        v2=pipeline_v2,
     )
     if reused:
         return recuperar(db, token, client=provider, request_id=request_id)
@@ -439,6 +483,11 @@ def recuperar(db: Session, token: str, *, client=None, request_id=None):
     payment = _tentativa_atual(cobranca)
     if payment is None:
         raise CheckoutConflito("Nao existe pagamento em processamento.")
+    _validate_pending_attempt(
+        cobranca,
+        payment,
+        v2=_public_pipeline_v2(cobranca),
+    )
     if not payment.provider_order_id:
         raise CheckoutConflito("Pagamento requer conciliacao antes de nova tentativa.")
     reconciled = mercado_pago_service.reconcile_payment(
@@ -483,6 +532,7 @@ def recuperar_proposta(
     payment = _tentativa_atual(cobranca)
     if payment is None:
         raise CheckoutConflito("Nao existe pagamento em processamento.")
+    _validate_pending_attempt(cobranca, payment, v2=True)
     if not payment.provider_order_id:
         raise CheckoutConflito("Pagamento requer conciliacao antes de nova tentativa.")
     reconciled = mercado_pago_service.reconcile_payment(

@@ -72,6 +72,53 @@ with Session(engine) as db:
             raise AssertionError('invalid checkout token accepted')
 ''')
 
+    def test_public_checkout_enforces_v2_integral_policy(self):
+        self.run_case(r'''
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+with Session(engine) as db:
+    current = accepted_charge(db)
+    current.proposta.politica_pagamento = 'integral'
+    db.commit()
+    token = current.referencia_externa
+    provider = MercadoPagoClient(access_token='private-access-token', session=FakeSession([]))
+    client = checkout_app(db, provider)
+    summary = client.get(f'/checkout/{token}')
+    assert summary.status_code == 200
+    assert [option['tipo'] for option in summary.json()['opcoes']] == ['integral']
+    blocked = client.post(f'/checkout/{token}/pix', json={'payment_option': 'entrada'})
+    assert blocked.status_code == 409
+    assert db.query(PagamentoModel).filter(PagamentoModel.cobranca_id == current.id).count() == 0
+''')
+
+    def test_incompatible_pending_attempt_is_not_reused(self):
+        self.run_case(r'''
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+with Session(engine) as db:
+    current = accepted_charge(db)
+    current.proposta.politica_pagamento = 'integral'
+    pending = finance.registrar_pagamento(
+        db,
+        current.id,
+        tipo='entrada',
+        valor='75.12',
+        status='pendente',
+        metodo='pix',
+        provider=mp_service.PROVIDER,
+        provider_reference='incompatible-pending',
+    )
+    pending.provider_idempotency_key = 'incompatible-pending'
+    db.commit()
+    provider = MercadoPagoClient(access_token='private-access-token', session=FakeSession([]))
+    client = checkout_app(db, provider)
+    response = client.post(
+        f'/checkout/{current.referencia_externa}/pix',
+        json={'payment_option': 'integral'},
+    )
+    assert response.status_code == 409
+    assert 'conciliacao' in response.json()['detail'].lower()
+    assert db.query(PagamentoModel).filter(PagamentoModel.cobranca_id == current.id).count() == 1
+''')
+
     def test_pix_is_backend_controlled_recoverable_and_idempotent(self):
         self.run_case(r'''
 with Session(engine) as db:
