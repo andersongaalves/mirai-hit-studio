@@ -1299,6 +1299,122 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         finally:
             settings.COMMERCIAL_PIPELINE_V2_ENABLED = previous
 
+    def test_integral_checkout_policy_postgresql17(self):
+        from core.config import settings
+        from models import CobrancaModel, PagamentoModel, ProducaoModel, PropostaModel
+        from models.enums.financeiro import PagamentoStatus
+        from services import financial_service, mercado_pago_service
+
+        previous = settings.COMMERCIAL_PIPELINE_V2_ENABLED
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+        try:
+            client_a = self._login("e2e-client-a")
+            client_b = self._login("e2e-client-b")
+            proposal_id = self.ids["other_client_proposal_id"]
+            self.assertEqual(
+                self.http.get(
+                    f"/portal/cliente/propostas/{proposal_id}/checkout",
+                    headers=client_a,
+                ).status_code,
+                404,
+            )
+            proposal = self.http.get(
+                f"/portal/cliente/propostas/{proposal_id}",
+                headers=client_b,
+            )
+            self.assertEqual(proposal.status_code, 200, proposal.text)
+            accepted = self.http.post(
+                f"/portal/cliente/propostas/{proposal_id}/aceitar",
+                headers=client_b,
+                json={"versao": proposal.json()["versao"]},
+            )
+            self.assertEqual(accepted.status_code, 200, accepted.text)
+
+            with self.SessionLocal.begin() as db:
+                charge = db.scalar(
+                    select(CobrancaModel).where(CobrancaModel.proposta_id == proposal_id)
+                )
+                self.assertIsNotNone(charge)
+                token = charge.referencia_externa
+                pending = financial_service.registrar_pagamento(
+                    db,
+                    charge.id,
+                    tipo="entrada",
+                    valor=financial_service.dividir_50_50(charge.valor_total)[0],
+                    status=PagamentoStatus.PENDENTE,
+                    metodo="pix",
+                    provider=mercado_pago_service.PROVIDER,
+                    provider_reference="e2e-incompatible-pending",
+                )
+                pending.provider_idempotency_key = "e2e-incompatible-pending"
+
+            public_summary = self.http.get(f"/checkout/{token}")
+            self.assertEqual(public_summary.status_code, 200, public_summary.text)
+            self.assertEqual(
+                [option["tipo"] for option in public_summary.json()["opcoes"]],
+                ["integral"],
+            )
+            self.assertEqual(
+                self.http.post(
+                    f"/checkout/{token}/pix",
+                    json={"payment_option": "entrada"},
+                ).status_code,
+                409,
+            )
+            self.assertEqual(
+                self.http.post(
+                    f"/portal/cliente/propostas/{proposal_id}/checkout/pix",
+                    headers=client_b,
+                    json={"payment_option": "integral"},
+                ).status_code,
+                409,
+            )
+            with self.SessionLocal.begin() as db:
+                self.assertEqual(
+                    db.query(PagamentoModel)
+                    .join(CobrancaModel)
+                    .filter(CobrancaModel.proposta_id == proposal_id)
+                    .count(),
+                    1,
+                )
+                pending = db.scalar(
+                    select(PagamentoModel)
+                    .join(CobrancaModel)
+                    .where(CobrancaModel.proposta_id == proposal_id)
+                )
+                pending.status = PagamentoStatus.CANCELADO.value
+
+            blocked_entry = self.http.post(
+                f"/checkout/{token}/pix",
+                json={"payment_option": "entrada"},
+            )
+            self.assertEqual(blocked_entry.status_code, 409, blocked_entry.text)
+            paid = self.http.post(
+                f"/portal/cliente/propostas/{proposal_id}/checkout/pix",
+                headers=client_b,
+                json={"payment_option": "integral"},
+            )
+            self.assertEqual(paid.status_code, 200, paid.text)
+            self.assertEqual(paid.json()["status"], "approved")
+
+            with self.SessionLocal() as db:
+                proposal_model = db.get(PropostaModel, proposal_id)
+                self.assertEqual(
+                    db.query(ProducaoModel)
+                    .filter(ProducaoModel.orcamento_id == proposal_model.orcamento_id)
+                    .count(),
+                    1,
+                )
+                self.assertEqual(
+                    db.query(PagamentoModel)
+                    .join(CobrancaModel)
+                    .filter(CobrancaModel.proposta_id == proposal_id)
+                    .count(),
+                    2,
+                )
+        finally:
+            settings.COMMERCIAL_PIPELINE_V2_ENABLED = previous
+
     def test_backend_postgresql17_matrix(self):
         from core.config import settings
         from jose import jwt

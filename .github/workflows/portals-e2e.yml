@@ -25,6 +25,7 @@ on:
             - "backend/routers/checkout.py"
             - "backend/schemas/checkout.py"
             - "backend/tests/test_authenticated_checkout.py"
+            - "backend/tests/test_commerce_policy_postgres.py"
             - "backend/tests/commercial_i2_support.py"
             - "backend/services/proposta_comercial_service.py"
             - "backend/models/config.py"
@@ -222,6 +223,7 @@ jobs:
               shell: bash
               run: |
                   set -euo pipefail
+                  python -m unittest discover -s tests -p 'test_commerce_policy_postgres.py' -v
                   python -m unittest discover -s tests -p 'test_portals_postgres_e2e.py' -v
 
             - name: Run focused static checks
@@ -239,6 +241,7 @@ jobs:
                   PY
                   )
                   ruff check backend/tests/test_portals_postgres_e2e.py
+                  ruff check backend/tests/test_commerce_policy_postgres.py
                   ruff check backend/services/portfolio_segments_service.py backend/tests/test_portfolio_segments.py
                   ruff check --ignore B008 backend/services/client_access_service.py backend/routers/client_access.py backend/schemas/client_access.py backend/tests/test_client_access.py backend/tests/test_client_signup.py
                   ruff check --ignore BLE001,RUF100 backend/services/proposta_comercial_service.py backend/tests/test_portals_postgres_e2e.py
