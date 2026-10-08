@@ -5,7 +5,6 @@ import unittest
 import test_bootstrap_database as isolated
 from test_mercado_pago import MP_SETUP
 
-
 CHECKOUT_SETUP = MP_SETUP + r'''
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
@@ -80,7 +79,7 @@ with Session(engine) as db:
     current.proposta.politica_pagamento = 'integral'
     db.commit()
     token = current.referencia_externa
-    provider = MercadoPagoClient(access_token='private-access-token', session=FakeSession([]))
+    provider = MercadoPagoClient(access_token='', session=FakeSession([]))
     client = checkout_app(db, provider)
     summary = client.get(f'/checkout/{token}')
     assert summary.status_code == 200

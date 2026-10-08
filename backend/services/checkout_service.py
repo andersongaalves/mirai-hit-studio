@@ -1,10 +1,11 @@
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from sqlalchemy import or_, select
-from sqlalchemy.orm import Session, joinedload, selectinload
-
-from integrations.mercado_pago import MercadoPagoClient, MercadoPagoPayer, ProviderPaymentResult
+from integrations.mercado_pago import (
+    MercadoPagoClient,
+    MercadoPagoPayer,
+    ProviderPaymentResult,
+)
 from models.enums.financeiro import CobrancaStatus, PagamentoStatus, PagamentoTipo
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from models.financeiro import CobrancaModel, PagamentoModel
@@ -19,6 +20,8 @@ from schemas.checkout import (
     CheckoutSummary,
 )
 from services import financial_service, mercado_pago_service, producao_liberacao_service
+from sqlalchemy import or_, select
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 
 class CheckoutNaoEncontrado(Exception):
@@ -352,6 +355,8 @@ def _result_response(db: Session, payment_id: int, result: ProviderPaymentResult
 def criar_pix(db: Session, token: str, tipo: str, *, client=None, request_id=None):
     cobranca = carregar(db, token)
     pipeline_v2 = _public_pipeline_v2(cobranca)
+    if pipeline_v2:
+        _validar_opcao_v2(cobranca, tipo)
     provider = client or MercadoPagoClient()
     provider.ensure_configured()
     payment_id, reused = _get_or_create_attempt(
@@ -383,6 +388,7 @@ def criar_pix_proposta(
     request_id=None,
 ):
     cobranca = carregar_proposta(db, proposta_id, cliente_id)
+    _validar_opcao_v2(cobranca, tipo)
     provider = client or MercadoPagoClient()
     provider.ensure_configured()
     payment_id, reused = _get_or_create_attempt(
@@ -408,6 +414,8 @@ def criar_pix_proposta(
 def criar_cartao(db: Session, token: str, dados, *, client=None, request_id=None):
     cobranca = carregar(db, token)
     pipeline_v2 = _public_pipeline_v2(cobranca)
+    if pipeline_v2:
+        _validar_opcao_v2(cobranca, dados.payment_option)
     provider = client or MercadoPagoClient()
     provider.ensure_configured()
     payment_id, reused = _get_or_create_attempt(
@@ -448,6 +456,7 @@ def criar_cartao_proposta(
     request_id=None,
 ):
     cobranca = carregar_proposta(db, proposta_id, cliente_id)
+    _validar_opcao_v2(cobranca, dados.payment_option)
     provider = client or MercadoPagoClient()
     provider.ensure_configured()
     payment_id, reused = _get_or_create_attempt(
