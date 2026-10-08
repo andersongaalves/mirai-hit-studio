@@ -5,8 +5,19 @@ from core.dependencies import require_client
 from database import get_db
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
-from integrations.mercado_pago import MercadoPagoClient, MercadoPagoError, MercadoPagoNotConfigured
+from integrations.mercado_pago import (
+    MercadoPagoClient,
+    MercadoPagoError,
+    MercadoPagoNotConfigured,
+)
 from models.usuario import UsuarioModel
+from schemas.checkout import (
+    CheckoutCardRequest,
+    CheckoutPaymentRequest,
+    CheckoutPaymentResponse,
+    CheckoutStatus,
+    CheckoutSummary,
+)
 from schemas.portal_cliente import (
     FinanceiroClienteResponse,
     ProducaoArquivoClienteResponse,
@@ -14,13 +25,12 @@ from schemas.portal_cliente import (
     PropostaClienteAction,
     PropostaClienteResponse,
 )
-from schemas.checkout import CheckoutCardRequest, CheckoutPaymentRequest, CheckoutPaymentResponse, CheckoutStatus, CheckoutSummary
 from services import (
+    checkout_service,
     financial_service,
     portal_cliente_proposta_service,
     portal_cliente_service,
     producao_arquivo_service,
-    checkout_service,
 )
 from services.producao_arquivo_storage import MAX_FILE_SIZE
 from sqlalchemy.orm import Session
@@ -29,6 +39,14 @@ router = APIRouter(prefix="/portal/cliente", tags=["Portal do Cliente"])
 Db = Annotated[Session, Depends(get_db)]
 CurrentClient = Annotated[UsuarioModel, Depends(require_client)]
 FINAL_STATUSES = {"finalizado", "entregue"}
+_CHECKOUT_EXCEPTIONS = (
+    checkout_service.CheckoutNaoEncontrado,
+    checkout_service.CheckoutIndisponivel,
+    checkout_service.CheckoutConflito,
+    financial_service.FinanceiroInvalido,
+    financial_service.FinanceiroConflito,
+    MercadoPagoError,
+)
 
 
 def _file_error(exc):
@@ -99,7 +117,7 @@ def _checkout_error(exc):
 def resumo_checkout_proposta(proposta_id: int, db: Db, user: CurrentClient):
     try:
         return checkout_service.resumo_proposta(db, proposta_id, user.cliente_id)
-    except Exception as exc:
+    except _CHECKOUT_EXCEPTIONS as exc:
         raise _checkout_error(exc) from None
 
 
@@ -110,7 +128,7 @@ def resumo_checkout_proposta(proposta_id: int, db: Db, user: CurrentClient):
 def status_checkout_proposta(proposta_id: int, db: Db, user: CurrentClient):
     try:
         return checkout_service.status_proposta(db, proposta_id, user.cliente_id)
-    except Exception as exc:
+    except _CHECKOUT_EXCEPTIONS as exc:
         raise _checkout_error(exc) from None
 
 
@@ -133,7 +151,7 @@ def recuperar_checkout_proposta(
             client=client,
             request_id=getattr(request.state, "request_id", None),
         )
-    except Exception as exc:
+    except _CHECKOUT_EXCEPTIONS as exc:
         raise _checkout_error(exc) from None
 
 
@@ -158,7 +176,7 @@ def pagar_checkout_pix(
             client=client,
             request_id=getattr(request.state, "request_id", None),
         )
-    except Exception as exc:
+    except _CHECKOUT_EXCEPTIONS as exc:
         raise _checkout_error(exc) from None
 
 
@@ -183,7 +201,7 @@ def pagar_checkout_cartao(
             client=client,
             request_id=getattr(request.state, "request_id", None),
         )
-    except Exception as exc:
+    except _CHECKOUT_EXCEPTIONS as exc:
         raise _checkout_error(exc) from None
 
 
