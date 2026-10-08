@@ -325,10 +325,38 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 orcamento_id=flow_budget.id,
                 numero="E2E-PROP-001",
                 status="aceita",
-                cliente_snapshot={},
-                itens_json=[],
+                cliente_snapshot={
+                    "cliente": {
+                        "nome": client_a.nome,
+                        "email": client_a.email,
+                        "whatsapp": None,
+                    },
+                    "orcamento": {
+                        "id": flow_budget.id,
+                        "servico": flow_budget.servico,
+                        "detalhes": None,
+                        "valor_total": "1000.00",
+                        "link_guia": None,
+                    },
+                },
+                objeto="Mixagem E2E aceita",
+                descricao="Proposta sintética aceita.",
+                itens_json=[{
+                    "descricao": "Mixagem",
+                    "quantidade": "1",
+                    "valor_unitario": "1000.00",
+                    "desconto": "0.00",
+                }],
                 pagamentos_json=[],
-                totais_json={},
+                politica_pagamento="entrada_50_50",
+                condicoes="Entrada de 50% para início.",
+                totais_json={
+                    "subtotal": "1000.00",
+                    "desconto": "0.00",
+                    "total": "1000.00",
+                },
+                enviada_em=datetime.now(timezone.utc),
+                aprovada_em=datetime.now(timezone.utc),
             )
             db.add(proposal)
             db.flush()
