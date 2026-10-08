@@ -1,0 +1,8 @@
+{% extends "email_base.html" %}
+{% block content %}
+<h1>Sua proposta está disponível</h1>
+<p>Olá, {{ nome }}.</p>
+<p>A proposta comercial <strong>{{ proposta_numero }}</strong> está disponível no Portal Mirai.</p>
+<p><a href="{{ proposal_url }}">Visualizar proposta</a></p>
+<p>Entre com sua conta para consultar os detalhes e responder com segurança.</p>
+{% endblock %}

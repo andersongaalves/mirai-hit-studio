@@ -2,6 +2,7 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 from core.config import settings
 from core.security import get_password_hash
@@ -21,7 +22,7 @@ from schemas.client_access import (
     PasswordRecoveryRequest,
     PasswordResetRequest,
 )
-from services import audit_service
+from services import audit_service, producao_liberacao_service
 from services.cliente_service import normalizar_email, normalizar_telefone
 from services.email_service import EmailService
 from sqlalchemy import and_, func, or_, select, text
@@ -654,8 +655,14 @@ def _commercial_context(db: Session, proposta_id: int, *, lock=False):
     proposal = db.scalar(proposal_query)
     if proposal is None:
         raise ClientAccessNotFound("Proposta nao encontrada.")
-    if proposal.status != PropostaStatus.ACEITA.value or proposal.aprovada_em is None:
-        raise ClientAccessInvalid("Somente propostas aceitas podem conceder acesso ao portal.")
+    if proposal.status == PropostaStatus.ENVIADA.value:
+        if proposal.enviada_em is None:
+            raise ClientAccessConflict("A proposta enviada possui estado inconsistente.")
+    elif proposal.status == PropostaStatus.ACEITA.value:
+        if proposal.aprovada_em is None:
+            raise ClientAccessConflict("A proposta aceita possui estado inconsistente.")
+    else:
+        raise ClientAccessInvalid("Somente propostas enviadas ou aceitas concedem acesso ao portal.")
     budget_query = select(OrcamentoModel).where(OrcamentoModel.id == proposal.orcamento_id)
     if lock:
         budget_query = budget_query.with_for_update().execution_options(populate_existing=True)
@@ -665,7 +672,50 @@ def _commercial_context(db: Session, proposta_id: int, *, lock=False):
     client = db.get(ClienteModel, budget.cliente_id)
     if client is None:
         raise ClientAccessConflict("O cliente comercial vinculado nao existe.")
+    _validate_commercial_identity(proposal, budget, client)
     return proposal, budget, client
+
+
+def _validated_email(value):
+    try:
+        return normalizar_email(str(TypeAdapter(EmailStr).validate_python(value)))
+    except ValidationError:
+        return None
+
+
+def _validate_commercial_identity(proposal, budget, client):
+    snapshot = proposal.cliente_snapshot if isinstance(proposal.cliente_snapshot, dict) else {}
+    snapshot_client = snapshot.get("cliente") if isinstance(snapshot.get("cliente"), dict) else {}
+    client_email = _validated_email(client.email)
+    if client_email is None:
+        raise ClientAccessInvalid(
+            "Este cliente precisa de um e-mail valido antes de receber acesso ao portal."
+        )
+    emails = {
+        client_email,
+        _validated_email(budget.email),
+        _validated_email(snapshot_client.get("email")),
+    }
+    if None in emails or len(emails) != 1:
+        raise ClientAccessConflict(
+            "A identidade comercial diverge. Conciliacao pelo Admin necessaria."
+        )
+
+
+def _proposal_path(proposal):
+    return f"/cliente/propostas/{proposal.id}"
+
+
+def _activation_url(proposal, raw_token):
+    base_url = settings.PUBLIC_FRONTEND_URL.rstrip("/")
+    next_path = quote(_proposal_path(proposal), safe="")
+    return f"{base_url}/ativar?token={raw_token}&next={next_path}"
+
+
+def _proposal_access_url(proposal):
+    base_url = settings.PUBLIC_FRONTEND_URL.rstrip("/")
+    next_path = quote(_proposal_path(proposal), safe="")
+    return f"{base_url}/acesso?next={next_path}"
 
 
 def _user_for_client(db: Session, cliente_id: int):
@@ -702,6 +752,10 @@ def _response(proposal, client, access, user):
         cliente_nome=client.nome,
         email=client.email,
         proposta_status=proposal.status,
+        convite_disponivel=(
+            proposal.status == PropostaStatus.ACEITA.value
+            or producao_liberacao_service.pipeline_v2_habilitada()
+        ),
         estado=_state(access, user, _now()),
         usuario_id=user.id if user else None,
         last_sent_at=access.last_sent_at if access else None,
@@ -721,18 +775,35 @@ def status(db: Session, proposta_id: int):
 
 def _prepare_invite(db, proposta_id, actor, request_id, *, resend):
     proposal, _, client = _commercial_context(db, proposta_id, lock=True)
+    if (
+        proposal.status == PropostaStatus.ENVIADA.value
+        and not producao_liberacao_service.pipeline_v2_habilitada()
+    ):
+        raise ClientAccessInvalid("O acesso antecipado a proposta esta indisponivel.")
     if not client.ativo:
         raise ClientAccessConflict("O cliente comercial esta inativo.")
-    try:
-        email = normalizar_email(str(TypeAdapter(EmailStr).validate_python(client.email)))
-    except ValidationError:
-        email = None
+    email = _validated_email(client.email)
     if email is None:
         raise ClientAccessInvalid("Este cliente precisa de um e-mail valido antes de receber acesso ao portal.")
     user = _user_for_client(db, client.id)
-    if user is not None:
-        raise ClientAccessConflict("Cliente ja possui acesso ao portal.")
     access = _access_for_client(db, client.id, lock=True)
+    if user is not None:
+        if resend:
+            raise ClientAccessConflict("A conta ja esta ativa; envie uma nova notificacao.")
+        if (
+            not user.ativo
+            or user.role != "cliente"
+            or user.is_admin
+            or user.cliente_id != client.id
+        ):
+            raise ClientAccessConflict("A conta vinculada exige conciliacao pelo Admin.")
+        if access and (
+            access.email_normalizado != email
+            or (access.usuario_id is not None and access.usuario_id != user.id)
+        ):
+            raise ClientAccessConflict("O acesso vinculado exige conciliacao pelo Admin.")
+        db.commit()
+        return "account", proposal, client, access, user
     if access and access.usuario_id is not None:
         raise ClientAccessConflict("Conflito de vinculo. Conciliacao necessaria.")
     if access and access.email_normalizado != email:
@@ -769,12 +840,11 @@ def _prepare_invite(db, proposta_id, actor, request_id, *, resend):
         request_id=request_id,
     )
     db.commit()
-    return proposal, client, access.id, raw_token, token_hash
+    return "invite", proposal, client, access.id, raw_token, token_hash
 
 
 def _deliver(db, proposal, client, access_id, raw_token, token_hash, actor, request_id):
-    base_url = settings.PUBLIC_FRONTEND_URL.rstrip("/")
-    activation_url = f"{base_url}/ativar?token={raw_token}"
+    activation_url = _activation_url(proposal, raw_token)
     try:
         provider = EmailService.enviar_convite_cliente(
             client,
@@ -819,6 +889,41 @@ def _deliver(db, proposal, client, access_id, raw_token, token_hash, actor, requ
         ) from None
 
 
+def _deliver_existing_account(db, proposal, client, access, user, actor, request_id):
+    try:
+        provider = EmailService.enviar_proposta_disponivel(
+            client,
+            _proposal_access_url(proposal),
+            proposta_numero=proposal.numero,
+            idempotency_key=(
+                f"client-proposal/{proposal.id}/v{proposal.versao}/user/{user.id}"
+            ),
+        )
+        if (
+            not isinstance(provider, dict)
+            or not isinstance(provider.get("id"), str)
+            or not provider["id"].strip()
+        ):
+            raise ValueError("invalid_provider_response")
+        audit_service.record(
+            db,
+            actor=actor,
+            action="client_access.proposal_notified",
+            entity_type="proposal",
+            entity_id=proposal.id,
+            metadata={"client_id": client.id, "proposal_id": proposal.id},
+            request_id=request_id,
+        )
+        db.commit()
+        return _response(proposal, client, access, user)
+    except Exception:  # noqa: BLE001 - provider errors are sanitized at this boundary.
+        db.rollback()
+        logger.error("client_proposal_notification_failed request_id=%s", request_id)
+        raise ClientAccessDeliveryUnavailable(
+            "Nao foi possivel confirmar a notificacao da proposta."
+        ) from None
+
+
 def invite(db, proposta_id, actor, request_id, source_key):
     enforce_rate_limit(
         db,
@@ -835,7 +940,10 @@ def invite(db, proposta_id, actor, request_id, source_key):
     except Exception:
         db.rollback()
         raise
-    return _deliver(db, *prepared, actor, request_id)
+    mode, *delivery = prepared
+    if mode == "account":
+        return _deliver_existing_account(db, *delivery, actor, request_id)
+    return _deliver(db, *delivery, actor, request_id)
 
 
 def resend(db, proposta_id, actor, request_id, source_key):
@@ -854,7 +962,8 @@ def resend(db, proposta_id, actor, request_id, source_key):
     except Exception:
         db.rollback()
         raise
-    return _deliver(db, *prepared, actor, request_id)
+    _, *delivery = prepared
+    return _deliver(db, *delivery, actor, request_id)
 
 
 def revoke(db, proposta_id, actor, request_id):

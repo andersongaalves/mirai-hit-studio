@@ -122,64 +122,75 @@ def enviar(db, proposta_id, actor=None, request_id=None):
         raise
 
 
+def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
+    pipeline_v2 = producao_liberacao_service.pipeline_v2_habilitada()
+    if model.status == Status.ACEITA.value:
+        if not crud_producao.buscar_por_orcamento(db, model.orcamento_id):
+            if not pipeline_v2:
+                raise service.PropostaConflito(
+                    "Proposta aceita sem producao; requer conciliacao."
+                )
+            try:
+                financial_service.criar_para_proposta(
+                    db,
+                    model,
+                    cliente_id=budget.cliente_id,
+                )
+            except financial_service.FinanceiroInvalido as error:
+                raise service.PropostaInvalida(str(error)) from None
+            except financial_service.FinanceiroConflito as error:
+                raise service.PropostaConflito(str(error)) from None
+        return service._resposta(model)
+    if model.status != Status.ENVIADA.value or not model.enviada_em:
+        raise service.PropostaConflito("Somente proposta enviada pode ser aprovada.")
+    if budget.status != OrcamentoStatus.PROPOSTA_ENVIADA.value:
+        raise service.PropostaConflito("Status do orcamento incompativel com a aprovacao.")
+    if crud_producao.buscar_por_orcamento(db, model.orcamento_id):
+        raise service.PropostaConflito(
+            "Ja existe producao para este orcamento; requer conciliacao."
+        )
+    if not pipeline_v2:
+        crud_producao.criar_sem_commit(
+            db,
+            _dados_producao(service._resposta(model)),
+        )
+    try:
+        financial_service.criar_para_proposta(
+            db,
+            model,
+            cliente_id=budget.cliente_id,
+        )
+    except financial_service.FinanceiroInvalido as error:
+        raise service.PropostaInvalida(str(error)) from None
+    except financial_service.FinanceiroConflito as error:
+        raise service.PropostaConflito(str(error)) from None
+    model.status = Status.ACEITA.value
+    model.aprovada_em = datetime.now(timezone.utc)
+    budget.status = OrcamentoStatus.APROVADO.value
+    db.flush()
+    audit_service.record(
+        db,
+        actor=actor,
+        action=audit_action,
+        entity_type="proposal",
+        entity_id=model.id,
+        metadata={"old_status": Status.ENVIADA.value, "new_status": model.status},
+        request_id=request_id,
+    )
+    return service._resposta(model)
+
+
 def aprovar(db, proposta_id, actor=None, request_id=None):
     try:
         model, budget = _carregar(db, proposta_id)
-        pipeline_v2 = producao_liberacao_service.pipeline_v2_habilitada()
-        if model.status == Status.ACEITA.value:
-            if not crud_producao.buscar_por_orcamento(db, model.orcamento_id):
-                if not pipeline_v2:
-                    raise service.PropostaConflito(
-                        "Proposta aceita sem producao; requer conciliacao."
-                    )
-                try:
-                    financial_service.criar_para_proposta(
-                        db,
-                        model,
-                        cliente_id=budget.cliente_id,
-                    )
-                except financial_service.FinanceiroInvalido as error:
-                    raise service.PropostaInvalida(str(error)) from None
-                except financial_service.FinanceiroConflito as error:
-                    raise service.PropostaConflito(str(error)) from None
-            response = service._resposta(model)
-            db.commit()
-            return response
-        if model.status != Status.ENVIADA.value or not model.enviada_em:
-            raise service.PropostaConflito("Somente proposta enviada pode ser aprovada.")
-        if budget.status != OrcamentoStatus.PROPOSTA_ENVIADA.value:
-            raise service.PropostaConflito("Status do orcamento incompativel com a aprovacao.")
-        if crud_producao.buscar_por_orcamento(db, model.orcamento_id):
-            raise service.PropostaConflito("Ja existe producao para este orcamento; requer conciliacao.")
-        if not pipeline_v2:
-            crud_producao.criar_sem_commit(
-                db,
-                _dados_producao(service._resposta(model)),
-            )
-        try:
-            financial_service.criar_para_proposta(
-                db,
-                model,
-                cliente_id=budget.cliente_id,
-            )
-        except financial_service.FinanceiroInvalido as error:
-            raise service.PropostaInvalida(str(error)) from None
-        except financial_service.FinanceiroConflito as error:
-            raise service.PropostaConflito(str(error)) from None
-        model.status = Status.ACEITA.value
-        model.aprovada_em = datetime.now(timezone.utc)
-        budget.status = OrcamentoStatus.APROVADO.value
-        db.flush()
-        audit_service.record(
+        response = _aprovar_carregada(
             db,
-            actor=actor,
-            action="proposal.approved",
-            entity_type="proposal",
-            entity_id=model.id,
-            metadata={"old_status": Status.ENVIADA.value, "new_status": model.status},
-            request_id=request_id,
+            model,
+            budget,
+            actor,
+            request_id,
+            audit_action="proposal.approved",
         )
-        response = service._resposta(model)
         db.commit()
         logger.info("proposal_approved")
         return response
@@ -188,6 +199,84 @@ def aprovar(db, proposta_id, actor=None, request_id=None):
         raise service.PropostaConflito(
             "Aceite concorrente; consulte o estado atual antes de repetir."
         ) from None
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _validar_cliente(model, budget, *, cliente_id, versao):
+    if budget.cliente_id != cliente_id:
+        raise service.PropostaNaoEncontrada("Proposta nao encontrada.")
+    if model.versao != versao:
+        raise service.PropostaConflito(
+            "A proposta foi atualizada. Revise a versao atual antes de continuar."
+        )
+
+
+def aceitar_cliente(db, proposta_id, *, cliente_id, versao, actor, request_id=None):
+    if not producao_liberacao_service.pipeline_v2_habilitada():
+        raise service.PropostaNaoEncontrada("Proposta nao encontrada.")
+    try:
+        model, budget = _carregar(db, proposta_id)
+        _validar_cliente(model, budget, cliente_id=cliente_id, versao=versao)
+        response = _aprovar_carregada(
+            db,
+            model,
+            budget,
+            actor,
+            request_id,
+            audit_action="proposal.accepted_by_client",
+        )
+        db.commit()
+        logger.info("proposal_accepted_by_client")
+        return response
+    except IntegrityError:
+        db.rollback()
+        raise service.PropostaConflito(
+            "Aceite concorrente; consulte o estado atual antes de repetir."
+        ) from None
+    except Exception:
+        db.rollback()
+        raise
+
+
+def recusar_cliente(db, proposta_id, *, cliente_id, versao, actor, request_id=None):
+    if not producao_liberacao_service.pipeline_v2_habilitada():
+        raise service.PropostaNaoEncontrada("Proposta nao encontrada.")
+    try:
+        model, budget = _carregar(db, proposta_id)
+        _validar_cliente(model, budget, cliente_id=cliente_id, versao=versao)
+        if model.status == Status.RECUSADA.value:
+            response = service._resposta(model)
+            db.commit()
+            return response
+        if model.status != Status.ENVIADA.value or not model.enviada_em:
+            raise service.PropostaConflito("Somente proposta enviada pode ser recusada.")
+        if budget.status != OrcamentoStatus.PROPOSTA_ENVIADA.value:
+            raise service.PropostaConflito("Status do orcamento incompativel com a recusa.")
+        if (
+            financial_service.buscar_por_proposta(db, model.id) is not None
+            or crud_producao.buscar_por_orcamento(db, model.orcamento_id) is not None
+        ):
+            raise service.PropostaConflito(
+                "Esta proposta possui operacoes comerciais e requer conciliacao."
+            )
+        model.status = Status.RECUSADA.value
+        budget.status = OrcamentoStatus.RECUSADO.value
+        db.flush()
+        audit_service.record(
+            db,
+            actor=actor,
+            action="proposal.refused_by_client",
+            entity_type="proposal",
+            entity_id=model.id,
+            metadata={"old_status": Status.ENVIADA.value, "new_status": model.status},
+            request_id=request_id,
+        )
+        response = service._resposta(model)
+        db.commit()
+        logger.info("proposal_refused_by_client")
+        return response
     except Exception:
         db.rollback()
         raise

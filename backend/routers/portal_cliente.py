@@ -1,20 +1,26 @@
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_client
 from database import get_db
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from models.usuario import UsuarioModel
 from schemas.portal_cliente import (
     FinanceiroClienteResponse,
     ProducaoArquivoClienteResponse,
     ProducaoClienteResponse,
+    PropostaClienteAction,
+    PropostaClienteResponse,
 )
-from services import financial_service, portal_cliente_service, producao_arquivo_service
+from services import (
+    financial_service,
+    portal_cliente_proposta_service,
+    portal_cliente_service,
+    producao_arquivo_service,
+)
 from services.producao_arquivo_storage import MAX_FILE_SIZE
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/portal/cliente", tags=["Portal do Cliente"])
 Db = Annotated[Session, Depends(get_db)]
@@ -48,6 +54,96 @@ def _client_file(model, user_id):
         "created_at": model.created_at,
         "updated_at": model.updated_at,
     }
+
+
+def _proposal_error(exc):
+    if isinstance(exc, portal_cliente_proposta_service.PropostaClienteNotFound):
+        return HTTPException(status_code=404, detail="Proposta nao encontrada.")
+    if isinstance(exc, portal_cliente_proposta_service.PropostaClienteConflict):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, portal_cliente_proposta_service.PropostaClienteUnavailable):
+        return HTTPException(status_code=503, detail="Documento indisponivel.")
+    return HTTPException(status_code=422, detail="Nao foi possivel processar a proposta.")
+
+
+@router.get("/propostas", response_model=list[PropostaClienteResponse])
+def listar_minhas_propostas(db: Db, user: CurrentClient):
+    try:
+        return portal_cliente_proposta_service.list_for_client(db, user.cliente_id)
+    except portal_cliente_proposta_service.PropostaClienteError as exc:
+        raise _proposal_error(exc) from None
+
+
+@router.get("/propostas/{proposta_id}", response_model=PropostaClienteResponse)
+def obter_minha_proposta(proposta_id: int, db: Db, user: CurrentClient):
+    try:
+        return portal_cliente_proposta_service.get_for_client(
+            db, proposta_id, user.cliente_id
+        )
+    except portal_cliente_proposta_service.PropostaClienteError as exc:
+        raise _proposal_error(exc) from None
+
+
+@router.get("/propostas/{proposta_id}/documento")
+def baixar_documento_proposta(proposta_id: int, db: Db, user: CurrentClient):
+    try:
+        content, filename = portal_cliente_proposta_service.document_for_client(
+            db, proposta_id, user.cliente_id
+        )
+    except portal_cliente_proposta_service.PropostaClienteError as exc:
+        raise _proposal_error(exc) from None
+    encoded = quote(filename, safe="")
+    return Response(
+        content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded}",
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.post("/propostas/{proposta_id}/aceitar", response_model=PropostaClienteResponse)
+def aceitar_minha_proposta(
+    proposta_id: int,
+    data: PropostaClienteAction,
+    request: Request,
+    db: Db,
+    user: CurrentClient,
+):
+    try:
+        return portal_cliente_proposta_service.accept(
+            db,
+            proposta_id,
+            user.cliente_id,
+            data.versao,
+            user,
+            getattr(request.state, "request_id", None),
+        )
+    except portal_cliente_proposta_service.PropostaClienteError as exc:
+        raise _proposal_error(exc) from None
+
+
+@router.post("/propostas/{proposta_id}/recusar", response_model=PropostaClienteResponse)
+def recusar_minha_proposta(
+    proposta_id: int,
+    data: PropostaClienteAction,
+    request: Request,
+    db: Db,
+    user: CurrentClient,
+):
+    try:
+        return portal_cliente_proposta_service.refuse(
+            db,
+            proposta_id,
+            user.cliente_id,
+            data.versao,
+            user,
+            getattr(request.state, "request_id", None),
+        )
+    except portal_cliente_proposta_service.PropostaClienteError as exc:
+        raise _proposal_error(exc) from None
 
 
 @router.get("/producoes", response_model=list[ProducaoClienteResponse])

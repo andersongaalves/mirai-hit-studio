@@ -36,6 +36,28 @@ class EmailService:
         }, {"idempotency_key": idempotency_key})
 
     @classmethod
+    def enviar_proposta_disponivel(
+        cls,
+        cliente,
+        proposal_url: str,
+        *,
+        proposta_numero: str,
+        idempotency_key: str,
+    ):
+        html = cls.render(
+            "email_proposta_portal.html",
+            nome=cliente.nome,
+            proposal_url=proposal_url,
+            proposta_numero=proposta_numero,
+        )
+        return resend.Emails.send({
+            "from": settings.EMAIL_FROM,
+            "to": cliente.email,
+            "subject": f"Proposta {proposta_numero} disponivel no Portal Mirai",
+            "html": html,
+        }, {"idempotency_key": idempotency_key})
+
+    @classmethod
     def enviar_confirmacao_cadastro(
         cls,
         cliente,

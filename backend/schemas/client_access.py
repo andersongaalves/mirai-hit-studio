@@ -24,6 +24,7 @@ class ClientAccessStatus(BaseModel):
     cliente_nome: str
     email: str | None
     proposta_status: str
+    convite_disponivel: bool = True
     estado: ClientAccessState
     usuario_id: int | None = None
     last_sent_at: datetime | None = None

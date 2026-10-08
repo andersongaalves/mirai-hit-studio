@@ -1,9 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from models.enums.proposta import PoliticaPagamento, PropostaStatus
+from pydantic import BaseModel, ConfigDict, Field
 
 from schemas.producao_arquivo import TipoArquivoProducao
+from schemas.proposta import PropostaItem, PropostaTotais
 
 
 class ProducaoClienteResponse(BaseModel):
@@ -62,3 +64,28 @@ class ProducaoArquivoClienteResponse(BaseModel):
     enviado_por_mim: bool
     created_at: datetime
     updated_at: datetime
+
+
+class PropostaClienteResponse(BaseModel):
+    id: int
+    numero: str
+    versao: int
+    status: PropostaStatus
+    servico: str
+    objeto: str
+    descricao: str
+    itens: list[PropostaItem]
+    totais: PropostaTotais
+    politica_pagamento: PoliticaPagamento
+    condicoes: str
+    documento_disponivel: bool
+    situacao_comercial: str
+    cobranca_status: str | None
+    enviada_em: datetime
+    aprovada_em: datetime | None
+    created_at: datetime | None
+    updated_at: datetime | None
+
+
+class PropostaClienteAction(BaseModel):
+    versao: int = Field(gt=0)
