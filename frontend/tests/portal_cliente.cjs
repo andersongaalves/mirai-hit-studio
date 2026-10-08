@@ -8,6 +8,26 @@ const now = Date.now();
 let loginRole = 'cliente';
 let failList = false;
 let uploads = 0;
+let proposals = [{
+    id: 11,
+    numero: 'PROP-CLIENT-011',
+    versao: 1,
+    status: 'enviada',
+    servico: 'Produção musical',
+    objeto: '<img src=x onerror=alert(2)>',
+    descricao: 'Proposta sintética segura.',
+    itens: [{ descricao: 'Produção musical', quantidade: '1', valor_unitario: '1200.00', desconto: '0.00' }],
+    totais: { subtotal: '1200.00', desconto: '0.00', total: '1200.00' },
+    politica_pagamento: 'entrada_50_50',
+    condicoes: 'Entrada de 50% para início.',
+    documento_disponivel: true,
+    situacao_comercial: 'aguardando_aceite',
+    cobranca_status: null,
+    enviada_em: new Date(now).toISOString(),
+    aprovada_em: null,
+    created_at: new Date(now).toISOString(),
+    updated_at: new Date(now).toISOString(),
+}];
 let productions = [
     {
         id: 1, titulo: '<img src=x onerror=alert(1)>', servico: 'Mixagem', status: 'revisao',
@@ -86,6 +106,29 @@ async function staticResponse(route) {
         const user = { id: 4, username: 'client-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true, cliente_id: loginRole === 'cliente' ? 1 : null };
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'synthetic-client-token', user } });
         if (url.pathname === '/auth/me') return route.fulfill({ json: user });
+        if (url.pathname === '/portal/cliente/propostas' && request.method() === 'GET') {
+            return route.fulfill({ json: proposals });
+        }
+        const proposalDocument = url.pathname.match(/^\/portal\/cliente\/propostas\/(\d+)\/documento$/);
+        if (proposalDocument) {
+            return route.fulfill({
+                body: '%PDF-1.4 synthetic',
+                contentType: 'application/pdf',
+                headers: { 'content-disposition': "attachment; filename*=UTF-8''proposta-11-v1.pdf" },
+            });
+        }
+        const proposalAction = url.pathname.match(/^\/portal\/cliente\/propostas\/(\d+)\/(aceitar|recusar)$/);
+        if (proposalAction && request.method() === 'POST') {
+            const proposal = proposals.find(item => item.id === Number(proposalAction[1]));
+            proposal.status = proposalAction[2] === 'aceitar' ? 'aceita' : 'recusada';
+            proposal.situacao_comercial = proposal.status === 'aceita' ? 'aguardando_pagamento' : 'recusada';
+            return route.fulfill({ json: proposal });
+        }
+        const proposalDetail = url.pathname.match(/^\/portal\/cliente\/propostas\/(\d+)$/);
+        if (proposalDetail) {
+            const proposal = proposals.find(item => item.id === Number(proposalDetail[1]));
+            return route.fulfill(proposal ? { json: proposal } : { status: 404, json: { detail: 'Proposta nao encontrada.' } });
+        }
         if (url.pathname === '/portal/cliente/producoes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
@@ -123,6 +166,25 @@ async function staticResponse(route) {
         assert.match(metrics, /Projetos em andamento1/);
         assert.match(metrics, /Projetos concluídos1/);
         assert.match(metrics, /Pagamentos pendentes1/);
+        assert.equal(await page.locator('#client-proposal-summary').isVisible(), true);
+        await page.getByRole('link', { name: 'Propostas', exact: true }).click();
+        await page.waitForURL('**/cliente/propostas');
+        await page.getByRole('button', { name: 'Abrir proposta' }).click();
+        await page.waitForURL('**/cliente/propostas/11');
+        assert.equal(await page.locator('#client-proposal-detail-content img').count(), 0);
+        assert.match(await page.locator('#client-proposal-detail-content').textContent(), /<img src=x onerror=alert\(2\)>/);
+        assert.match(await page.locator('#client-proposal-detail-content').textContent(), /R\$\s*1\.200,00/);
+        const proposalDownloadPromise = page.waitForEvent('download');
+        await page.getByRole('button', { name: 'Baixar PDF' }).click();
+        assert.match((await proposalDownloadPromise).suggestedFilename(), /^proposta-11(?:-v1)?\.pdf$/);
+        page.once('dialog', dialog => dialog.accept());
+        await page.getByRole('button', { name: 'Aceitar proposta' }).click();
+        await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Proposta aceita'));
+        assert.equal(await page.getByRole('button', { name: 'Aceitar proposta' }).count(), 0);
+        for (const width of [320, 375, 390, 768, 1024, 1440]) {
+            await page.setViewportSize({ width, height: 800 });
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+        }
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });

@@ -27,6 +27,16 @@ const access = {
             const request = route.request();
             const url = new URL(request.url());
             if (url.origin === 'http://localhost:8000') {
+                if (url.pathname === '/auth/login') {
+                    return route.fulfill({ json: {
+                        access_token: 'client-deep-link-token',
+                        token_type: 'bearer',
+                        user: { id: 7, username: 'client', role: 'cliente', is_admin: false, ativo: true, cliente_id: 4 },
+                    } });
+                }
+                if (url.pathname === '/auth/me') {
+                    return route.fulfill({ json: { id: 7, username: 'client', role: 'cliente', is_admin: false, ativo: true, cliente_id: 4 } });
+                }
                 if (url.pathname === '/cliente-acessos/validar') {
                     return route.fulfill({ json: { estado: 'valido' } });
                 }
@@ -47,8 +57,11 @@ const access = {
                 return route.fulfill({ json: [] });
             }
             if (url.origin === 'http://localhost:4173') {
-                const aliases = { '/ativar': '/ativar.html' };
-                const file = path.resolve(root, `.${aliases[url.pathname] || url.pathname}`);
+                const aliases = { '/ativar': '/ativar.html', '/acesso': '/acesso.html' };
+                const target = url.pathname.startsWith('/cliente')
+                    ? '/portal-cliente.html'
+                    : aliases[url.pathname] || url.pathname;
+                const file = path.resolve(root, `.${target}`);
                 assert.ok(file.startsWith(root + path.sep));
                 try {
                     return route.fulfill({
@@ -60,14 +73,38 @@ const access = {
             return route.fulfill({ status: 200, body: '' });
         });
 
-        await page.goto('http://localhost:4173/ativar?token=synthetic-token-with-sufficient-length-1234');
+        const proposalPath = '/cliente/propostas/8';
+        await page.goto(`http://localhost:4173/ativar?token=synthetic-token-with-sufficient-length-1234&next=${encodeURIComponent(proposalPath)}`);
         await page.waitForSelector('#activation-form:not(.hidden)');
         await page.locator('#activation-username').fill('cliente_portal');
         await page.locator('#activation-password').fill('secure-password');
         await page.locator('#activation-confirm').fill('secure-password');
         await page.locator('#activation-form').getByRole('button', { name: 'Ativar acesso' }).click();
         await page.waitForSelector('#activation-login:not(.hidden)');
+        assert.equal(
+            await page.locator('#activation-login').getAttribute('href'),
+            `/acesso?next=${encodeURIComponent(proposalPath)}`,
+        );
+        assert.equal(new URL(page.url()).searchParams.has('token'), false);
+
+        await page.goto('http://localhost:4173/ativar?token=synthetic-token-with-sufficient-length-1234&next=https%3A%2F%2Fevil.example%2Fcliente');
+        await page.waitForSelector('#activation-form:not(.hidden)');
         assert.equal(await page.locator('#activation-login').getAttribute('href'), '/acesso');
+
+        await page.goto(`http://localhost:4173/acesso?next=${encodeURIComponent(proposalPath)}`);
+        await page.locator('#username').fill('client');
+        await page.locator('#password').fill('synthetic-password');
+        await page.getByRole('button', { name: 'Entrar' }).click();
+        await page.waitForURL(`**${proposalPath}`);
+        assert.equal(new URL(page.url()).pathname, proposalPath);
+
+        await page.evaluate(() => localStorage.clear());
+        await page.goto('http://localhost:4173/acesso?next=https%3A%2F%2Fevil.example%2Fcliente');
+        await page.locator('#username').fill('client');
+        await page.locator('#password').fill('synthetic-password');
+        await page.getByRole('button', { name: 'Entrar' }).click();
+        await page.waitForURL('**/cliente');
+        assert.equal(new URL(page.url()).pathname, '/cliente');
 
         for (const width of [320, 375, 390, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 800 });

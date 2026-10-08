@@ -8,8 +8,18 @@ const budgetId = Number(process.env.E2E_FLOW_BUDGET_ID);
 const producerId = Number(process.env.E2E_PRODUCER_A_ID);
 const provisionClientId = Number(process.env.E2E_PROVISION_CLIENT_ID);
 const otherProductionId = Number(process.env.E2E_OTHER_PRODUCTION_ID);
+const clientProposalId = Number(process.env.E2E_CLIENT_PROPOSAL_ID);
+const otherClientProposalId = Number(process.env.E2E_OTHER_CLIENT_PROPOSAL_ID);
 
-for (const [name, value] of Object.entries({ password, budgetId, producerId, provisionClientId, otherProductionId })) {
+for (const [name, value] of Object.entries({
+    password,
+    budgetId,
+    producerId,
+    provisionClientId,
+    otherProductionId,
+    clientProposalId,
+    otherClientProposalId,
+})) {
     assert.ok(value, `missing ${name}`);
 }
 
@@ -83,6 +93,31 @@ function expectStatus(result, status, label) {
         assert.equal(catalog.status, 200);
         assert.ok(Array.isArray(catalog.body) && catalog.body.length > 0);
 
+        await login(page, `/cliente/propostas/${clientProposalId}`, 'e2e-client-a');
+        await page.locator('#proposal-detail-title').waitFor({ state: 'visible' });
+        assert.match(await page.locator('#client-proposal-detail-content').textContent(), /Produção musical E2E/);
+        assert.match(await page.locator('#client-proposal-detail-content').textContent(), /R\$\s*1\.200,00/);
+        expectStatus(
+            await api(page, 'GET', `/portal/cliente/propostas/${otherClientProposalId}`),
+            404,
+            'client proposal ownership',
+        );
+        const proposalDownloadPromise = page.waitForEvent('download');
+        await page.getByRole('button', { name: 'Baixar PDF' }).click();
+        const proposalDownload = await proposalDownloadPromise;
+        assert.match(proposalDownload.suggestedFilename(), /^proposta-\d+(?:-v1)?\.pdf$/);
+        page.once('dialog', dialog => dialog.accept());
+        await page.getByRole('button', { name: 'Aceitar proposta' }).click();
+        await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Proposta aceita'));
+        const acceptedProposal = expectStatus(
+            await api(page, 'GET', `/portal/cliente/propostas/${clientProposalId}`),
+            200,
+            'accepted client proposal',
+        );
+        assert.equal(acceptedProposal.status, 'aceita');
+        assert.equal(acceptedProposal.situacao_comercial, 'aguardando_pagamento');
+
+        await resetSession(page);
         await login(page, '/admin', 'e2e-admin');
         expectStatus(await api(page, 'POST', '/usuarios', {
             username: 'e2e-provisioned-client',

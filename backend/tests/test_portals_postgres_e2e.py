@@ -11,8 +11,10 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Barrier
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -82,6 +84,10 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         if "portals_e2e" not in (configured.database or ""):
             raise RuntimeError("Portals E2E requires a clearly disposable database name")
 
+        cls.proposal_pdf_directory = TemporaryDirectory(prefix="mirai-proposal-e2e-")
+        cls.previous_proposal_pdf_dir = os.environ.get("PROPOSTA_PDF_DIR")
+        os.environ["PROPOSTA_PDF_DIR"] = cls.proposal_pdf_directory.name
+
         from core.config import settings
         from database import SessionLocal, engine
         from main import app
@@ -139,6 +145,11 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         finally:
             cls.stack.close()
             cls.engine.dispose()
+            if cls.previous_proposal_pdf_dir is None:
+                os.environ.pop("PROPOSTA_PDF_DIR", None)
+            else:
+                os.environ["PROPOSTA_PDF_DIR"] = cls.previous_proposal_pdf_dir
+            cls.proposal_pdf_directory.cleanup()
 
     def setUp(self):
         self._cleanup()
@@ -200,6 +211,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             ServicoModel,
             UsuarioModel,
         )
+        from services.documento_storage import LocalDocumentoStorage
 
         password = "Portals-E2E-only!"
         with self.SessionLocal.begin() as db:
@@ -284,7 +296,30 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 cliente_id=provision.id,
                 status="aprovado",
             )
-            db.add_all([flow_budget, other_budget, completed_budget, invite_budget])
+            client_proposal_budget = OrcamentoModel(
+                nome_cliente=client_a.nome,
+                email=client_a.email,
+                servico="Produção musical",
+                cliente_id=client_a.id,
+                valor_total=1200.0,
+                status="proposta_enviada",
+            )
+            other_proposal_budget = OrcamentoModel(
+                nome_cliente=client_b.nome,
+                email=client_b.email,
+                servico="Mixagem",
+                cliente_id=client_b.id,
+                valor_total=800.0,
+                status="proposta_enviada",
+            )
+            db.add_all([
+                flow_budget,
+                other_budget,
+                completed_budget,
+                invite_budget,
+                client_proposal_budget,
+                other_proposal_budget,
+            ])
             db.flush()
             proposal = PropostaModel(
                 orcamento_id=flow_budget.id,
@@ -301,7 +336,20 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 orcamento_id=invite_budget.id,
                 numero="E2E-PROP-INVITE",
                 status="aceita",
-                cliente_snapshot={},
+                cliente_snapshot={
+                    "cliente": {
+                        "nome": provision.nome,
+                        "email": provision.email,
+                        "whatsapp": None,
+                    },
+                    "orcamento": {
+                        "id": invite_budget.id,
+                        "servico": invite_budget.servico,
+                        "detalhes": None,
+                        "valor_total": None,
+                        "link_guia": None,
+                    },
+                },
                 itens_json=[],
                 pagamentos_json=[],
                 totais_json={},
@@ -309,6 +357,89 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             )
             db.add(invite_proposal)
             db.flush()
+            sent_at = datetime.now(timezone.utc)
+            client_proposal = PropostaModel(
+                orcamento_id=client_proposal_budget.id,
+                numero="E2E-PROP-CLIENT-001",
+                status="enviada",
+                cliente_snapshot={
+                    "cliente": {
+                        "nome": client_a.nome,
+                        "email": client_a.email,
+                        "whatsapp": None,
+                    },
+                    "orcamento": {
+                        "id": client_proposal_budget.id,
+                        "servico": client_proposal_budget.servico,
+                        "detalhes": None,
+                        "valor_total": "1200.00",
+                        "link_guia": None,
+                    },
+                },
+                objeto="Produção musical E2E",
+                descricao="Proposta sintética do Portal do Cliente.",
+                itens_json=[{
+                    "descricao": "Produção musical",
+                    "quantidade": "1",
+                    "valor_unitario": "1200.00",
+                    "desconto": "0.00",
+                }],
+                pagamentos_json=[],
+                politica_pagamento="entrada_50_50",
+                condicoes="Entrada de 50% para início.",
+                totais_json={
+                    "subtotal": "1200.00",
+                    "desconto": "0.00",
+                    "total": "1200.00",
+                },
+                enviada_em=sent_at,
+            )
+            other_client_proposal = PropostaModel(
+                orcamento_id=other_proposal_budget.id,
+                numero="E2E-PROP-CLIENT-002",
+                status="enviada",
+                cliente_snapshot={
+                    "cliente": {
+                        "nome": client_b.nome,
+                        "email": client_b.email,
+                        "whatsapp": None,
+                    },
+                    "orcamento": {
+                        "id": other_proposal_budget.id,
+                        "servico": other_proposal_budget.servico,
+                        "detalhes": None,
+                        "valor_total": "800.00",
+                        "link_guia": None,
+                    },
+                },
+                objeto="Mixagem E2E",
+                descricao="Proposta sintética alheia.",
+                itens_json=[{
+                    "descricao": "Mixagem",
+                    "quantidade": "1",
+                    "valor_unitario": "800.00",
+                    "desconto": "0.00",
+                }],
+                pagamentos_json=[],
+                politica_pagamento="integral",
+                condicoes="Pagamento integral.",
+                totais_json={
+                    "subtotal": "800.00",
+                    "desconto": "0.00",
+                    "total": "800.00",
+                },
+                enviada_em=sent_at,
+            )
+            db.add_all([client_proposal, other_client_proposal])
+            db.flush()
+            pdf = b"%PDF-1.4\n% synthetic client proposal\n%%EOF\n"
+            client_proposal.pdf_path = LocalDocumentoStorage().salvar(
+                pdf,
+                client_proposal.id,
+                client_proposal.versao,
+            )
+            client_proposal.pdf_sha256 = sha256(pdf).hexdigest()
+            client_proposal.gerada_em = sent_at
             charge = CobrancaModel(
                 proposta_id=proposal.id,
                 cliente_id=client_a.id,
@@ -355,11 +486,15 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 "admin_id": admin.id,
                 "producer_a_id": producer_a.id,
                 "producer_b_id": producer_b.id,
+                "client_user_a_id": client_user_a.id,
                 "client_a_id": client_a.id,
                 "client_b_id": client_b.id,
                 "provision_client_id": provision.id,
                 "flow_budget_id": flow_budget.id,
                 "invite_proposal_id": invite_proposal.id,
+                "client_proposal_id": client_proposal.id,
+                "client_proposal_version": client_proposal.versao,
+                "other_client_proposal_id": other_client_proposal.id,
                 "other_production_id": other_production.id,
                 "completed_production_id": completed.id,
             }
@@ -764,6 +899,104 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         self.assertEqual(created.status_code, 200, created.text)
         return created.json()["id"]
 
+    def test_client_proposal_acceptance_postgresql17_concurrency(self):
+        from core.config import settings
+        from models import (
+            AuditLogModel,
+            CobrancaModel,
+            ProducaoModel,
+            PropostaModel,
+            UsuarioModel,
+        )
+        from services import portal_cliente_proposta_service
+
+        previous = settings.COMMERCIAL_PIPELINE_V2_ENABLED
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+        try:
+            admin = self._login("e2e-admin")
+            producer = self._login("e2e-producer-a")
+            client = self._login("e2e-client-a")
+            own_id = self.ids["client_proposal_id"]
+            other_id = self.ids["other_client_proposal_id"]
+
+            self.assertEqual(
+                self.http.get("/portal/cliente/propostas", headers=admin).status_code,
+                403,
+            )
+            self.assertEqual(
+                self.http.get("/portal/cliente/propostas", headers=producer).status_code,
+                403,
+            )
+            own = self.http.get(f"/portal/cliente/propostas/{own_id}", headers=client)
+            self.assertEqual(own.status_code, 200, own.text)
+            self.assertEqual(own.json()["status"], "enviada")
+            self.assertEqual(
+                self.http.get(f"/portal/cliente/propostas/{other_id}", headers=client).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.http.get(
+                    f"/portal/cliente/propostas/{other_id}/documento",
+                    headers=client,
+                ).status_code,
+                404,
+            )
+            document = self.http.get(
+                f"/portal/cliente/propostas/{own_id}/documento",
+                headers=client,
+            )
+            self.assertEqual(document.status_code, 200, document.text)
+            self.assertTrue(document.content.startswith(b"%PDF-"))
+            self.assertEqual(document.headers["cache-control"], "private, no-store")
+
+            gate = Barrier(2)
+
+            def accept(request_id):
+                with self.SessionLocal() as db:
+                    actor = db.get(UsuarioModel, self.ids["client_user_a_id"])
+                    gate.wait(timeout=10)
+                    return portal_cliente_proposta_service.accept(
+                        db,
+                        own_id,
+                        self.ids["client_a_id"],
+                        self.ids["client_proposal_version"],
+                        actor,
+                        request_id,
+                    )
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(accept, ("accept-a", "accept-b")))
+            self.assertEqual([item["status"] for item in results], ["aceita", "aceita"])
+
+            with self.SessionLocal() as db:
+                proposal = db.get(PropostaModel, own_id)
+                self.assertEqual(proposal.status, "aceita")
+                self.assertEqual(
+                    db.query(CobrancaModel).filter(CobrancaModel.proposta_id == own_id).count(),
+                    1,
+                )
+                self.assertEqual(
+                    db.query(ProducaoModel)
+                    .filter(ProducaoModel.orcamento_id == proposal.orcamento_id)
+                    .count(),
+                    0,
+                )
+                self.assertEqual(
+                    db.query(AuditLogModel)
+                    .filter(AuditLogModel.action == "proposal.accepted_by_client")
+                    .count(),
+                    1,
+                )
+
+            refused = self.http.post(
+                f"/portal/cliente/propostas/{own_id}/recusar",
+                headers=client,
+                json={"versao": self.ids["client_proposal_version"]},
+            )
+            self.assertEqual(refused.status_code, 409, refused.text)
+        finally:
+            settings.COMMERCIAL_PIPELINE_V2_ENABLED = previous
+
     def test_backend_postgresql17_matrix(self):
         from core.config import settings
         from jose import jwt
@@ -1033,7 +1266,14 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             )
 
     def test_browser_uses_real_backend_and_postgresql(self):
-        from models import ProducaoArquivoModel, RepasseProdutorModel
+        from core.config import settings
+        from models import (
+            CobrancaModel,
+            ProducaoArquivoModel,
+            ProducaoModel,
+            PropostaModel,
+            RepasseProdutorModel,
+        )
 
         root = Path(__file__).resolve().parents[2]
         env = {
@@ -1043,16 +1283,26 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             "E2E_PRODUCER_A_ID": str(self.ids["producer_a_id"]),
             "E2E_PROVISION_CLIENT_ID": str(self.ids["provision_client_id"]),
             "E2E_OTHER_PRODUCTION_ID": str(self.ids["other_production_id"]),
+            "E2E_CLIENT_PROPOSAL_ID": str(self.ids["client_proposal_id"]),
+            "E2E_OTHER_CLIENT_PROPOSAL_ID": str(self.ids["other_client_proposal_id"]),
         }
-        result = subprocess.run(
-            [os.getenv("NODE_BINARY", "node"), str(root / "frontend/tests/portals_postgres_e2e.cjs")],
-            cwd=root,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=180,
-            check=False,
-        )
+        previous = settings.COMMERCIAL_PIPELINE_V2_ENABLED
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+        try:
+            result = subprocess.run(
+                [
+                    os.getenv("NODE_BINARY", "node"),
+                    str(root / "frontend/tests/portals_postgres_e2e.cjs"),
+                ],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=180,
+                check=False,
+            )
+        finally:
+            settings.COMMERCIAL_PIPELINE_V2_ENABLED = previous
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("PORTALS_E2E_PASS", result.stdout)
         with self.SessionLocal() as db:
@@ -1062,6 +1312,20 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             files = db.query(ProducaoArquivoModel).all()
             self.assertGreaterEqual(len(files), 3)
             self.assertTrue(all(item.object_key not in result.stdout for item in files))
+            proposal = db.get(PropostaModel, self.ids["client_proposal_id"])
+            self.assertEqual(proposal.status, "aceita")
+            self.assertEqual(
+                db.query(CobrancaModel)
+                .filter(CobrancaModel.proposta_id == proposal.id)
+                .count(),
+                1,
+            )
+            self.assertEqual(
+                db.query(ProducaoModel)
+                .filter(ProducaoModel.orcamento_id == proposal.orcamento_id)
+                .count(),
+                0,
+            )
 
 
 if __name__ == "__main__":
