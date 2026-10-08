@@ -136,6 +136,8 @@ def local_frontend_server(directory, port=0):
                 self.path = '/portal-produtor.html'
             elif self.path == '/cliente' or self.path.startswith('/cliente/'):
                 self.path = '/portal-cliente.html'
+            elif self.path == '/checkout' or self.path.startswith('/checkout?'):
+                self.path = '/checkout.html'
             elif re.fullmatch(r'/checkout/[0-9a-f-]{36}', self.path, re.IGNORECASE):
                 self.path = '/checkout.html'
             return super().do_GET()

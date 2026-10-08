@@ -3,7 +3,7 @@ name: Portals E2E PostgreSQL 17
 on:
     workflow_dispatch:
     push:
-        branches: [main]
+        branches: [main, phase/3.5b3-authenticated-checkout]
         paths:
             - ".github/workflows/portals-e2e.yml"
             - "backend/routers/portal_*.py"
@@ -19,6 +19,13 @@ on:
             - "backend/services/portfolio_segments_service.py"
             - "backend/services/client_access_service.py"
             - "backend/services/portal_cliente_proposta_service.py"
+            - "backend/services/checkout_service.py"
+            - "backend/services/mercado_pago_service.py"
+            - "backend/services/producao_liberacao_service.py"
+            - "backend/routers/checkout.py"
+            - "backend/schemas/checkout.py"
+            - "backend/tests/test_authenticated_checkout.py"
+            - "backend/tests/commercial_i2_support.py"
             - "backend/services/proposta_comercial_service.py"
             - "backend/models/config.py"
             - "backend/models/usuario.py"
@@ -41,6 +48,7 @@ on:
             - "frontend/portal-*.html"
             - "frontend/js/produtor/**"
             - "frontend/js/cliente/**"
+            - "frontend/js/checkout.js"
             - "frontend/js/admin/auth.js"
             - "frontend/js/admin/configuracoes.js"
             - "frontend/js/admin/projetos.js"
@@ -54,6 +62,7 @@ on:
             - "frontend/tests/client_signup_postgres_e2e.cjs"
             - "frontend/tests/password_recovery*.cjs"
             - "frontend/tests/portals_postgres_e2e.cjs"
+            - "frontend/tests/checkout.cjs"
             - "frontend/acesso.html"
             - "frontend/ativar.html"
             - "frontend/cadastro.html"
@@ -193,6 +202,7 @@ jobs:
                   python -m unittest discover -s tests -p 'test_portfolio_segments.py' -v
                   python -m unittest discover -s tests -p 'test_client_access.py' -v
                   python -m unittest discover -s tests -p 'test_client_proposals.py' -v
+                  python -m unittest discover -s tests -p 'test_authenticated_checkout.py' -v
                   python -m unittest discover -s tests -p 'test_client_signup.py' -v
                   python -m unittest discover -s tests -p 'test_password_recovery.py' -v
 
@@ -202,6 +212,7 @@ jobs:
                   node frontend/tests/auth_sessions.cjs
                   node frontend/tests/client_access.cjs
                   node frontend/tests/portal_cliente.cjs
+                  node frontend/tests/checkout.cjs
                   node frontend/tests/proposta_comercial.cjs
                   node frontend/tests/client_signup.cjs
                   node frontend/tests/password_recovery.cjs

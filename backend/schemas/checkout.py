@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Literal
 
+from models.enums.proposta import PoliticaPagamento
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
@@ -32,6 +33,7 @@ class CheckoutSummary(CheckoutContract):
     valor_pago: Money = Field(ge=0, allow_inf_nan=False)
     saldo: Money = Field(ge=0, allow_inf_nan=False)
     moeda: Literal["BRL"]
+    politica_pagamento: PoliticaPagamento | None = None
     status: Literal["pendente", "parcialmente_paga", "paga", "cancelada"]
     opcoes: list[CheckoutOption]
     tentativa: CheckoutAttempt | None = None

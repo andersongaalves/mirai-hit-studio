@@ -22,6 +22,7 @@ import httpx
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from commercial_i2_support import local_frontend_server, local_server
+from integrations.mercado_pago import MercadoPagoClient
 from services.producao_arquivo_storage import ProducaoArquivoStorageError
 from sqlalchemy import delete, inspect, select, text
 from sqlalchemy.engine import make_url
@@ -91,6 +92,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         from core.config import settings
         from database import SessionLocal, engine
         from main import app
+        from routers.portal_cliente import get_mercado_pago_client as portal_provider
+        from commercial_i2_support import PaymentTransport
         from services import producao_arquivo_service
 
         actual = make_url(str(engine.url))
@@ -114,6 +117,13 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         cls.SessionLocal = SessionLocal
         cls.app = app
         cls.storage = MemoryStorage()
+        cls.payment_transport = PaymentTransport()
+        cls.payment_transport.next_status = "processed"
+        cls.payment_client = MercadoPagoClient(
+            access_token="synthetic-postgres-e2e-token",
+            session=cls.payment_transport,
+        )
+        app.dependency_overrides[portal_provider] = lambda: cls.payment_client
         settings.PUBLIC_FRONTEND_URL = "http://localhost:4173"
 
         cls.stack = ExitStack()
@@ -1616,7 +1626,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 db.query(ProducaoModel)
                 .filter(ProducaoModel.orcamento_id == proposal.orcamento_id)
                 .count(),
-                0,
+                1,
             )
 
 

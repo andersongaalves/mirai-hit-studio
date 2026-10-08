@@ -1,13 +1,15 @@
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from integrations.mercado_pago import MercadoPagoClient, MercadoPagoPayer, ProviderPaymentResult
 from models.enums.financeiro import CobrancaStatus, PagamentoStatus, PagamentoTipo
-from models.enums.proposta import PropostaStatus
+from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from models.financeiro import CobrancaModel, PagamentoModel
+from models.orcamento import OrcamentoModel
+from models.proposta import PropostaModel
 from schemas.checkout import (
     CheckoutAttempt,
     CheckoutOption,
@@ -16,7 +18,7 @@ from schemas.checkout import (
     CheckoutStatus,
     CheckoutSummary,
 )
-from services import financial_service, mercado_pago_service
+from services import financial_service, mercado_pago_service, producao_liberacao_service
 
 
 class CheckoutNaoEncontrado(Exception):
@@ -81,14 +83,21 @@ def _ultimo_pagamento(cobranca: CobrancaModel) -> PagamentoModel | None:
     return max(cobranca.pagamentos, key=lambda payment: payment.id or 0, default=None)
 
 
-def _options(cobranca: CobrancaModel) -> list[CheckoutOption]:
+def _options(cobranca: CobrancaModel, *, v2: bool = False) -> list[CheckoutOption]:
     if cobranca.status in {CobrancaStatus.PAGA.value, CobrancaStatus.CANCELADA.value}:
         return []
-    tipos = (
-        [PagamentoTipo.SALDO]
-        if financial_service.valor_pago(cobranca) > 0
-        else [PagamentoTipo.INTEGRAL, PagamentoTipo.ENTRADA]
-    )
+    pago = financial_service.valor_pago(cobranca)
+    if v2:
+        try:
+            politica = PoliticaPagamento(cobranca.proposta.politica_pagamento)
+        except (AttributeError, ValueError):
+            raise CheckoutConflito("Politica de pagamento requer conciliacao.") from None
+        if politica == PoliticaPagamento.INTEGRAL:
+            tipos = [] if pago else [PagamentoTipo.INTEGRAL]
+        else:
+            tipos = [PagamentoTipo.SALDO] if pago else [PagamentoTipo.INTEGRAL, PagamentoTipo.ENTRADA]
+    else:
+        tipos = [PagamentoTipo.SALDO] if pago > 0 else [PagamentoTipo.INTEGRAL, PagamentoTipo.ENTRADA]
     return [
         CheckoutOption(
             tipo=tipo.value,
@@ -99,8 +108,7 @@ def _options(cobranca: CobrancaModel) -> list[CheckoutOption]:
     ]
 
 
-def resumo(db: Session, token: str) -> CheckoutSummary:
-    cobranca = carregar(db, token)
+def _summary(cobranca: CobrancaModel, *, v2: bool = False) -> CheckoutSummary:
     pago = financial_service.valor_pago(cobranca)
     saldo = financial_service.saldo_pendente(cobranca)
     pending = _tentativa_atual(cobranca)
@@ -111,8 +119,11 @@ def resumo(db: Session, token: str) -> CheckoutSummary:
         valor_pago=pago,
         saldo=saldo,
         moeda=cobranca.moeda,
+        politica_pagamento=(
+            PoliticaPagamento(cobranca.proposta.politica_pagamento) if v2 else None
+        ),
         status=cobranca.status,
-        opcoes=_options(cobranca),
+        opcoes=_options(cobranca, v2=v2),
         tentativa=CheckoutAttempt(
             metodo="cartao" if pending.metodo != "pix" else "pix",
             tipo=pending.tipo,
@@ -120,6 +131,62 @@ def resumo(db: Session, token: str) -> CheckoutSummary:
             recuperavel=bool(pending.provider_order_id),
         ) if pending else None,
     )
+
+
+def resumo(db: Session, token: str) -> CheckoutSummary:
+    cobranca = carregar(db, token)
+    return _summary(cobranca)
+
+
+def _proposta_cobranca_query(proposta_id: int, cliente_id: int, *, lock=False):
+    query = (
+        select(CobrancaModel)
+        .join(CobrancaModel.proposta)
+        .join(PropostaModel.orcamento)
+        .where(
+            PropostaModel.id == proposta_id,
+            OrcamentoModel.cliente_id == cliente_id,
+            or_(CobrancaModel.cliente_id.is_(None), CobrancaModel.cliente_id == cliente_id),
+        )
+        .options(
+            joinedload(CobrancaModel.proposta),
+            joinedload(CobrancaModel.cliente),
+            selectinload(CobrancaModel.pagamentos),
+        )
+    )
+    return query.with_for_update(of=CobrancaModel) if lock else query
+
+
+def carregar_proposta(db: Session, proposta_id: int, cliente_id: int, *, lock=False) -> CobrancaModel:
+    if not producao_liberacao_service.pipeline_v2_habilitada():
+        raise CheckoutNaoEncontrado("Checkout nao encontrado.")
+    cobranca = db.scalar(_proposta_cobranca_query(proposta_id, cliente_id, lock=lock))
+    if cobranca is None:
+        raise CheckoutNaoEncontrado("Checkout nao encontrado.")
+    if cobranca.proposta.status != PropostaStatus.ACEITA.value:
+        raise CheckoutIndisponivel("Checkout disponivel somente apos o aceite.")
+    if cobranca.moeda != "BRL":
+        raise CheckoutConflito("Cobranca com moeda invalida requer conciliacao.")
+    return cobranca
+
+
+def resumo_proposta(db: Session, proposta_id: int, cliente_id: int) -> CheckoutSummary:
+    return _summary(carregar_proposta(db, proposta_id, cliente_id), v2=True)
+
+
+def _validar_opcao_v2(cobranca: CobrancaModel, tipo: str) -> None:
+    try:
+        politica = PoliticaPagamento(cobranca.proposta.politica_pagamento)
+        tipo_value = PagamentoTipo(tipo)
+    except (AttributeError, ValueError):
+        raise CheckoutConflito("Opcao de pagamento indisponivel.") from None
+    pago = financial_service.valor_pago(cobranca)
+    if politica == PoliticaPagamento.INTEGRAL and tipo_value != PagamentoTipo.INTEGRAL:
+        raise CheckoutConflito("Esta proposta exige pagamento integral.")
+    if politica == PoliticaPagamento.ENTRADA_50_50 and pago and tipo_value != PagamentoTipo.SALDO:
+        raise CheckoutConflito("Somente o saldo restante esta disponivel.")
+    if politica == PoliticaPagamento.ENTRADA_50_50 and not pago and tipo_value == PagamentoTipo.SALDO:
+        raise CheckoutConflito("O saldo fica disponivel apos a entrada aprovada.")
 
 
 def status(db: Session, token: str) -> CheckoutStatus:
@@ -157,9 +224,27 @@ def _payer(cobranca: CobrancaModel, *, email=None, identification_type=None, ide
     )
 
 
-def _get_or_create_attempt(db: Session, cobranca: CobrancaModel, *, tipo: str, metodo: str):
+def _get_or_create_attempt(
+    db: Session,
+    cobranca: CobrancaModel,
+    *,
+    tipo: str,
+    metodo: str,
+    v2: bool = False,
+    cliente_id: int | None = None,
+):
     # The charge lock serializes checkout submissions. Existing outbound paths remain unchanged.
-    locked = carregar(db, cobranca.referencia_externa, lock=True)
+    if v2:
+        if cliente_id is None:
+            raise CheckoutConflito("Identidade do cliente requer conciliacao.")
+        locked = carregar_proposta(
+            db,
+            cobranca.proposta_id,
+            cliente_id,
+            lock=True,
+        )
+    else:
+        locked = carregar(db, cobranca.referencia_externa, lock=True)
     db.expire(locked, ["pagamentos", "status", "valor_total"])
     pending = db.scalar(
         select(PagamentoModel)
@@ -178,6 +263,8 @@ def _get_or_create_attempt(db: Session, cobranca: CobrancaModel, *, tipo: str, m
             raise CheckoutConflito("Ja existe um pagamento em processamento.")
         db.rollback()
         return pending.id, True
+    if v2:
+        _validar_opcao_v2(locked, tipo)
     try:
         amount = financial_service.valor_para_pagamento(locked, tipo)
     except (financial_service.FinanceiroInvalido, financial_service.FinanceiroConflito) as error:
@@ -247,6 +334,38 @@ def criar_pix(db: Session, token: str, tipo: str, *, client=None, request_id=Non
     return _result_response(db, payment_id, execution.result)
 
 
+def criar_pix_proposta(
+    db: Session,
+    proposta_id: int,
+    cliente_id: int,
+    tipo: str,
+    *,
+    client=None,
+    request_id=None,
+):
+    cobranca = carregar_proposta(db, proposta_id, cliente_id)
+    provider = client or MercadoPagoClient()
+    provider.ensure_configured()
+    payment_id, reused = _get_or_create_attempt(
+        db,
+        cobranca,
+        tipo=tipo,
+        metodo="pix",
+        v2=True,
+        cliente_id=cliente_id,
+    )
+    if reused:
+        return recuperar_proposta(db, proposta_id, cliente_id, client=provider, request_id=request_id)
+    execution = mercado_pago_service.enviar_pix(
+        db,
+        payment_id,
+        payer=_payer(cobranca),
+        client=provider,
+        request_id=request_id,
+    )
+    return _result_response(db, payment_id, execution.result)
+
+
 def criar_cartao(db: Session, token: str, dados, *, client=None, request_id=None):
     provider = client or MercadoPagoClient()
     provider.ensure_configured()
@@ -275,8 +394,92 @@ def criar_cartao(db: Session, token: str, dados, *, client=None, request_id=None
     return _result_response(db, payment_id, execution.result)
 
 
+def criar_cartao_proposta(
+    db: Session,
+    proposta_id: int,
+    cliente_id: int,
+    dados,
+    *,
+    client=None,
+    request_id=None,
+):
+    cobranca = carregar_proposta(db, proposta_id, cliente_id)
+    provider = client or MercadoPagoClient()
+    provider.ensure_configured()
+    payment_id, reused = _get_or_create_attempt(
+        db,
+        cobranca,
+        tipo=dados.payment_option,
+        metodo="cartao",
+        v2=True,
+        cliente_id=cliente_id,
+    )
+    if reused:
+        return recuperar_proposta(db, proposta_id, cliente_id, client=provider, request_id=request_id)
+    execution = mercado_pago_service.enviar_cartao(
+        db,
+        payment_id,
+        payer=_payer(
+            cobranca,
+            identification_type=dados.identification_type,
+            identification_number=dados.identification_number,
+        ),
+        card_token=dados.card_token,
+        payment_method_id=dados.payment_method_id,
+        payment_method_type=dados.payment_method_type,
+        installments=dados.installments,
+        client=provider,
+        request_id=request_id,
+    )
+    return _result_response(db, payment_id, execution.result)
+
+
 def recuperar(db: Session, token: str, *, client=None, request_id=None):
     cobranca = carregar(db, token)
+    payment = _tentativa_atual(cobranca)
+    if payment is None:
+        raise CheckoutConflito("Nao existe pagamento em processamento.")
+    if not payment.provider_order_id:
+        raise CheckoutConflito("Pagamento requer conciliacao antes de nova tentativa.")
+    reconciled = mercado_pago_service.reconcile_payment(
+        db, payment.id, client=client, request_id=request_id
+    )
+    return _result_response(db, payment.id, reconciled.provider_result)
+
+
+def status_proposta(db: Session, proposta_id: int, cliente_id: int) -> CheckoutStatus:
+    cobranca = carregar_proposta(db, proposta_id, cliente_id)
+    return _status(cobranca)
+
+
+def _status(cobranca: CobrancaModel) -> CheckoutStatus:
+    latest = _ultimo_pagamento(cobranca)
+    payment_status = None
+    if latest is not None:
+        payment_status = {
+            PagamentoStatus.PENDENTE.value: "processando",
+            PagamentoStatus.RECUSADO.value: "recusado",
+            PagamentoStatus.CANCELADO.value: "recusado",
+            PagamentoStatus.APROVADO.value: "aprovado",
+            PagamentoStatus.REEMBOLSADO.value: None,
+        }[latest.status]
+    return CheckoutStatus(
+        status=cobranca.status,
+        valor_pago=financial_service.valor_pago(cobranca),
+        saldo=financial_service.saldo_pendente(cobranca),
+        pagamento_status=payment_status,
+    )
+
+
+def recuperar_proposta(
+    db: Session,
+    proposta_id: int,
+    cliente_id: int,
+    *,
+    client=None,
+    request_id=None,
+):
+    cobranca = carregar_proposta(db, proposta_id, cliente_id)
     payment = _tentativa_atual(cobranca)
     if payment is None:
         raise CheckoutConflito("Nao existe pagamento em processamento.")

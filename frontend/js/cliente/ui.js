@@ -368,6 +368,12 @@ export function renderProposalDetail(proposal, handlers) {
         accept.addEventListener("click", () => handlers.onAccept(proposal, accept));
         actions.append(refuse, accept);
     }
+    if (proposal.status === "aceita" && !["paga", "cancelada"].includes(proposal.cobranca_status)) {
+        const payment = element("a", "btn-cta", "Ir para pagamento");
+        payment.href = `/checkout?proposta=${encodeURIComponent(proposal.id)}`;
+        payment.setAttribute("data-authenticated-checkout", "true");
+        actions.append(payment);
+    }
     detail.append(title, meta, description, conditions, items, actions);
     root.append(detail);
 }

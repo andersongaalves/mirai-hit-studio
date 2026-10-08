@@ -5,6 +5,7 @@ from core.dependencies import require_client
 from database import get_db
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
+from integrations.mercado_pago import MercadoPagoClient, MercadoPagoError, MercadoPagoNotConfigured
 from models.usuario import UsuarioModel
 from schemas.portal_cliente import (
     FinanceiroClienteResponse,
@@ -13,11 +14,13 @@ from schemas.portal_cliente import (
     PropostaClienteAction,
     PropostaClienteResponse,
 )
+from schemas.checkout import CheckoutCardRequest, CheckoutPaymentRequest, CheckoutPaymentResponse, CheckoutStatus, CheckoutSummary
 from services import (
     financial_service,
     portal_cliente_proposta_service,
     portal_cliente_service,
     producao_arquivo_service,
+    checkout_service,
 )
 from services.producao_arquivo_storage import MAX_FILE_SIZE
 from sqlalchemy.orm import Session
@@ -64,6 +67,124 @@ def _proposal_error(exc):
     if isinstance(exc, portal_cliente_proposta_service.PropostaClienteUnavailable):
         return HTTPException(status_code=503, detail="Documento indisponivel.")
     return HTTPException(status_code=422, detail="Nao foi possivel processar a proposta.")
+
+
+def get_mercado_pago_client():
+    return MercadoPagoClient()
+
+
+def _checkout_error(exc):
+    if isinstance(exc, checkout_service.CheckoutNaoEncontrado):
+        return HTTPException(status_code=404, detail="Checkout nao encontrado.")
+    if isinstance(exc, checkout_service.CheckoutIndisponivel):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, checkout_service.CheckoutConflito):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, financial_service.FinanceiroInvalido):
+        return HTTPException(status_code=422, detail="Dados financeiros invalidos.")
+    if isinstance(exc, financial_service.FinanceiroConflito):
+        return HTTPException(status_code=409, detail="Situacao financeira requer conciliacao.")
+    if isinstance(exc, MercadoPagoNotConfigured):
+        return HTTPException(status_code=503, detail="Pagamento temporariamente indisponivel.")
+    if isinstance(exc, MercadoPagoError):
+        status = 429 if exc.http_status == 429 else 503
+        return HTTPException(status_code=status, detail="Provider de pagamento temporariamente indisponivel.")
+    return HTTPException(status_code=503, detail="Checkout temporariamente indisponivel.")
+
+
+@router.get(
+    "/propostas/{proposta_id}/checkout",
+    response_model=CheckoutSummary,
+)
+def resumo_checkout_proposta(proposta_id: int, db: Db, user: CurrentClient):
+    try:
+        return checkout_service.resumo_proposta(db, proposta_id, user.cliente_id)
+    except Exception as exc:
+        raise _checkout_error(exc) from None
+
+
+@router.get(
+    "/propostas/{proposta_id}/checkout/status",
+    response_model=CheckoutStatus,
+)
+def status_checkout_proposta(proposta_id: int, db: Db, user: CurrentClient):
+    try:
+        return checkout_service.status_proposta(db, proposta_id, user.cliente_id)
+    except Exception as exc:
+        raise _checkout_error(exc) from None
+
+
+@router.get(
+    "/propostas/{proposta_id}/checkout/pending-payment",
+    response_model=CheckoutPaymentResponse,
+)
+def recuperar_checkout_proposta(
+    proposta_id: int,
+    request: Request,
+    db: Db,
+    user: CurrentClient,
+    client: MercadoPagoClient = Depends(get_mercado_pago_client),
+):
+    try:
+        return checkout_service.recuperar_proposta(
+            db,
+            proposta_id,
+            user.cliente_id,
+            client=client,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except Exception as exc:
+        raise _checkout_error(exc) from None
+
+
+@router.post(
+    "/propostas/{proposta_id}/checkout/pix",
+    response_model=CheckoutPaymentResponse,
+)
+def pagar_checkout_pix(
+    proposta_id: int,
+    data: CheckoutPaymentRequest,
+    request: Request,
+    db: Db,
+    user: CurrentClient,
+    client: MercadoPagoClient = Depends(get_mercado_pago_client),
+):
+    try:
+        return checkout_service.criar_pix_proposta(
+            db,
+            proposta_id,
+            user.cliente_id,
+            data.payment_option,
+            client=client,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except Exception as exc:
+        raise _checkout_error(exc) from None
+
+
+@router.post(
+    "/propostas/{proposta_id}/checkout/card",
+    response_model=CheckoutPaymentResponse,
+)
+def pagar_checkout_cartao(
+    proposta_id: int,
+    data: CheckoutCardRequest,
+    request: Request,
+    db: Db,
+    user: CurrentClient,
+    client: MercadoPagoClient = Depends(get_mercado_pago_client),
+):
+    try:
+        return checkout_service.criar_cartao_proposta(
+            db,
+            proposta_id,
+            user.cliente_id,
+            data,
+            client=client,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except Exception as exc:
+        raise _checkout_error(exc) from None
 
 
 @router.get("/propostas", response_model=list[PropostaClienteResponse])

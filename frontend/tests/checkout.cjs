@@ -34,7 +34,7 @@ function summary(description) {
 
 async function staticResponse(route) {
     const url = new URL(route.request().url());
-    const pathname = url.pathname.startsWith('/checkout/') ? '/checkout.html' : url.pathname;
+    const pathname = url.pathname === '/checkout' || url.pathname.startsWith('/checkout/') ? '/checkout.html' : url.pathname;
     const file = path.resolve(root, '.' + decodeURIComponent(pathname));
     assert.ok(file.startsWith(root + path.sep));
     try {
@@ -51,6 +51,7 @@ async function staticResponse(route) {
         const context = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
         await context.addInitScript(() => localStorage.setItem('mirai.analytics_consent.v1', 'rejected'));
         let pixRequests = 0;
+        let authenticatedPixRequests = 0;
         let cardPayload = null;
         let sdkFailure = false;
         const pageErrors = [];
@@ -73,6 +74,24 @@ async function staticResponse(route) {
                 ` });
             }
             if (url.origin === 'http://localhost:8000') {
+                if (url.pathname === '/portal/cliente/propostas/42/checkout' && route.request().method() === 'GET') {
+                    assert.equal(route.request().headers().authorization, 'Bearer client-token');
+                    return route.fulfill({ json: {
+                        proposta_numero: 'MHS-000042', descricao: 'Proposta autenticada', valor_total: '300.00',
+                        valor_pago: '0.00', saldo: '300.00', moeda: 'BRL', politica_pagamento: 'integral',
+                        status: 'pendente', tentativa: null,
+                        opcoes: [{ tipo: 'integral', titulo: 'Pagamento completo', valor: '300.00' }],
+                    } });
+                }
+                if (url.pathname === '/portal/cliente/propostas/42/checkout/pix' && route.request().method() === 'POST') {
+                    assert.equal(route.request().headers().authorization, 'Bearer client-token');
+                    authenticatedPixRequests += 1;
+                    return route.fulfill({ json: {
+                        status: 'pending', checkout_status: 'pendente', payment_option: 'integral',
+                        valor: '300.00', moeda: 'BRL', challenge_url: null,
+                        pix: { qr_code: 'auth-pix-code', qr_code_base64: null, ticket_url: null, expiration_time: null },
+                    } });
+                }
                 const match = url.pathname.match(/^\/checkout\/([0-9a-f-]{36})(.*)$/i);
                 if (url.pathname === '/checkout/config') return route.fulfill({ json: { mercado_pago_public_key: 'TEST-public-key' } });
                 if (!match) return route.fulfill({ status: 404, json: { detail: 'not found' } });
@@ -196,6 +215,18 @@ async function staticResponse(route) {
         await statePage.goto('http://localhost:4173/checkout/88888888-8888-4888-8888-888888888888');
         await statePage.waitForSelector('#checkout-error:not(.hidden)');
         assert.match(await statePage.locator('#checkout-error-message').textContent(), /não encontrado/i);
+
+        const authenticatedPage = await context.newPage();
+        authenticatedPage.on('pageerror', error => pageErrors.push(error.message));
+        await authenticatedPage.addInitScript(() => localStorage.setItem('mirai.auth.cliente.access_token', 'client-token'));
+        await authenticatedPage.goto('http://localhost:4173/checkout?proposta=42');
+        await authenticatedPage.waitForSelector('#checkout-content:not(.hidden)');
+        assert.equal(await authenticatedPage.locator('input[name="payment_option"]').count(), 1);
+        assert.equal(await authenticatedPage.locator('input[name="payment_option"]').first().inputValue(), 'integral');
+        await authenticatedPage.getByRole('button', { name: 'Gerar Pix' }).click();
+        await authenticatedPage.waitForSelector('#pix-result:not(.hidden)');
+        assert.equal(authenticatedPixRequests, 1);
+        await authenticatedPage.close();
 
         assert.deepEqual(pageErrors, []);
         console.log('PASS: guest summary, XSS safety, Pix, double-submit, card tokenization, 3DS, SDK failure and mobile structure.');

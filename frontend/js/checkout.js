@@ -1,10 +1,12 @@
 import { API_URL } from "./config.js";
 import { initAnalytics, track, trackOnce } from "./analytics.js";
+import { AUTH_CONTEXTS, createAuthContext } from "./admin/auth.js";
 
 const $ = id => document.getElementById(id);
 const TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const state = {
     token: null,
+    proposalId: null,
     summary: null,
     option: null,
     method: "pix",
@@ -13,6 +15,7 @@ const state = {
     polling: null,
     pollCount: 0,
 };
+const clientAuth = createAuthContext(AUTH_CONTEXTS.cliente);
 
 function money(value) {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value));
@@ -24,8 +27,27 @@ function readToken() {
     return TOKEN_PATTERN.test(token ?? "") ? token : null;
 }
 
+function readProposalId() {
+    const value = new URLSearchParams(location.search).get("proposta");
+    return /^\d+$/.test(value || "") && Number(value) > 0 ? Number(value) : null;
+}
+
+function authenticatedPath(path) {
+    const base = `/portal/cliente/propostas/${state.proposalId}/checkout`;
+    if (path === "checkout/config") return path;
+    if (path === `checkout/${state.token}`) return base;
+    if (path === `checkout/${state.token}/status`) return `${base}/status`;
+    if (path === `checkout/${state.token}/pending-payment`) return `${base}/pending-payment`;
+    if (path === `checkout/${state.token}/pix`) return `${base}/pix`;
+    if (path === `checkout/${state.token}/card`) return `${base}/card`;
+    return path;
+}
+
 async function api(path, options = {}) {
-    const response = await fetch(`${API_URL}/${path}`, options);
+    const endpoint = state.proposalId ? authenticatedPath(path) : path;
+    const response = state.proposalId
+        ? await clientAuth.authFetch(endpoint, options)
+        : await fetch(`${API_URL}/${endpoint}`, options);
     if (!response.ok) {
         let message = "Não foi possível concluir a operação.";
         try {
@@ -342,7 +364,8 @@ async function loadCheckout() {
     setHidden("checkout-loading", false);
     setHidden("checkout-error", true);
     try {
-        state.token = readToken();
+        state.proposalId = readProposalId();
+        state.token = state.proposalId ? String(state.proposalId) : readToken();
         if (!state.token) throw new Error("Link de checkout inválido.");
         const summary = await api(`checkout/${state.token}`);
         renderSummary(summary);
