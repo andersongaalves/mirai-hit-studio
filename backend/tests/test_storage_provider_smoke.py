@@ -6,6 +6,8 @@ from unittest.mock import patch
 
 import httpx
 
+from services.documento_storage import SupabaseDocumentoStorage
+from services.producao_arquivo_storage import SupabaseProducaoArquivoStorage
 from scripts.storage_provider_smoke import (
     _SmokeFailure,
     _legacy_smoke,
@@ -81,7 +83,7 @@ class StorageProviderSmokeTests(unittest.TestCase):
         self.assertIn("--diagnostic-output /tmp/storage-smoke-diagnostic.json", workflow)
         diagnostic_step = workflow.split("- name: Publish sanitized smoke diagnostics", 1)[1]
         diagnostic_step = diagnostic_step.split("- name:", 1)[0]
-        self.assertIn("if: always()", diagnostic_step)
+        self.assertIn("if: failure()", diagnostic_step)
         self.assertIn("/tmp/storage-smoke-diagnostic.json", diagnostic_step)
         self.assertIn("retention-days: 1", diagnostic_step)
         self.assertIn("if-no-files-found: warn", diagnostic_step)
@@ -205,6 +207,74 @@ class StorageProviderSmokeTests(unittest.TestCase):
         self.assertIn(("production", "DELETE"), requests)
         self.assertNotIn("private URL", str(raised.exception.failure))
         self.assertNotIn("object key", str(cleanup))
+
+    def test_real_legacy_adapters_preserve_sanitized_http_status(self):
+        deleted_buckets = set()
+
+        def handler(request):
+            path = request.url.path
+            if "/bucket/" in path:
+                return httpx.Response(200, json={"public": False})
+            bucket = (
+                "proposal-bucket"
+                if "proposal-bucket" in path
+                else "production-bucket"
+            )
+            if request.method == "POST":
+                return httpx.Response(200)
+            if request.method == "DELETE":
+                deleted_buckets.add(bucket)
+                return httpx.Response(200)
+            if bucket in deleted_buckets:
+                return httpx.Response(404)
+            if bucket == "proposal-bucket":
+                return httpx.Response(
+                    200,
+                    content=b"%PDF-1.7\nMirai synthetic storage smoke\n%%EOF\n",
+                )
+            return httpx.Response(502)
+
+        transport = httpx.MockTransport(handler)
+        proposal = SupabaseDocumentoStorage(
+            base_url="https://storage.invalid",
+            service_key="test-only",
+            bucket="proposal-bucket",
+            transport=transport,
+        )
+        production = SupabaseProducaoArquivoStorage(
+            base_url="https://storage.invalid",
+            service_key="test-only",
+            bucket="production-bucket",
+            transport=transport,
+        )
+
+        with (
+            patch(
+                "scripts.storage_provider_smoke.SupabaseDocumentoStorage",
+                return_value=proposal,
+            ),
+            patch(
+                "scripts.storage_provider_smoke.SupabaseProducaoArquivoStorage",
+                return_value=production,
+            ),
+        ):
+            with self.assertRaises(_SmokeFailure) as raised:
+                _legacy_smoke("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+
+        self.assertEqual(
+            raised.exception.failure,
+            {
+                "stage": "production_download",
+                "category": "http_error",
+                "http_status": 502,
+            },
+        )
+        self.assertEqual(
+            raised.exception.cleanup["proposal_pdf"]["absence"], "confirmed"
+        )
+        self.assertEqual(
+            raised.exception.cleanup["production_file"]["absence"], "confirmed"
+        )
 
 
 if __name__ == "__main__":

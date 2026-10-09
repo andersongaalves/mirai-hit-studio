@@ -93,14 +93,45 @@ class _SmokeFailure(Exception):
         self.cleanup = cleanup or {}
 
 
-def _legacy_step(stage: str, operation):
+def _legacy_step(
+    stage: str,
+    operation,
+    *,
+    storage=None,
+    expected_http_statuses: tuple[int, ...] = (),
+):
+    from contextlib import nullcontext
+    from unittest.mock import patch
+
+    observed_status = None
+    request_context = nullcontext()
+    if storage is not None:
+        original_request = storage._request
+
+        def recorded_request(*args, **kwargs):
+            nonlocal observed_status
+            response = original_request(*args, **kwargs)
+            status = getattr(response, "status_code", None)
+            if isinstance(status, int) and 100 <= status <= 599:
+                observed_status = status
+            return response
+
+        request_context = patch.object(
+            storage, "_request", side_effect=recorded_request
+        )
+
     try:
-        return operation()
+        with request_context:
+            return operation()
     except Exception as exc:  # noqa: BLE001 - retain only sanitized diagnostics.
+        status = _http_status(exc) or observed_status
+        category = _error_category(exc)
+        if status is not None and status not in expected_http_statuses:
+            category = "http_error"
         raise _SmokeFailure({
             "stage": stage,
-            "category": _error_category(exc),
-            **({"http_status": _http_status(exc)} if _http_status(exc) else {}),
+            "category": category,
+            **({"http_status": status} if status is not None else {}),
         }) from None
 
 
@@ -271,6 +302,8 @@ def _legacy_smoke(run_id: str) -> dict:
         _legacy_step(
             "proposal_bucket_check",
             lambda: _assert_bucket(proposal_bucket, public=False),
+            storage=proposal_bucket,
+            expected_http_statuses=(200,),
         )
         production_bucket = _legacy_step(
             "production_storage_init", SupabaseProducaoArquivoStorage
@@ -278,6 +311,8 @@ def _legacy_smoke(run_id: str) -> dict:
         _legacy_step(
             "production_bucket_check",
             lambda: _assert_bucket(production_bucket, public=False),
+            storage=production_bucket,
+            expected_http_statuses=(200,),
         )
 
         proposal_id = 9000000000000000000
@@ -291,12 +326,18 @@ def _legacy_smoke(run_id: str) -> dict:
             "services.documento_storage.uuid4", return_value=_uuid(run_id.replace("-", ""))
         ):
             saved_reference = _legacy_step(
-                "proposal_upload", lambda: proposal_bucket.salvar(_PDF, proposal_id, 1)
+                "proposal_upload",
+                lambda: proposal_bucket.salvar(_PDF, proposal_id, 1),
+                storage=proposal_bucket,
+                expected_http_statuses=(200, 201),
             )
         if saved_reference != proposal_ref:
             raise _SmokeFailure({"stage": "proposal_reference_check", "category": "reference_mismatch"})
         proposal_payload = _legacy_step(
-            "proposal_download", lambda: proposal_bucket.ler(saved_reference)
+            "proposal_download",
+            lambda: proposal_bucket.ler(saved_reference),
+            storage=proposal_bucket,
+            expected_http_statuses=(200,),
         )
         if proposal_payload != _PDF:
             raise _SmokeFailure({"stage": "proposal_integrity_check", "category": "content_mismatch"})
@@ -309,11 +350,16 @@ def _legacy_smoke(run_id: str) -> dict:
             saved_key = _legacy_step(
                 "production_upload",
                 lambda: production_bucket.save(_PDF, "application/pdf"),
+                storage=production_bucket,
+                expected_http_statuses=(200, 201),
             )
         if saved_key != production_key:
             raise _SmokeFailure({"stage": "production_reference_check", "category": "reference_mismatch"})
         production_payload = _legacy_step(
-            "production_download", lambda: production_bucket.read(saved_key)
+            "production_download",
+            lambda: production_bucket.read(saved_key),
+            storage=production_bucket,
+            expected_http_statuses=(200,),
         )
         if production_payload != _PDF:
             raise _SmokeFailure({"stage": "production_integrity_check", "category": "content_mismatch"})
