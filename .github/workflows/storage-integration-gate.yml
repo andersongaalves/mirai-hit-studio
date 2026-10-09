@@ -20,20 +20,20 @@ jobs:
             postgres:
                 image: postgres:17
                 env:
-                    POSTGRES_DB: mirai_storage_integration
+                    POSTGRES_DB: mirai_portals_e2e_storage
                     POSTGRES_USER: mirai_integration
                     POSTGRES_PASSWORD: mirai_integration_disposable
                 ports:
                     - 5432:5432
                 options: >-
-                    --health-cmd "pg_isready -U mirai_integration -d mirai_storage_integration"
+                    --health-cmd "pg_isready -U mirai_integration -d mirai_portals_e2e_storage"
                     --health-interval 5s
                     --health-timeout 5s
                     --health-retries 12
         env:
             APP_ENV: test
-            DATABASE_URL: postgresql+psycopg2://mirai_integration:mirai_integration_disposable@127.0.0.1:5432/mirai_storage_integration
-            MIRAI_PORTALS_E2E_DATABASE_URL: postgresql+psycopg2://mirai_integration:mirai_integration_disposable@127.0.0.1:5432/mirai_storage_integration
+            DATABASE_URL: postgresql+psycopg2://mirai_integration:mirai_integration_disposable@127.0.0.1:5432/mirai_portals_e2e_storage
+            MIRAI_PORTALS_E2E_DATABASE_URL: postgresql+psycopg2://mirai_integration:mirai_integration_disposable@127.0.0.1:5432/mirai_portals_e2e_storage
             MIRAI_PORTALS_E2E_ALLOW: POSTGRES_17_DISPOSABLE_ONLY
             API_NAME: Mirai storage integration
             API_VERSION: "2.0"
@@ -107,7 +107,7 @@ jobs:
                   PGPASSWORD: mirai_integration_disposable
               run: |
                   set -euo pipefail
-                  psql --host 127.0.0.1 --username mirai_integration --dbname mirai_storage_integration --set ON_ERROR_STOP=1 <<'SQL'
+                  psql --host 127.0.0.1 --username mirai_integration --dbname mirai_portals_e2e_storage --set ON_ERROR_STOP=1 <<'SQL'
                   DO $$ BEGIN
                     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
                       CREATE ROLE anon NOLOGIN;
@@ -245,7 +245,7 @@ jobs:
                   PGPASSWORD: mirai_integration_disposable
               run: |
                   set +e
-                  remaining="$(psql --host 127.0.0.1 --username mirai_integration --dbname mirai_storage_integration --tuples-only --no-align --command "
+                  remaining="$(psql --host 127.0.0.1 --username mirai_integration --dbname mirai_portals_e2e_storage --tuples-only --no-align --command "
                     SELECT
                       (SELECT count(*) FROM usuarios) +
                       (SELECT count(*) FROM clientes) +
