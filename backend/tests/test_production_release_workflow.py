@@ -1,3 +1,4 @@
+import hashlib
 import unittest
 from pathlib import Path
 
@@ -5,12 +6,20 @@ from pathlib import Path
 class ProductionReleaseWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        root = Path(__file__).resolve().parents[2]
         cls.source = (
-            Path(__file__).resolve().parents[2]
+            root
             / ".github"
             / "workflows"
             / "production-release.yml"
         ).read_text(encoding="utf-8")
+        cls.integration_source = (
+            root
+            / ".github"
+            / "workflows"
+            / "storage-integration-gate.yml"
+        ).read_text(encoding="utf-8")
+        cls.guard_path = root / "backend" / "scripts" / "production_release_guard.py"
 
     def test_release_is_manual_serial_and_main_bound(self):
         self.assertIn("workflow_dispatch:", self.source)
@@ -49,6 +58,24 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("--require-rollout-ready", self.source)
         self.assertIn("COMMERCIAL_PIPELINE_V2_ENABLED", self.source)
         self.assertNotIn("COMMERCIAL_PIPELINE_V2_ENABLED: true", self.source)
+
+    def test_integration_ci_runs_on_main_but_release_rejects_branch_evidence(self):
+        self.assertIn(
+            "branches: [main, phase/3.8-integration-gate]", self.integration_source
+        )
+        self.assertIn(
+            "main|phase/3.8-integration-gate", self.integration_source
+        )
+        self.assertIn('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', self.integration_source)
+        guard = Path(__file__).resolve().parents[1].joinpath(
+            "scripts/production_release_guard.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"head_branch": "main"', guard)
+        self.assertIn('allowed_events=("workflow_dispatch",)', guard)
+
+    def test_release_guard_source_pin_matches_the_reviewed_script(self):
+        digest = hashlib.sha256(self.guard_path.read_bytes()).hexdigest()
+        self.assertIn(f"RELEASE_GUARD_SHA256: {digest}", self.source)
 
 
 if __name__ == "__main__":

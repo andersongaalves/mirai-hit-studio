@@ -19,7 +19,7 @@ class ProductionReleaseGuardTests(unittest.TestCase):
             ),
         }
 
-    def workflow_run(self, run_id, path):
+    def workflow_run(self, run_id, path, event="workflow_dispatch"):
         return {
             "id": int(run_id),
             "head_sha": self.SHA,
@@ -27,6 +27,7 @@ class ProductionReleaseGuardTests(unittest.TestCase):
             "status": "completed",
             "conclusion": "success",
             "path": path,
+            "event": event,
         }
 
     def report(self, **overrides):
@@ -65,6 +66,29 @@ class ProductionReleaseGuardTests(unittest.TestCase):
         wrong = self.workflow_run("101", ".github/workflows/other.yml")
         report = self.report(integration_run=wrong)
         self.assertEqual(report["statuses"]["integration_ci"], "run_path_mismatch")
+
+    def test_only_main_ci_and_manual_main_hmac_issuer_are_accepted(self):
+        branch_run = self.workflow_run(
+            "101", ".github/workflows/storage-integration-gate.yml", event="push"
+        )
+        branch_run["head_branch"] = "phase/3.8-integration-gate"
+        report = self.report(integration_run=branch_run)
+        self.assertFalse(report["release_ready"])
+        self.assertEqual(report["statuses"]["integration_ci"], "run_head_branch_mismatch")
+
+        main_push = self.workflow_run(
+            "101", ".github/workflows/storage-integration-gate.yml", event="push"
+        )
+        self.assertTrue(self.report(integration_run=main_push)["release_ready"])
+
+        issuer_push = self.workflow_run(
+            "202", ".github/workflows/storage-provider-rollout.yml", event="push"
+        )
+        report = self.report(issuer_run=issuer_push)
+        self.assertFalse(report["release_ready"])
+        self.assertEqual(
+            report["statuses"]["storage_evidence_issuer"], "run_event_mismatch"
+        )
 
     def test_publish_requires_auto_deploy_disabled_in_both_providers(self):
         render = {"id": "srv-1", "branch": "main", "autoDeploy": "no"}

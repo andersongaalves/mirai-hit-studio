@@ -200,20 +200,26 @@ No secret was generated, inspected, rotated, or stored by phase 3.8S.
 
 The transition is an ordered, separately authorized operation:
 
-1. Perform authenticated read-only audits of Render and Cloudflare and record
+1. Prepare and validate the protected alternative publication path while
+   external auto-deploy remains unchanged.
+2. Perform authenticated read-only audits of Render and Cloudflare and record
    current deployment IDs/SHAs, settings, health, and rollback eligibility.
-2. Protect all Environments and prove the environment guard fails for bypass,
+3. Protect all Environments and prove the environment guard fails for bypass,
    missing reviewers, self-review, and non-main deployment policy.
-3. Configure least-privilege secrets and run real provider smokes from the
-   protected evidence workflow for the exact main SHA.
-4. Run `production-release.yml` in `dry-run` mode and retain its sanitized
-   evidence. This is still not a deploy homologation.
-5. With separate CTRL authorization, disable direct Render and Cloudflare
-   production auto-deploy. Re-read both provider APIs and require the guard to
-   report disabled before publication credentials can be used.
-6. Prove a push to `main` does not publish. Only then run the protected
-   publisher with `release_mode=publish` for the exact approved SHA.
-7. If Render fails before becoming live, stop. If Pages fails after Render is
+4. With separate CTRL authorization, disable direct Render and Cloudflare
+   production auto-deploy. Re-read both provider APIs and prove a push does not
+   publish before integrating Storage.
+5. Integrate the reviewed Storage commit into `main` without publishing it.
+6. Execute `storage-integration-gate.yml` on that exact `main` SHA. The workflow
+   also remains available on `phase/3.8-integration-gate`, but a branch run is
+   never accepted by `production-release.yml` as main release evidence.
+7. Run the authorized real-provider smokes on the same `main` SHA and emit the
+   short-lived HMAC evidence only from the protected manual main workflow.
+8. Run `production-release.yml` in `dry-run`, review the bound CI/evidence, and
+   obtain publication approval for that exact SHA.
+9. Publish with `release_mode=publish`; both provider APIs must still report
+   direct auto-deploy disabled before deployment credentials are used.
+10. If Render fails before becoming live, stop. If Pages fails after Render is
    live, do not improvise another upload: preserve evidence and use the recorded
    previous Render deployment plus the Pages rollback mechanism after explicit
    operational authorization. Never downgrade the database or delete Storage

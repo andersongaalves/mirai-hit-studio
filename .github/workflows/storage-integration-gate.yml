@@ -3,7 +3,7 @@ name: Storage Integration Gate
 on:
     workflow_dispatch:
     push:
-        branches: [phase/3.8-integration-gate]
+        branches: [main, phase/3.8-integration-gate]
 
 permissions:
     contents: read
@@ -74,7 +74,10 @@ jobs:
               run: |
                   set -euo pipefail
                   test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-                  test "$GITHUB_REF_NAME" = "phase/3.8-integration-gate"
+                  case "$GITHUB_REF_NAME" in
+                    main|phase/3.8-integration-gate) ;;
+                    *) exit 1 ;;
+                  esac
                   test "$COMMERCIAL_PIPELINE_V2_ENABLED" = "false"
 
             - name: Set up Python

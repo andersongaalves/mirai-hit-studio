@@ -34,6 +34,7 @@ def validate_workflow_run(
     run_id: str,
     target_sha: str,
     workflow_path: str,
+    allowed_events: tuple[str, ...],
 ) -> str:
     if not RUN_ID_RE.fullmatch(run_id):
         return "run_id_invalid"
@@ -48,6 +49,8 @@ def validate_workflow_run(
     for field, value in expected.items():
         if run.get(field) != value:
             return f"run_{field}_mismatch"
+    if run.get("event") not in allowed_events:
+        return "run_event_mismatch"
     return "verified"
 
 
@@ -97,12 +100,14 @@ def build_report(
             run_id=integration_run_id,
             target_sha=target_sha,
             workflow_path=".github/workflows/storage-integration-gate.yml",
+            allowed_events=("push", "workflow_dispatch"),
         ),
         "storage_evidence_issuer": validate_workflow_run(
             issuer_run,
             run_id=issuer_run_id,
             target_sha=target_sha,
             workflow_path=".github/workflows/storage-provider-rollout.yml",
+            allowed_events=("workflow_dispatch",),
         ),
     }
     if require_provider_state:
