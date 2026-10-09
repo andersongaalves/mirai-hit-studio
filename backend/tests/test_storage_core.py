@@ -1,7 +1,7 @@
 """Unit coverage for the provider-neutral storage core; no real provider calls."""
 
-from datetime import datetime, timezone
 import unittest
+from datetime import datetime, timezone
 
 import httpx
 
@@ -22,7 +22,6 @@ from services.storage.memory import InMemoryStorage
 from services.storage.policies import StoragePolicy
 from services.storage.r2 import R2Storage
 from services.storage.registry import StorageRegistry
-
 
 NOW = datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc)
 ACCOUNT_ID = "a" * 32
@@ -223,8 +222,17 @@ class CloudinaryAdapterTests(unittest.TestCase):
         self.assertEqual(str(stored.reference), "cloudinary://mirai-test/public-images/opaque")
         self.assertEqual(
             stored.public_url,
-            "https://res.cloudinary.com/mirai-test/image/upload/public-images/opaque",
+            "https://res.cloudinary.com/mirai-test/image/upload/"
+            "f_auto,q_auto,c_limit,w_1600/public-images/opaque",
         )
+        self.assertEqual(storage.reference_from_public_url(stored.public_url), stored.reference)
+        self.assertEqual(
+            storage.reference_from_public_url(
+                "https://res.cloudinary.com/mirai-test/image/upload/public-images/opaque"
+            ),
+            stored.reference,
+        )
+        self.assertIsNone(storage.reference_from_public_url("https://example.invalid/cover.jpg"))
         storage.delete(stored.reference)
         self.assertEqual(len(requests), 2)
 

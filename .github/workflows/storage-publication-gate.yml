@@ -1,0 +1,153 @@
+name: Storage Publication Preflight (No Deploy)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact main commit being checked; must equal this workflow run SHA
+        required: true
+        type: string
+      issuer_run_id:
+        description: Successful Storage Provider Rollout Evidence run ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: storage-publication-preflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  protected-environment-guard:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out only the trusted main SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate exact publication target
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/storage-publication-gate.yml@refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$TARGET_SHA" = "$GITHUB_SHA"
+          [[ "$ISSUER_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+      - name: Require existing protected rollout and publication Environments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: backend
+        run: >-
+          python -m scripts.storage_environment_guard
+          --environment storage-rollout
+          --environment render-production
+          --environment cloudflare-pages-production
+          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --require-main-protection
+          --required-check storage-integration
+
+  verify-storage-evidence:
+    needs: protected-environment-guard
+    if: needs.protected-environment-guard.result == 'success' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: storage-rollout
+    steps:
+      - name: Check out the trusted main SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify pinned verifier source
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+      - name: Verify issuer workflow run metadata
+        env:
+          ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ISSUER_RUN_ID")"
+          RUN_JSON="$run_json" python - "$TARGET_SHA" "$ISSUER_RUN_ID" <<'PY'
+          import json
+          import os
+          import sys
+
+          run = json.loads(os.environ["RUN_JSON"])
+          target_sha, run_id = sys.argv[1:]
+          assert str(run.get("id")) == run_id
+          assert run.get("head_sha") == target_sha
+          assert run.get("head_branch") == "main"
+          assert run.get("event") == "workflow_dispatch"
+          assert run.get("status") == "completed"
+          assert run.get("conclusion") == "success"
+          assert run.get("path") == ".github/workflows/storage-provider-rollout.yml"
+          PY
+      - name: Download sanitized evidence from the exact issuer run
+        env:
+          ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh run download "$ISSUER_RUN_ID"
+          --name "storage-rollout-evidence-$ISSUER_RUN_ID"
+          --dir /tmp/storage-rollout-evidence
+      - name: Recheck pinned verifier immediately before secret access
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+      - name: Verify signed provider evidence, expiry, target, and effective config
+        working-directory: backend
+        env:
+          COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_REGION: ${{ vars.R2_REGION }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS || '900' }}
+          R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
+          R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PORTFOLIO_AUDIO_STORAGE_BUCKET: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BUCKET }}
+          PRODUCAO_STORAGE_BUCKET: ${{ vars.PRODUCAO_STORAGE_BUCKET }}
+          SUPABASE_STORAGE_BUCKET: ${{ vars.SUPABASE_STORAGE_BUCKET }}
+          PROPOSTA_STORAGE_BACKEND: ${{ vars.PROPOSTA_STORAGE_BACKEND }}
+          PRODUCTION_TEMP_STORAGE_BACKEND: ${{ vars.PRODUCTION_TEMP_STORAGE_BACKEND }}
+          PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
+          PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
+          PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND || 'legacy' }}
+          STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY: ${{ secrets.STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY }}
+          STORAGE_PREFLIGHT_EVIDENCE_PATH: /tmp/storage-rollout-evidence/storage-evidence.json
+          STORAGE_PREFLIGHT_EXPECTED_ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+          PYTHON_EXECUTABLE: /usr/bin/python3
+          PYTHONPATH: ""
+          PYTHONHOME: ""
+          PYTHONNOUSERSITE: "1"
+        run: '"$PYTHON_EXECUTABLE" -m scripts.storage_preflight --require-rollout-ready'
+      - name: State explicit non-deployment result
+        if: success()
+        run: echo "Storage publication preflight passed. No Render or Cloudflare deployment was requested by this workflow."
