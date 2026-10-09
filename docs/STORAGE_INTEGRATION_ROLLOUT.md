@@ -37,40 +37,83 @@ public URL.
 
 ## Sanitized rollout preflight
 
-From `backend`, run `python -m scripts.storage_preflight` to report effective
-configuration presence and format validity. It does not contact providers;
-`provider_accessible` remains `not_checked` and `smoke` remains `not_run` until
-separately reviewed evidence is recorded. The report contains no credential
-values.
+From `backend`, `python -m scripts.storage_preflight` reports only effective
+configuration presence/format and the Commercial V2 flag. It does not contact
+providers. Credential values are never included in the report.
 
-The deployment gate must run `python -m scripts.storage_preflight
---require-rollout-ready`. It exits nonzero unless configuration is valid,
-Commercial V2 is explicitly `false`, and all five provider groups have
-protected-environment attestations:
+The mandatory rollout command is:
 
-- `STORAGE_PREFLIGHT_R2_TEMP_ACCESSIBLE=true` and
-  `STORAGE_PREFLIGHT_R2_TEMP_SMOKE=approved`;
-- `STORAGE_PREFLIGHT_R2_FINAL_ACCESSIBLE=true` and
-  `STORAGE_PREFLIGHT_R2_FINAL_SMOKE=approved`;
-- `STORAGE_PREFLIGHT_CLOUDINARY_ACCESSIBLE=true` and
-  `STORAGE_PREFLIGHT_CLOUDINARY_SMOKE=approved`;
-- `STORAGE_PREFLIGHT_SUPABASE_AUDIO_ACCESSIBLE=true` and
-  `STORAGE_PREFLIGHT_SUPABASE_AUDIO_SMOKE=approved`;
-- `STORAGE_PREFLIGHT_LEGACY_STORAGE_ACCESSIBLE=true` and
-  `STORAGE_PREFLIGHT_LEGACY_STORAGE_SMOKE=approved`.
+```sh
+python -m scripts.storage_preflight --require-rollout-ready
+```
 
-Only the deployment process may set these attestations after the corresponding
-read-only connectivity check and approved synthetic smoke. The integration CI
-uses fakes and intentionally verifies that the rollout gate stays blocked; it
-does not attest live connectivity. This repository has no deployment workflow
-that can populate protected attestations in this phase.
+The protected workflow supplies the evidence file path through
+`STORAGE_PREFLIGHT_EVIDENCE_PATH`; the optional `--evidence` argument is for
+explicit controlled invocations and does not weaken validation.
+
+The gate fails closed unless all required configuration is valid, the current
+environment explicitly sets `COMMERCIAL_PIPELINE_V2_ENABLED=false`, and the
+evidence manifest:
+
+- has an HMAC-SHA256 signature made with `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY`;
+- is bound to the exact target `GITHUB_SHA` and a keyed fingerprint of the
+  effective storage configuration (the fingerprint does not disclose secrets);
+- identifies the GitHub repository, workflow run URL/ID, the allowlisted
+  `.github/workflows/storage-provider-rollout.yml` on `main`, actor, and CTRL
+  authorization reference;
+- is time-limited to at most 24 hours;
+- has a SHA-256 evidence digest and successful connectivity/smoke result for
+  each of R2 temp, R2 final, Cloudinary, Supabase audio, and legacy storage.
+
+The former `STORAGE_PREFLIGHT_*_ACCESSIBLE` and `*_SMOKE` environment flags are
+not accepted as evidence. Fakes, local test fixtures, configuration presence,
+or a manually edited JSON file do not prove provider connectivity. The HMAC
+key must only be available to a GitHub Actions job in a protected Environment
+with CTRL-approved reviewers; it must never be configured in Render, frontend
+builds, pull-request jobs, or ordinary CI. The issuer must create evidence only
+after the real provider smokes have completed, and the referenced sanitized
+evidence artifact must be retained with the workflow run. No such real
+attestation exists in this phase, so `--require-rollout-ready` is expected to
+fail. The CLI labels provider checks as `verified_from_evidence` and keeps
+`provider_connectivity_probed=false`; the CLI itself never probes a provider.
+The allowlisted `storage-provider-rollout.yml` issuer does not exist yet, and
+its protected Environment/key have not been provisioned.
+
+When authorized, isolate the signing job from candidate code: use the trusted
+workflow definition on `main`, review and bind the exact candidate SHA, retain
+the sanitized smoke artifact, and expose the HMAC key only to the protected
+signing job after reviewer approval. Do not run candidate-controlled scripts
+in a job that can read the signing key.
+
+### Actual publication mechanism and required integration
+
+The repository has no application deploy workflow that can enforce this
+command. Existing production publication is external: Render auto-deploys
+from `main`, and Cloudflare Pages is connected to `main` (see
+`docs/PRODUCTION_INFRA_I4.md`). Therefore a repository-only check cannot claim
+to block those deployments. The integration is **not rollout-ready** until the
+CTRL approves and configures one of these controls:
+
+1. Disable direct auto-deploy in both providers and publish only from a
+   protected GitHub Actions deployment workflow that runs this exact command
+   before obtaining deploy credentials; or
+2. Make the verified preflight a required check before merge and confirm the
+   providers deploy only merged `main` commits after all required checks pass.
+
+The control must cover backend and frontend publications that change Storage
+adapters, configuration, migrations, or Storage-facing routes. Provider deploy
+credentials must be unavailable to earlier jobs. A `workflow_dispatch` check
+that is not required by branch protection is advisory, not a deploy gate.
+Changing Render/Cloudflare settings or branch protection requires separate CTRL
+approval and was not performed here.
 
 ## A. R2 real
 
 Preflight:
 
-- Confirm private temp/final buckets, least-privilege credentials, endpoint,
-  region, and signed URL lifetime.
+- Confirm private temp/final buckets, least-privilege credentials scoped to
+  those buckets, endpoint/region, and signed URL lifetime. Verify read, write,
+  delete of a newly created test object, and that public access is disabled.
 - Keep legacy Supabase production objects readable during rollout.
 
 Smoke:
@@ -78,8 +121,10 @@ Smoke:
 - Upload one synthetic temporary file and one synthetic final file through the
   backend; verify opaque reference, metadata, SHA-256, authorized download, and
   denied cross-owner access.
-- Exercise one forced database failure and confirm compensation removes only
-  the new object.
+- Exercise a forced database failure and confirm compensation removes only the
+  newly-created test object. Verify a persisted R2 reference remains readable
+  after switching the write provider, and that rollback never deletes source
+  objects or silently writes to another provider.
 
 PASS requires all checks plus sanitized logs. Rollback sets the production
 scopes back to the previous Supabase adapter and preserves every R2 object for
@@ -89,12 +134,14 @@ reconciliation.
 
 Preflight:
 
-- Confirm account credentials and signed upload/delete access from the backend.
+- Confirm credentials are server-only and least-privilege; validate signed
+  upload, transformation, and controlled deletion from the backend.
 
 Smoke:
 
-- Upload a synthetic image, verify the public transformed URL, replace it, and
-  remove only the test asset.
+- Upload an identifiable disposable synthetic image, verify the public
+  transformed URL and integrity/ownership, replace it without silently
+  deleting the prior version, then remove only the exact test asset.
 - Confirm a historical external URL is never deleted.
 
 PASS requires upload, transform, replacement, compensation, and controlled
@@ -105,19 +152,33 @@ Cloudinary assets for inventory.
 
 Preflight:
 
-- Confirm the configured `portfolio-audio` bucket, backend-only service role,
-  allowed MP3 policy, and public delivery behavior.
+- Confirm the configured `portfolio-audio` bucket, server-only service role,
+  allowed MP3 policy, and public delivery behavior. Verify playback and HTTP
+  Range requests against the actual delivery path.
 
 Smoke:
 
-- Upload synthetic Before/After MP3 files, play both public URLs, replace one
-  version, and verify a historical raw key remains readable.
+- Upload identifiable disposable Before/After MP3 files, verify playback and
+  Range requests, replace one version while retaining history, and verify a
+  historical raw key remains readable.
 
 PASS requires upload, playback/range behavior, replacement, and legacy reads.
 Rollback returns the audio scope to the previous adapter without rewriting
 stored references.
 
-## D. Legacy migration
+## D. Storage smoke evidence and cleanup
+
+Each smoke must use a unique run-scoped synthetic object name with no customer
+data, record sanitized operation results and SHA-256, test authorized and
+cross-owner access, verify replacement/version behavior and failure
+compensation, then remove only the exact synthetic objects it created. The
+sanitized evidence artifact must include opaque non-sensitive object
+identifiers, result codes, digests, timestamps, and the run reference; it must
+contain no credentials, signed URLs, PII, customer keys, or object contents.
+Confirm cleanup and rollback/read behavior before issuing the signed manifest.
+No smoke in this phase created or changed an external resource.
+
+## E. Legacy migration
 
 Preflight:
 
@@ -134,7 +195,7 @@ PASS requires deterministic resume, zero reference leaks, and no source
 deletions. Rollback stops new batches; database references changed by a failed
 batch must be reconciled transactionally, while both object copies remain.
 
-## E. Lifecycle and retention
+## F. Lifecycle and retention
 
 Preflight:
 

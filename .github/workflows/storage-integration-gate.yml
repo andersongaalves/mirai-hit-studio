@@ -207,7 +207,9 @@ jobs:
 
                   report = json.loads(sys.argv[1])
                   assert report["provider_connectivity_probed"] is False
+                  assert report["provider_connectivity_evidence_verified"] is False
                   assert report["commercial_pipeline_v2"] == "off"
+                  assert report["evidence_status"] == "not_provided"
                   assert report["rollout_ready"] is False
                   assert all(
                       component["provider_accessible"] == "not_checked"
@@ -246,6 +248,7 @@ jobs:
                     backend/services/portfolio_audio_storage_core.py \
                     backend/scripts/storage_lifecycle.py \
                     backend/scripts/migrate_production_files.py \
+                    backend/scripts/storage_preflight.py \
                     backend/tests/test_storage_core.py \
                     backend/tests/test_producao_r2_storage.py \
                     backend/tests/test_portfolio_image_storage.py \
