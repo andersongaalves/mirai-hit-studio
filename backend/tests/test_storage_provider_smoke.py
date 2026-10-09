@@ -1,6 +1,8 @@
 import json
+import struct
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,6 +12,8 @@ from services.documento_storage import SupabaseDocumentoStorage
 from services.producao_arquivo_storage import SupabaseProducaoArquivoStorage
 from scripts.storage_provider_smoke import (
     _SmokeFailure,
+    _PNG,
+    _error_category,
     _legacy_smoke,
     diagnostic_report,
     main,
@@ -74,6 +78,23 @@ class _ProductionStorage:
 
 
 class StorageProviderSmokeTests(unittest.TestCase):
+    def test_synthetic_cloudinary_png_has_valid_chunks_and_pixel_data(self):
+        self.assertEqual(_PNG[:8], b"\x89PNG\r\n\x1a\n")
+        offset = 8
+        chunks = []
+        while offset < len(_PNG):
+            length = struct.unpack(">I", _PNG[offset:offset + 4])[0]
+            kind = _PNG[offset + 4:offset + 8]
+            data = _PNG[offset + 8:offset + 8 + length]
+            crc = struct.unpack(">I", _PNG[offset + 8 + length:offset + 12 + length])[0]
+            self.assertEqual(zlib.crc32(kind + data), crc, kind)
+            chunks.append((kind, data))
+            offset += 12 + length
+        self.assertEqual(offset, len(_PNG))
+        self.assertEqual([kind for kind, _ in chunks], [b"IHDR", b"IDAT", b"IEND"])
+        self.assertEqual(struct.unpack(">IIBBBBB", chunks[0][1]), (1, 1, 8, 6, 0, 0, 0))
+        self.assertEqual(zlib.decompress(chunks[1][1]), bytes((0, 255, 0, 0, 255)))
+
     def test_rollout_workflow_publishes_bounded_diagnostics_on_failure(self):
         workflow = (
             Path(__file__).resolve().parents[2]
@@ -83,10 +104,51 @@ class StorageProviderSmokeTests(unittest.TestCase):
         self.assertIn("--diagnostic-output /tmp/storage-smoke-diagnostic.json", workflow)
         diagnostic_step = workflow.split("- name: Publish sanitized smoke diagnostics", 1)[1]
         diagnostic_step = diagnostic_step.split("- name:", 1)[0]
-        self.assertIn("if: failure()", diagnostic_step)
+        self.assertIn("!cancelled()", diagnostic_step)
+        for condition in (
+            "steps.legacy-smoke.outcome == 'success'",
+            "steps.legacy-smoke.outcome == 'failure'",
+            "steps.all-smokes.outcome == 'failure'",
+        ):
+            self.assertIn(condition, diagnostic_step)
         self.assertIn("/tmp/storage-smoke-diagnostic.json", diagnostic_step)
         self.assertIn("retention-days: 1", diagnostic_step)
-        self.assertIn("if-no-files-found: warn", diagnostic_step)
+        self.assertIn("if-no-files-found: error", diagnostic_step)
+
+    def test_legacy_workflow_step_is_isolated_from_other_provider_secrets(self):
+        workflow = (
+            Path(__file__).resolve().parents[2]
+            / ".github/workflows/storage-provider-rollout.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("default: legacy_only", workflow)
+        self.assertIn('case "$SMOKE_SCOPE" in legacy_only|all)', workflow)
+        legacy = workflow.split(
+            "- name: Run legacy-only diagnostic and independent cleanup", 1
+        )[1].split("- name:", 1)[0]
+        self.assertIn("if: inputs.smoke_scope == 'legacy_only'", legacy)
+        self.assertIn("--scope legacy_only", legacy)
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", legacy)
+        for excluded in ("R2_", "CLOUDINARY_", "PORTFOLIO_AUDIO_", "HMAC"):
+            self.assertNotIn(excluded, legacy)
+        for name in (
+            "Run bounded real-provider smoke and cleanup",
+            "Recheck pinned signer and verifier immediately before secret access",
+            "Sign only a complete successful smoke report",
+            "Verify the signed evidence and effective configuration",
+            "Publish sanitized, short-lived evidence",
+        ):
+            step = workflow.split(f"- name: {name}", 1)[1].split("- name:", 1)[0]
+            self.assertIn("inputs.smoke_scope == 'all'", step)
+
+    def test_smoke_source_pin_matches_reviewed_script(self):
+        import hashlib
+
+        root = Path(__file__).resolve().parents[2]
+        digest = hashlib.sha256(
+            (root / "backend/scripts/storage_provider_smoke.py").read_bytes()
+        ).hexdigest()
+        workflow = (root / ".github/workflows/storage-provider-rollout.yml").read_text()
+        self.assertIn(f"{digest}  scripts/storage_provider_smoke.py", workflow)
 
     def test_provider_failure_is_reported_sanitized_and_blocks_attestation(self):
         with (
@@ -123,6 +185,7 @@ class StorageProviderSmokeTests(unittest.TestCase):
         report = {
             "run_id": "private-run-id",
             "all_passed": False,
+            "selected_passed": False,
             "components": {
                 "legacy_storage": {
                     "smoke": "failed",
@@ -157,6 +220,7 @@ class StorageProviderSmokeTests(unittest.TestCase):
         report = {
             "run_id": "private-run-id",
             "all_passed": False,
+            "selected_passed": False,
             "components": {
                 "legacy_storage": {
                     "smoke": "failed",
@@ -275,6 +339,146 @@ class StorageProviderSmokeTests(unittest.TestCase):
         self.assertEqual(
             raised.exception.cleanup["production_file"]["absence"], "confirmed"
         )
+
+    def test_legacy_only_never_invokes_other_providers_or_attests_full_rollout(self):
+        with (
+            patch("scripts.storage_provider_smoke._r2_smoke") as r2,
+            patch("scripts.storage_provider_smoke._cloudinary_smoke") as cloudinary,
+            patch("scripts.storage_provider_smoke._audio_smoke") as audio,
+            patch(
+                "scripts.storage_provider_smoke._legacy_smoke",
+                return_value={"sha256": "a" * 64, "cleanup": {}},
+            ) as legacy,
+        ):
+            report = run_smokes(scope="legacy_only")
+        r2.assert_not_called()
+        cloudinary.assert_not_called()
+        audio.assert_not_called()
+        legacy.assert_called_once()
+        self.assertEqual(set(report["components"]), {"legacy_storage"})
+        self.assertTrue(report["selected_passed"])
+        self.assertFalse(report["all_passed"])
+
+    def test_invalid_scope_is_rejected_before_any_provider_call(self):
+        with patch("scripts.storage_provider_smoke.uuid4") as generate_id:
+            with self.assertRaisesRegex(ValueError, "invalid_smoke_scope"):
+                run_smokes(scope="legacy")
+        generate_id.assert_not_called()
+
+    def test_cli_legacy_success_returns_zero_without_full_rollout_claim(self):
+        report = {
+            "all_passed": False,
+            "selected_passed": True,
+            "components": {"legacy_storage": {"smoke": "passed", "cleanup": {}}},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = str(Path(directory) / "smoke.json")
+            diagnostic = str(Path(directory) / "diagnostic.json")
+            with patch(
+                "scripts.storage_provider_smoke.run_smokes", return_value=report
+            ) as run:
+                self.assertEqual(main([
+                    "--scope", "legacy_only", "--output", output,
+                    "--diagnostic-output", diagnostic,
+                ]), 0)
+            run.assert_called_once_with(scope="legacy_only")
+            sanitized = json.loads(Path(diagnostic).read_text())
+        self.assertTrue(sanitized["selected_passed"])
+        self.assertFalse(sanitized["all_passed"])
+
+    def test_real_adapters_preserve_transport_failures_and_cleanup_is_independent(self):
+        for error, expected in (
+            (httpx.ReadTimeout, "network_timeout"),
+            (httpx.ConnectError, "network_error"),
+        ):
+            with self.subTest(error=error.__name__):
+                requests = []
+                deleted = set()
+
+                def handler(request):
+                    path = request.url.path
+                    requests.append((request.method, path))
+                    if "/bucket/" in path:
+                        self.assertEqual(request.method, "GET")
+                        return httpx.Response(200, json={"public": False})
+                    bucket = "proposal" if "proposal-bucket" in path else "production"
+                    if request.method == "POST":
+                        return httpx.Response(200)
+                    if request.method == "DELETE":
+                        if bucket == "proposal":
+                            raise error("secret URL and key", request=request)
+                        deleted.add(bucket)
+                        return httpx.Response(200)
+                    if bucket in deleted:
+                        return httpx.Response(404)
+                    if bucket == "production":
+                        raise error("secret URL and key", request=request)
+                    # The failed proposal DELETE may leave a synthetic object.
+                    return httpx.Response(
+                        200, content=b"%PDF-1.7\nMirai synthetic storage smoke\n%%EOF\n"
+                    )
+
+                transport = httpx.MockTransport(handler)
+                proposal = SupabaseDocumentoStorage(
+                    base_url="https://storage.invalid", service_key="test-only",
+                    bucket="proposal-bucket", transport=transport,
+                )
+                production = SupabaseProducaoArquivoStorage(
+                    base_url="https://storage.invalid", service_key="test-only",
+                    bucket="production-bucket", transport=transport,
+                )
+                with (
+                    patch("scripts.storage_provider_smoke.SupabaseDocumentoStorage", return_value=proposal),
+                    patch("scripts.storage_provider_smoke.SupabaseProducaoArquivoStorage", return_value=production),
+                ):
+                    with self.assertRaises(_SmokeFailure) as raised:
+                        _legacy_smoke("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+                self.assertEqual(raised.exception.failure, {
+                    "stage": "production_download", "category": expected,
+                })
+                cleanup = raised.exception.cleanup
+                self.assertEqual(cleanup["proposal_pdf"]["delete_category"], expected)
+                self.assertEqual(cleanup["proposal_pdf"]["absence"], "not_confirmed")
+                self.assertEqual(cleanup["production_file"]["absence"], "confirmed")
+                self.assertIn(("DELETE", "/storage/v1/object/production-bucket"), requests)
+                self.assertNotIn("secret URL", str(raised.exception.failure) + str(cleanup))
+
+    def test_invalid_or_public_bucket_blocks_writes_without_changing_buckets(self):
+        for response, expected, status in (
+            (httpx.Response(200, json={"public": True}), "bucket_visibility_mismatch", 200),
+            (httpx.Response(200, content=b"invalid"), "bucket_metadata_invalid", 200),
+            (httpx.Response(403), "http_error", 403),
+            (httpx.Response(404), "http_error", 404),
+        ):
+            with self.subTest(expected=expected, status=status):
+                requests = []
+
+                def handler(request):
+                    requests.append((request.method, request.url.path))
+                    return response
+
+                proposal = SupabaseDocumentoStorage(
+                    base_url="https://storage.invalid", service_key="test-only",
+                    bucket="proposal-bucket", transport=httpx.MockTransport(handler),
+                )
+                with (
+                    patch("scripts.storage_provider_smoke.SupabaseDocumentoStorage", return_value=proposal),
+                    patch("scripts.storage_provider_smoke.SupabaseProducaoArquivoStorage") as production,
+                ):
+                    with self.assertRaises(_SmokeFailure) as raised:
+                        _legacy_smoke("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+                production.assert_not_called()
+                self.assertEqual(requests, [("GET", "/storage/v1/bucket/proposal-bucket")])
+                self.assertEqual(raised.exception.failure, {
+                    "stage": "proposal_bucket_check", "category": expected, "http_status": status,
+                })
+                for cleanup in raised.exception.cleanup.values():
+                    self.assertEqual(cleanup["delete"], "not_needed")
+
+    def test_exception_context_cycles_are_bounded(self):
+        error = RuntimeError("secret URL")
+        error.__context__ = error
+        self.assertEqual(_error_category(error), "operation_error")
 
 
 if __name__ == "__main__":

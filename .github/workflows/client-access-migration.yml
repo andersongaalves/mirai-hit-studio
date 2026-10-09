@@ -26,7 +26,8 @@ jobs:
         timeout-minutes: 10
         services:
             postgres:
-                image: postgres:17
+                # Official PostgreSQL mirror; no shared Docker Hub anonymous quota.
+                image: public.ecr.aws/docker/library/postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
                 env:
                     POSTGRES_DB: mirai_portals_e2e
                     POSTGRES_USER: mirai_e2e

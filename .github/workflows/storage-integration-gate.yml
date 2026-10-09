@@ -20,7 +20,8 @@ jobs:
         timeout-minutes: 35
         services:
             postgres:
-                image: postgres:17
+                # Official PostgreSQL mirror; no shared Docker Hub anonymous quota.
+                image: public.ecr.aws/docker/library/postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
                 env:
                     POSTGRES_DB: mirai_portals_e2e_storage
                     POSTGRES_USER: mirai_integration
@@ -160,6 +161,7 @@ jobs:
                     test_production_release_workflow.py \
                     test_storage_evidence.py \
                     test_storage_provider_smoke.py \
+                    test_ci_postgres_workflows.py \
                     test_portfolio_mix_comparison.py; do
                       python -m unittest discover -s tests -p "$pattern" -v
                   done
@@ -278,7 +280,8 @@ jobs:
                     backend/tests/test_production_release_guard.py \
                     backend/tests/test_production_release_workflow.py \
                     backend/tests/test_storage_evidence.py \
-                    backend/tests/test_storage_provider_smoke.py
+                    backend/tests/test_storage_provider_smoke.py \
+                    backend/tests/test_ci_postgres_workflows.py
                   node --check frontend/js/admin/projetos.js
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs
