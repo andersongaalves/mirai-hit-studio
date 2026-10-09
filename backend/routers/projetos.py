@@ -16,9 +16,9 @@ from services.portfolio_audio_storage import (
     HTTPAudioValidationError,
     PortfolioAudioStorageError,
     max_audio_bytes,
-    new_portfolio_audio_storage,
     validate_mp3,
 )
+from services.portfolio_audio_storage_core import new_portfolio_audio_storage
 from services.portfolio_service import (
     PUBLIC_CASE_TYPES,
     PUBLIC_VERTICALS,
