@@ -104,7 +104,65 @@ def main_protection_status(protection: object, *, required_check: str) -> str:
     return "protected"
 
 
-def _get_json(url: str, token: str) -> dict:
+def ruleset_main_protection_status(ruleset: object, *, required_check: str) -> str:
+    if not isinstance(ruleset, dict) or ruleset.get("target") != "branch":
+        return "main_protection_missing"
+    if ruleset.get("enforcement") != "active":
+        return "main_protection_disabled"
+
+    conditions = ruleset.get("conditions")
+    ref_name = conditions.get("ref_name") if isinstance(conditions, dict) else None
+    if (
+        not isinstance(ref_name, dict)
+        or ref_name.get("include") != ["refs/heads/main"]
+        or ref_name.get("exclude") != []
+    ):
+        return "main_ruleset_scope_not_main_only"
+    if (
+        ruleset.get("bypass_actors") != []
+        or ruleset.get("current_user_can_bypass") not in {None, "never"}
+    ):
+        return "administrator_rules_not_enforced"
+
+    rules = ruleset.get("rules")
+    if not isinstance(rules, list):
+        return "main_protection_missing"
+    by_type = {
+        rule.get("type"): rule
+        for rule in rules
+        if isinstance(rule, dict) and isinstance(rule.get("type"), str)
+    }
+    reviews = by_type.get("pull_request")
+    if not isinstance(reviews, dict):
+        return "pull_request_not_required"
+    review_parameters = reviews.get("parameters")
+    if not isinstance(review_parameters, dict):
+        return "pull_request_not_required"
+    if review_parameters.get("required_approving_review_count") not in {None, 0}:
+        return "human_pr_review_unexpected"
+
+    checks = by_type.get("required_status_checks")
+    check_parameters = checks.get("parameters") if isinstance(checks, dict) else None
+    if (
+        not isinstance(check_parameters, dict)
+        or check_parameters.get("strict_required_status_checks_policy") is not True
+    ):
+        return "required_ci_missing"
+    contexts = {
+        item.get("context")
+        for item in check_parameters.get("required_status_checks", [])
+        if isinstance(item, dict) and isinstance(item.get("context"), str)
+    }
+    if required_check not in contexts:
+        return "required_ci_missing"
+    if "non_fast_forward" not in by_type:
+        return "force_push_not_blocked"
+    if "deletion" not in by_type:
+        return "branch_deletion_not_blocked"
+    return "protected"
+
+
+def _get_json(url: str, token: str) -> object:
     request = Request(
         url,
         headers={
@@ -115,7 +173,7 @@ def _get_json(url: str, token: str) -> dict:
     )
     with urlopen(request, timeout=10) as response:
         payload = json.loads(response.read())
-    if not isinstance(payload, dict):
+    if not isinstance(payload, (dict, list)):
         raise TypeError("invalid_response")
     return payload
 
@@ -163,17 +221,45 @@ def check_main_protection(
     token: str,
     *,
     required_check: str,
+    ruleset_name: str = "mirai-main-protection",
 ) -> str:
-    if not _valid_request(api_url, repository, token) or not required_check:
+    if (
+        not _valid_request(api_url, repository, token)
+        or not required_check
+        or not ruleset_name
+    ):
         return "request_configuration_invalid"
-    url = f"{api_url.rstrip('/')}/repos/{repository}/branches/main/protection"
+    base = f"{api_url.rstrip('/')}/repos/{repository}"
     try:
-        protection = _get_json(url, token)
+        protection = _get_json(base + "/branches/main/protection", token)
+    except HTTPError as error:
+        if error.code not in {403, 404}:
+            return "github_api_unavailable"
+    except (URLError, TimeoutError, OSError, ValueError, TypeError):
+        return "github_api_unavailable"
+    else:
+        return main_protection_status(protection, required_check=required_check)
+
+    try:
+        rulesets = _get_json(
+            base + "/rulesets?includes_parents=true&targets=branch",
+            token,
+        )
+        if not isinstance(rulesets, list):
+            return "github_api_unavailable"
+        matches = [
+            item
+            for item in rulesets
+            if isinstance(item, dict) and item.get("name") == ruleset_name
+        ]
+        if len(matches) != 1 or not isinstance(matches[0].get("id"), int):
+            return "main_protection_missing"
+        ruleset = _get_json(base + f"/rulesets/{matches[0]['id']}", token)
     except HTTPError as error:
         return "main_protection_missing" if error.code == 404 else "github_api_unavailable"
     except (URLError, TimeoutError, OSError, ValueError, TypeError):
         return "github_api_unavailable"
-    return main_protection_status(protection, required_check=required_check)
+    return ruleset_main_protection_status(ruleset, required_check=required_check)
 
 
 def main(argv=None) -> int:
@@ -182,6 +268,7 @@ def main(argv=None) -> int:
     parser.add_argument("--solo-admin-reviewer")
     parser.add_argument("--require-main-protection", action="store_true")
     parser.add_argument("--required-check", default="storage-integration")
+    parser.add_argument("--main-ruleset", default="mirai-main-protection")
     args = parser.parse_args(argv)
     repository = os.environ.get("GITHUB_REPOSITORY", "")
     api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
@@ -203,6 +290,7 @@ def main(argv=None) -> int:
             repository,
             token,
             required_check=args.required_check,
+            ruleset_name=args.main_ruleset,
         )
     report = {"environments": results}
     if main_status is not None:

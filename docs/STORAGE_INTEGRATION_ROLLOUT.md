@@ -216,6 +216,12 @@ the pull-request run has appeared successfully in GitHub; otherwise merging can
 become impossible. Phase 3.8S prepares and validates this policy but does not
 write it through the GitHub API.
 
+The read-only guard accepts either classic branch protection or the repository
+Ruleset named `mirai-main-protection`. For the Ruleset path it requires active
+enforcement, exactly `refs/heads/main`, an empty bypass list, pull requests with
+zero approvals, strict `storage-integration`, and deletion/non-fast-forward
+rules. A disabled Ruleset or a Ruleset without the required check fails closed.
+
 ### Rollout and rollback procedure
 
 The transition is an ordered, separately authorized operation:

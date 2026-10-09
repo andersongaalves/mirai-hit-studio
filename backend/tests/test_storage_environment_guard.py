@@ -6,9 +6,11 @@ from unittest.mock import patch
 
 from scripts.storage_environment_guard import (
     check_environment,
+    check_main_protection,
     main,
     main_protection_status,
     protection_status,
+    ruleset_main_protection_status,
 )
 
 
@@ -27,6 +29,40 @@ def protected_environment():
             "protected_branches": False,
             "custom_branch_policies": True,
         },
+    }
+
+
+def protected_main_ruleset():
+    return {
+        "id": 24800367,
+        "name": "mirai-main-protection",
+        "target": "branch",
+        "enforcement": "active",
+        "conditions": {
+            "ref_name": {
+                "exclude": [],
+                "include": ["refs/heads/main"],
+            }
+        },
+        "bypass_actors": [],
+        "current_user_can_bypass": "never",
+        "rules": [
+            {"type": "deletion"},
+            {"type": "non_fast_forward"},
+            {
+                "type": "pull_request",
+                "parameters": {"required_approving_review_count": 0},
+            },
+            {
+                "type": "required_status_checks",
+                "parameters": {
+                    "strict_required_status_checks_policy": True,
+                    "required_status_checks": [
+                        {"context": "storage-integration"},
+                    ],
+                },
+            },
+        ],
     }
 
 
@@ -171,6 +207,81 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
             main_protection_status(changed, required_check="storage-integration"),
             "human_pr_review_unexpected",
         )
+
+    def test_main_ruleset_requires_active_main_only_pr_ci_and_no_bypass(self):
+        ruleset = protected_main_ruleset()
+        self.assertEqual(
+            ruleset_main_protection_status(
+                ruleset,
+                required_check="storage-integration",
+            ),
+            "protected",
+        )
+        for change, expected in (
+            ({"enforcement": "disabled"}, "main_protection_disabled"),
+            ({"bypass_actors": [{"actor_type": "RepositoryRole"}]}, "administrator_rules_not_enforced"),
+            ({"current_user_can_bypass": "always"}, "administrator_rules_not_enforced"),
+        ):
+            self.assertEqual(
+                ruleset_main_protection_status(
+                    dict(ruleset, **change),
+                    required_check="storage-integration",
+                ),
+                expected,
+            )
+
+        changed = protected_main_ruleset()
+        changed["conditions"]["ref_name"]["include"] = ["~ALL"]
+        self.assertEqual(
+            ruleset_main_protection_status(changed, required_check="storage-integration"),
+            "main_ruleset_scope_not_main_only",
+        )
+        changed = protected_main_ruleset()
+        changed["rules"] = [
+            rule for rule in changed["rules"]
+            if rule["type"] != "required_status_checks"
+        ]
+        self.assertEqual(
+            ruleset_main_protection_status(changed, required_check="storage-integration"),
+            "required_ci_missing",
+        )
+        for rule_type, expected in (
+            ("non_fast_forward", "force_push_not_blocked"),
+            ("deletion", "branch_deletion_not_blocked"),
+        ):
+            changed = protected_main_ruleset()
+            changed["rules"] = [
+                rule for rule in changed["rules"]
+                if rule["type"] != rule_type
+            ]
+            self.assertEqual(
+                ruleset_main_protection_status(
+                    changed,
+                    required_check="storage-integration",
+                ),
+                expected,
+            )
+
+    def test_main_protection_falls_back_to_named_ruleset(self):
+        from urllib.error import HTTPError
+
+        with patch(
+            "scripts.storage_environment_guard._get_json",
+            side_effect=[
+                HTTPError("url", 404, "missing", {}, None),
+                [{"id": 24800367, "name": "mirai-main-protection"}],
+                protected_main_ruleset(),
+            ],
+        ):
+            self.assertEqual(
+                check_main_protection(
+                    "https://api.github.com",
+                    "andersongaalves/mirai-hit-studio",
+                    "test-token",
+                    required_check="storage-integration",
+                ),
+                "protected",
+            )
 
     def test_missing_environment_fails_closed_without_creating_it(self):
         from urllib.error import URLError
