@@ -116,7 +116,7 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           R2_REGION: ${{ vars.R2_REGION }}
-          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS || '900' }}
           R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
           R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
@@ -132,7 +132,7 @@ jobs:
           PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
           PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
           PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
-          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND || 'legacy' }}
         run: python -m scripts.storage_provider_smoke --output /tmp/storage-smoke.json
       - name: Recheck pinned signer and verifier immediately before secret access
         working-directory: backend
@@ -150,7 +150,7 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           R2_REGION: ${{ vars.R2_REGION }}
-          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS || '900' }}
           R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
           R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
@@ -166,7 +166,7 @@ jobs:
           PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
           PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
           PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
-          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND || 'legacy' }}
           STORAGE_PREFLIGHT_TARGET_SHA: ${{ inputs.target_sha }}
           STORAGE_ROLLOUT_AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
           STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY: ${{ secrets.STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY }}
@@ -185,7 +185,7 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           R2_REGION: ${{ vars.R2_REGION }}
-          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS || '900' }}
           R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
           R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
@@ -201,7 +201,7 @@ jobs:
           PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
           PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
           PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
-          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND || 'legacy' }}
           STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY: ${{ secrets.STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY }}
           STORAGE_PREFLIGHT_EVIDENCE_PATH: /tmp/storage-evidence.json
           PYTHON_EXECUTABLE: ${{ steps.setup-python.outputs.python-path }}

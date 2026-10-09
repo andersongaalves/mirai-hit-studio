@@ -80,6 +80,11 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("COMMERCIAL_PIPELINE_V2_ENABLED", self.source)
         self.assertNotIn("COMMERCIAL_PIPELINE_V2_ENABLED: true", self.source)
 
+    def test_optional_storage_settings_keep_the_application_defaults(self):
+        for source in (self.source, self.issuer_source, self.preflight_source):
+            self.assertIn("vars.R2_PRESIGN_MAX_SECONDS || '900'", source)
+            self.assertIn("vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND || 'legacy'", source)
+
     def test_integration_ci_runs_on_main_but_release_rejects_branch_evidence(self):
         self.assertIn(
             "branches: [main, phase/3.8-integration-gate]", self.integration_source
