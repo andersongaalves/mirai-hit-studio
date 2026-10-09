@@ -229,6 +229,19 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
                 ),
                 expected,
             )
+        for missing_bypass in (None, "missing"):
+            changed = protected_main_ruleset()
+            if missing_bypass == "missing":
+                del changed["bypass_actors"]
+            else:
+                changed["bypass_actors"] = None
+            self.assertEqual(
+                ruleset_main_protection_status(
+                    changed,
+                    required_check="storage-integration",
+                ),
+                "administrator_rules_not_enforced",
+            )
 
         changed = protected_main_ruleset()
         changed["conditions"]["ref_name"]["include"] = ["~ALL"]
@@ -290,6 +303,7 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
                     "https://api.github.com",
                     "andersongaalves/mirai-hit-studio",
                     "test-token",
+                    ruleset_token="ruleset-token",
                     required_check="storage-integration",
                 ),
                 "protected",
@@ -344,6 +358,7 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
                 "https://api.github.com",
                 "andersongaalves/mirai-hit-studio",
                 "test-token",
+                ruleset_token="ruleset-token",
                 required_check="storage-integration",
             )
         self.assertEqual(result, "protected")
@@ -391,6 +406,7 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
                             "https://api.github.com",
                             "andersongaalves/mirai-hit-studio",
                             "test-token",
+                            ruleset_token="ruleset-token",
                             required_check="storage-integration",
                         ),
                         expected,
@@ -413,6 +429,88 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
                 "github_api_unavailable",
             )
         get_json.assert_called_once()
+
+    def test_ruleset_details_require_separate_privileged_token(self):
+        from urllib.error import HTTPError
+
+        with patch.dict(
+            "os.environ",
+            {
+                "GITHUB_REPOSITORY": "andersongaalves/mirai-hit-studio",
+                "GITHUB_API_URL": "https://api.github.com",
+                "GH_TOKEN": "read-only-token",
+                "GH_RULESET_TOKEN": "ruleset-read-token",
+            },
+            clear=True,
+        ), patch(
+            "scripts.storage_environment_guard._get_json",
+            side_effect=[
+                {
+                    **protected_environment(),
+                    "protection_rules": [{
+                        **protected_environment()["protection_rules"][0],
+                        "prevent_self_review": False,
+                    }],
+                },
+                {"branch_policies": [{"name": "main"}]},
+                HTTPError("url", 403, "forbidden", {}, None),
+                [{"id": 24800367, "name": "mirai-main-protection"}],
+                protected_main_ruleset(),
+            ],
+        ) as get_json, redirect_stdout(StringIO()):
+            self.assertEqual(
+                main([
+                    "--environment", "storage-rollout",
+                    "--solo-admin-reviewer", "andersongaalves",
+                    "--require-main-protection",
+                ]),
+                0,
+            )
+
+        self.assertEqual(
+            [call.args[1] for call in get_json.call_args_list],
+            [
+                "read-only-token",
+                "read-only-token",
+                "read-only-token",
+                "ruleset-read-token",
+                "ruleset-read-token",
+            ],
+        )
+
+    def test_ruleset_fallback_fails_closed_without_separate_token(self):
+        from urllib.error import HTTPError
+
+        output = StringIO()
+        with patch.dict(
+            "os.environ",
+            {
+                "GITHUB_REPOSITORY": "andersongaalves/mirai-hit-studio",
+                "GITHUB_API_URL": "https://api.github.com",
+                "GH_TOKEN": "read-only-token",
+            },
+            clear=True,
+        ), patch(
+            "scripts.storage_environment_guard._get_json",
+            side_effect=[
+                protected_environment(),
+                {"branch_policies": [{"name": "main"}]},
+                HTTPError("url", 403, "forbidden", {}, None),
+            ],
+        ) as get_json, redirect_stdout(output):
+            self.assertEqual(
+                main([
+                    "--environment", "storage-rollout",
+                    "--require-main-protection",
+                ]),
+                1,
+            )
+        self.assertEqual(get_json.call_count, 3)
+        self.assertEqual(
+            json.loads(output.getvalue())["main"],
+            "ruleset_credential_missing",
+        )
+        self.assertNotIn("read-only-token", output.getvalue())
 
     def test_missing_environment_fails_closed_without_creating_it(self):
         from urllib.error import URLError

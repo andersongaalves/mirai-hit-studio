@@ -224,6 +224,34 @@ zero approvals, the required `storage-integration` check (whether or not strict
 up-to-date-branch enforcement is enabled), and deletion/non-fast-forward rules.
 A disabled Ruleset or a Ruleset without the required check fails closed.
 
+The Rulesets API omits `bypass_actors` unless the caller has write access to the
+Ruleset. The guard therefore requires that field to be explicitly present as an
+empty list; a missing, null, or non-empty value fails closed. The ordinary
+`GITHUB_TOKEN` remains limited to the workflow's existing read permissions and
+is used for Environment and run metadata queries. Only after approval of the
+protected `storage-rollout` Environment does the relevant job mint a short-lived
+GitHub App installation token for the Ruleset read. The workflow uses that token
+only for GET requests to list/read Rulesets; it never sends a Ruleset mutation.
+
+Before using the protected issuer, publication-preflight, or release-evidence
+jobs, configure these two values on the existing `storage-rollout` Environment:
+
+- Variable `STORAGE_GUARD_APP_CLIENT_ID`: Client ID of a GitHub App installed
+  only on `andersongaalves/mirai-hit-studio`.
+- Secret `STORAGE_GUARD_APP_PRIVATE_KEY`: that App's private key.
+
+Grant the App only repository `Administration: write`, which is required for
+the Rulesets API to reveal `bypass_actors`; do not grant contents, Actions,
+deployments, or other permissions. The workflow requests only this permission
+and scopes the installation token to `mirai-hit-studio`. The installation token
+expires within one hour and the action revokes it when the job finishes. The
+private key must remain in the protected Environment and must not be copied to
+repository-wide secrets or variables. Although the workflow uses the token only
+for read requests, `Administration: write` is a powerful credential: restrict
+App installation and key custody accordingly. No App or credential is created
+by this repository change; an administrator must provision these settings
+before a protected Ruleset check can pass.
+
 ### Rollout and rollback procedure
 
 The transition is an ordered, separately authorized operation:

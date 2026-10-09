@@ -55,8 +55,6 @@ jobs:
           --environment render-production
           --environment cloudflare-pages-production
           --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
-          --require-main-protection
-          --required-check storage-integration
 
   verify-storage-evidence:
     needs: protected-environment-guard
@@ -76,6 +74,28 @@ jobs:
         run: |
           set -euo pipefail
           echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+      - name: Create short-lived Ruleset inspection token
+        id: ruleset-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          client-id: ${{ vars.STORAGE_GUARD_APP_CLIENT_ID }}
+          private-key: ${{ secrets.STORAGE_GUARD_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: mirai-hit-studio
+          permission-administration: write
+      - name: Verify protected Environments and main Ruleset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_RULESET_TOKEN: ${{ steps.ruleset-token.outputs.token }}
+        working-directory: backend
+        run: >-
+          python -m scripts.storage_environment_guard
+          --environment storage-rollout
+          --environment render-production
+          --environment cloudflare-pages-production
+          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --require-main-protection
+          --required-check storage-integration
       - name: Verify issuer workflow run metadata
         env:
           ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
