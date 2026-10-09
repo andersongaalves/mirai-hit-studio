@@ -26,9 +26,16 @@ from services.portfolio_service import (
     delete_project_and_reorder,
     set_audio_key,
 )
+from services.storage.contracts import (
+    StorageError,
+    StorageScope,
+    StorageValidationError,
+)
+from services.storage.registry import storage_for
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 def _response(project, storage=None):
@@ -184,6 +191,74 @@ async def upload_project_audio(
     return _response(project, storage)
 
 
+@router.post("/{id}/imagem", response_model=ProjetoResponse)
+async def upload_project_image(
+    id: int,
+    imagem: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
+    data = await imagem.read(MAX_IMAGE_BYTES + 1)
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="A imagem excede o limite de 10 MB.")
+    project = _project_or_404(db, id)
+    try:
+        storage = storage_for(StorageScope.PUBLIC_IMAGE)
+        stored = storage.save(data, imagem.content_type or "application/octet-stream")
+        new_url = stored.public_url or storage.get_public_url(stored.reference)
+    except StorageValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except StorageError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+    old_url = project.link_capa
+    try:
+        project.link_capa = new_url
+        db.commit()
+        db.refresh(project)
+    except Exception:
+        db.rollback()
+        try:
+            storage.delete(stored.reference)
+        except StorageError:
+            logger.warning("portfolio_image_compensation_failed project_id=%s", id)
+        raise
+
+    old_reference = getattr(storage, "reference_from_public_url", lambda value: None)(old_url)
+    if old_reference:
+        try:
+            storage.delete(old_reference)
+        except StorageError:
+            logger.warning("portfolio_image_cleanup_failed project_id=%s", id)
+    return _response(project)
+
+
+@router.delete("/{id}/imagem", response_model=ProjetoResponse)
+def delete_project_image(
+    id: int,
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
+    project = _project_or_404(db, id)
+    old_url = project.link_capa
+    project.link_capa = ""
+    try:
+        db.commit()
+        db.refresh(project)
+    except Exception:
+        db.rollback()
+        raise
+
+    try:
+        storage = storage_for(StorageScope.PUBLIC_IMAGE)
+        old_reference = getattr(storage, "reference_from_public_url", lambda value: None)(old_url)
+        if old_reference:
+            storage.delete(old_reference)
+    except StorageError:
+        logger.warning("portfolio_image_cleanup_failed project_id=%s", id)
+    return _response(project)
+
+
 @router.delete("/{id}/audio/{slot}", response_model=ProjetoResponse)
 def delete_project_audio(
     id: int,
@@ -215,6 +290,7 @@ def delete_project_audio(
 def deletar_projeto(id: int, db: Session = Depends(get_db), user=Depends(require_admin)):
     project = _project_or_404(db, id)
     audio_keys = [project.audio_before_key, project.audio_after_key]
+    image_url = project.link_capa
     try:
         delete_project_and_reorder(db, project)
         db.commit()
@@ -227,4 +303,11 @@ def deletar_projeto(id: int, db: Session = Depends(get_db), user=Depends(require
             new_portfolio_audio_storage().delete(key)
         except PortfolioAudioStorageError:
             logger.warning("portfolio_audio_cleanup_failed project_id=%s slot=project_delete", id)
+    try:
+        storage = storage_for(StorageScope.PUBLIC_IMAGE)
+        image_reference = getattr(storage, "reference_from_public_url", lambda value: None)(image_url)
+        if image_reference:
+            storage.delete(image_reference)
+    except StorageError:
+        logger.warning("portfolio_image_cleanup_failed project_id=%s", id)
     return {"status": "ok"}

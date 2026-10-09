@@ -1043,12 +1043,30 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Link da Capa (Opcional)</label>
+                                <label for="proj_capa">Link da Capa (Opcional)</label>
                                 <input
                                     type="text"
                                     id="proj_capa"
                                     class="form-control"
                                 />
+                                <label for="proj_capa_upload">Ou enviar nova capa</label>
+                                <input
+                                    id="proj_capa_upload"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/avif"
+                                />
+                                <img
+                                    id="proj_capa_preview"
+                                    alt="Prévia da capa do projeto"
+                                    hidden
+                                    style="max-width: 240px; max-height: 160px; object-fit: contain"
+                                />
+                                <button
+                                    id="proj_capa_remove"
+                                    class="btn-small btn-danger"
+                                    type="button"
+                                    hidden
+                                >Remover capa gerenciada</button>
                             </div>
 
                             <div class="form-group">

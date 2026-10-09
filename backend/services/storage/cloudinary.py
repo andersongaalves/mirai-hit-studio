@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
 import re
-from typing import Mapping
-from urllib.parse import quote
+from collections.abc import Mapping
+from datetime import datetime, timezone
+from urllib.parse import quote, unquote, urlsplit
 
 import httpx
 
@@ -28,8 +28,8 @@ from .contracts import (
 from .keys import generate_object_key
 from .policies import DEFAULT_POLICIES, StoragePolicy, sha256_hex, validate_sha256
 
-
 _CLOUD_NAME = re.compile(r"[A-Za-z0-9_-]{1,128}")
+_PUBLIC_TRANSFORM = "f_auto,q_auto,c_limit,w_1600"
 
 
 class CloudinaryImageStorage(StorageAdapter):
@@ -147,4 +147,32 @@ class CloudinaryImageStorage(StorageAdapter):
     def get_public_url(self, reference: ObjectReference | str) -> str:
         reference = self._validated_reference(reference)
         encoded_key = "/".join(quote(segment, safe="") for segment in reference.key.split("/"))
-        return f"https://res.cloudinary.com/{quote(self.cloud_name, safe='')}/image/upload/{encoded_key}"
+        return (
+            f"https://res.cloudinary.com/{quote(self.cloud_name, safe='')}/image/upload/"
+            f"{_PUBLIC_TRANSFORM}/{encoded_key}"
+        )
+
+    def reference_from_public_url(self, value: str) -> ObjectReference | None:
+        try:
+            parsed = urlsplit(value)
+        except (TypeError, ValueError):
+            return None
+        prefix = f"/{quote(self.cloud_name, safe='')}/image/upload/"
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "res.cloudinary.com"
+            or not parsed.path.startswith(prefix)
+            or parsed.query
+            or parsed.fragment
+        ):
+            return None
+        remainder = parsed.path[len(prefix):]
+        transform_prefix = f"{_PUBLIC_TRANSFORM}/"
+        if remainder.startswith(transform_prefix):
+            remainder = remainder[len(transform_prefix):]
+        key = "/".join(unquote(segment) for segment in remainder.split("/"))
+        try:
+            validate_object_key(key)
+        except StorageInvalidReference:
+            return None
+        return self._reference(key)

@@ -14,6 +14,7 @@ import { closeAdminModal, openAdminModal } from "./admin_modal.js";
 let projetos = [];
 let segmentCatalog = [];
 let audioState = { beforeUrl: null, afterUrl: null, objectUrls: [] };
+let coverObjectUrl = null;
 document.addEventListener("admin:logout", () => { projetos = []; segmentCatalog = []; });
 document.addEventListener("portfolio-segments:changed", event => {
     segmentCatalog = Array.isArray(event.detail?.segments) ? event.detail.segments : [];
@@ -205,10 +206,29 @@ function bindAudioControls() {
     }
 }
 
+function bindCoverControls() {
+    const input = $("proj_capa_upload");
+    if (input.dataset.bound === "true") return;
+    input.dataset.bound = "true";
+    input.addEventListener("change", () => {
+        const file = selectedCover();
+        if (!file) {
+            setCoverPreview($("proj_capa").value.trim());
+            return;
+        }
+        coverObjectUrl = URL.createObjectURL(file);
+        const preview = $("proj_capa_preview");
+        preview.src = coverObjectUrl;
+        preview.hidden = false;
+    });
+    $("proj_capa_remove").addEventListener("click", removerCapa);
+}
+
 export function novoProjeto() {
     limparFormulario();
 
     bindAudioControls();
+    bindCoverControls();
 
     openAdminModal("modal-projeto", { onRequestClose: fecharModal });
 }
@@ -219,6 +239,7 @@ export function editarProjeto(id) {
     if (!projeto) return;
 
     bindAudioControls();
+    bindCoverControls();
     resetAudioState();
     $("proj_audio_before").value = "";
     $("proj_audio_after").value = "";
@@ -240,6 +261,8 @@ export function editarProjeto(id) {
     $("proj_audio").value = projeto.link_audio;
 
     $("proj_capa").value = projeto.link_capa;
+    $("proj_capa_upload").value = "";
+    setCoverPreview(projeto.link_capa);
 
     $("proj_descricao").value = projeto.descricao;
 
@@ -256,6 +279,7 @@ export function editarProjeto(id) {
 
 export function fecharModal() {
     resetAudioState();
+    setCoverPreview(null);
     closeAdminModal("modal-projeto");
 }
 
@@ -289,6 +313,21 @@ function projetoPayload(showComparison, order) {
 
         landing_order: showComparison ? order : null,
     };
+}
+
+function setCoverPreview(url) {
+    const preview = $("proj_capa_preview");
+    if (coverObjectUrl) {
+        URL.revokeObjectURL(coverObjectUrl);
+        coverObjectUrl = null;
+    }
+    preview.src = url || "";
+    preview.hidden = !url;
+    $("proj_capa_remove").hidden = !url || !$("proj_id").value;
+}
+
+function selectedCover() {
+    return $("proj_capa_upload").files?.[0] || null;
 }
 
 function projetoChanges(payload, project) {
@@ -382,6 +421,18 @@ async function uploadAudio(projectId, slot, file) {
     return response.json();
 }
 
+async function uploadImage(projectId, file) {
+    if (!file) return null;
+    const form = new FormData();
+    form.append("imagem", file);
+    const response = await authFetch(`/projetos/${projectId}/imagem`, {
+        method: "POST",
+        body: form,
+    });
+    if (!response.ok) throw await responseError(response, "Erro ao enviar capa.");
+    return response.json();
+}
+
 export async function salvarProjeto() {
     const originalId = $("proj_id").value;
     const originalProject = originalId
@@ -389,6 +440,7 @@ export async function salvarProjeto() {
         : null;
     const beforeFile = selectedAudio("before");
     const afterFile = selectedAudio("after");
+    const coverFile = selectedCover();
     const wantsHighlight = $("proj_mix_landing").checked;
     const order = Number($("proj_mix_order").value) || 1;
     const hasUploads = Boolean(beforeFile || afterFile);
@@ -423,6 +475,7 @@ export async function salvarProjeto() {
             project = await response.json();
         }
 
+        project = await uploadImage(project.id, coverFile) || project;
         await uploadAudio(project.id, "before", beforeFile);
         await uploadAudio(project.id, "after", afterFile);
 
@@ -472,6 +525,28 @@ export async function removerAudio(slot) {
     }
 }
 
+export async function removerCapa() {
+    const projectId = $("proj_id").value;
+    if (!projectId) {
+        $("proj_capa").value = "";
+        $("proj_capa_upload").value = "";
+        setCoverPreview(null);
+        return;
+    }
+    try {
+        const response = await authFetch(`/projetos/${projectId}/imagem`, { method: "DELETE" });
+        if (!response.ok) throw await responseError(response, "Erro ao remover capa.");
+        const project = await response.json();
+        $("proj_capa").value = project.link_capa || "";
+        $("proj_capa_upload").value = "";
+        setCoverPreview(project.link_capa);
+        Notify.success("Capa removida.");
+    } catch (error) {
+        console.error(error);
+        Notify.error(error.message);
+    }
+}
+
 // ===========================
 // DELETE
 // ===========================
@@ -500,6 +575,7 @@ export async function deletarProjeto(id) {
 
 function limparFormulario() {
     bindAudioControls();
+    bindCoverControls();
     resetAudioState();
     [
         "proj_id",
@@ -529,10 +605,12 @@ function limparFormulario() {
     $("proj_destaque").checked = false;
     $("proj_audio_before").value = "";
     $("proj_audio_after").value = "";
+    $("proj_capa_upload").value = "";
     $("proj_mix_landing").checked = false;
     $("proj_mix_order").value = "1";
     setAudioPreview("before", null);
     setAudioPreview("after", null);
+    setCoverPreview(null);
     syncComparisonControls();
 }
 
