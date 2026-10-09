@@ -1,4 +1,5 @@
 import hashlib
+import re
 import unittest
 from pathlib import Path
 
@@ -114,6 +115,46 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
             self.assertIn("--require-main-protection", source)
             self.assertIn("--required-check storage-integration", source)
         self.assertIn("github.ref == 'refs/heads/main'", self.issuer_source)
+
+    def test_ruleset_app_credential_is_confined_to_approved_environment_jobs(self):
+        token_action = (
+            "actions/create-github-app-token@"
+            "bcd2ba49218906704ab6c1aa796996da409d3eb1"
+        )
+        sources = (
+            (self.issuer_source, "trusted-request-guard", "provider-smokes-and-signature"),
+            (self.preflight_source, "protected-environment-guard", "verify-storage-evidence"),
+            (self.source, "trusted-release-gate", "verify-storage-evidence"),
+        )
+
+        def job_block(source, name):
+            match = re.search(
+                rf"(?ms)^  {re.escape(name)}:\n(.*?)(?=^  [a-z0-9-]+:\n|\Z)",
+                source,
+            )
+            self.assertIsNotNone(match, name)
+            return match.group(1)
+
+        for source, unprotected_start, protected_start in sources:
+            with self.subTest(workflow=unprotected_start):
+                unprotected = job_block(source, unprotected_start)
+                protected = job_block(source, protected_start)
+                self.assertNotIn("STORAGE_GUARD_APP_PRIVATE_KEY", unprotected)
+                self.assertNotIn("GH_RULESET_TOKEN", unprotected)
+                self.assertNotIn("--require-main-protection", unprotected)
+                self.assertIn("environment: storage-rollout", protected)
+                self.assertIn(token_action, protected)
+                self.assertIn("STORAGE_GUARD_APP_PRIVATE_KEY", protected)
+                self.assertIn("permission-administration: write", protected)
+                self.assertIn("GH_RULESET_TOKEN: ${{ steps.ruleset-token.outputs.token }}", protected)
+                self.assertIn("--require-main-protection", protected)
+                self.assertIn("--required-check storage-integration", protected)
+                self.assertIn("repositories: mirai-hit-studio", protected)
+
+        self.assertIn("contents: read", self.issuer_source)
+        self.assertIn("actions: read", self.issuer_source)
+        self.assertIn("deployments: read", self.issuer_source)
+        self.assertNotIn("administration:", self.issuer_source.split("concurrency:", 1)[0])
 
     def test_release_guard_source_pin_matches_the_reviewed_script(self):
         digest = hashlib.sha256(self.guard_path.read_bytes()).hexdigest()

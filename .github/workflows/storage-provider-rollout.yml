@@ -58,8 +58,6 @@ jobs:
           python -m scripts.storage_environment_guard
           --environment storage-rollout
           --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
-          --require-main-protection
-          --required-check storage-integration
 
   provider-smokes-and-signature:
     needs: trusted-request-guard
@@ -97,6 +95,26 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$STORAGE_PREFLIGHT_TARGET_SHA" = "$GITHUB_SHA"
           test "$COMMERCIAL_PIPELINE_V2_ENABLED" = "false"
+      - name: Create short-lived Ruleset inspection token
+        id: ruleset-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          client-id: ${{ vars.STORAGE_GUARD_APP_CLIENT_ID }}
+          private-key: ${{ secrets.STORAGE_GUARD_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: mirai-hit-studio
+          permission-administration: write
+      - name: Verify protected Environments and main Ruleset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_RULESET_TOKEN: ${{ steps.ruleset-token.outputs.token }}
+        working-directory: backend
+        run: >-
+          python -m scripts.storage_environment_guard
+          --environment storage-rollout
+          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --require-main-protection
+          --required-check storage-integration
       - name: Set up Python
         uses: actions/setup-python@v5
         id: setup-python

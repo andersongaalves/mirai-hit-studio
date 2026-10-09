@@ -217,6 +217,7 @@ def check_main_protection(
     repository: str,
     token: str,
     *,
+    ruleset_token: str | None = None,
     required_check: str,
     ruleset_name: str = "mirai-main-protection",
 ) -> str:
@@ -238,10 +239,14 @@ def check_main_protection(
         if main_protection_status(protection, required_check=required_check) == "protected":
             return "protected"
 
+    ruleset_credential = ruleset_token or ""
+    if not _valid_request(api_url, repository, ruleset_credential):
+        return "ruleset_credential_missing"
+
     try:
         rulesets = _get_json(
             base + "/rulesets?includes_parents=true&targets=branch",
-            token,
+            ruleset_credential,
         )
         if not isinstance(rulesets, list):
             return "github_api_unavailable"
@@ -252,7 +257,10 @@ def check_main_protection(
         ]
         if len(matches) != 1 or not isinstance(matches[0].get("id"), int):
             return "main_protection_missing"
-        ruleset = _get_json(base + f"/rulesets/{matches[0]['id']}", token)
+        ruleset = _get_json(
+            base + f"/rulesets/{matches[0]['id']}",
+            ruleset_credential,
+        )
     except HTTPError as error:
         return "main_protection_missing" if error.code == 404 else "github_api_unavailable"
     except (URLError, TimeoutError, OSError, ValueError, TypeError):
@@ -271,6 +279,7 @@ def main(argv=None) -> int:
     repository = os.environ.get("GITHUB_REPOSITORY", "")
     api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
     token = os.environ.get("GH_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
+    ruleset_token = os.environ.get("GH_RULESET_TOKEN", "")
     results = {
         name: check_environment(
             api_url,
@@ -287,6 +296,7 @@ def main(argv=None) -> int:
             api_url,
             repository,
             token,
+            ruleset_token=ruleset_token,
             required_check=args.required_check,
             ruleset_name=args.main_ruleset,
         )
