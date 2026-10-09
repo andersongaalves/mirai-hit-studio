@@ -6,7 +6,14 @@ from collections.abc import Callable
 
 from .cloudinary import CloudinaryImageStorage
 from .config import StorageSettings
-from .contracts import StorageAdapter, StorageConfigurationError, StorageScope
+from .contracts import (
+    ObjectReference,
+    ObjectVisibility,
+    StorageAdapter,
+    StorageConfigurationError,
+    StorageInvalidReference,
+    StorageScope,
+)
 from .legacy import LegacyDocumentAdapter, SupabasePortfolioAudioAdapter, SupabaseProductionAdapter
 from .memory import InMemoryStorage
 from .r2 import R2Storage
@@ -47,6 +54,35 @@ class StorageRegistry:
         if adapter.scope != normalized_scope:
             raise StorageConfigurationError("Provider de storage incompativel com o escopo.")
         self._instances[normalized_scope] = adapter
+        return adapter
+
+    def storage_for_reference(
+        self,
+        scope: StorageScope | str,
+        reference: ObjectReference,
+    ) -> StorageAdapter:
+        """Resolve an existing object independently of the configured write backend."""
+        try:
+            normalized_scope = scope if isinstance(scope, StorageScope) else StorageScope(scope)
+        except ValueError:
+            raise StorageInvalidReference("Escopo da referencia invalido.") from None
+
+        if normalized_scope not in {StorageScope.PRODUCTION_TEMP, StorageScope.PRODUCTION_FINAL}:
+            raise StorageInvalidReference("Referencia privada de Producao invalida.")
+        if reference.provider not in {"r2", "supabase", "memory"}:
+            raise StorageInvalidReference("Provider da referencia de Producao invalido.")
+
+        try:
+            factory = self.factories[reference.provider]
+        except KeyError:
+            raise StorageConfigurationError("Provider da referencia nao esta disponivel.") from None
+        adapter = factory(normalized_scope, self.settings)
+        if adapter.scope != normalized_scope or adapter.visibility != ObjectVisibility.PRIVATE:
+            raise StorageInvalidReference("Escopo da referencia de Producao invalido.")
+
+        namespace = getattr(adapter, "bucket", None) or getattr(adapter, "namespace", None)
+        if namespace != reference.namespace:
+            raise StorageInvalidReference("Namespace da referencia de Producao invalido.")
         return adapter
 
     @staticmethod

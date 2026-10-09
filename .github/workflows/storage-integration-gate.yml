@@ -145,6 +145,7 @@ jobs:
                     test_portfolio_audio_storage_core.py \
                     test_storage_lifecycle.py \
                     test_storage_migration.py \
+                    test_storage_preflight.py \
                     test_portfolio_mix_comparison.py; do
                       python -m unittest discover -s tests -p "$pattern" -v
                   done
@@ -199,6 +200,25 @@ jobs:
                   assert inventory["deletions"] == 0
                   assert inventory["references_printed"] == 0
                   PY
+                  preflight="$(python -m scripts.storage_preflight)"
+                  python - "$preflight" <<'PY'
+                  import json
+                  import sys
+
+                  report = json.loads(sys.argv[1])
+                  assert report["provider_connectivity_probed"] is False
+                  assert report["commercial_pipeline_v2"] == "off"
+                  assert report["rollout_ready"] is False
+                  assert all(
+                      component["provider_accessible"] == "not_checked"
+                      and component["smoke"] == "not_run"
+                      for component in report["components"].values()
+                  )
+                  PY
+                  if python -m scripts.storage_preflight --require-rollout-ready; then
+                      echo "storage rollout gate unexpectedly passed without provider smoke" >&2
+                      exit 1
+                  fi
                   if python -m scripts.migrate_production_files \
                     --database-url "$DATABASE_URL" --mode copy --confirm-copy; then
                       echo "migration copy unexpectedly enabled" >&2
@@ -231,7 +251,8 @@ jobs:
                     backend/tests/test_portfolio_image_storage.py \
                     backend/tests/test_portfolio_audio_storage_core.py \
                     backend/tests/test_storage_lifecycle.py \
-                    backend/tests/test_storage_migration.py
+                    backend/tests/test_storage_migration.py \
+                    backend/tests/test_storage_preflight.py
                   node --check frontend/js/admin/projetos.js
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs
@@ -270,6 +291,7 @@ jobs:
                     echo "- PostgreSQL 17 and Alembic c5f2a7d9e184: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
+                    echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"
                     echo "- Lifecycle: dry-run only, zero deletions"
                     echo "- Migration: inventory only; copy gate remained disabled"
                     echo "- Commercial pipeline V2: off"

@@ -201,7 +201,7 @@ class ProductionFileStorage:
             raise ProducaoArquivoStorageError(str(exc)) from None
 
     def _resolve(self, value):
-        from services.storage.contracts import ObjectReference, StorageInvalidReference
+        from services.storage.contracts import ObjectReference, StorageError, StorageInvalidReference
 
         if "://" not in value:
             legacy = self._legacy_adapter()
@@ -210,11 +210,10 @@ class ProductionFileStorage:
             reference = ObjectReference.parse(value)
         except StorageInvalidReference as exc:
             raise ProducaoArquivoStorageError(str(exc)) from None
-        if reference.provider == "supabase":
-            return self._legacy_adapter(), reference
-        adapter = self._adapter()
-        if reference.provider != adapter.provider:
-            raise ProducaoArquivoStorageError("Provider do arquivo de Producao invalido.")
+        try:
+            adapter = self.registry.storage_for_reference(self.scope, reference)
+        except StorageError as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
         return adapter, reference
 
     def save(self, data: bytes, mime_type: str):

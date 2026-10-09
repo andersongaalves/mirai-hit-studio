@@ -16,13 +16,15 @@ connectivity.
 
 Provider adapters are created lazily, so absent credentials do not prevent a
 normal application startup. The affected upload/read operation fails closed
-when its provider is resolved. Deploy must remain blocked until every active
-scope below is provisioned and checked server-side:
+when its provider is resolved. Deploy must remain blocked until every required
+provider below is provisioned and checked server-side. Production-file writes
+are selected per scope; R2 and legacy Supabase remain independently resolvable
+for persisted references during rollback.
 
-- R2 private production files: `PRODUCTION_TEMP_STORAGE_BACKEND=r2`,
-  `PRODUCTION_FINAL_STORAGE_BACKEND=r2`, `R2_ACCOUNT_ID`,
-  `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_TEMP_BUCKET`, and
-  `R2_FINAL_BUCKET`. Buckets must be private.
+- R2 private production files: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+  `R2_SECRET_ACCESS_KEY`, `R2_TEMP_BUCKET`, and `R2_FINAL_BUCKET`. Buckets
+  must be private. Each scope writes to its configured R2 or Supabase provider;
+  both must remain addressable by persisted reference during rollback.
 - Cloudinary public Portfolio images: `PUBLIC_IMAGE_STORAGE_BACKEND=cloudinary`,
   `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and
   `CLOUDINARY_API_SECRET`.
@@ -32,6 +34,36 @@ scope below is provisioned and checked server-side:
 
 No credential value belongs in CI output, documentation, frontend code, or a
 public URL.
+
+## Sanitized rollout preflight
+
+From `backend`, run `python -m scripts.storage_preflight` to report effective
+configuration presence and format validity. It does not contact providers;
+`provider_accessible` remains `not_checked` and `smoke` remains `not_run` until
+separately reviewed evidence is recorded. The report contains no credential
+values.
+
+The deployment gate must run `python -m scripts.storage_preflight
+--require-rollout-ready`. It exits nonzero unless configuration is valid,
+Commercial V2 is explicitly `false`, and all five provider groups have
+protected-environment attestations:
+
+- `STORAGE_PREFLIGHT_R2_TEMP_ACCESSIBLE=true` and
+  `STORAGE_PREFLIGHT_R2_TEMP_SMOKE=approved`;
+- `STORAGE_PREFLIGHT_R2_FINAL_ACCESSIBLE=true` and
+  `STORAGE_PREFLIGHT_R2_FINAL_SMOKE=approved`;
+- `STORAGE_PREFLIGHT_CLOUDINARY_ACCESSIBLE=true` and
+  `STORAGE_PREFLIGHT_CLOUDINARY_SMOKE=approved`;
+- `STORAGE_PREFLIGHT_SUPABASE_AUDIO_ACCESSIBLE=true` and
+  `STORAGE_PREFLIGHT_SUPABASE_AUDIO_SMOKE=approved`;
+- `STORAGE_PREFLIGHT_LEGACY_STORAGE_ACCESSIBLE=true` and
+  `STORAGE_PREFLIGHT_LEGACY_STORAGE_SMOKE=approved`.
+
+Only the deployment process may set these attestations after the corresponding
+read-only connectivity check and approved synthetic smoke. The integration CI
+uses fakes and intentionally verifies that the rollout gate stays blocked; it
+does not attest live connectivity. This repository has no deployment workflow
+that can populate protected attestations in this phase.
 
 ## A. R2 real
 
