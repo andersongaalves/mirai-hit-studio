@@ -105,7 +105,7 @@ def upload(
         replaces_id,
         replacement_actor_id,
     )
-    storage = storage or new_production_file_storage()
+    storage = storage or new_production_file_storage(file_type)
     try:
         object_key = storage.save(data, mime_type)
     except ProducaoArquivoStorageError as exc:
@@ -259,11 +259,19 @@ def get_for_client(db, file_id, client_id):
 
 
 def read(model, storage=None):
-    storage = storage or new_production_file_storage()
+    storage = storage or new_production_file_storage(model.tipo)
     try:
-        return storage.read(model.object_key)
+        content = storage.read(model.object_key)
     except ProducaoArquivoStorageError as exc:
         raise ProducaoArquivoUnavailable(str(exc)) from None
+    if hashlib.sha256(content).hexdigest() != model.sha256:
+        logger.error(
+            "production_file_integrity_mismatch production_id=%s file_id=%s",
+            model.producao_id,
+            model.id,
+        )
+        raise ProducaoArquivoUnavailable("Integridade do arquivo nao confirmada.")
+    return content
 
 
 def update_visibility(db, *, model, actor, producer, client, request_id=None):
