@@ -70,6 +70,129 @@ def _object_missing(response: httpx.Response) -> bool:
     )
 
 
+def _http_status(exc: Exception) -> int | None:
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None)
+    return status if isinstance(status, int) and 100 <= status <= 599 else None
+
+
+def _error_category(exc: Exception) -> str:
+    if isinstance(exc, httpx.TimeoutException):
+        return "network_timeout"
+    if isinstance(exc, httpx.RequestError):
+        return "network_error"
+    if _http_status(exc) is not None:
+        return "http_error"
+    return "operation_error"
+
+
+class _SmokeFailure(Exception):
+    def __init__(self, failure: dict, cleanup: dict | None = None):
+        super().__init__(failure["category"])
+        self.failure = failure
+        self.cleanup = cleanup or {}
+
+
+def _legacy_step(
+    stage: str,
+    operation,
+    *,
+    storage=None,
+    expected_http_statuses: tuple[int, ...] = (),
+):
+    from contextlib import nullcontext
+    from unittest.mock import patch
+
+    observed_status = None
+    request_context = nullcontext()
+    if storage is not None:
+        original_request = storage._request
+
+        def recorded_request(*args, **kwargs):
+            nonlocal observed_status
+            response = original_request(*args, **kwargs)
+            status = getattr(response, "status_code", None)
+            if isinstance(status, int) and 100 <= status <= 599:
+                observed_status = status
+            return response
+
+        request_context = patch.object(
+            storage, "_request", side_effect=recorded_request
+        )
+
+    try:
+        with request_context:
+            return operation()
+    except Exception as exc:  # noqa: BLE001 - retain only sanitized diagnostics.
+        status = _http_status(exc) or observed_status
+        category = _error_category(exc)
+        if status is not None and status not in expected_http_statuses:
+            category = "http_error"
+        raise _SmokeFailure({
+            "stage": stage,
+            "category": category,
+            **({"http_status": status} if status is not None else {}),
+        }) from None
+
+
+def _cleanup_legacy_object(storage, key: str, *, attempted: bool) -> dict:
+    result = {"delete": "not_attempted", "absence": "not_verified"}
+    bucket_path = "object/" + quote(storage.bucket, safe="")
+
+    if attempted:
+        try:
+            response = storage._request(
+                "DELETE", bucket_path, json={"prefixes": [key]}
+            )
+            if response.status_code in (200, 204):
+                result["delete"] = "deleted"
+            elif _object_missing(response):
+                result["delete"] = "already_absent"
+                result["delete_http_status"] = response.status_code
+            else:
+                result["delete"] = "failed"
+                result["delete_category"] = "http_error"
+                result["delete_http_status"] = response.status_code
+        except Exception as exc:  # noqa: BLE001 - continue to the other object.
+            result["delete"] = "failed"
+            result["delete_category"] = _error_category(exc)
+            if status := _http_status(exc):
+                result["delete_http_status"] = status
+
+    try:
+        response = storage._request(
+            "GET",
+            "object/authenticated/"
+            + quote(storage.bucket, safe="")
+            + "/"
+            + quote(key, safe="/"),
+        )
+        result["absence"] = (
+            "confirmed" if _object_missing(response) else "not_confirmed"
+        )
+        result["verify_http_status"] = response.status_code
+    except Exception as exc:  # noqa: BLE001 - report verification separately.
+        result["absence"] = "not_verified"
+        result["verify_category"] = _error_category(exc)
+        if status := _http_status(exc):
+            result["verify_http_status"] = status
+    return result
+
+
+def _safe_legacy_cleanup(storage, key: str, *, attempted: bool) -> dict:
+    try:
+        return _cleanup_legacy_object(storage, key, attempted=attempted)
+    except Exception as exc:  # noqa: BLE001 - preserve the other object's cleanup.
+        result = {
+            "delete": "failed" if attempted else "not_attempted",
+            "absence": "not_verified",
+            "verify_category": _error_category(exc),
+        }
+        if status := _http_status(exc):
+            result["verify_http_status"] = status
+        return result
+
+
 def _r2_smoke(scope: StorageScope, run_id: str) -> dict:
     settings = StorageSettings.from_env()
     backends = dict(settings.backends)
@@ -163,54 +286,117 @@ def _audio_smoke(run_id: str) -> dict:
 def _legacy_smoke(run_id: str) -> dict:
     from unittest.mock import patch
 
-    proposal_bucket = SupabaseDocumentoStorage()
-    _assert_bucket(proposal_bucket, public=False)
-    proposal_id = 9000000000000000000
-    proposal_key = f"propostas/{proposal_id}/v1/{run_id.replace('-', '')}.pdf"
-    proposal_ref = proposal_bucket._reference(proposal_key)
-    proposal_written = True
+    proposal_bucket = None
+    production_bucket = None
+    proposal_key = None
+    production_key = None
+    proposal_attempted = False
+    production_attempted = False
+    primary_failure = None
+    cleanup = {}
 
-    production_bucket = SupabaseProducaoArquivoStorage()
-    _assert_bucket(production_bucket, public=False)
-    production_folder = run_id.replace("-", "")
-    production_key = f"arquivos/{production_folder}/{production_folder}"
-    production_written = True
     try:
+        proposal_bucket = _legacy_step(
+            "proposal_storage_init", SupabaseDocumentoStorage
+        )
+        _legacy_step(
+            "proposal_bucket_check",
+            lambda: _assert_bucket(proposal_bucket, public=False),
+            storage=proposal_bucket,
+            expected_http_statuses=(200,),
+        )
+        production_bucket = _legacy_step(
+            "production_storage_init", SupabaseProducaoArquivoStorage
+        )
+        _legacy_step(
+            "production_bucket_check",
+            lambda: _assert_bucket(production_bucket, public=False),
+            storage=production_bucket,
+            expected_http_statuses=(200,),
+        )
+
+        proposal_id = 9000000000000000000
+        proposal_key = f"propostas/{proposal_id}/v1/{run_id.replace('-', '')}.pdf"
+        proposal_ref = proposal_bucket._reference(proposal_key)
+        production_folder = run_id.replace("-", "")
+        production_key = f"arquivos/{production_folder}/{production_folder}"
+
+        proposal_attempted = True
         with patch.object(proposal_bucket, "_bucket_privado", return_value=None), patch(
             "services.documento_storage.uuid4", return_value=_uuid(run_id.replace("-", ""))
         ):
-            saved_reference = proposal_bucket.salvar(_PDF, proposal_id, 1)
+            saved_reference = _legacy_step(
+                "proposal_upload",
+                lambda: proposal_bucket.salvar(_PDF, proposal_id, 1),
+                storage=proposal_bucket,
+                expected_http_statuses=(200, 201),
+            )
         if saved_reference != proposal_ref:
-            raise RuntimeError("unexpected_generated_reference")
-        if proposal_bucket.ler(saved_reference) != _PDF:
-            raise RuntimeError("legacy_document_read_failed")
+            raise _SmokeFailure({"stage": "proposal_reference_check", "category": "reference_mismatch"})
+        proposal_payload = _legacy_step(
+            "proposal_download",
+            lambda: proposal_bucket.ler(saved_reference),
+            storage=proposal_bucket,
+            expected_http_statuses=(200,),
+        )
+        if proposal_payload != _PDF:
+            raise _SmokeFailure({"stage": "proposal_integrity_check", "category": "content_mismatch"})
 
         uuid_values = iter((_uuid(production_folder), _uuid(production_folder)))
         with patch.object(production_bucket, "ensure_private_bucket", return_value=None), patch(
             "services.producao_arquivo_storage.uuid4", side_effect=lambda: next(uuid_values)
         ):
-            saved_key = production_bucket.save(_PDF, "application/pdf")
-        if saved_key != production_key:
-            raise RuntimeError("unexpected_generated_reference")
-        if production_bucket.read(saved_key) != _PDF:
-            raise RuntimeError("legacy_production_read_failed")
-    finally:
-        if production_written:
-            production_bucket.delete(production_key)
-        if proposal_written:
-            path = "object/" + quote(proposal_bucket.bucket, safe="")
-            response = proposal_bucket._request("DELETE", path, json={"prefixes": [proposal_key]})
-            if response.status_code not in (200, 204):
-                raise RuntimeError("cleanup_failed")
-            check = proposal_bucket._request(
-                "GET",
-                "object/authenticated/" + quote(proposal_bucket.bucket, safe="") + "/" + quote(proposal_key, safe="/"),
+            production_attempted = True
+            saved_key = _legacy_step(
+                "production_upload",
+                lambda: production_bucket.save(_PDF, "application/pdf"),
+                storage=production_bucket,
+                expected_http_statuses=(200, 201),
             )
-            if not _object_missing(check):
-                raise RuntimeError("cleanup_verification_failed")
+        if saved_key != production_key:
+            raise _SmokeFailure({"stage": "production_reference_check", "category": "reference_mismatch"})
+        production_payload = _legacy_step(
+            "production_download",
+            lambda: production_bucket.read(saved_key),
+            storage=production_bucket,
+            expected_http_statuses=(200,),
+        )
+        if production_payload != _PDF:
+            raise _SmokeFailure({"stage": "production_integrity_check", "category": "content_mismatch"})
+    except _SmokeFailure as exc:
+        primary_failure = exc.failure
+    except Exception as exc:  # noqa: BLE001 - never include provider exception text.
+        primary_failure = {
+            "stage": "legacy_setup",
+            "category": _error_category(exc),
+            **({"http_status": _http_status(exc)} if _http_status(exc) else {}),
+        }
+    finally:
+        if proposal_bucket is not None and proposal_key is not None:
+            cleanup["proposal_pdf"] = _safe_legacy_cleanup(
+                proposal_bucket, proposal_key, attempted=proposal_attempted
+            )
+        else:
+            cleanup["proposal_pdf"] = {"delete": "not_needed", "absence": "not_applicable"}
+        if production_bucket is not None and production_key is not None:
+            cleanup["production_file"] = _safe_legacy_cleanup(
+                production_bucket, production_key, attempted=production_attempted
+            )
+        else:
+            cleanup["production_file"] = {"delete": "not_needed", "absence": "not_applicable"}
+
+    cleanup_failed = any(
+        result["delete"] == "failed" or result["absence"] not in ("confirmed", "not_applicable")
+        for result in cleanup.values()
+    )
+    if primary_failure or cleanup_failed:
+        if primary_failure is None:
+            primary_failure = {"stage": "legacy_cleanup", "category": "cleanup_failed"}
+        raise _SmokeFailure(primary_failure, cleanup)
     return {
         "operations": ["private_document_put_get_delete", "private_production_put_get_delete"],
         "sha256": hashlib.sha256(_PDF).hexdigest(),
+        "cleanup": cleanup,
     }
 
 
@@ -228,8 +414,23 @@ def run_smokes() -> dict:
         try:
             result = check()
             sanitized = {"connectivity": "passed", "smoke": "passed", **result}
+        except _SmokeFailure as exc:
+            sanitized = {
+                "connectivity": "failed",
+                "smoke": "failed",
+                "failure": exc.failure,
+                **({"cleanup": exc.cleanup} if exc.cleanup else {}),
+            }
         except Exception as exc:  # noqa: BLE001 - sanitize all provider failures before logging.
-            sanitized = {"connectivity": "failed", "smoke": "failed", "failure_class": type(exc).__name__}
+            sanitized = {
+                "connectivity": "failed",
+                "smoke": "failed",
+                "failure": {
+                    "stage": name,
+                    "category": _error_category(exc),
+                    **({"http_status": _http_status(exc)} if _http_status(exc) else {}),
+                },
+            }
         digest = hashlib.sha256(json.dumps(sanitized, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         results[name] = {**sanitized, "evidence_sha256": digest}
     return {
@@ -241,14 +442,34 @@ def run_smokes() -> dict:
     }
 
 
+def diagnostic_report(report: dict) -> dict:
+    return {
+        "schema_version": 1,
+        "all_passed": report["all_passed"],
+        "components": {
+            name: {
+                "status": result["smoke"],
+                **({"failure": result["failure"]} if "failure" in result else {}),
+                **({"cleanup": result["cleanup"]} if "cleanup" in result else {}),
+            }
+            for name, result in report["components"].items()
+        },
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--diagnostic-output")
     args = parser.parse_args(argv)
     report = run_smokes()
     output = os.path.abspath(args.output)
     with open(output, "x", encoding="utf-8") as file:
         json.dump(report, file, sort_keys=True)
+    if args.diagnostic_output:
+        diagnostic_output = os.path.abspath(args.diagnostic_output)
+        with open(diagnostic_output, "x", encoding="utf-8") as file:
+            json.dump(diagnostic_report(report), file, sort_keys=True)
     print(json.dumps({"all_passed": report["all_passed"], "components": {name: value["smoke"] for name, value in report["components"].items()}}, sort_keys=True))
     return 0 if report["all_passed"] else 1
 
