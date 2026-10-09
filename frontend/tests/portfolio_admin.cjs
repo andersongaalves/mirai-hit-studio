@@ -98,6 +98,14 @@ async function staticResponse(route) {
             writes.push({ path: url.pathname, method: request.method() });
             return route.fulfill({ json: project });
         }
+        if (url.pathname === "/projetos/7/imagem" && ["POST", "DELETE"].includes(request.method())) {
+            writes.push({ path: url.pathname, method: request.method() });
+            const link_capa = request.method() === "POST"
+                ? "https://res.cloudinary.com/example/image/upload/portfolio/test-cover"
+                : "";
+            projects = projects.map(item => item.id === 7 ? { ...item, link_capa } : item);
+            return route.fulfill({ json: projects.find(item => item.id === 7) });
+        }
         const empty = ["/config", "/servicos", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores", "/newsletter/subscribers", "/newsletter/campaigns"];
         if (empty.includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
         if (url.pathname === "/dashboard") return route.fulfill({ json: { metrics: {}, pipeline: {}, attention: {}, recent_activity: [] } });
@@ -136,6 +144,28 @@ async function staticResponse(route) {
         assert.equal(writes[3].payload.landing_order, 1);
         assert.deepEqual(Object.keys(writes[3].payload).sort(), ["landing_order", "show_mix_comparison_on_landing"]);
         assert.equal(await page.locator(".portfolio-mix-comparison").evaluate(element => element.scrollWidth <= element.clientWidth), true);
+
+        await page.waitForTimeout(50);
+        await page.evaluate(() => window.editarProjeto(7));
+        await page.locator("#proj_capa_upload").setInputFiles({
+            name: "client-visible-name.png",
+            mimeType: "image/png",
+            buffer: Buffer.from("\x89PNG\r\n\x1a\nsynthetic"),
+        });
+        assert.equal(await page.locator("#proj_capa_preview").isVisible(), true);
+        await page.getByRole("button", { name: "Salvar Projeto" }).click();
+        await page.waitForFunction(() => document.getElementById("modal-projeto").classList.contains("hidden"));
+        assert.equal(writes.at(-1).method, "POST");
+        assert.equal(writes.at(-1).path, "/projetos/7/imagem");
+
+        await page.waitForTimeout(50);
+        await page.evaluate(() => window.editarProjeto(7));
+        assert.equal(await page.locator("#proj_capa_preview").getAttribute("src"), projects[0].link_capa);
+        await page.locator("#proj_capa_remove").click();
+        assert.equal(writes.at(-1).method, "DELETE");
+        assert.equal(writes.at(-1).path, "/projetos/7/imagem");
+        assert.equal(await page.locator("#proj_capa_preview").isHidden(), true);
+        await page.evaluate(() => window.fecharModalProjeto());
 
         await page.waitForTimeout(50);
         const beforeLegacyEdit = writes.length;
