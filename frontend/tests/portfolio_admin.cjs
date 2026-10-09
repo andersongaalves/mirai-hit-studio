@@ -4,6 +4,10 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
+const coverPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==",
+    "base64",
+);
 const project = {
     id: 7,
     titulo: "Mix synthetic",
@@ -112,13 +116,24 @@ async function staticResponse(route) {
         return route.fulfill({ status: 404, json: { detail: "Not found" } });
     });
 
+    async function openProject(id) {
+        // Saving closes the modal before its async list refresh has completed.
+        // Await the real loader instead of assuming a 50ms refresh deadline.
+        await page.evaluate(async projectId => {
+            const { carregarPortfolio } = await import("/js/admin/projetos.js");
+            await carregarPortfolio();
+            window.editarProjeto(projectId);
+        }, id);
+        await page.locator("#modal-projeto").waitFor({ state: "visible" });
+    }
+
     try {
         await page.goto("http://localhost:4173/admin.html");
         await page.locator("#username").fill("admin");
         await page.locator("#password").fill("password");
         await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
         await page.waitForFunction(() => typeof window.editarProjeto === "function");
-        await page.evaluate(() => window.editarProjeto(7));
+        await openProject(7);
 
         assert.equal(await page.locator("#proj_audio_before_preview").getAttribute("src"), project.audio_before_url);
         assert.equal(await page.locator("#proj_audio_after_preview").getAttribute("src"), project.audio_after_url);
@@ -145,12 +160,15 @@ async function staticResponse(route) {
         assert.deepEqual(Object.keys(writes[3].payload).sort(), ["landing_order", "show_mix_comparison_on_landing"]);
         assert.equal(await page.locator(".portfolio-mix-comparison").evaluate(element => element.scrollWidth <= element.clientWidth), true);
 
-        await page.waitForTimeout(50);
-        await page.evaluate(() => window.editarProjeto(7));
+        await openProject(7);
         await page.locator("#proj_capa_upload").setInputFiles({
             name: "client-visible-name.png",
             mimeType: "image/png",
-            buffer: Buffer.from("\x89PNG\r\n\x1a\nsynthetic"),
+            buffer: coverPng,
+        });
+        await page.waitForFunction(() => {
+            const preview = document.getElementById("proj_capa_preview");
+            return !preview.hidden && preview.complete && preview.naturalWidth > 0;
         });
         assert.equal(await page.locator("#proj_capa_preview").isVisible(), true);
         await page.getByRole("button", { name: "Salvar Projeto" }).click();
@@ -158,21 +176,19 @@ async function staticResponse(route) {
         assert.equal(writes.at(-1).method, "POST");
         assert.equal(writes.at(-1).path, "/projetos/7/imagem");
 
-        await page.waitForTimeout(50);
-        await page.evaluate(() => window.editarProjeto(7));
+        await openProject(7);
         assert.equal(await page.locator("#proj_capa_preview").getAttribute("src"), projects[0].link_capa);
         await page.locator("#proj_capa_remove").click();
+        await page.locator("#proj_capa_preview").waitFor({ state: "hidden" });
         assert.equal(writes.at(-1).method, "DELETE");
         assert.equal(writes.at(-1).path, "/projetos/7/imagem");
-        await page.locator("#proj_capa_preview").waitFor({ state: "hidden" });
         await page.evaluate(() => window.fecharModalProjeto());
 
-        await page.waitForTimeout(50);
         const beforeLegacyEdit = writes.length;
-        await page.evaluate(() => window.editarProjeto(8));
+        await openProject(8);
         await page.locator("#proj_titulo").fill("Projeto legado editado");
         await page.getByRole("button", { name: "Salvar Projeto" }).click();
-        await page.waitForTimeout(100);
+        await page.waitForFunction(() => document.getElementById("modal-projeto").classList.contains("hidden"));
         assert.equal(
             await page.locator("#modal-projeto").evaluate(element => element.classList.contains("hidden")),
             true,
@@ -184,8 +200,7 @@ async function staticResponse(route) {
         assert.equal(projects.find(item => item.id === 8).destaque, true);
         assert.equal(projects.find(item => item.id === 8).vertical, null);
 
-        await page.waitForTimeout(50);
-        await page.evaluate(() => window.editarProjeto(8));
+        await openProject(8);
         await page.locator("#proj_titulo").fill("x");
         await page.getByRole("button", { name: "Salvar Projeto" }).click();
         let message = page.locator(".notification.error .notification-message").last();
