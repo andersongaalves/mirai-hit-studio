@@ -16,6 +16,12 @@ on:
         required: true
         type: choice
         options: ['no', 'yes']
+      smoke_scope:
+        description: Only legacy Storage diagnostics, or the full explicitly authorized provider set
+        required: true
+        type: choice
+        default: legacy_only
+        options: ['legacy_only', 'all']
 
 permissions:
   contents: read
@@ -41,6 +47,7 @@ jobs:
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
           AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
+          SMOKE_SCOPE: ${{ inputs.smoke_scope }}
         shell: bash
         run: |
           set -euo pipefail
@@ -50,6 +57,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$TARGET_SHA" = "$GITHUB_SHA"
           [[ "$AUTHORIZATION_REF" =~ ^CTRL-[A-Za-z0-9._-]{3,100}$ ]]
+          case "$SMOKE_SCOPE" in legacy_only|all) ;; *) exit 1 ;; esac
       - name: Require pre-existing protected rollout Environment
         env:
           GH_TOKEN: ${{ github.token }}
@@ -83,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo 'f0b6b18ec649720756ae5dd7fc53a94834cd92046861ed0bf52509cce993df4f  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
+          echo 'dcf73cedd95a837fadfae57c5e6a9269e5ddea586b008013b492435bdec44a02  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
           echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
           echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Assert release and provider configuration
@@ -125,7 +133,23 @@ jobs:
       - name: Install trusted backend dependencies
         working-directory: backend
         run: python -m pip install -r requirements.txt
+      - name: Run legacy-only diagnostic and independent cleanup
+        id: legacy-smoke
+        if: inputs.smoke_scope == 'legacy_only'
+        working-directory: backend
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PRODUCAO_STORAGE_BUCKET: ${{ vars.PRODUCAO_STORAGE_BUCKET }}
+          SUPABASE_STORAGE_BUCKET: ${{ vars.SUPABASE_STORAGE_BUCKET }}
+        run: >-
+          python -m scripts.storage_provider_smoke
+          --scope legacy_only
+          --output /tmp/storage-smoke.json
+          --diagnostic-output /tmp/storage-smoke-diagnostic.json
       - name: Run bounded real-provider smoke and cleanup
+        id: all-smokes
+        if: inputs.smoke_scope == 'all'
         working-directory: backend
         env:
           COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
@@ -153,17 +177,23 @@ jobs:
           PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND || 'legacy' }}
         run: >-
           python -m scripts.storage_provider_smoke
+          --scope all
           --output /tmp/storage-smoke.json
           --diagnostic-output /tmp/storage-smoke-diagnostic.json
       - name: Publish sanitized smoke diagnostics
-        if: failure()
+        if: >-
+          !cancelled() &&
+          (steps.legacy-smoke.outcome == 'success' ||
+           steps.legacy-smoke.outcome == 'failure' ||
+           steps.all-smokes.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: storage-rollout-diagnostic-${{ github.run_id }}
           path: /tmp/storage-smoke-diagnostic.json
           retention-days: 1
-          if-no-files-found: warn
+          if-no-files-found: error
       - name: Recheck pinned signer and verifier immediately before secret access
+        if: inputs.smoke_scope == 'all'
         working-directory: backend
         shell: bash
         run: |
@@ -171,6 +201,7 @@ jobs:
           echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
           echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Sign only a complete successful smoke report
+        if: inputs.smoke_scope == 'all'
         working-directory: backend
         env:
           COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
@@ -206,6 +237,7 @@ jobs:
           PYTHONNOUSERSITE: "1"
         run: '"$PYTHON_EXECUTABLE" -m scripts.storage_evidence /tmp/storage-smoke.json /tmp/storage-evidence.json'
       - name: Verify the signed evidence and effective configuration
+        if: inputs.smoke_scope == 'all'
         working-directory: backend
         env:
           COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
@@ -239,7 +271,7 @@ jobs:
           PYTHONNOUSERSITE: "1"
         run: '"$PYTHON_EXECUTABLE" -m scripts.storage_preflight --require-rollout-ready'
       - name: Publish sanitized, short-lived evidence
-        if: success()
+        if: success() && inputs.smoke_scope == 'all'
         uses: actions/upload-artifact@v4
         with:
           name: storage-rollout-evidence-${{ github.run_id }}

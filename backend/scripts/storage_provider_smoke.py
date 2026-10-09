@@ -37,6 +37,10 @@ _PNG = bytes.fromhex(
 _MP3 = (bytes((0xFF, 0xFB, 0x90, 0x64)) + bytes(413)) * 3
 
 
+class _BucketFailure(Exception):
+    """Fixed, non-sensitive bucket diagnostics; never retain response bodies."""
+
+
 def _uuid(value: str):
     return SimpleNamespace(hex=value)
 
@@ -46,12 +50,12 @@ def _assert_bucket(storage, *, public: bool) -> None:
         "GET", "bucket/" + quote(storage.bucket, safe="")
     )
     if response.status_code != 200:
-        raise RuntimeError("bucket_unavailable")
+        raise _BucketFailure("bucket_unavailable")
     try:
         if response.json().get("public") is not public:
-            raise RuntimeError("bucket_visibility_mismatch")
+            raise _BucketFailure("bucket_visibility_mismatch")
     except (ValueError, AttributeError):
-        raise RuntimeError("bucket_metadata_invalid") from None
+        raise _BucketFailure("bucket_metadata_invalid") from None
 
 
 def _object_missing(response: httpx.Response) -> bool:
@@ -77,12 +81,23 @@ def _http_status(exc: Exception) -> int | None:
 
 
 def _error_category(exc: Exception) -> str:
-    if isinstance(exc, httpx.TimeoutException):
-        return "network_timeout"
-    if isinstance(exc, httpx.RequestError):
-        return "network_error"
-    if _http_status(exc) is not None:
-        return "http_error"
+    # Legacy adapters suppress provider exceptions with `from None`. Their
+    # context still identifies transport failures without revealing any text.
+    current = exc
+    seen = set()
+    for _ in range(8):
+        if current is None or id(current) in seen:
+            break
+        seen.add(id(current))
+        if isinstance(current, _BucketFailure):
+            return str(current)
+        if isinstance(current, httpx.TimeoutException):
+            return "network_timeout"
+        if isinstance(current, httpx.RequestError):
+            return "network_error"
+        if _http_status(current) is not None:
+            return "http_error"
+        current = current.__cause__ or current.__context__
     return "operation_error"
 
 
@@ -110,6 +125,7 @@ def _legacy_step(
 
         def recorded_request(*args, **kwargs):
             nonlocal observed_status
+            observed_status = None
             response = original_request(*args, **kwargs)
             status = getattr(response, "status_code", None)
             if isinstance(status, int) and 100 <= status <= 599:
@@ -400,7 +416,9 @@ def _legacy_smoke(run_id: str) -> dict:
     }
 
 
-def run_smokes() -> dict:
+def run_smokes(*, scope: str = "all") -> dict:
+    if scope not in ("all", "legacy_only"):
+        raise ValueError("invalid_smoke_scope")
     run_id = str(uuid4())
     checks = {
         "r2_private_temp": lambda: _r2_smoke(StorageScope.PRODUCTION_TEMP, run_id),
@@ -411,6 +429,8 @@ def run_smokes() -> dict:
     }
     results = {}
     for name, check in checks.items():
+        if scope == "legacy_only" and name != "legacy_storage":
+            continue
         try:
             result = check()
             sanitized = {"connectivity": "passed", "smoke": "passed", **result}
@@ -433,12 +453,14 @@ def run_smokes() -> dict:
             }
         digest = hashlib.sha256(json.dumps(sanitized, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         results[name] = {**sanitized, "evidence_sha256": digest}
+    selected_passed = all(result["smoke"] == "passed" for result in results.values())
     return {
         "schema_version": 1,
         "run_id": run_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "components": results,
-        "all_passed": all(result["smoke"] == "passed" for result in results.values()),
+        "selected_passed": selected_passed,
+        "all_passed": scope == "all" and selected_passed,
     }
 
 
@@ -446,6 +468,7 @@ def diagnostic_report(report: dict) -> dict:
     return {
         "schema_version": 1,
         "all_passed": report["all_passed"],
+        "selected_passed": report["selected_passed"],
         "components": {
             name: {
                 "status": result["smoke"],
@@ -461,8 +484,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True)
     parser.add_argument("--diagnostic-output")
+    parser.add_argument("--scope", choices=("all", "legacy_only"), default="all")
     args = parser.parse_args(argv)
-    report = run_smokes()
+    report = run_smokes(scope=args.scope)
     output = os.path.abspath(args.output)
     with open(output, "x", encoding="utf-8") as file:
         json.dump(report, file, sort_keys=True)
@@ -470,8 +494,8 @@ def main(argv=None) -> int:
         diagnostic_output = os.path.abspath(args.diagnostic_output)
         with open(diagnostic_output, "x", encoding="utf-8") as file:
             json.dump(diagnostic_report(report), file, sort_keys=True)
-    print(json.dumps({"all_passed": report["all_passed"], "components": {name: value["smoke"] for name, value in report["components"].items()}}, sort_keys=True))
-    return 0 if report["all_passed"] else 1
+    print(json.dumps({"all_passed": report["all_passed"], "selected_passed": report["selected_passed"], "components": {name: value["smoke"] for name, value in report["components"].items()}}, sort_keys=True))
+    return 0 if report["selected_passed"] else 1
 
 
 if __name__ == "__main__":

@@ -83,6 +83,16 @@ class StorageEvidenceTests(unittest.TestCase):
         incomplete = {"all_passed": True, "components": {}}
         with self.assertRaisesRegex(ValueError, "provider_smoke_evidence_incomplete"):
             build_signed_evidence(incomplete, self.env)
+        legacy_only = {
+            "all_passed": False,
+            "selected_passed": True,
+            "components": {"legacy_storage": self.smoke["components"]["legacy_storage"]},
+        }
+        with self.assertRaisesRegex(ValueError, "provider_smokes_not_passed"):
+            build_signed_evidence(legacy_only, self.env)
+        legacy_only["all_passed"] = True
+        with self.assertRaisesRegex(ValueError, "provider_smoke_evidence_incomplete"):
+            build_signed_evidence(legacy_only, self.env)
         disabled = dict(self.env, COMMERCIAL_PIPELINE_V2_ENABLED="true")
         with self.assertRaisesRegex(ValueError, "effective_configuration_not_ready"):
             build_signed_evidence(self.smoke, disabled)
