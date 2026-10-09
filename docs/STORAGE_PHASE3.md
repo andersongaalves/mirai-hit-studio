@@ -53,4 +53,3 @@ nao deve ser confundida com o resultado do fake S3-compatível.
 3. Executar smoke controlado sem dados comerciais reais.
 4. Manter origem Supabase disponivel para referencias historicas.
 5. Integrar somente apos aprovacao do CTRL; nao remover objetos legados.
-
