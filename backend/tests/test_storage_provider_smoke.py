@@ -1,6 +1,8 @@
 import json
+import struct
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,6 +12,7 @@ from services.documento_storage import SupabaseDocumentoStorage
 from services.producao_arquivo_storage import SupabaseProducaoArquivoStorage
 from scripts.storage_provider_smoke import (
     _SmokeFailure,
+    _PNG,
     _error_category,
     _legacy_smoke,
     diagnostic_report,
@@ -75,6 +78,23 @@ class _ProductionStorage:
 
 
 class StorageProviderSmokeTests(unittest.TestCase):
+    def test_synthetic_cloudinary_png_has_valid_chunks_and_pixel_data(self):
+        self.assertEqual(_PNG[:8], b"\x89PNG\r\n\x1a\n")
+        offset = 8
+        chunks = []
+        while offset < len(_PNG):
+            length = struct.unpack(">I", _PNG[offset:offset + 4])[0]
+            kind = _PNG[offset + 4:offset + 8]
+            data = _PNG[offset + 8:offset + 8 + length]
+            crc = struct.unpack(">I", _PNG[offset + 8 + length:offset + 12 + length])[0]
+            self.assertEqual(zlib.crc32(kind + data), crc, kind)
+            chunks.append((kind, data))
+            offset += 12 + length
+        self.assertEqual(offset, len(_PNG))
+        self.assertEqual([kind for kind, _ in chunks], [b"IHDR", b"IDAT", b"IEND"])
+        self.assertEqual(struct.unpack(">IIBBBBB", chunks[0][1]), (1, 1, 8, 6, 0, 0, 0))
+        self.assertEqual(zlib.decompress(chunks[1][1]), bytes((0, 255, 0, 0, 255)))
+
     def test_rollout_workflow_publishes_bounded_diagnostics_on_failure(self):
         workflow = (
             Path(__file__).resolve().parents[2]

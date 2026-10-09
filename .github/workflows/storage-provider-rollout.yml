@@ -91,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo 'dcf73cedd95a837fadfae57c5e6a9269e5ddea586b008013b492435bdec44a02  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
+          echo '9c1fc3a79b79d1eab4817116ca24494ccffb4982084bf2758fed678b97299372  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
           echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
           echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Assert release and provider configuration
