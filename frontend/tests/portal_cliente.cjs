@@ -171,6 +171,10 @@ async function staticResponse(route) {
         await page.waitForURL('**/cliente/propostas');
         await page.getByRole('button', { name: 'Abrir proposta' }).click();
         await page.waitForURL('**/cliente/propostas/11');
+        await page.waitForFunction(() => (
+            document.getElementById('client-proposal-detail-content')
+                ?.textContent.includes('<img src=x onerror=alert(2)>')
+        ));
         assert.equal(await page.locator('#client-proposal-detail-content img').count(), 0);
         assert.match(await page.locator('#client-proposal-detail-content').textContent(), /<img src=x onerror=alert\(2\)>/);
         assert.match(await page.locator('#client-proposal-detail-content').textContent(), /R\$\s*1\.200,00/);
