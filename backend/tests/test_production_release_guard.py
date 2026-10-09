@@ -1,6 +1,10 @@
 import unittest
 
-from scripts.production_release_guard import build_report
+from scripts.production_release_guard import (
+    build_plan_report,
+    build_report,
+    validate_render_v2_environment,
+)
 
 
 class ProductionReleaseGuardTests(unittest.TestCase):
@@ -143,6 +147,56 @@ class ProductionReleaseGuardTests(unittest.TestCase):
         self.assertFalse(report["release_ready"])
         self.assertEqual(report["statuses"]["render"], "render_service_mismatch")
         self.assertEqual(report["statuses"]["cloudflare_pages"], "cloudflare_project_mismatch")
+
+    def test_plan_only_requires_exact_main_ci_but_never_claims_homologation(self):
+        report = build_plan_report(
+            context=self.context(),
+            target_sha=self.SHA,
+            workflow_path=self.WORKFLOW,
+            integration_run=self.workflow_run(
+                "101", ".github/workflows/storage-integration-gate.yml", event="push"
+            ),
+            integration_run_id="101",
+        )
+        self.assertTrue(report["plan_valid"])
+        self.assertTrue(report["simulation_only"])
+        self.assertFalse(report["publication_authorized"])
+        self.assertEqual(report["storage_evidence"], "not_checked")
+        self.assertEqual(report["provider_state"], "not_checked")
+
+        missing_ci = self.workflow_run(
+            "101", ".github/workflows/storage-integration-gate.yml", event="push"
+        )
+        missing_ci["conclusion"] = None
+        self.assertFalse(build_plan_report(
+            context=self.context(),
+            target_sha=self.SHA,
+            workflow_path=self.WORKFLOW,
+            integration_run=missing_ci,
+            integration_run_id="101",
+        )["plan_valid"])
+
+    def test_render_effective_v2_setting_must_be_explicitly_false(self):
+        self.assertEqual(
+            validate_render_v2_environment({
+                "envVar": {
+                    "key": "COMMERCIAL_PIPELINE_V2_ENABLED",
+                    "value": "false",
+                }
+            }),
+            "verified",
+        )
+        self.assertEqual(
+            validate_render_v2_environment({
+                "key": "COMMERCIAL_PIPELINE_V2_ENABLED",
+                "value": "true",
+            }),
+            "render_v2_not_disabled",
+        )
+        self.assertEqual(
+            validate_render_v2_environment({}),
+            "render_v2_setting_missing",
+        )
 
 
 if __name__ == "__main__":

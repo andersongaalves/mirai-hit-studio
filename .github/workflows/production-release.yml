@@ -13,18 +13,19 @@ on:
         type: string
       issuer_run_id:
         description: Successful Storage Provider Rollout Evidence run for target_sha
-        required: true
+        required: false
+        default: ""
         type: string
       authorization_ref:
         description: CTRL authorization reference, e.g. CTRL-1234
         required: true
         type: string
       release_mode:
-        description: dry-run never contacts deployment APIs
+        description: plan-only has no protected jobs; dry-run verifies real evidence without deploy
         required: true
-        default: dry-run
+        default: plan-only
         type: choice
-        options: [dry-run, publish]
+        options: [plan-only, dry-run, publish]
 
 permissions:
   contents: read
@@ -36,12 +37,12 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_GUARD_SHA256: b6edb3585f97b9e5e9bca7c79a68fe541c5b1edb37313c6bda19b4fa37ecf59b
+  RELEASE_GUARD_SHA256: 3aaa6923d6606a8b5240cda4cc338545555489eef6969cb398ba06508d5c3ab8
   STORAGE_PREFLIGHT_SHA256: 1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f
 
 jobs:
   trusted-release-gate:
-    if: github.ref == 'refs/heads/main'
+    if: inputs.release_mode != 'plan-only' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -77,6 +78,9 @@ jobs:
           --environment storage-rollout
           --environment render-production
           --environment cloudflare-pages-production
+          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --require-main-protection
+          --required-check storage-integration
       - name: Fetch exact successful CI and evidence issuer runs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -107,6 +111,80 @@ jobs:
           --integration-run-id '${{ inputs.integration_run_id }}'
           --issuer-run /tmp/issuer-run.json
           --issuer-run-id '${{ inputs.issuer_run_id }}'
+
+  plan-only:
+    if: inputs.release_mode == 'plan-only' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out only the trusted main SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate planning request without protected resources
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          INTEGRATION_RUN_ID: ${{ inputs.integration_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/production-release.yml@refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$TARGET_SHA" = "$GITHUB_SHA"
+          [[ "$INTEGRATION_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          echo "$RELEASE_GUARD_SHA256  backend/scripts/production_release_guard.py" | sha256sum --check --status
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$INTEGRATION_RUN_ID" > /tmp/integration-run.json
+          python - <<'PY' > /tmp/release-context.json
+          import json, os
+          print(json.dumps({
+              "event_name": os.environ["GITHUB_EVENT_NAME"],
+              "ref": os.environ["GITHUB_REF"],
+              "sha": os.environ["GITHUB_SHA"],
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "workflow_ref": os.environ["GITHUB_WORKFLOW_REF"],
+          }))
+          PY
+          cd backend
+          python -m scripts.production_release_guard \
+            --plan-only \
+            --context /tmp/release-context.json \
+            --target-sha "$TARGET_SHA" \
+            --integration-run /tmp/integration-run.json \
+            --integration-run-id "$INTEGRATION_RUN_ID"
+      - name: Mark result as planning simulation, never homologation
+        run: |
+          echo 'PLAN-ONLY: request and exact main CI metadata passed.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'SIMULATION ONLY: Storage evidence, providers, secrets and deployment were not checked.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'This result is not provider homologation and does not authorize publication.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Audit effective GitHub protections without changing them
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: backend
+        shell: bash
+        run: |
+          set +e
+          python -m scripts.storage_environment_guard \
+            --environment storage-rollout \
+            --environment render-production \
+            --environment cloudflare-pages-production \
+            --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER" \
+            --require-main-protection \
+            --required-check storage-integration \
+            > /tmp/github-protection-plan.json
+          status=$?
+          set -e
+          PROTECTION_STATUS="$status" python - <<'PY'
+          import json, os
+          with open('/tmp/github-protection-plan.json', encoding='utf-8') as source:
+              report = json.load(source)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write(f"GitHub protection audit exit: {os.environ['PROTECTION_STATUS']}\n")
+              summary.write(f"Sanitized effective state: `{json.dumps(report, sort_keys=True)}`\n")
+          PY
 
   verify-storage-evidence:
     needs: trusted-release-gate
@@ -172,7 +250,7 @@ jobs:
     steps:
       - name: Record a non-publication simulation
         run: |
-          echo 'Release gates passed in dry-run mode.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'HOMOLOGATION DRY-RUN: protected gates and real signed Storage evidence passed.' >> "$GITHUB_STEP_SUMMARY"
           echo 'No Render or Cloudflare deployment API was called.' >> "$GITHUB_STEP_SUMMARY"
           echo 'No production setting, provider object, database or Commercial V2 flag was changed.' >> "$GITHUB_STEP_SUMMARY"
 
@@ -200,11 +278,22 @@ jobs:
           curl --fail-with-body --silent --show-error \
             --header "Authorization: Bearer $RENDER_API_KEY" \
             "https://api.render.com/v1/services/$RENDER_SERVICE_ID" > /tmp/render-service.json
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/env-vars/COMMERCIAL_PIPELINE_V2_ENABLED" \
+            > /tmp/render-v2.json
           python - "$RENDER_SERVICE_ID" <<'PY'
           import json, sys
-          from backend.scripts.production_release_guard import validate_render_service
+          from backend.scripts.production_release_guard import (
+              validate_render_service,
+              validate_render_v2_environment,
+          )
           with open('/tmp/render-service.json', encoding='utf-8') as source:
               status = validate_render_service(json.load(source), service_id=sys.argv[1])
+          if status != 'verified':
+              raise SystemExit(status)
+          with open('/tmp/render-v2.json', encoding='utf-8') as source:
+              status = validate_render_v2_environment(json.load(source))
           if status != 'verified':
               raise SystemExit(status)
           PY

@@ -54,7 +54,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: backend
-        run: python -m scripts.storage_environment_guard --environment storage-rollout
+        run: >-
+          python -m scripts.storage_environment_guard
+          --environment storage-rollout
+          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --require-main-protection
+          --required-check storage-integration
 
   provider-smokes-and-signature:
     needs: trusted-request-guard

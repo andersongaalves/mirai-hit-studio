@@ -11,7 +11,21 @@ from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
 
-def protection_status(environment: object, branch_policies: object) -> str:
+def _reviewer_login(entry: object) -> str:
+    if not isinstance(entry, dict) or entry.get("type") != "User":
+        return ""
+    reviewer = entry.get("reviewer")
+    if isinstance(reviewer, dict):
+        return str(reviewer.get("login", "")).lower()
+    return str(entry.get("login", "")).lower()
+
+
+def protection_status(
+    environment: object,
+    branch_policies: object,
+    *,
+    solo_admin_reviewer: str | None = None,
+) -> str:
     if not isinstance(environment, dict) or not isinstance(branch_policies, dict):
         return "environment_or_branch_policy_missing"
     if environment.get("can_admins_bypass") is not False:
@@ -21,7 +35,20 @@ def protection_status(environment: object, branch_policies: object) -> str:
     if not isinstance(rules, list):
         return "required_reviewers_missing"
     reviewer_rules = [rule for rule in rules if isinstance(rule, dict) and rule.get("type") == "required_reviewers"]
-    if not any(
+    if solo_admin_reviewer:
+        expected = solo_admin_reviewer.lower()
+        if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?", expected):
+            return "authorized_reviewer_invalid"
+        matching_rules = [
+            rule
+            for rule in reviewer_rules
+            if rule.get("prevent_self_review") is False
+            and isinstance(rule.get("reviewers"), list)
+            and [_reviewer_login(entry) for entry in rule["reviewers"]] == [expected]
+        ]
+        if len(matching_rules) != 1 or len(reviewer_rules) != 1:
+            return "solo_admin_reviewer_mismatch"
+    elif not any(
         isinstance(rule.get("reviewers"), list)
         and len(rule["reviewers"]) > 0
         and rule.get("prevent_self_review") is True
@@ -44,6 +71,39 @@ def protection_status(environment: object, branch_policies: object) -> str:
     return "protected"
 
 
+def main_protection_status(protection: object, *, required_check: str) -> str:
+    if not isinstance(protection, dict):
+        return "main_protection_missing"
+    reviews = protection.get("required_pull_request_reviews")
+    if not isinstance(reviews, dict):
+        return "pull_request_not_required"
+    if reviews.get("required_approving_review_count") not in {None, 0}:
+        return "human_pr_review_unexpected"
+
+    checks = protection.get("required_status_checks")
+    if not isinstance(checks, dict) or checks.get("strict") is not True:
+        return "required_ci_missing"
+    contexts = {
+        item
+        for item in checks.get("contexts", [])
+        if isinstance(item, str)
+    }
+    contexts.update(
+        item.get("context")
+        for item in checks.get("checks", [])
+        if isinstance(item, dict) and isinstance(item.get("context"), str)
+    )
+    if required_check not in contexts:
+        return "required_ci_missing"
+    if (protection.get("enforce_admins") or {}).get("enabled") is not True:
+        return "administrator_rules_not_enforced"
+    if (protection.get("allow_force_pushes") or {}).get("enabled") is not False:
+        return "force_push_not_blocked"
+    if (protection.get("allow_deletions") or {}).get("enabled") is not False:
+        return "branch_deletion_not_blocked"
+    return "protected"
+
+
 def _get_json(url: str, token: str) -> dict:
     request = Request(
         url,
@@ -60,13 +120,26 @@ def _get_json(url: str, token: str) -> dict:
     return payload
 
 
-def check_environment(api_url: str, repository: str, name: str, token: str) -> str:
+def _valid_request(api_url: str, repository: str, token: str) -> bool:
     parsed = urlsplit(api_url)
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-        return "api_url_invalid"
+        return False
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
-        return "repository_invalid"
-    if not token or not re.fullmatch(r"[a-z][a-z0-9-]{1,49}", name):
+        return False
+    return bool(token)
+
+
+def check_environment(
+    api_url: str,
+    repository: str,
+    name: str,
+    token: str,
+    *,
+    solo_admin_reviewer: str | None = None,
+) -> str:
+    if not _valid_request(api_url, repository, token):
+        return "request_configuration_invalid"
+    if not re.fullmatch(r"[a-z][a-z0-9-]{1,49}", name):
         return "request_configuration_invalid"
 
     base = f"{api_url.rstrip('/')}/repos/{repository}/environments/{quote(name, safe='')}"
@@ -77,22 +150,68 @@ def check_environment(api_url: str, repository: str, name: str, token: str) -> s
         return "environment_not_found" if error.code == 404 else "github_api_unavailable"
     except (URLError, TimeoutError, OSError, ValueError, TypeError):
         return "github_api_unavailable"
-    return protection_status(environment, policies)
+    return protection_status(
+        environment,
+        policies,
+        solo_admin_reviewer=solo_admin_reviewer,
+    )
+
+
+def check_main_protection(
+    api_url: str,
+    repository: str,
+    token: str,
+    *,
+    required_check: str,
+) -> str:
+    if not _valid_request(api_url, repository, token) or not required_check:
+        return "request_configuration_invalid"
+    url = f"{api_url.rstrip('/')}/repos/{repository}/branches/main/protection"
+    try:
+        protection = _get_json(url, token)
+    except HTTPError as error:
+        return "main_protection_missing" if error.code == 404 else "github_api_unavailable"
+    except (URLError, TimeoutError, OSError, ValueError, TypeError):
+        return "github_api_unavailable"
+    return main_protection_status(protection, required_check=required_check)
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", action="append", required=True)
+    parser.add_argument("--solo-admin-reviewer")
+    parser.add_argument("--require-main-protection", action="store_true")
+    parser.add_argument("--required-check", default="storage-integration")
     args = parser.parse_args(argv)
     repository = os.environ.get("GITHUB_REPOSITORY", "")
     api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
     token = os.environ.get("GH_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
     results = {
-        name: check_environment(api_url, repository, name, token)
+        name: check_environment(
+            api_url,
+            repository,
+            name,
+            token,
+            solo_admin_reviewer=args.solo_admin_reviewer,
+        )
         for name in args.environment
     }
-    print(json.dumps({"environments": results}, sort_keys=True))
-    return 0 if all(status == "protected" for status in results.values()) else 1
+    main_status = None
+    if args.require_main_protection:
+        main_status = check_main_protection(
+            api_url,
+            repository,
+            token,
+            required_check=args.required_check,
+        )
+    report = {"environments": results}
+    if main_status is not None:
+        report["main"] = main_status
+    print(json.dumps(report, sort_keys=True))
+    ready = all(status == "protected" for status in results.values())
+    if main_status is not None:
+        ready = ready and main_status == "protected"
+    return 0 if ready else 1
 
 
 if __name__ == "__main__":

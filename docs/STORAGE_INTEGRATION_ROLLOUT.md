@@ -121,8 +121,11 @@ preflight, not a publisher and not a required branch-protection check. The new
 exact main SHA, exact successful integration/evidence runs, all three protected
 Environments, signed unexpired Storage evidence, effective provider identity,
 and that direct auto-deploy is disabled before a deploy API is called. Its
-`dry-run` mode never receives Render/Cloudflare credentials or calls their
-deployment APIs. Its `publish` path deploys the exact SHA to Render first,
+`plan-only` validates only the trusted request and exact successful main CI;
+it does not reference an Environment, secret, provider, Storage evidence, or
+deployment API and is explicitly not homologation. `dry-run` is the protected
+homologation simulation: it verifies real signed Storage evidence but never
+calls a deployment API. The `publish` path deploys the exact SHA to Render first,
 then the static `frontend` directory to the existing Pages project, performs a
 read-only smoke, and retains only sanitized release evidence.
 
@@ -157,7 +160,7 @@ CI result must not be represented as a real deployment homologation.
 
 | Platform | Connected/readable | Automation prepared | Current blocker |
 |---|---|---|---|
-| GitHub | Repository admin identity confirmed; public REST state readable | protected Environments, exact-run validation, serialized release | three production Environments exist but are unprotected; branch protection and Actions permission endpoints were not readable with the available integration; no second reviewer was proven |
+| GitHub | Repository admin identity confirmed; public REST state readable | solo-admin protected Environments, exact-run validation, serialized release | three production Environments and main protection remain externally unconfigured/unverified |
 | Render | No authenticated MCP/CLI/API session available | exact-commit deploy, status polling, health smoke and rollback procedure | service ID, effective branch/build/start/health/auto-deploy and rollback target require authenticated read-only audit |
 | Cloudflare Pages | Account/project/deploy history readable through official MCP/API | Wrangler direct upload of the exact authorized SHA and read-only smoke | production auto-deploy is enabled; protected transition and deploy token are not configured |
 
@@ -172,7 +175,12 @@ Required secret/variable placement is deliberately separated:
 - `storage-rollout`: provider variables/secrets already enumerated above and
   `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY`; no deploy credential.
 - `render-production`: `RENDER_API_KEY` secret and `RENDER_SERVICE_ID` variable;
-  neither belongs in ordinary CI or Storage evidence jobs.
+  neither belongs in ordinary CI or Storage evidence jobs. Before publication,
+  the protected readiness job reads only the exact
+  `COMMERCIAL_PIPELINE_V2_ENABLED` service variable and requires `false`. If
+  that value is inherited from an Environment Group and cannot be proved by
+  the scoped service endpoint, release fails closed until an authenticated
+  effective-configuration audit is added.
 - `cloudflare-pages-production`: `CLOUDFLARE_API_TOKEN` secret and
   `CLOUDFLARE_ACCOUNT_ID` variable; token must be limited to the existing Pages
   project/account operations needed by the publisher.
@@ -181,20 +189,32 @@ No secret was generated, inspected, rotated, or stored by phase 3.8S.
 
 ### Required external setup before use
 
-1. Protect existing `storage-rollout` with required CTRL reviewer(s),
-   prevent-self-review, administrator bypass disabled, and exactly the `main`
-   deployment policy. Confirm another eligible reviewer first; do not create a
-   self-lockout when no second reviewer exists.
+1. Protect existing `storage-rollout` for the explicit solo administrator
+   `andersongaalves`: this must be the sole required user reviewer,
+   `prevent_self_review=false`, administrator bypass disabled, and exactly the
+   `main` deployment policy. The API guard rejects a different/multiple
+   reviewer, an unprotected Environment, or a self-review prohibition that
+   would deadlock the only administrator.
 2. Add least-privilege R2, Cloudinary, and Supabase values referenced by the
    issuer. Keep `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY` in this Environment only.
-3. Protect existing `render-production` and `cloudflare-pages-production` with
-   separate reviewer rules and `main` only, then store each provider credential
-   only in its matching Environment. The Storage jobs do not use deployment
-   credentials.
+3. Apply the same solo-admin protection independently to `render-production`
+   and `cloudflare-pages-production`, then store each provider credential only
+   in its matching Environment. Storage jobs do not use deployment credentials.
 4. Confirm rollback availability in both provider dashboards. Only after an
    approved replacement path is ready, disable external auto-deploy and make
    the verified gate a required check. Do not integrate Storage before this
    transition has been demonstrated.
+
+The prepared `main` protection requires pull requests with zero additional
+human approvals, strict successful `storage-integration`, application of the
+rules to administrators, and force-push/deletion disabled. The integration
+workflow now runs the same stable job on pull requests targeting `main`, on the
+final `main` SHA after merge, and on the isolated integration branch. The
+release verifier accepts only the final run whose `head_branch=main` and
+`head_sha` equals the release target. Do not configure the required check until
+the pull-request run has appeared successfully in GitHub; otherwise merging can
+become impossible. Phase 3.8S prepares and validates this policy but does not
+write it through the GitHub API.
 
 ### Rollout and rollback procedure
 
@@ -204,8 +224,10 @@ The transition is an ordered, separately authorized operation:
    external auto-deploy remains unchanged.
 2. Perform authenticated read-only audits of Render and Cloudflare and record
    current deployment IDs/SHAs, settings, health, and rollback eligibility.
-3. Protect all Environments and prove the environment guard fails for bypass,
-   missing reviewers, self-review, and non-main deployment policy.
+3. Apply the authorized solo-admin Environment policy and main branch
+   protection, then prove the API guard rejects bypass, a different reviewer,
+   missing protection, non-main deployment policy, absent CI, force-push, branch
+   deletion, or rules that do not apply to administrators.
 4. With separate CTRL authorization, disable direct Render and Cloudflare
    production auto-deploy. Re-read both provider APIs and prove a push does not
    publish before integrating Storage.
@@ -215,8 +237,9 @@ The transition is an ordered, separately authorized operation:
    never accepted by `production-release.yml` as main release evidence.
 7. Run the authorized real-provider smokes on the same `main` SHA and emit the
    short-lived HMAC evidence only from the protected manual main workflow.
-8. Run `production-release.yml` in `dry-run`, review the bound CI/evidence, and
-   obtain publication approval for that exact SHA.
+8. Optionally run `plan-only` first; treat it only as a no-secret planning
+   simulation. Then run `dry-run`, review the bound CI and real signed evidence,
+   and obtain publication approval for that exact SHA.
 9. Publish with `release_mode=publish`; both provider APIs must still report
    direct auto-deploy disabled before deployment credentials are used.
 10. If Render fails before becoming live, stop. If Pages fails after Render is
@@ -231,10 +254,10 @@ mechanism, and preserves all new and legacy objects for reconciliation. A
 rollback cannot be claimed tested until both real provider paths are exercised
 with synthetic content under explicit approval.
 
-GitHub Environment protections are configured outside YAML. The read-only
-guard fails closed unless the API reports required reviewers, self-review
-prevention, administrator bypass disabled, and only `main` as an allowed
-branch. See [GitHub deployment environments](https://docs.github.com/en/actions/reference/workflows-and-deployments/deployments-and-environments)
+GitHub Environment protections are configured outside YAML. In solo-admin mode,
+the read-only guard fails closed unless the API reports exactly the authorized
+user reviewer, self-review allowed, administrator bypass disabled, and only
+`main` as an allowed branch. See [GitHub deployment environments](https://docs.github.com/en/actions/reference/workflows-and-deployments/deployments-and-environments)
 and the [deployment branch policy API](https://docs.github.com/en/rest/deployments/branch-policies).
 
 ## A. R2 real

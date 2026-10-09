@@ -67,6 +67,17 @@ def validate_render_service(service: dict, *, service_id: str) -> str:
     return "verified"
 
 
+def validate_render_v2_environment(env_var: dict) -> str:
+    value = env_var.get("envVar", env_var)
+    if not isinstance(value, dict):
+        return "render_v2_setting_missing"
+    if value.get("key") != "COMMERCIAL_PIPELINE_V2_ENABLED":
+        return "render_v2_setting_missing"
+    if str(value.get("value", "")).lower() != "false":
+        return "render_v2_not_disabled"
+    return "verified"
+
+
 def validate_cloudflare_project(project: dict, *, project_name: str) -> str:
     if project.get("name") != project_name:
         return "cloudflare_project_mismatch"
@@ -121,6 +132,36 @@ def build_report(
     return {"target_sha": target_sha, "statuses": statuses, "release_ready": ready}
 
 
+def build_plan_report(
+    *,
+    context: dict,
+    target_sha: str,
+    workflow_path: str,
+    integration_run: dict,
+    integration_run_id: str,
+) -> dict:
+    statuses = {
+        "request": validate_request(context, target_sha=target_sha, workflow_path=workflow_path),
+        "integration_ci": validate_workflow_run(
+            integration_run,
+            run_id=integration_run_id,
+            target_sha=target_sha,
+            workflow_path=".github/workflows/storage-integration-gate.yml",
+            allowed_events=("push", "workflow_dispatch"),
+        ),
+    }
+    valid = all(value in {"trusted", "verified"} for value in statuses.values())
+    return {
+        "target_sha": target_sha,
+        "statuses": statuses,
+        "plan_valid": valid,
+        "simulation_only": True,
+        "storage_evidence": "not_checked",
+        "provider_state": "not_checked",
+        "publication_authorized": False,
+    }
+
+
 def _load(path: str) -> dict:
     try:
         value = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -135,15 +176,29 @@ def main(argv=None) -> int:
     parser.add_argument("--target-sha", required=True)
     parser.add_argument("--integration-run", required=True)
     parser.add_argument("--integration-run-id", required=True)
-    parser.add_argument("--issuer-run", required=True)
-    parser.add_argument("--issuer-run-id", required=True)
+    parser.add_argument("--issuer-run")
+    parser.add_argument("--issuer-run-id")
     parser.add_argument("--workflow-path", default=".github/workflows/production-release.yml")
     parser.add_argument("--render-service")
     parser.add_argument("--render-service-id", default="")
     parser.add_argument("--cloudflare-project")
     parser.add_argument("--cloudflare-project-name", default="mirai-hit-studio")
     parser.add_argument("--require-provider-state", action="store_true")
+    parser.add_argument("--plan-only", action="store_true")
     args = parser.parse_args(argv)
+
+    if args.plan_only:
+        report = build_plan_report(
+            context=_load(args.context),
+            target_sha=args.target_sha,
+            workflow_path=args.workflow_path,
+            integration_run=_load(args.integration_run),
+            integration_run_id=args.integration_run_id,
+        )
+        print(json.dumps(report, sort_keys=True))
+        return 0 if report["plan_valid"] else 1
+    if not args.issuer_run or not args.issuer_run_id:
+        parser.error("--issuer-run and --issuer-run-id are required outside plan-only")
 
     report = build_report(
         context=_load(args.context),

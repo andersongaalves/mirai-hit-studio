@@ -2,6 +2,8 @@ name: Storage Integration Gate
 
 on:
     workflow_dispatch:
+    pull_request:
+        branches: [main]
     push:
         branches: [main, phase/3.8-integration-gate]
 
@@ -74,10 +76,14 @@ jobs:
               run: |
                   set -euo pipefail
                   test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-                  case "$GITHUB_REF_NAME" in
-                    main|phase/3.8-integration-gate) ;;
-                    *) exit 1 ;;
-                  esac
+                  if [[ "$GITHUB_EVENT_NAME" = "pull_request" ]]; then
+                    test "$GITHUB_BASE_REF" = "main"
+                  else
+                    case "$GITHUB_REF_NAME" in
+                      main|phase/3.8-integration-gate) ;;
+                      *) exit 1 ;;
+                    esac
+                  fi
                   test "$COMMERCIAL_PIPELINE_V2_ENABLED" = "false"
 
             - name: Set up Python

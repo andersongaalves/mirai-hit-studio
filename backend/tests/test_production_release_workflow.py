@@ -20,6 +20,12 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
             / "storage-integration-gate.yml"
         ).read_text(encoding="utf-8")
         cls.guard_path = root / "backend" / "scripts" / "production_release_guard.py"
+        cls.issuer_source = (
+            root / ".github" / "workflows" / "storage-provider-rollout.yml"
+        ).read_text(encoding="utf-8")
+        cls.preflight_source = (
+            root / ".github" / "workflows" / "storage-publication-gate.yml"
+        ).read_text(encoding="utf-8")
 
     def test_release_is_manual_serial_and_main_bound(self):
         self.assertIn("workflow_dispatch:", self.source)
@@ -38,6 +44,9 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         ):
             self.assertIn(f"environment: {environment}", self.source)
             self.assertIn(f"--environment {environment}", self.source)
+        self.assertIn('--solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"', self.source)
+        self.assertIn("--require-main-protection", self.source)
+        self.assertIn("--required-check storage-integration", self.source)
         guard = Path(__file__).resolve().parents[1].joinpath(
             "scripts/production_release_guard.py"
         ).read_text(encoding="utf-8")
@@ -54,6 +63,18 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertNotIn("api.render.com", dry_run)
         self.assertNotIn("wrangler", dry_run)
 
+    def test_plan_only_has_no_environment_secret_provider_or_deploy_access(self):
+        start = self.source.index("  plan-only:")
+        end = self.source.index("  verify-storage-evidence:")
+        plan = self.source[start:end]
+        self.assertNotIn("environment:", plan)
+        self.assertNotIn("secrets.", plan)
+        self.assertNotIn("RENDER_API_KEY", plan)
+        self.assertNotIn("CLOUDFLARE_API_TOKEN", plan)
+        self.assertNotIn("storage_preflight", plan)
+        self.assertIn("SIMULATION ONLY", plan)
+        self.assertIn("does not authorize publication", plan)
+
     def test_storage_preflight_and_v2_off_are_mandatory(self):
         self.assertIn("--require-rollout-ready", self.source)
         self.assertIn("COMMERCIAL_PIPELINE_V2_ENABLED", self.source)
@@ -63,6 +84,9 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertIn(
             "branches: [main, phase/3.8-integration-gate]", self.integration_source
         )
+        self.assertIn("pull_request:", self.integration_source)
+        self.assertIn("branches: [main]", self.integration_source)
+        self.assertIn('test "$GITHUB_BASE_REF" = "main"', self.integration_source)
         self.assertIn(
             "main|phase/3.8-integration-gate", self.integration_source
         )
@@ -72,6 +96,19 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn('"head_branch": "main"', guard)
         self.assertIn('allowed_events=("workflow_dispatch",)', guard)
+
+    def test_render_readiness_requires_effective_v2_off(self):
+        self.assertIn(
+            "/env-vars/COMMERCIAL_PIPELINE_V2_ENABLED", self.source
+        )
+        self.assertIn("validate_render_v2_environment", self.source)
+
+    def test_hmac_issuer_and_preflight_require_solo_admin_main_protection(self):
+        for source in (self.issuer_source, self.preflight_source):
+            self.assertIn('--solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"', source)
+            self.assertIn("--require-main-protection", source)
+            self.assertIn("--required-check storage-integration", source)
+        self.assertIn("github.ref == 'refs/heads/main'", self.issuer_source)
 
     def test_release_guard_source_pin_matches_the_reviewed_script(self):
         digest = hashlib.sha256(self.guard_path.read_bytes()).hexdigest()

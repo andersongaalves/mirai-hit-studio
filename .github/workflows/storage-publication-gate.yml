@@ -54,6 +54,9 @@ jobs:
           --environment storage-rollout
           --environment render-production
           --environment cloudflare-pages-production
+          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --require-main-protection
+          --required-check storage-integration
 
   verify-storage-evidence:
     needs: protected-environment-guard
