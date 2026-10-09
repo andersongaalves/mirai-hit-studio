@@ -144,5 +144,117 @@ class SupabaseProducaoArquivoStorage:
             raise ProducaoArquivoStorageError("Nao foi possivel compensar o upload.")
 
 
-def new_production_file_storage():
-    return SupabaseProducaoArquivoStorage()
+FILE_TYPE_SCOPE = {
+    "material": "production_temp",
+    "referencia": "production_temp",
+    "previa": "production_temp",
+    "entrega": "production_final",
+    "comprovante": "production_final",
+}
+
+
+class ProductionFileStorage:
+    """Provider-neutral facade with lazy compatibility for legacy Supabase keys."""
+
+    def __init__(self, scope, *, registry=None, legacy_factory=None):
+        from services.storage.contracts import StorageError, StorageScope
+
+        self.scope = StorageScope(scope)
+        if self.scope not in {
+            StorageScope.PRODUCTION_TEMP,
+            StorageScope.PRODUCTION_FINAL,
+        }:
+            raise ProducaoArquivoStorageError("Escopo de arquivo de Producao invalido.")
+        try:
+            if registry is None:
+                from services.storage.config import StorageSettings
+                from services.storage.registry import StorageRegistry
+
+                registry = StorageRegistry(StorageSettings.from_env())
+            self.registry = registry
+        except StorageError as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
+        self._legacy_factory = legacy_factory
+        self._legacy = None
+
+    def _legacy_adapter(self):
+        from services.storage.contracts import StorageError
+
+        if self._legacy is None:
+            try:
+                if self._legacy_factory is None:
+                    from services.storage.legacy import SupabaseProductionAdapter
+
+                    self._legacy = SupabaseProductionAdapter(self.scope)
+                else:
+                    self._legacy = self._legacy_factory()
+            except StorageError as exc:
+                raise ProducaoArquivoStorageError(str(exc)) from None
+        return self._legacy
+
+    def _adapter(self):
+        from services.storage.contracts import StorageError
+
+        try:
+            return self.registry.storage_for(self.scope)
+        except StorageError as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
+
+    def _resolve(self, value):
+        from services.storage.contracts import ObjectReference, StorageInvalidReference
+
+        if "://" not in value:
+            legacy = self._legacy_adapter()
+            return legacy, ObjectReference("supabase", legacy.bucket, value)
+        try:
+            reference = ObjectReference.parse(value)
+        except StorageInvalidReference as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
+        if reference.provider == "supabase":
+            return self._legacy_adapter(), reference
+        adapter = self._adapter()
+        if reference.provider != adapter.provider:
+            raise ProducaoArquivoStorageError("Provider do arquivo de Producao invalido.")
+        return adapter, reference
+
+    def save(self, data: bytes, mime_type: str):
+        from services.storage.contracts import StorageError
+
+        try:
+            stored = self._adapter().save(data, mime_type)
+        except StorageError as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
+        reference = str(stored.reference)
+        if len(reference) > 180:
+            try:
+                self._adapter().delete(stored.reference)
+            except StorageError:
+                pass
+            raise ProducaoArquivoStorageError("Referencia de arquivo muito longa.")
+        return reference
+
+    def read(self, value):
+        from services.storage.contracts import StorageError
+
+        adapter, reference = self._resolve(value)
+        try:
+            return adapter.read(reference)
+        except StorageError as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
+
+    def delete(self, value):
+        from services.storage.contracts import StorageError
+
+        adapter, reference = self._resolve(value)
+        try:
+            adapter.delete(reference)
+        except StorageError as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
+
+
+def new_production_file_storage(file_type):
+    try:
+        scope = FILE_TYPE_SCOPE[file_type]
+    except KeyError:
+        raise ProducaoArquivoStorageError("Tipo de arquivo de Producao invalido.") from None
+    return ProductionFileStorage(scope)
