@@ -206,8 +206,9 @@ No secret was generated, inspected, rotated, or stored by phase 3.8S.
    transition has been demonstrated.
 
 The prepared `main` protection requires pull requests with zero additional
-human approvals, strict successful `storage-integration`, application of the
-rules to administrators, and force-push/deletion disabled. The integration
+human approvals and the successful `storage-integration` check, applies the
+rules to administrators, and disables force-push/deletion. Strict
+up-to-date-branch enforcement is optional and is currently disabled. The integration
 workflow now runs the same stable job on pull requests targeting `main`, on the
 final `main` SHA after merge, and on the isolated integration branch. The
 release verifier accepts only the final run whose `head_branch=main` and
@@ -219,8 +220,9 @@ write it through the GitHub API.
 The read-only guard accepts either classic branch protection or the repository
 Ruleset named `mirai-main-protection`. For the Ruleset path it requires active
 enforcement, exactly `refs/heads/main`, an empty bypass list, pull requests with
-zero approvals, strict `storage-integration`, and deletion/non-fast-forward
-rules. A disabled Ruleset or a Ruleset without the required check fails closed.
+zero approvals, the required `storage-integration` check (whether or not strict
+up-to-date-branch enforcement is enabled), and deletion/non-fast-forward rules.
+A disabled Ruleset or a Ruleset without the required check fails closed.
 
 ### Rollout and rollback procedure
 

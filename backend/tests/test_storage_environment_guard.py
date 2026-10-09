@@ -56,9 +56,9 @@ def protected_main_ruleset():
             {
                 "type": "required_status_checks",
                 "parameters": {
-                    "strict_required_status_checks_policy": True,
+                    "strict_required_status_checks_policy": False,
                     "required_status_checks": [
-                        {"context": "storage-integration"},
+                        {"context": "storage-integration", "integration_id": 15368},
                     ],
                 },
             },
@@ -240,6 +240,18 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
         changed["rules"] = [
             rule for rule in changed["rules"]
             if rule["type"] != "required_status_checks"
+        ]
+        self.assertEqual(
+            ruleset_main_protection_status(changed, required_check="storage-integration"),
+            "required_ci_missing",
+        )
+        changed = protected_main_ruleset()
+        checks_rule = next(
+            rule for rule in changed["rules"]
+            if rule["type"] == "required_status_checks"
+        )
+        checks_rule["parameters"]["required_status_checks"] = [
+            {"context": "another-check", "integration_id": 15368},
         ]
         self.assertEqual(
             ruleset_main_protection_status(changed, required_check="storage-integration"),

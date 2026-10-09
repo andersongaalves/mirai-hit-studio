@@ -143,10 +143,7 @@ def ruleset_main_protection_status(ruleset: object, *, required_check: str) -> s
 
     checks = by_type.get("required_status_checks")
     check_parameters = checks.get("parameters") if isinstance(checks, dict) else None
-    if (
-        not isinstance(check_parameters, dict)
-        or check_parameters.get("strict_required_status_checks_policy") is not True
-    ):
+    if not isinstance(check_parameters, dict):
         return "required_ci_missing"
     contexts = {
         item.get("context")
