@@ -12,7 +12,7 @@
 
 | Fase | Objetivo | Status | Branch / HEAD |
 | --- | --- | --- | --- |
-| 3.7 | Auditoria comercial | BLOCKED | `phase/3.7-commercial-readiness` / `d41409e` |
+| 3.7 | Auditoria comercial | BLOCKED | `phase/3.7-commercial-readiness` / `4457bc6` |
 | 3.8B | R2 privado | PASS tecnico | `phase/3.8b-r2-private` / `8ffff52` |
 | 3.8C | Cloudinary publico | PASS descartavel | `phase/3.8c-cloudinary-public` / `e065da1` |
 | 3.8D | Supabase audio | PASS descartavel | `phase/3.8d-supabase-audio` / `0230282` |

@@ -1,0 +1,277 @@
+name: Storage Integration Gate
+
+on:
+    workflow_dispatch:
+    push:
+        branches: [phase/3.8-integration-gate]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: storage-integration-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    storage-integration:
+        runs-on: ubuntu-latest
+        timeout-minutes: 35
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_DB: mirai_storage_integration
+                    POSTGRES_USER: mirai_integration
+                    POSTGRES_PASSWORD: mirai_integration_disposable
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U mirai_integration -d mirai_storage_integration"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 12
+        env:
+            APP_ENV: test
+            DATABASE_URL: postgresql+psycopg2://mirai_integration:mirai_integration_disposable@127.0.0.1:5432/mirai_storage_integration
+            MIRAI_PORTALS_E2E_DATABASE_URL: postgresql+psycopg2://mirai_integration:mirai_integration_disposable@127.0.0.1:5432/mirai_storage_integration
+            MIRAI_PORTALS_E2E_ALLOW: POSTGRES_17_DISPOSABLE_ONLY
+            API_NAME: Mirai storage integration
+            API_VERSION: "2.0"
+            DEBUG: "false"
+            HOST: 127.0.0.1
+            PORT: "8000"
+            LOG_LEVEL: WARNING
+            SECRET_KEY: storage-integration-only-secret
+            ALGORITHM: HS256
+            ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+            REFRESH_TOKEN_EXPIRE_DAYS: "7"
+            ALLOWED_ORIGINS: http://localhost:4173
+            BACKUP_FOLDER: /tmp/mirai-storage-integration
+            BACKUP_KEEP_DAYS: "1"
+            RATE_LIMIT_DB: /tmp/mirai-storage-integration-rate.sqlite3
+            RESEND_API_KEY: test-only
+            EMAIL_FROM: storage-integration@example.invalid
+            ADMIN_EMAIL: storage-integration@example.invalid
+            PUBLIC_API_URL: http://127.0.0.1:8000
+            PUBLIC_FRONTEND_URL: http://localhost:4173
+            AI_ENABLED: "false"
+            AI_EMAIL_ENABLED: "false"
+            COMMERCIAL_PIPELINE_V2_ENABLED: "false"
+            PUBLIC_IMAGE_STORAGE_BACKEND: memory
+            PORTFOLIO_AUDIO_STORAGE_BACKEND: memory
+            PRODUCTION_TEMP_STORAGE_BACKEND: memory
+            PRODUCTION_FINAL_STORAGE_BACKEND: memory
+            PROPOSAL_DOCUMENT_STORAGE_BACKEND: legacy
+
+        steps:
+            - name: Check out integration SHA
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Assert exact branch SHA and protected mode
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+                  test "$GITHUB_REF_NAME" = "phase/3.8-integration-gate"
+                  test "$COMMERCIAL_PIPELINE_V2_ENABLED" = "false"
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version-file: backend/.python-version
+                  cache: pip
+                  cache-dependency-path: |
+                      backend/requirements.txt
+                      backend/requirements-test.txt
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Install test dependencies
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  python -m pip install --disable-pip-version-check -r backend/requirements-test.txt
+                  python -m pip install --disable-pip-version-check ruff==0.16.9
+                  npm install --no-save --no-package-lock playwright@1.55.0
+                  npx playwright install --with-deps chromium
+
+            - name: Prepare disposable PostgreSQL 17
+              working-directory: backend
+              shell: bash
+              env:
+                  PGPASSWORD: mirai_integration_disposable
+              run: |
+                  set -euo pipefail
+                  psql --host 127.0.0.1 --username mirai_integration --dbname mirai_storage_integration --set ON_ERROR_STOP=1 <<'SQL'
+                  DO $$ BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+                      CREATE ROLE anon NOLOGIN;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+                      CREATE ROLE authenticated NOLOGIN;
+                    END IF;
+                  END $$;
+                  SQL
+                  python -m scripts.bootstrap_database
+                  python -m alembic upgrade head
+                  python - <<'PY'
+                  import os
+                  from alembic.config import Config
+                  from alembic.script import ScriptDirectory
+                  from sqlalchemy import create_engine, text
+
+                  heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
+                  assert heads == ["c5f2a7d9e184"], heads
+                  with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
+                      assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
+                      assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
+                  print(f"postgresql=17 alembic_head={heads[0]}")
+                  PY
+
+            - name: Run Storage Core and provider boundary tests
+              working-directory: backend
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  for pattern in \
+                    test_storage_core.py \
+                    test_producao_r2_storage.py \
+                    test_portfolio_image_storage.py \
+                    test_portfolio_audio_storage_core.py \
+                    test_storage_lifecycle.py \
+                    test_storage_migration.py \
+                    test_portfolio_mix_comparison.py; do
+                      python -m unittest discover -s tests -p "$pattern" -v
+                  done
+
+            - name: Run portal and ownership regressions
+              working-directory: backend
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  for pattern in \
+                    test_portal_produtor.py \
+                    test_portal_produtor_operacao.py \
+                    test_portal_cliente.py \
+                    test_portal_cliente_operacao.py \
+                    test_producao.py \
+                    test_authenticated_checkout.py; do
+                      python -m unittest discover -s tests -p "$pattern" -v
+                  done
+
+            - name: Run PostgreSQL 17 and real-browser E2E
+              working-directory: backend
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  python -m unittest discover -s tests -p 'test_commerce_policy_postgres.py' -v
+                  python -m unittest discover -s tests -p 'test_portals_postgres_e2e.py' -v
+
+            - name: Run Admin and portal browser regressions
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  node frontend/tests/portfolio_admin.cjs
+                  node frontend/tests/portal_produtor.cjs
+                  node frontend/tests/portal_cliente.cjs
+
+            - name: Prove lifecycle and migration safety gates
+              working-directory: backend
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  lifecycle="$(python -m scripts.storage_lifecycle --database-url "$DATABASE_URL" --dry-run)"
+                  inventory="$(python -m scripts.migrate_production_files --database-url "$DATABASE_URL" --mode inventory)"
+                  python - "$lifecycle" "$inventory" <<'PY'
+                  import json
+                  import sys
+
+                  lifecycle = json.loads(sys.argv[1])
+                  inventory = json.loads(sys.argv[2])
+                  assert lifecycle["mode"] == "dry-run"
+                  assert lifecycle["deletions"] == 0
+                  assert inventory["mode"] == "inventory"
+                  assert inventory["deletions"] == 0
+                  assert inventory["references_printed"] == 0
+                  PY
+                  if python -m scripts.migrate_production_files \
+                    --database-url "$DATABASE_URL" --mode copy --confirm-copy; then
+                      echo "migration copy unexpectedly enabled" >&2
+                      exit 1
+                  fi
+
+            - name: Run focused static checks
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  python -m compileall -q backend
+                  (
+                    cd backend
+                    python - <<'PY'
+                  from sqlalchemy.orm import configure_mappers
+                  import models
+                  configure_mappers()
+                  print("configure_mappers=passed")
+                  PY
+                  )
+                  ruff check --select E4,E7,E9,F \
+                    backend/services/storage \
+                    backend/services/producao_arquivo_storage.py \
+                    backend/services/producao_arquivo_service.py \
+                    backend/services/portfolio_audio_storage_core.py \
+                    backend/scripts/storage_lifecycle.py \
+                    backend/scripts/migrate_production_files.py \
+                    backend/tests/test_storage_core.py \
+                    backend/tests/test_producao_r2_storage.py \
+                    backend/tests/test_portfolio_image_storage.py \
+                    backend/tests/test_portfolio_audio_storage_core.py \
+                    backend/tests/test_storage_lifecycle.py \
+                    backend/tests/test_storage_migration.py
+                  node --check frontend/js/admin/projetos.js
+                  node --check frontend/tests/portfolio_admin.cjs
+                  node --check frontend/tests/portal_produtor.cjs
+                  node --check frontend/tests/portal_cliente.cjs
+                  git diff --check origin/main...HEAD
+
+            - name: Verify disposable data cleanup
+              if: always()
+              shell: bash
+              env:
+                  PGPASSWORD: mirai_integration_disposable
+              run: |
+                  set +e
+                  remaining="$(psql --host 127.0.0.1 --username mirai_integration --dbname mirai_storage_integration --tuples-only --no-align --command "
+                    SELECT
+                      (SELECT count(*) FROM usuarios) +
+                      (SELECT count(*) FROM clientes) +
+                      (SELECT count(*) FROM orcamentos) +
+                      (SELECT count(*) FROM producoes) +
+                      (SELECT count(*) FROM producao_arquivos) +
+                      (SELECT count(*) FROM repasses_produtor);
+                  " 2>/dev/null | tr -d '[:space:]')"
+                  if [[ -n "$remaining" && "$remaining" != "0" ]]; then
+                    echo "storage_integration_cleanup_failed remaining=$remaining" >&2
+                    exit 1
+                  fi
+                  rm -f /tmp/mirai-storage-integration-rate.sqlite3
+
+            - name: Publish sanitized result
+              if: success()
+              shell: bash
+              run: |
+                  {
+                    echo "### Storage integration gate"
+                    echo "- Exact integration SHA: $GITHUB_SHA"
+                    echo "- PostgreSQL 17 and Alembic c5f2a7d9e184: passed"
+                    echo "- FastAPI and Playwright E2E: passed"
+                    echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
+                    echo "- Lifecycle: dry-run only, zero deletions"
+                    echo "- Migration: inventory only; copy gate remained disabled"
+                    echo "- Commercial pipeline V2: off"
+                    echo "- Production providers, data and secrets: not used"
+                  } >> "$GITHUB_STEP_SUMMARY"
