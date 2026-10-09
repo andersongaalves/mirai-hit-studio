@@ -61,38 +61,65 @@ evidence manifest:
 - identifies the GitHub repository, workflow run URL/ID, the allowlisted
   `.github/workflows/storage-provider-rollout.yml` on `main`, actor, and CTRL
   authorization reference;
-- is time-limited to at most 24 hours;
+- is time-limited to two hours when emitted and never accepted beyond four hours;
 - has a SHA-256 evidence digest and successful connectivity/smoke result for
   each of R2 temp, R2 final, Cloudinary, Supabase audio, and legacy storage.
 
 The former `STORAGE_PREFLIGHT_*_ACCESSIBLE` and `*_SMOKE` environment flags are
 not accepted as evidence. Fakes, local test fixtures, configuration presence,
 or a manually edited JSON file do not prove provider connectivity. The HMAC
-key must only be available to a GitHub Actions job in a protected Environment
-with CTRL-approved reviewers; it must never be configured in Render, frontend
-builds, pull-request jobs, or ordinary CI. The issuer must create evidence only
-after the real provider smokes have completed, and the referenced sanitized
-evidence artifact must be retained with the workflow run. No such real
-attestation exists in this phase, so `--require-rollout-ready` is expected to
-fail. The CLI labels provider checks as `verified_from_evidence` and keeps
-`provider_connectivity_probed=false`; the CLI itself never probes a provider.
-The allowlisted `storage-provider-rollout.yml` issuer does not exist yet, and
-its protected Environment/key have not been provisioned.
+key is referenced only by protected workflow steps, never Render, frontend
+builds, pull-request jobs, ordinary CI, or jobs checking out another branch.
+The issuer runs only from `main`; `target_sha` must equal its own `GITHUB_SHA`,
+and it checks out only that same main SHA. Before any secret step, the workflow
+verifies fixed SHA-256 pins for the smoke, signer, and verifier modules; it
+repeats the signer/verifier checks immediately before those modules receive the
+HMAC key. The publication workflow similarly pins the verifier. Any source
+change requires a reviewed workflow change to update the pin. The workflow
+definition on protected `main`, its Environment approval, and these source pins
+are the trust roots; a separate candidate branch is never checked out. A
+no-secret guard queries GitHub before any job
+references `storage-rollout`, so a missing Environment is not auto-created and
+mistaken for a protected one. The guard requires reviewers, prevents self-review
+and administrator bypass, and restricts deployments to the single `main`
+branch policy.
 
-When authorized, isolate the signing job from candidate code: use the trusted
-workflow definition on `main`, review and bind the exact candidate SHA, retain
-the sanitized smoke artifact, and expose the HMAC key only to the protected
-signing job after reviewer approval. Do not run candidate-controlled scripts
-in a job that can read the signing key.
+The emitter retains a sanitized, run-scoped report and a two-hour signed
+manifest as a one-day GitHub artifact. It signs only after every real provider
+smoke passes. The separate `storage-publication-gate.yml` validates the exact
+successful issuer run and invokes
+`python -m scripts.storage_preflight --require-rollout-ready` in a protected
+job with Storage configuration/HMAC access but no Render or Pages deploy
+credentials. Python dependencies are not installed in this secret-bearing
+job; the preflight uses the standard library. Environment approval is the authorization control; the free-form
+authorization reference is traceability only. The verifier requires a manual
+dispatch from `main`, exact SHA, allowlisted workflow, complete evidence,
+unchanged configuration fingerprint, and Commercial V2 exactly off.
+
+These workflows are definitions only. The repository currently has only the
+unrelated `github-pages` Environment; `storage-rollout`, `render-production`,
+and `cloudflare-pages-production` do not exist. No provider secrets or
+protected reviewers were created or inspected. Neither workflow was run and
+no real provider evidence exists, so `--require-rollout-ready` must fail. The
+CLI labels verified results `verified_from_evidence`, keeps
+`provider_connectivity_probed=false`, and never probes a provider itself.
+
+The real-smoke harness uses unique synthetic IDs, reads existing bucket
+settings, and cleans up only precomputed run-scoped keys. It never creates a
+missing bucket. Any uncertain failure marks the component failed and prevents
+signing. The legacy document adapter does not expose deletion; its smoke uses
+the server-only Supabase API to delete only its own unique key and verifies the
+object is gone. No smokes were executed in this phase.
 
 ### Actual publication mechanism and required integration
 
-The repository has no application deploy workflow that can enforce this
-command. Existing production publication is external: Render auto-deploys
-from `main`, and Cloudflare Pages is connected to `main` (see
-`docs/PRODUCTION_INFRA_I4.md`). Therefore a repository-only check cannot claim
-to block those deployments. The integration is **not rollout-ready** until the
-CTRL approves and configures one of these controls:
+The new `storage-publication-gate.yml` is a manually dispatched preflight, not
+a publisher and not a required branch-protection check. It has no Render or
+Cloudflare credentials and cannot block the external deploy systems. Existing
+production publication is external: Render auto-deploys from `main`, and
+Cloudflare Pages is connected to `main` (see `docs/PRODUCTION_INFRA_I4.md`).
+Therefore the integration is **not rollout-ready** until the CTRL approves
+and configures one of these controls:
 
 1. Disable direct auto-deploy in both providers and publish only from a
    protected GitHub Actions deployment workflow that runs this exact command
@@ -106,6 +133,29 @@ credentials must be unavailable to earlier jobs. A `workflow_dispatch` check
 that is not required by branch protection is advisory, not a deploy gate.
 Changing Render/Cloudflare settings or branch protection requires separate CTRL
 approval and was not performed here.
+
+The current manual workflow is not a mandatory publication gate and must not
+be treated as one.
+
+### Required external setup before use
+
+1. Create `storage-rollout` with required CTRL reviewer(s), prevent-self-review,
+   administrator bypass disabled, and exactly the `main` deployment policy.
+2. Add least-privilege R2, Cloudinary, and Supabase values referenced by the
+   issuer. Keep `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY` in this Environment only.
+3. Create `render-production` and `cloudflare-pages-production` with separate
+   protected reviewer rules and `main` only. The current preflight workflow
+   does not use their deployment credentials.
+4. Confirm rollback availability in both provider dashboards. Only after an
+   approved replacement path is ready, disable external auto-deploy and make
+   the verified gate a required check. Do not integrate Storage before this
+   transition has been demonstrated.
+
+GitHub Environment protections are configured outside YAML. The read-only
+guard fails closed unless the API reports required reviewers, self-review
+prevention, administrator bypass disabled, and only `main` as an allowed
+branch. See [GitHub deployment environments](https://docs.github.com/en/actions/reference/workflows-and-deployments/deployments-and-environments)
+and the [deployment branch policy API](https://docs.github.com/en/rest/deployments/branch-policies).
 
 ## A. R2 real
 

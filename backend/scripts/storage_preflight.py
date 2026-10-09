@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
 import os
 import re
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
-
 
 _COMPONENTS = (
     "r2_private_temp",
@@ -37,6 +36,7 @@ _CONFIG_KEYS = (
     "SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
     "PORTFOLIO_AUDIO_STORAGE_BUCKET",
+    "PORTFOLIO_AUDIO_MAX_BYTES",
     "PRODUCAO_STORAGE_BUCKET",
     "SUPABASE_STORAGE_BUCKET",
     "PRODUCTION_TEMP_STORAGE_BACKEND",
@@ -44,6 +44,7 @@ _CONFIG_KEYS = (
     "PUBLIC_IMAGE_STORAGE_BACKEND",
     "PORTFOLIO_AUDIO_STORAGE_BACKEND",
     "PROPOSAL_DOCUMENT_STORAGE_BACKEND",
+    "PROPOSTA_STORAGE_BACKEND",
 )
 
 
@@ -126,6 +127,16 @@ def _verify_evidence(env, evidence, now=None):
         return False, "configuration_mismatch"
 
     repository = env.get("GITHUB_REPOSITORY", "")
+    allowed_verifiers = {
+        f"{repository}/.github/workflows/storage-provider-rollout.yml@refs/heads/main",
+        f"{repository}/.github/workflows/storage-publication-gate.yml@refs/heads/main",
+    }
+    if (
+        env.get("GITHUB_REF") != "refs/heads/main"
+        or env.get("GITHUB_WORKFLOW_REF") not in allowed_verifiers
+        or env.get("GITHUB_EVENT_NAME") != "workflow_dispatch"
+    ):
+        return False, "untrusted_verification_context"
     run = evidence.get("workflow_run")
     if not isinstance(run, dict):
         return False, "workflow_run_missing"
@@ -136,6 +147,10 @@ def _verify_evidence(env, evidence, now=None):
         not repository
         or not isinstance(run_id, str)
         or not re.fullmatch(r"[1-9][0-9]*", run_id)
+        or (
+            bool(env.get("STORAGE_PREFLIGHT_EXPECTED_ISSUER_RUN_ID"))
+            and run_id != env.get("STORAGE_PREFLIGHT_EXPECTED_ISSUER_RUN_ID")
+        )
         or parsed_url is None
         or parsed_url.scheme != "https"
         or parsed_url.hostname != "github.com"
@@ -160,7 +175,7 @@ def _verify_evidence(env, evidence, now=None):
         or issued_at > current_time + timedelta(minutes=5)
         or expires_at <= current_time
         or expires_at <= issued_at
-        or expires_at - issued_at > timedelta(hours=24)
+        or expires_at - issued_at > timedelta(hours=4)
     ):
         return False, "evidence_expired_or_invalid"
 
@@ -235,8 +250,9 @@ def build_report(environ=None, evidence=None, now=None):
         "legacy_storage": _component(
             env,
             "LEGACY_STORAGE",
-            ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"),
+            ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "PROPOSTA_STORAGE_BACKEND"),
             supabase_valid
+            and env.get("PROPOSTA_STORAGE_BACKEND", "local").strip().lower() == "supabase"
             and _bucket(env.get("PRODUCAO_STORAGE_BUCKET", "producao-arquivos").strip())
             and _bucket(env.get("SUPABASE_STORAGE_BUCKET", "propostas-pdf").strip()),
             env.get("PROPOSAL_DOCUMENT_STORAGE_BACKEND", "legacy").strip().lower(),

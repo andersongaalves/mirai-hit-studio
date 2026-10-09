@@ -146,6 +146,9 @@ jobs:
                     test_storage_lifecycle.py \
                     test_storage_migration.py \
                     test_storage_preflight.py \
+                    test_storage_environment_guard.py \
+                    test_storage_evidence.py \
+                    test_storage_provider_smoke.py \
                     test_portfolio_mix_comparison.py; do
                       python -m unittest discover -s tests -p "$pattern" -v
                   done
@@ -249,13 +252,19 @@ jobs:
                     backend/scripts/storage_lifecycle.py \
                     backend/scripts/migrate_production_files.py \
                     backend/scripts/storage_preflight.py \
+                    backend/scripts/storage_environment_guard.py \
+                    backend/scripts/storage_evidence.py \
+                    backend/scripts/storage_provider_smoke.py \
                     backend/tests/test_storage_core.py \
                     backend/tests/test_producao_r2_storage.py \
                     backend/tests/test_portfolio_image_storage.py \
                     backend/tests/test_portfolio_audio_storage_core.py \
                     backend/tests/test_storage_lifecycle.py \
                     backend/tests/test_storage_migration.py \
-                    backend/tests/test_storage_preflight.py
+                    backend/tests/test_storage_preflight.py \
+                    backend/tests/test_storage_environment_guard.py \
+                    backend/tests/test_storage_evidence.py \
+                    backend/tests/test_storage_provider_smoke.py
                   node --check frontend/js/admin/projetos.js
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs

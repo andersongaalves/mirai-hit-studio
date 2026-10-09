@@ -1,0 +1,216 @@
+name: Storage Provider Rollout Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact main commit being evaluated; must equal this workflow run SHA
+        required: true
+        type: string
+      authorization_ref:
+        description: CTRL approval reference, e.g. CTRL-1234
+        required: true
+        type: string
+      confirm_real_smokes:
+        description: Explicitly authorize disposable real-provider smoke writes and cleanup
+        required: true
+        type: choice
+        options: [no, yes]
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: storage-provider-rollout-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  trusted-request-guard:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out only the trusted main workflow SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate exact source, target, and authorization
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/storage-provider-rollout.yml@refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$TARGET_SHA" = "$GITHUB_SHA"
+          [[ "$AUTHORIZATION_REF" =~ ^CTRL-[A-Za-z0-9._-]{3,100}$ ]]
+      - name: Require pre-existing protected rollout Environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: backend
+        run: python -m scripts.storage_environment_guard --environment storage-rollout
+
+  provider-smokes-and-signature:
+    needs: trusted-request-guard
+    if: >-
+      needs.trusted-request-guard.result == 'success' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.confirm_real_smokes == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: storage-rollout
+    env:
+      APP_ENV: storage-smoke
+      STORAGE_PREFLIGHT_TARGET_SHA: ${{ inputs.target_sha }}
+      STORAGE_ROLLOUT_AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
+    steps:
+      - name: Check out the exact trusted main SHA, never the candidate branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify pinned smoke, signer, and verifier source
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '445cf90bfb2d43bac4907afac958817905e9c1b6971baf710a15ec978390c406  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
+          echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
+          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+      - name: Assert release and provider configuration
+        shell: bash
+        env:
+          COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$STORAGE_PREFLIGHT_TARGET_SHA" = "$GITHUB_SHA"
+          test "$COMMERCIAL_PIPELINE_V2_ENABLED" = "false"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install trusted backend dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements.txt
+      - name: Run bounded real-provider smoke and cleanup
+        working-directory: backend
+        env:
+          COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_REGION: ${{ vars.R2_REGION }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS }}
+          R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
+          R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PORTFOLIO_AUDIO_STORAGE_BUCKET: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BUCKET }}
+          PRODUCAO_STORAGE_BUCKET: ${{ vars.PRODUCAO_STORAGE_BUCKET }}
+          SUPABASE_STORAGE_BUCKET: ${{ vars.SUPABASE_STORAGE_BUCKET }}
+          PROPOSTA_STORAGE_BACKEND: ${{ vars.PROPOSTA_STORAGE_BACKEND }}
+          PRODUCTION_TEMP_STORAGE_BACKEND: ${{ vars.PRODUCTION_TEMP_STORAGE_BACKEND }}
+          PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
+          PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
+          PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND }}
+        run: python -m scripts.storage_provider_smoke --output /tmp/storage-smoke.json
+      - name: Recheck pinned signer and verifier immediately before secret access
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
+          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+      - name: Sign only a complete successful smoke report
+        working-directory: backend
+        env:
+          COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_REGION: ${{ vars.R2_REGION }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS }}
+          R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
+          R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PORTFOLIO_AUDIO_STORAGE_BUCKET: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BUCKET }}
+          PRODUCAO_STORAGE_BUCKET: ${{ vars.PRODUCAO_STORAGE_BUCKET }}
+          SUPABASE_STORAGE_BUCKET: ${{ vars.SUPABASE_STORAGE_BUCKET }}
+          PROPOSTA_STORAGE_BACKEND: ${{ vars.PROPOSTA_STORAGE_BACKEND }}
+          PRODUCTION_TEMP_STORAGE_BACKEND: ${{ vars.PRODUCTION_TEMP_STORAGE_BACKEND }}
+          PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
+          PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
+          PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND }}
+          STORAGE_PREFLIGHT_TARGET_SHA: ${{ inputs.target_sha }}
+          STORAGE_ROLLOUT_AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
+          STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY: ${{ secrets.STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY }}
+          STORAGE_PREFLIGHT_EVIDENCE_PATH: /tmp/storage-evidence.json
+          PYTHON_EXECUTABLE: ${{ steps.setup-python.outputs.python-path }}
+          PYTHONPATH: ""
+          PYTHONHOME: ""
+          PYTHONNOUSERSITE: "1"
+        run: '"$PYTHON_EXECUTABLE" -m scripts.storage_evidence /tmp/storage-smoke.json /tmp/storage-evidence.json'
+      - name: Verify the signed evidence and effective configuration
+        working-directory: backend
+        env:
+          COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_REGION: ${{ vars.R2_REGION }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS }}
+          R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
+          R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PORTFOLIO_AUDIO_STORAGE_BUCKET: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BUCKET }}
+          PRODUCAO_STORAGE_BUCKET: ${{ vars.PRODUCAO_STORAGE_BUCKET }}
+          SUPABASE_STORAGE_BUCKET: ${{ vars.SUPABASE_STORAGE_BUCKET }}
+          PROPOSTA_STORAGE_BACKEND: ${{ vars.PROPOSTA_STORAGE_BACKEND }}
+          PRODUCTION_TEMP_STORAGE_BACKEND: ${{ vars.PRODUCTION_TEMP_STORAGE_BACKEND }}
+          PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
+          PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
+          PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND }}
+          STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY: ${{ secrets.STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY }}
+          STORAGE_PREFLIGHT_EVIDENCE_PATH: /tmp/storage-evidence.json
+          PYTHON_EXECUTABLE: ${{ steps.setup-python.outputs.python-path }}
+          PYTHONPATH: ""
+          PYTHONHOME: ""
+          PYTHONNOUSERSITE: "1"
+        run: '"$PYTHON_EXECUTABLE" -m scripts.storage_preflight --require-rollout-ready'
+      - name: Publish sanitized, short-lived evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storage-rollout-evidence-${{ github.run_id }}
+          path: |
+            /tmp/storage-smoke.json
+            /tmp/storage-evidence.json
+          retention-days: 1
+          if-no-files-found: error

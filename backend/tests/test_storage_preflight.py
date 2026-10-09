@@ -1,15 +1,15 @@
 """Storage preflight reports configuration without probing live providers."""
 
-import unittest
-from contextlib import redirect_stdout
-from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
+import unittest
+from contextlib import redirect_stdout
+from datetime import datetime, timedelta, timezone
 from io import StringIO
 from unittest.mock import patch
 
-from scripts.storage_preflight import build_report, main, _configuration_fingerprint
+from scripts.storage_preflight import _configuration_fingerprint, build_report, main
 
 
 class StoragePreflightTests(unittest.TestCase):
@@ -32,9 +32,13 @@ class StoragePreflightTests(unittest.TestCase):
             "PRODUCTION_FINAL_STORAGE_BACKEND": "r2",
             "PUBLIC_IMAGE_STORAGE_BACKEND": "cloudinary",
             "PORTFOLIO_AUDIO_STORAGE_BACKEND": "supabase",
+            "PROPOSTA_STORAGE_BACKEND": "supabase",
             "COMMERCIAL_PIPELINE_V2_ENABLED": "false",
             "GITHUB_SHA": self.TARGET_SHA,
+            "GITHUB_REF": "refs/heads/main",
+            "GITHUB_EVENT_NAME": "workflow_dispatch",
             "GITHUB_REPOSITORY": "andersongaalves/mirai-hit-studio",
+            "GITHUB_WORKFLOW_REF": "andersongaalves/mirai-hit-studio/.github/workflows/storage-provider-rollout.yml@refs/heads/main",
             "STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY": self.EVIDENCE_KEY,
         }
         return env
@@ -134,6 +138,13 @@ class StoragePreflightTests(unittest.TestCase):
         self.assertFalse(report["rollout_ready"])
         self.assertEqual(report["evidence_status"], "configuration_mismatch")
 
+    def test_publication_verifier_must_select_the_signed_issuer_run(self):
+        env = self.valid_environment()
+        env["STORAGE_PREFLIGHT_EXPECTED_ISSUER_RUN_ID"] = "987654321"
+        report = build_report(env, self.valid_evidence())
+        self.assertFalse(report["rollout_ready"])
+        self.assertEqual(report["evidence_status"], "workflow_run_invalid")
+
     def test_evidence_from_unapproved_workflow_is_rejected(self):
         env = self.valid_environment()
         evidence = self.valid_evidence()
@@ -162,8 +173,50 @@ class StoragePreflightTests(unittest.TestCase):
         self.assertEqual(build_report(env, self.valid_evidence(now), now)["evidence_status"], "signature_missing")
         expired = self.valid_evidence(now - timedelta(days=2))
         self.assertEqual(build_report(self.valid_environment(), expired, now)["evidence_status"], "evidence_expired_or_invalid")
+        too_long = self.valid_evidence(now)
+        too_long["expires_at"] = (now + timedelta(hours=5)).isoformat()
+        canonical = json.dumps(
+            {name: value for name, value in too_long.items() if name != "signature"},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        too_long["signature"] = hmac.new(
+            self.EVIDENCE_KEY.encode(), canonical, hashlib.sha256
+        ).hexdigest()
+        self.assertEqual(
+            build_report(self.valid_environment(), too_long, now)["evidence_status"],
+            "evidence_expired_or_invalid",
+        )
         env["COMMERCIAL_PIPELINE_V2_ENABLED"] = "true"
         self.assertFalse(build_report(env)["rollout_ready"])
+
+    def test_verification_requires_manual_main_workflow_context(self):
+        env = self.valid_environment()
+        evidence = self.valid_evidence()
+        env["GITHUB_REF"] = "refs/heads/phase/untrusted"
+        self.assertEqual(
+            build_report(env, evidence)["evidence_status"],
+            "untrusted_verification_context",
+        )
+        env = self.valid_environment()
+        env["GITHUB_EVENT_NAME"] = "pull_request"
+        self.assertEqual(
+            build_report(env, evidence)["evidence_status"],
+            "untrusted_verification_context",
+        )
+        env = self.valid_environment()
+        env["GITHUB_WORKFLOW_REF"] = "attacker/workflow.yml@refs/heads/main"
+        self.assertEqual(
+            build_report(env, evidence)["evidence_status"],
+            "untrusted_verification_context",
+        )
+
+    def test_missing_legacy_document_backend_blocks_rollout(self):
+        env = self.valid_environment()
+        del env["PROPOSTA_STORAGE_BACKEND"]
+        report = build_report(env, self.valid_evidence())
+        self.assertFalse(report["components"]["legacy_storage"]["configuration_valid"])
+        self.assertFalse(report["rollout_ready"])
 
     def test_supabase_can_be_selected_for_new_production_writes_while_r2_stays_ready(self):
         env = self.valid_environment()
