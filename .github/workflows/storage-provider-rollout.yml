@@ -15,7 +15,7 @@ on:
         description: Explicitly authorize disposable real-provider smoke writes and cleanup
         required: true
         type: choice
-        options: [no, yes]
+        options: ['no', 'yes']
 
 permissions:
   contents: read
