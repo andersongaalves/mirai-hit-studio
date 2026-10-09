@@ -1,0 +1,394 @@
+name: Protected Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact reviewed main commit to publish
+        required: true
+        type: string
+      integration_run_id:
+        description: Successful Storage Integration Gate run for target_sha
+        required: true
+        type: string
+      issuer_run_id:
+        description: Successful Storage Provider Rollout Evidence run for target_sha
+        required: true
+        type: string
+      authorization_ref:
+        description: CTRL authorization reference, e.g. CTRL-1234
+        required: true
+        type: string
+      release_mode:
+        description: dry-run never contacts deployment APIs
+        required: true
+        default: dry-run
+        type: choice
+        options: [dry-run, publish]
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: protected-production-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_GUARD_SHA256: e926dfe81bdc05902ad3d19274ee28a3988e211fff60df5767369a73fcde94fe
+  STORAGE_PREFLIGHT_SHA256: 1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f
+
+jobs:
+  trusted-release-gate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out only the trusted main SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate immutable request fields
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
+          INTEGRATION_RUN_ID: ${{ inputs.integration_run_id }}
+          ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/production-release.yml@refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$TARGET_SHA" = "$GITHUB_SHA"
+          [[ "$AUTHORIZATION_REF" =~ ^CTRL-[A-Za-z0-9._-]{3,100}$ ]]
+          [[ "$INTEGRATION_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$ISSUER_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          echo "$RELEASE_GUARD_SHA256  backend/scripts/production_release_guard.py" | sha256sum --check --status
+      - name: Require all deployment Environments to be protected
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: backend
+        run: >-
+          python -m scripts.storage_environment_guard
+          --environment storage-rollout
+          --environment render-production
+          --environment cloudflare-pages-production
+      - name: Fetch exact successful CI and evidence issuer runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INTEGRATION_RUN_ID: ${{ inputs.integration_run_id }}
+          ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$INTEGRATION_RUN_ID" > /tmp/integration-run.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ISSUER_RUN_ID" > /tmp/issuer-run.json
+          python - <<'PY' > /tmp/release-context.json
+          import json, os
+          print(json.dumps({
+              "event_name": os.environ["GITHUB_EVENT_NAME"],
+              "ref": os.environ["GITHUB_REF"],
+              "sha": os.environ["GITHUB_SHA"],
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "workflow_ref": os.environ["GITHUB_WORKFLOW_REF"],
+          }))
+          PY
+      - name: Verify CI, issuer, SHA, workflow and replay boundaries
+        working-directory: backend
+        run: >-
+          python -m scripts.production_release_guard
+          --context /tmp/release-context.json
+          --target-sha '${{ inputs.target_sha }}'
+          --integration-run /tmp/integration-run.json
+          --integration-run-id '${{ inputs.integration_run_id }}'
+          --issuer-run /tmp/issuer-run.json
+          --issuer-run-id '${{ inputs.issuer_run_id }}'
+
+  verify-storage-evidence:
+    needs: trusted-release-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: storage-rollout
+    steps:
+      - name: Check out only the trusted main SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify pinned preflight source
+        working-directory: backend
+        shell: bash
+        run: echo "$STORAGE_PREFLIGHT_SHA256  scripts/storage_preflight.py" | sha256sum --check --status
+      - name: Download evidence from the exact issuer run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh run download '${{ inputs.issuer_run_id }}'
+          --name 'storage-rollout-evidence-${{ inputs.issuer_run_id }}'
+          --dir /tmp/storage-rollout-evidence
+      - name: Verify signed evidence and effective Storage configuration
+        working-directory: backend
+        env:
+          COMMERCIAL_PIPELINE_V2_ENABLED: ${{ vars.COMMERCIAL_PIPELINE_V2_ENABLED }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_REGION: ${{ vars.R2_REGION }}
+          R2_PRESIGN_MAX_SECONDS: ${{ vars.R2_PRESIGN_MAX_SECONDS }}
+          R2_TEMP_BUCKET: ${{ vars.R2_TEMP_BUCKET }}
+          R2_FINAL_BUCKET: ${{ vars.R2_FINAL_BUCKET }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PORTFOLIO_AUDIO_STORAGE_BUCKET: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BUCKET }}
+          PRODUCAO_STORAGE_BUCKET: ${{ vars.PRODUCAO_STORAGE_BUCKET }}
+          SUPABASE_STORAGE_BUCKET: ${{ vars.SUPABASE_STORAGE_BUCKET }}
+          PROPOSTA_STORAGE_BACKEND: ${{ vars.PROPOSTA_STORAGE_BACKEND }}
+          PRODUCTION_TEMP_STORAGE_BACKEND: ${{ vars.PRODUCTION_TEMP_STORAGE_BACKEND }}
+          PRODUCTION_FINAL_STORAGE_BACKEND: ${{ vars.PRODUCTION_FINAL_STORAGE_BACKEND }}
+          PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
+          PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
+          PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND }}
+          STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY: ${{ secrets.STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY }}
+          STORAGE_PREFLIGHT_EVIDENCE_PATH: /tmp/storage-rollout-evidence/storage-evidence.json
+          STORAGE_PREFLIGHT_EXPECTED_ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+          PYTHONPATH: ""
+          PYTHONHOME: ""
+          PYTHONNOUSERSITE: "1"
+        run: /usr/bin/python3 -m scripts.storage_preflight --require-rollout-ready
+
+  dry-run:
+    needs: [trusted-release-gate, verify-storage-evidence]
+    if: inputs.release_mode == 'dry-run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Record a non-publication simulation
+        run: |
+          echo 'Release gates passed in dry-run mode.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No Render or Cloudflare deployment API was called.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No production setting, provider object, database or Commercial V2 flag was changed.' >> "$GITHUB_STEP_SUMMARY"
+
+  render-readiness:
+    needs: [trusted-release-gate, verify-storage-evidence]
+    if: inputs.release_mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: render-production
+    steps:
+      - name: Check out trusted guard only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify Render identity and auto-deploy state read-only
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RENDER_API_KEY"
+          test -n "$RENDER_SERVICE_ID"
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID" > /tmp/render-service.json
+          python - "$RENDER_SERVICE_ID" <<'PY'
+          import json, sys
+          from backend.scripts.production_release_guard import validate_render_service
+          with open('/tmp/render-service.json', encoding='utf-8') as source:
+              status = validate_render_service(json.load(source), service_id=sys.argv[1])
+          if status != 'verified':
+              raise SystemExit(status)
+          PY
+
+  cloudflare-readiness:
+    needs: [trusted-release-gate, verify-storage-evidence]
+    if: inputs.release_mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: cloudflare-pages-production
+    steps:
+      - name: Check out trusted guard only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify Pages identity and auto-deploy state read-only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio" \
+            | python -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["result"]))' \
+            > /tmp/cloudflare-project.json
+          python - <<'PY'
+          import json
+          from backend.scripts.production_release_guard import validate_cloudflare_project
+          with open('/tmp/cloudflare-project.json', encoding='utf-8') as source:
+              status = validate_cloudflare_project(json.load(source), project_name='mirai-hit-studio')
+          if status != 'verified':
+              raise SystemExit(status)
+          PY
+
+  deploy-render:
+    needs: [render-readiness, cloudflare-readiness]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: render-production
+    outputs:
+      deploy_id: ${{ steps.deploy.outputs.deploy_id }}
+    steps:
+      - name: Deploy exact authorized commit
+        id: deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header 'Content-Type: application/json' \
+            --data "{\"commitId\":\"$TARGET_SHA\",\"clearCache\":\"do_not_clear\"}" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys")"
+          deploy_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$response")"
+          [[ "$deploy_id" =~ ^[A-Za-z0-9_-]+$ ]]
+          echo "deploy_id=$deploy_id" >> "$GITHUB_OUTPUT"
+      - name: Wait for Render deployment and verify exact commit
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          DEPLOY_ID: ${{ steps.deploy.outputs.deploy_id }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 90); do
+            response="$(curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID")"
+            status="$(python -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<< "$response")"
+            commit="$(python -c 'import json,sys; print((json.load(sys.stdin).get("commit") or {}).get("id", ""))' <<< "$response")"
+            test -z "$commit" || test "$commit" = "$TARGET_SHA"
+            case "$status" in
+              live) exit 0 ;;
+              build_failed|update_failed|canceled|deactivated) exit 1 ;;
+            esac
+            sleep 10
+          done
+          exit 1
+
+  deploy-cloudflare-pages:
+    needs: [deploy-render, render-readiness, cloudflare-readiness]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cloudflare-pages-production
+    outputs:
+      deployment_id: ${{ steps.verify.outputs.deployment_id }}
+    steps:
+      - name: Check out the exact authorized static frontend
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.target_sha }}
+          persist-credentials: false
+      - name: Publish exact frontend to Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          npm_config_cache: /tmp/mirai-release-npm-cache
+        shell: bash
+        run: >-
+          npx --yes wrangler@4.149.0 pages deploy frontend
+          --project-name mirai-hit-studio
+          --branch main
+          --commit-hash "$TARGET_SHA"
+      - name: Confirm latest production deployment identity
+        id: verify
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio/deployments?env=production&per_page=1")"
+          DEPLOYMENT_JSON="$response" python - "$TARGET_SHA" <<'PY' > /tmp/cloudflare-deployment-id
+          import json, os, sys
+          payload = json.loads(os.environ['DEPLOYMENT_JSON'])
+          deployment = payload['result'][0]
+          trigger = deployment.get('deployment_trigger') or {}
+          metadata = trigger.get('metadata') or {}
+          if metadata.get('commit_hash') != sys.argv[1]:
+              raise SystemExit('cloudflare_deployed_sha_mismatch')
+          if ((deployment.get('latest_stage') or {}).get('status')) != 'success':
+              raise SystemExit('cloudflare_deployment_not_successful')
+          print(deployment['id'])
+          PY
+          deployment_id="$(cat /tmp/cloudflare-deployment-id)"
+          [[ "$deployment_id" =~ ^[A-Za-z0-9-]+$ ]]
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+
+  smoke-and-evidence:
+    needs: [deploy-render, deploy-cloudflare-pages]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Run read-only production smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' https://api.miraihitstudio.com.br/health)" = 200
+          for path in / /admin /produtor /cliente /portfolio /acesso; do
+            code="$(curl --location --max-redirs 2 --silent --output /dev/null --write-out '%{http_code}' "https://miraihitstudio.com.br$path")"
+            test "$code" = 200
+          done
+      - name: Write sanitized release evidence
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          INTEGRATION_RUN_ID: ${{ inputs.integration_run_id }}
+          ISSUER_RUN_ID: ${{ inputs.issuer_run_id }}
+          RENDER_DEPLOY_ID: ${{ needs.deploy-render.outputs.deploy_id }}
+          CLOUDFLARE_DEPLOYMENT_ID: ${{ needs.deploy-cloudflare-pages.outputs.deployment_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          evidence = {
+              "schema_version": 1,
+              "target_sha": os.environ["TARGET_SHA"],
+              "integration_run_id": os.environ["INTEGRATION_RUN_ID"],
+              "storage_issuer_run_id": os.environ["ISSUER_RUN_ID"],
+              "render_deploy_id": os.environ["RENDER_DEPLOY_ID"],
+              "cloudflare_project": "mirai-hit-studio",
+              "cloudflare_deployment_id": os.environ["CLOUDFLARE_DEPLOYMENT_ID"],
+              "read_only_smoke": "passed",
+              "commercial_pipeline_v2": "unchanged_off",
+          }
+          with open('/tmp/production-release-evidence.json', 'w', encoding='utf-8') as output:
+              json.dump(evidence, output, sort_keys=True)
+          PY
+      - name: Retain sanitized release evidence briefly
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: production-release-evidence-${{ github.run_id }}
+          path: /tmp/production-release-evidence.json
+          retention-days: 7
+          if-no-files-found: error

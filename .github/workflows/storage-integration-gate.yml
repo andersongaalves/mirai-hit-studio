@@ -147,6 +147,8 @@ jobs:
                     test_storage_migration.py \
                     test_storage_preflight.py \
                     test_storage_environment_guard.py \
+                    test_production_release_guard.py \
+                    test_production_release_workflow.py \
                     test_storage_evidence.py \
                     test_storage_provider_smoke.py \
                     test_portfolio_mix_comparison.py; do
@@ -253,6 +255,7 @@ jobs:
                     backend/scripts/migrate_production_files.py \
                     backend/scripts/storage_preflight.py \
                     backend/scripts/storage_environment_guard.py \
+                    backend/scripts/production_release_guard.py \
                     backend/scripts/storage_evidence.py \
                     backend/scripts/storage_provider_smoke.py \
                     backend/tests/test_storage_core.py \
@@ -263,6 +266,8 @@ jobs:
                     backend/tests/test_storage_migration.py \
                     backend/tests/test_storage_preflight.py \
                     backend/tests/test_storage_environment_guard.py \
+                    backend/tests/test_production_release_guard.py \
+                    backend/tests/test_production_release_workflow.py \
                     backend/tests/test_storage_evidence.py \
                     backend/tests/test_storage_provider_smoke.py
                   node --check frontend/js/admin/projetos.js

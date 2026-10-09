@@ -96,11 +96,13 @@ authorization reference is traceability only. The verifier requires a manual
 dispatch from `main`, exact SHA, allowlisted workflow, complete evidence,
 unchanged configuration fingerprint, and Commercial V2 exactly off.
 
-These workflows are definitions only. The repository currently has only the
-unrelated `github-pages` Environment; `storage-rollout`, `render-production`,
-and `cloudflare-pages-production` do not exist. No provider secrets or
-protected reviewers were created or inspected. Neither workflow was run and
-no real provider evidence exists, so `--require-rollout-ready` must fail. The
+These workflows are definitions only. A read-only API audit on 2026-10-09
+confirmed that `storage-rollout`, `render-production`, and
+`cloudflare-pages-production` now exist, but all three are **unprotected**:
+administrator bypass is enabled, no protection rule/reviewer exists, and no
+`main`-only deployment branch policy is configured. They must not be treated
+as authorization gates. No provider secret value was read or changed. No real
+provider evidence exists, so `--require-rollout-ready` must fail. The
 CLI labels verified results `verified_from_evidence`, keeps
 `provider_connectivity_probed=false`, and never probes a provider itself.
 
@@ -113,13 +115,26 @@ object is gone. No smokes were executed in this phase.
 
 ### Actual publication mechanism and required integration
 
-The new `storage-publication-gate.yml` is a manually dispatched preflight, not
-a publisher and not a required branch-protection check. It has no Render or
-Cloudflare credentials and cannot block the external deploy systems. Existing
-production publication is external: Render auto-deploys from `main`, and
-Cloudflare Pages is connected to `main` (see `docs/PRODUCTION_INFRA_I4.md`).
-Therefore the integration is **not rollout-ready** until the CTRL approves
-and configures one of these controls:
+The `storage-publication-gate.yml` workflow remains a manually dispatched
+preflight, not a publisher and not a required branch-protection check. The new
+`production-release.yml` is the prepared central publisher. It validates the
+exact main SHA, exact successful integration/evidence runs, all three protected
+Environments, signed unexpired Storage evidence, effective provider identity,
+and that direct auto-deploy is disabled before a deploy API is called. Its
+`dry-run` mode never receives Render/Cloudflare credentials or calls their
+deployment APIs. Its `publish` path deploys the exact SHA to Render first,
+then the static `frontend` directory to the existing Pages project, performs a
+read-only smoke, and retains only sanitized release evidence.
+
+The publisher is **prepared code, not an operational gate**. Existing
+production publication is external. A read-only Cloudflare API audit confirmed
+that Pages project `mirai-hit-studio` uses GitHub `main`, has production
+deployments enabled, and currently serves main SHA
+`2d83c8047c76614264cee2d4804fbf13a6740fc7`. The Render account could not be
+queried because no Render MCP, CLI credentials, API token, or service ID was
+available in this environment; its current auto-deploy state therefore remains
+unverified rather than inferred from historical docs. The integration is
+**not rollout-ready** until the CTRL approves and configures these controls:
 
 1. Disable direct auto-deploy in both providers and publish only from a
    protected GitHub Actions deployment workflow that runs this exact command
@@ -134,22 +149,81 @@ that is not required by branch protection is advisory, not a deploy gate.
 Changing Render/Cloudflare settings or branch protection requires separate CTRL
 approval and was not performed here.
 
-The current manual workflow is not a mandatory publication gate and must not
-be treated as one.
+Neither manual workflow is a mandatory publication gate while provider-side
+auto-deploy remains enabled or unverified. A successful dry-run or fake-provider
+CI result must not be represented as a real deployment homologation.
+
+### Phase 3.8S infrastructure audit
+
+| Platform | Connected/readable | Automation prepared | Current blocker |
+|---|---|---|---|
+| GitHub | Repository admin identity confirmed; public REST state readable | protected Environments, exact-run validation, serialized release | three production Environments exist but are unprotected; branch protection and Actions permission endpoints were not readable with the available integration; no second reviewer was proven |
+| Render | No authenticated MCP/CLI/API session available | exact-commit deploy, status polling, health smoke and rollback procedure | service ID, effective branch/build/start/health/auto-deploy and rollback target require authenticated read-only audit |
+| Cloudflare Pages | Account/project/deploy history readable through official MCP/API | Wrangler direct upload of the exact authorized SHA and read-only smoke | production auto-deploy is enabled; protected transition and deploy token are not configured |
+
+The GitHub repository has no rulesets visible through the public endpoint. That
+does not prove unprotected `main`: the authenticated branch-protection endpoint
+was unavailable and must be checked before rollout. Existing GitHub-hosted
+Pages uses a separate `github-pages` Environment and is not accepted as a
+substitute for the three production Environments above.
+
+Required secret/variable placement is deliberately separated:
+
+- `storage-rollout`: provider variables/secrets already enumerated above and
+  `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY`; no deploy credential.
+- `render-production`: `RENDER_API_KEY` secret and `RENDER_SERVICE_ID` variable;
+  neither belongs in ordinary CI or Storage evidence jobs.
+- `cloudflare-pages-production`: `CLOUDFLARE_API_TOKEN` secret and
+  `CLOUDFLARE_ACCOUNT_ID` variable; token must be limited to the existing Pages
+  project/account operations needed by the publisher.
+
+No secret was generated, inspected, rotated, or stored by phase 3.8S.
 
 ### Required external setup before use
 
-1. Create `storage-rollout` with required CTRL reviewer(s), prevent-self-review,
-   administrator bypass disabled, and exactly the `main` deployment policy.
+1. Protect existing `storage-rollout` with required CTRL reviewer(s),
+   prevent-self-review, administrator bypass disabled, and exactly the `main`
+   deployment policy. Confirm another eligible reviewer first; do not create a
+   self-lockout when no second reviewer exists.
 2. Add least-privilege R2, Cloudinary, and Supabase values referenced by the
    issuer. Keep `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY` in this Environment only.
-3. Create `render-production` and `cloudflare-pages-production` with separate
-   protected reviewer rules and `main` only. The current preflight workflow
-   does not use their deployment credentials.
+3. Protect existing `render-production` and `cloudflare-pages-production` with
+   separate reviewer rules and `main` only, then store each provider credential
+   only in its matching Environment. The Storage jobs do not use deployment
+   credentials.
 4. Confirm rollback availability in both provider dashboards. Only after an
    approved replacement path is ready, disable external auto-deploy and make
    the verified gate a required check. Do not integrate Storage before this
    transition has been demonstrated.
+
+### Rollout and rollback procedure
+
+The transition is an ordered, separately authorized operation:
+
+1. Perform authenticated read-only audits of Render and Cloudflare and record
+   current deployment IDs/SHAs, settings, health, and rollback eligibility.
+2. Protect all Environments and prove the environment guard fails for bypass,
+   missing reviewers, self-review, and non-main deployment policy.
+3. Configure least-privilege secrets and run real provider smokes from the
+   protected evidence workflow for the exact main SHA.
+4. Run `production-release.yml` in `dry-run` mode and retain its sanitized
+   evidence. This is still not a deploy homologation.
+5. With separate CTRL authorization, disable direct Render and Cloudflare
+   production auto-deploy. Re-read both provider APIs and require the guard to
+   report disabled before publication credentials can be used.
+6. Prove a push to `main` does not publish. Only then run the protected
+   publisher with `release_mode=publish` for the exact approved SHA.
+7. If Render fails before becoming live, stop. If Pages fails after Render is
+   live, do not improvise another upload: preserve evidence and use the recorded
+   previous Render deployment plus the Pages rollback mechanism after explicit
+   operational authorization. Never downgrade the database or delete Storage
+   objects as an automatic rollback.
+
+Rollback disables further release runs, keeps Commercial V2 off, redeploys the
+last known-good application commits through each provider's official rollback
+mechanism, and preserves all new and legacy objects for reconciliation. A
+rollback cannot be claimed tested until both real provider paths are exercised
+with synthetic content under explicit approval.
 
 GitHub Environment protections are configured outside YAML. The read-only
 guard fails closed unless the API reports required reviewers, self-review
