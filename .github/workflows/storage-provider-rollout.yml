@@ -83,7 +83,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo '445cf90bfb2d43bac4907afac958817905e9c1b6971baf710a15ec978390c406  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
+          echo 'a53da7764dfed4ef950cb6faf76a07182d4162cb0f5c7452324ef6fd76ddd55e  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
           echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
           echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Assert release and provider configuration
@@ -151,7 +151,18 @@ jobs:
           PUBLIC_IMAGE_STORAGE_BACKEND: ${{ vars.PUBLIC_IMAGE_STORAGE_BACKEND }}
           PORTFOLIO_AUDIO_STORAGE_BACKEND: ${{ vars.PORTFOLIO_AUDIO_STORAGE_BACKEND }}
           PROPOSAL_DOCUMENT_STORAGE_BACKEND: ${{ vars.PROPOSAL_DOCUMENT_STORAGE_BACKEND || 'legacy' }}
-        run: python -m scripts.storage_provider_smoke --output /tmp/storage-smoke.json
+        run: >-
+          python -m scripts.storage_provider_smoke
+          --output /tmp/storage-smoke.json
+          --diagnostic-output /tmp/storage-smoke-diagnostic.json
+      - name: Publish sanitized smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storage-rollout-diagnostic-${{ github.run_id }}
+          path: /tmp/storage-smoke-diagnostic.json
+          retention-days: 1
+          if-no-files-found: warn
       - name: Recheck pinned signer and verifier immediately before secret access
         working-directory: backend
         shell: bash
