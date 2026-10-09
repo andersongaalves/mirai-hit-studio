@@ -164,7 +164,7 @@ async function staticResponse(route) {
         await page.locator("#proj_capa_remove").click();
         assert.equal(writes.at(-1).method, "DELETE");
         assert.equal(writes.at(-1).path, "/projetos/7/imagem");
-        assert.equal(await page.locator("#proj_capa_preview").isHidden(), true);
+        await page.locator("#proj_capa_preview").waitFor({ state: "hidden" });
         await page.evaluate(() => window.fecharModalProjeto());
 
         await page.waitForTimeout(50);
