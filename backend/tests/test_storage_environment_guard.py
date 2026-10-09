@@ -295,6 +295,125 @@ class StorageEnvironmentGuardTests(unittest.TestCase):
                 "protected",
             )
 
+    def test_valid_legacy_main_protection_is_accepted_without_ruleset_lookup(self):
+        protection = {
+            "required_pull_request_reviews": {"required_approving_review_count": 0},
+            "required_status_checks": {
+                "strict": True,
+                "contexts": ["storage-integration"],
+            },
+            "enforce_admins": {"enabled": True},
+            "allow_force_pushes": {"enabled": False},
+            "allow_deletions": {"enabled": False},
+        }
+        with patch(
+            "scripts.storage_environment_guard._get_json",
+            return_value=protection,
+        ) as get_json:
+            self.assertEqual(
+                check_main_protection(
+                    "https://api.github.com",
+                    "andersongaalves/mirai-hit-studio",
+                    "test-token",
+                    required_check="storage-integration",
+                ),
+                "protected",
+            )
+        get_json.assert_called_once()
+
+    def test_insufficient_legacy_protection_accepts_valid_ruleset(self):
+        protection = {
+            "required_pull_request_reviews": {"required_approving_review_count": 0},
+            "required_status_checks": {
+                "strict": True,
+                "contexts": ["storage-integration"],
+            },
+            "enforce_admins": {"enabled": False},
+            "allow_force_pushes": {"enabled": False},
+            "allow_deletions": {"enabled": False},
+        }
+        with patch(
+            "scripts.storage_environment_guard._get_json",
+            side_effect=[
+                protection,
+                [{"id": 24800367, "name": "mirai-main-protection"}],
+                protected_main_ruleset(),
+            ],
+        ) as get_json:
+            result = check_main_protection(
+                "https://api.github.com",
+                "andersongaalves/mirai-hit-studio",
+                "test-token",
+                required_check="storage-integration",
+            )
+        self.assertEqual(result, "protected")
+        self.assertEqual(get_json.call_count, 3)
+
+    def test_insufficient_legacy_protection_fails_for_invalid_rulesets(self):
+        protection = {"enforce_admins": {"enabled": False}}
+
+        def disable(ruleset):
+            ruleset["enforcement"] = "disabled"
+
+        def add_bypass(ruleset):
+            ruleset["bypass_actors"] = [{"actor_type": "RepositoryRole"}]
+
+        def remove_required_check(ruleset):
+            ruleset["rules"] = [
+                rule
+                for rule in ruleset["rules"]
+                if rule["type"] != "required_status_checks"
+            ]
+
+        def widen_scope(ruleset):
+            ruleset["conditions"]["ref_name"]["include"] = ["~ALL"]
+
+        cases = (
+            (disable, "main_protection_disabled"),
+            (add_bypass, "administrator_rules_not_enforced"),
+            (remove_required_check, "required_ci_missing"),
+            (widen_scope, "main_ruleset_scope_not_main_only"),
+        )
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                ruleset = protected_main_ruleset()
+                mutate(ruleset)
+                with patch(
+                    "scripts.storage_environment_guard._get_json",
+                    side_effect=[
+                        protection,
+                        [{"id": 24800367, "name": "mirai-main-protection"}],
+                        ruleset,
+                    ],
+                ):
+                    self.assertEqual(
+                        check_main_protection(
+                            "https://api.github.com",
+                            "andersongaalves/mirai-hit-studio",
+                            "test-token",
+                            required_check="storage-integration",
+                        ),
+                        expected,
+                    )
+
+    def test_api_communication_failure_fails_closed(self):
+        from urllib.error import URLError
+
+        with patch(
+            "scripts.storage_environment_guard._get_json",
+            side_effect=URLError("network detail"),
+        ) as get_json:
+            self.assertEqual(
+                check_main_protection(
+                    "https://api.github.com",
+                    "andersongaalves/mirai-hit-studio",
+                    "test-token",
+                    required_check="storage-integration",
+                ),
+                "github_api_unavailable",
+            )
+        get_json.assert_called_once()
+
     def test_missing_environment_fails_closed_without_creating_it(self):
         from urllib.error import URLError
 

@@ -235,7 +235,8 @@ def check_main_protection(
     except (URLError, TimeoutError, OSError, ValueError, TypeError):
         return "github_api_unavailable"
     else:
-        return main_protection_status(protection, required_check=required_check)
+        if main_protection_status(protection, required_check=required_check) == "protected":
+            return "protected"
 
     try:
         rulesets = _get_json(
