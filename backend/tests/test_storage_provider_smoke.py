@@ -8,17 +8,18 @@ from unittest.mock import patch
 
 import httpx
 
-from services.documento_storage import SupabaseDocumentoStorage
-from services.producao_arquivo_storage import SupabaseProducaoArquivoStorage
 from scripts.storage_provider_smoke import (
-    _SmokeFailure,
     _PNG,
+    _cleanup_legacy_object,
     _error_category,
     _legacy_smoke,
+    _SmokeFailure,
     diagnostic_report,
     main,
     run_smokes,
 )
+from services.documento_storage import SupabaseDocumentoStorage
+from services.producao_arquivo_storage import SupabaseProducaoArquivoStorage
 
 
 class _Response:
@@ -339,6 +340,151 @@ class StorageProviderSmokeTests(unittest.TestCase):
         self.assertEqual(
             raised.exception.cleanup["production_file"]["absence"], "confirmed"
         )
+
+    def test_legacy_cleanup_bypasses_warm_cache_without_hiding_retained_objects(self):
+        from scripts.storage_provider_smoke import _PDF
+
+        for retained_bucket in (None, "proposal-bucket", "production-bucket"):
+            with self.subTest(retained_bucket=retained_bucket):
+                requests = []
+                objects = set()
+                cached_downloads = set()
+                uploaded_keys = {}
+
+                def handler(
+                    request, *, requests=requests, objects=objects,
+                    cached_downloads=cached_downloads, retained_bucket=retained_bucket,
+                    uploaded_keys=uploaded_keys,
+                ):
+                    path = request.url.path
+                    requests.append(request)
+                    if "/bucket/" in path:
+                        self.assertEqual(request.method, "GET")
+                        return httpx.Response(200, json={"public": False})
+                    bucket = (
+                        "proposal-bucket" if "proposal-bucket" in path
+                        else "production-bucket"
+                    )
+                    if request.method == "POST":
+                        self.assertEqual(request.headers["x-upsert"], "false")
+                        uploaded_keys[bucket] = path.split(bucket + "/", 1)[1]
+                        objects.add(bucket)
+                        return httpx.Response(201)
+                    if request.method == "DELETE":
+                        keys = json.loads(request.content)["prefixes"]
+                        self.assertEqual(keys, [uploaded_keys[bucket]])
+                        if bucket != retained_bucket:
+                            objects.discard(bucket)
+                        return httpx.Response(200)
+                    self.assertEqual(request.method, "GET")
+                    self.assertEqual(path, (
+                        f"/storage/v1/object/authenticated/{bucket}/{uploaded_keys[bucket]}"
+                    ))
+                    # Download URLs can keep returning 200 after origin deletion.
+                    # Only the documented cacheNonce bypass reads origin state.
+                    if request.url.params.get("cacheNonce"):
+                        self.assertEqual(request.headers["cache-control"], "no-cache")
+                        self.assertEqual(request.headers["authorization"], "Bearer test-only")
+                        if bucket in objects:
+                            return httpx.Response(200, content=_PDF)
+                        return httpx.Response(400, json={"code": "NoSuchKey"})
+                    if bucket in objects:
+                        cached_downloads.add(path)
+                    if path in cached_downloads:
+                        return httpx.Response(200, content=_PDF)
+                    return httpx.Response(404)
+
+                transport = httpx.MockTransport(handler)
+                proposal = SupabaseDocumentoStorage(
+                    base_url="https://storage.invalid", service_key="test-only",
+                    bucket="proposal-bucket", transport=transport,
+                )
+                production = SupabaseProducaoArquivoStorage(
+                    base_url="https://storage.invalid", service_key="test-only",
+                    bucket="production-bucket", transport=transport,
+                )
+                with (
+                    patch("scripts.storage_provider_smoke.SupabaseDocumentoStorage", return_value=proposal),
+                    patch("scripts.storage_provider_smoke.SupabaseProducaoArquivoStorage", return_value=production),
+                ):
+                    if retained_bucket is None:
+                        result = _legacy_smoke("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+                        cleanup = result["cleanup"]
+                    else:
+                        with self.assertRaises(_SmokeFailure) as raised:
+                            _legacy_smoke("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+                        self.assertEqual(raised.exception.failure, {
+                            "stage": "legacy_cleanup", "category": "cleanup_failed",
+                        })
+                        cleanup = raised.exception.cleanup
+
+                for name, bucket in (
+                    ("proposal_pdf", "proposal-bucket"),
+                    ("production_file", "production-bucket"),
+                ):
+                    self.assertEqual(cleanup[name]["delete"], "deleted")
+                    self.assertEqual(cleanup[name]["absence"], (
+                        "not_confirmed" if bucket == retained_bucket else "confirmed"
+                    ))
+                    self.assertEqual(cleanup[name]["verify_http_status"], (
+                        200 if bucket == retained_bucket else 400
+                    ))
+                    self.assertEqual(cleanup[name]["verify_method"], "authenticated_get_cache_bypass")
+                verifications = [r for r in requests if r.url.params.get("cacheNonce")]
+                self.assertEqual(len(verifications), 2)
+                self.assertEqual(len({r.url.params["cacheNonce"] for r in verifications}), 2)
+                self.assertEqual(sum(r.method == "POST" for r in requests), 2)
+                self.assertEqual(sum(r.method == "DELETE" for r in requests), 2)
+                self.assertEqual(len(requests), 10)
+                sanitized = str(cleanup)
+                for request in verifications:
+                    self.assertNotIn(request.url.params["cacheNonce"], sanitized)
+                    self.assertNotIn(str(request.url), sanitized)
+                self.assertNotIn("test-only", sanitized)
+
+    def test_cleanup_verification_rejects_auth_errors_redirects_and_server_errors(self):
+        for status, payload in (
+            (200, None), (302, None), (400, {"code": "AccessDenied"}),
+            (401, None), (403, None), (500, None),
+        ):
+            with self.subTest(status=status):
+                requests = []
+
+                def handler(request, *, requests=requests, status=status, payload=payload):
+                    requests.append(request)
+                    if request.method == "DELETE":
+                        return httpx.Response(200)
+                    return httpx.Response(status, json=payload)
+
+                storage = SupabaseDocumentoStorage(
+                    base_url="https://storage.invalid", service_key="test-only",
+                    bucket="proposal-bucket", transport=httpx.MockTransport(handler),
+                )
+                cleanup = _cleanup_legacy_object(storage, "synthetic/key.pdf", attempted=True)
+                self.assertEqual(cleanup["absence"], "not_confirmed")
+                self.assertEqual(cleanup["verify_http_status"], status)
+                self.assertEqual([r.method for r in requests], ["DELETE", "GET"])
+
+    def test_cleanup_without_upload_attempt_only_verifies_exact_key_without_cache(self):
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            return httpx.Response(404)
+
+        storage = SupabaseDocumentoStorage(
+            base_url="https://storage.invalid", service_key="test-only",
+            bucket="proposal-bucket", transport=httpx.MockTransport(handler),
+        )
+        cleanup = _cleanup_legacy_object(storage, "synthetic/key.pdf", attempted=False)
+        self.assertEqual(cleanup["delete"], "not_attempted")
+        self.assertEqual(cleanup["absence"], "confirmed")
+        self.assertEqual(len(requests), 1)
+        request = requests[0]
+        self.assertEqual(request.method, "GET")
+        self.assertEqual(request.url.path, "/storage/v1/object/authenticated/proposal-bucket/synthetic/key.pdf")
+        self.assertEqual(set(request.url.params.keys()), {"cacheNonce"})
+        self.assertEqual(request.headers["cache-control"], "no-cache")
 
     def test_legacy_only_never_invokes_other_providers_or_attests_full_rollout(self):
         with (
