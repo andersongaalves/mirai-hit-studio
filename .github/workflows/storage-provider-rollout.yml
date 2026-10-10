@@ -93,7 +93,7 @@ jobs:
           set -euo pipefail
           echo '10903c832ebbb7d52dd94427af946e92d89977440084db092fb24c1c79c50f47  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
           echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
-          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+          echo '0df4129fc8cd0a2c954c43b407c79c496c5c795bd8b9eaeb4647837b243d7a06  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Assert release and provider configuration
         shell: bash
         env:
@@ -199,7 +199,7 @@ jobs:
         run: |
           set -euo pipefail
           echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
-          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+          echo '0df4129fc8cd0a2c954c43b407c79c496c5c795bd8b9eaeb4647837b243d7a06  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Sign only a complete successful smoke report
         if: inputs.smoke_scope == 'all'
         working-directory: backend

@@ -160,6 +160,14 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         digest = hashlib.sha256(self.guard_path.read_bytes()).hexdigest()
         self.assertIn(f"RELEASE_GUARD_SHA256: {digest}", self.source)
 
+    def test_all_preflight_source_pins_match_the_reviewed_script(self):
+        script = Path(__file__).resolve().parents[1] / "scripts/storage_preflight.py"
+        digest = hashlib.sha256(script.read_bytes()).hexdigest()
+        self.assertIn(f"STORAGE_PREFLIGHT_SHA256: {digest}", self.source)
+        for source in (self.issuer_source, self.preflight_source):
+            pins = re.findall(r"([a-f0-9]{64})  scripts/storage_preflight\.py", source)
+            self.assertEqual(pins, [digest, digest])
+
 
 if __name__ == "__main__":
     unittest.main()

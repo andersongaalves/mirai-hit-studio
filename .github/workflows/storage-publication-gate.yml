@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+          echo '0df4129fc8cd0a2c954c43b407c79c496c5c795bd8b9eaeb4647837b243d7a06  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Create short-lived Ruleset inspection token
         id: ruleset-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
@@ -133,7 +133,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo '1d11ea3a05cac04aff727ec41509a66310991f60955214ff0eb609055f13269f  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+          echo '0df4129fc8cd0a2c954c43b407c79c496c5c795bd8b9eaeb4647837b243d7a06  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Verify signed provider evidence, expiry, target, and effective config
         working-directory: backend
         env:
