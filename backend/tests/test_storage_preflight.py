@@ -7,7 +7,7 @@ import unittest
 from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
 from io import StringIO
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 from scripts.storage_preflight import _configuration_fingerprint, build_report, main
 
@@ -41,6 +41,16 @@ class StoragePreflightTests(unittest.TestCase):
             "GITHUB_WORKFLOW_REF": "andersongaalves/mirai-hit-studio/.github/workflows/storage-provider-rollout.yml@refs/heads/main",
             "STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY": self.EVIDENCE_KEY,
         }
+        return env
+
+    def production_release_environment(self):
+        env = self.valid_environment()
+        env.update({
+            "GITHUB_WORKFLOW_REF": f"{env['GITHUB_REPOSITORY']}/.github/workflows/production-release.yml@refs/heads/main",
+            "GITHUB_RUN_ID": "987654321",
+            "STORAGE_PREFLIGHT_EXPECTED_ISSUER_RUN_ID": "123456789",
+            "STORAGE_PREFLIGHT_EVIDENCE_PATH": "/tmp/storage-rollout-evidence/storage-evidence.json",
+        })
         return env
 
     def valid_evidence(self, now=None):
@@ -129,6 +139,74 @@ class StoragePreflightTests(unittest.TestCase):
         report = build_report(env, evidence)
         self.assertFalse(report["rollout_ready"])
         self.assertEqual(report["evidence_status"], "target_sha_mismatch")
+
+    def test_production_release_verifies_exact_rollout_issuer_evidence(self):
+        env = self.production_release_environment()
+        evidence = self.valid_evidence()
+        report = build_report(env, evidence)
+        self.assertTrue(report["rollout_ready"])
+        self.assertEqual(report["evidence_status"], "verified")
+        self.assertNotEqual(env["GITHUB_RUN_ID"], evidence["workflow_run"]["id"])
+
+        output = StringIO()
+        evidence_file = mock_open(read_data=json.dumps(evidence))
+        with patch.dict("os.environ", env, clear=True), patch(
+            "builtins.open", evidence_file
+        ), redirect_stdout(output):
+            self.assertEqual(main(["--require-rollout-ready"]), 0)
+        evidence_file.assert_called_once_with(
+            env["STORAGE_PREFLIGHT_EVIDENCE_PATH"], encoding="utf-8"
+        )
+        cli_report = json.loads(output.getvalue())
+        self.assertTrue(cli_report["provider_connectivity_evidence_verified"])
+        self.assertFalse(cli_report["provider_connectivity_probed"])
+        self.assertEqual(cli_report["commercial_pipeline_v2"], "off")
+
+    def test_production_release_rejects_untrusted_verification_contexts(self):
+        env = self.production_release_environment()
+        evidence = self.valid_evidence()
+        workflow = f"{env['GITHUB_REPOSITORY']}/.github/workflows/production-release.yml"
+        for name, value in (
+            ("GITHUB_REF", "refs/heads/feature/untrusted"),
+            ("GITHUB_REF", "refs/pull/1/merge"),
+            ("GITHUB_EVENT_NAME", "pull_request"),
+            ("GITHUB_EVENT_NAME", "pull_request_target"),
+            ("GITHUB_EVENT_NAME", "push"),
+            ("GITHUB_WORKFLOW_REF", f"{workflow}@refs/heads/feature/untrusted"),
+            ("GITHUB_WORKFLOW_REF", f"{workflow}@refs/tags/v1"),
+            ("GITHUB_WORKFLOW_REF", f"{env['GITHUB_REPOSITORY']}/.github/workflows/unknown.yml@refs/heads/main"),
+            ("GITHUB_WORKFLOW_REF", "attacker/repo/.github/workflows/production-release.yml@refs/heads/main"),
+        ):
+            with self.subTest(name=name, value=value):
+                report = build_report({**env, name: value}, evidence)
+                self.assertFalse(report["rollout_ready"])
+                self.assertEqual(report["evidence_status"], "untrusted_verification_context")
+
+    def test_production_release_preserves_signed_evidence_boundaries(self):
+        env = self.production_release_environment()
+        evidence = self.valid_evidence()
+        tampered = self.valid_evidence()
+        tampered["components"]["cloudinary"]["smoke"] = "failed"
+        release_issuer = self.valid_evidence()
+        release_issuer["workflow_run"]["workflow_ref"] = env["GITHUB_WORKFLOW_REF"]
+        release_issuer.pop("signature")
+        canonical = json.dumps(release_issuer, sort_keys=True, separators=(",", ":")).encode()
+        release_issuer["signature"] = hmac.new(
+            self.EVIDENCE_KEY.encode(), canonical, hashlib.sha256
+        ).hexdigest()
+        for changes, candidate, expected in (
+            ({}, tampered, "signature_invalid"),
+            ({"STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY": ""}, evidence, "signature_missing"),
+            ({"GITHUB_SHA": "b" * 40}, evidence, "target_sha_mismatch"),
+            ({"R2_FINAL_BUCKET": "different-bucket"}, evidence, "configuration_mismatch"),
+            ({"STORAGE_PREFLIGHT_EXPECTED_ISSUER_RUN_ID": "111111111"}, evidence, "workflow_run_invalid"),
+            ({}, release_issuer, "workflow_run_invalid"),
+            ({}, self.valid_evidence(datetime.now(timezone.utc) - timedelta(days=1)), "evidence_expired_or_invalid"),
+        ):
+            with self.subTest(expected=expected, changes=changes):
+                report = build_report({**env, **changes}, candidate)
+                self.assertFalse(report["rollout_ready"])
+                self.assertEqual(report["evidence_status"], expected)
 
     def test_configuration_change_invalidates_signed_evidence(self):
         env = self.valid_environment()

@@ -130,6 +130,7 @@ def _verify_evidence(env, evidence, now=None):
     allowed_verifiers = {
         f"{repository}/.github/workflows/storage-provider-rollout.yml@refs/heads/main",
         f"{repository}/.github/workflows/storage-publication-gate.yml@refs/heads/main",
+        f"{repository}/.github/workflows/production-release.yml@refs/heads/main",
     }
     if (
         env.get("GITHUB_REF") != "refs/heads/main"
