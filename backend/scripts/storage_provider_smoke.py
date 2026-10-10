@@ -152,7 +152,11 @@ def _legacy_step(
 
 
 def _cleanup_legacy_object(storage, key: str, *, attempted: bool) -> dict:
-    result = {"delete": "not_attempted", "absence": "not_verified"}
+    result = {
+        "delete": "not_attempted",
+        "absence": "not_verified",
+        "verify_method": "authenticated_get_cache_bypass",
+    }
     bucket_path = "object/" + quote(storage.bucket, safe="")
 
     if attempted:
@@ -176,12 +180,16 @@ def _cleanup_legacy_object(storage, key: str, *, attempted: bool) -> dict:
                 result["delete_http_status"] = status
 
     try:
+        # The preceding download may still be cached after DELETE. Supabase's
+        # cacheNonce bypass fetches origin state without waiting for CDN expiry.
         response = storage._request(
             "GET",
             "object/authenticated/"
             + quote(storage.bucket, safe="")
             + "/"
             + quote(key, safe="/"),
+            params={"cacheNonce": uuid4().hex},
+            headers={"Cache-Control": "no-cache"},
         )
         result["absence"] = (
             "confirmed" if _object_missing(response) else "not_confirmed"
