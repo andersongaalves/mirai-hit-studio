@@ -187,7 +187,8 @@ function renderPix(pix, status, amount) {
     if (validationError) diagnostic("pix_validation", validationError);
     if (expired) diagnostic("pix_lifecycle", "expired");
     const image = $("pix-qr");
-    const base64 = validCode ? pix.qr_code_base64?.replace(/\s/g, "") : "";
+    const base64 = validCode && typeof pix.qr_code_base64 === "string"
+        ? pix.qr_code_base64.replace(/\s/g, "") : "";
     const mime = pixImageMime(base64);
     if (validCode && base64 && !mime) diagnostic("pix_qr_image", "invalid_image_data");
     image.src = mime ? `data:${mime};base64,${base64}` : "";
