@@ -29,7 +29,7 @@ MERCADO_PAGO_WEBHOOK_SECRET=
 MERCADO_PAGO_TIMEOUT_SECONDS=10
 ```
 
-O Access Token e privado e usado somente pelo backend. O segredo de webhook e uma credencial separada, obtida na configuracao de notificacoes do Mercado Pago. A Public Key fica configuravel para a tokenizacao frontend da F3.4, mas ainda nao e exposta por endpoint. A aplicacao inicia sem essas variaveis; operacoes do gateway e o webhook retornam indisponibilidade controlada enquanto suas credenciais estiverem ausentes.
+O Access Token e privado e usado somente pelo backend. O segredo de webhook e uma credencial separada, obtida na configuracao de notificacoes do Mercado Pago. `GET /checkout/config` expõe apenas a Public Key necessária à tokenização do frontend; Access Token e segredo de webhook nunca são enviados ao navegador. A aplicação inicia sem essas variáveis; operações do gateway e o webhook retornam indisponibilidade controlada enquanto suas credenciais estiverem ausentes.
 
 ## Fluxo
 
@@ -43,7 +43,7 @@ O navegador nunca define o valor autoritativo. Uma cobranca parcialmente paga na
 
 ## Pix e cartao
 
-Pix retorna transitoriamente codigo copia-e-cola, QR base64 e `ticket_url` no DTO normalizado. Esses dados nao sao persistidos nem registrados em log.
+Pix retorna transitoriamente codigo copia-e-cola, QR base64 e `ticket_url` no DTO normalizado. Esses dados nao sao persistidos nem registrados em log. O frontend valida formato EMV e CRC do copia-e-cola, compara o valor EMV quando informado com o valor da tentativa e não apresenta código em estado terminal ou após a expiração. A imagem base64 usa o MIME detectado pela assinatura de bytes. Ambos os campos são preservados sem reformatar o payload do provider.
 
 Cartao aceita somente token temporario, identificador do meio, tipo e parcelas. PAN, CVV e validade bruta nao fazem parte da API interna. O token e enviado ao provider e descartado, sem persistencia ou log.
 

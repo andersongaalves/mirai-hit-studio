@@ -1,6 +1,7 @@
 import { API_URL } from "./config.js";
 import { initAnalytics, track, trackOnce } from "./analytics.js";
 import { AUTH_CONTEXTS, createAuthContext } from "./admin/auth.js";
+import { pixImageMime, validatePixPayload } from "./pix.js";
 
 const $ = id => document.getElementById(id);
 const TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -12,6 +13,7 @@ const state = {
     method: "pix",
     busy: false,
     cardController: null,
+    cardRenderId: 0,
     polling: null,
     pollCount: 0,
 };
@@ -168,29 +170,49 @@ function renderPayment(result) {
     } else {
         message.textContent = "Pagamento em processamento. A confirmação será atualizada automaticamente.";
     }
-    renderPix(result.pix);
+    renderPix(result.pix, result.status, result.valor);
     renderChallenge(result.challenge_url);
     if (["pending", "action_required"].includes(result.status)) startPolling();
     if (result.status === "approved") refreshSummary();
 }
 
-function renderPix(pix) {
+function renderPix(pix, status, amount) {
     setHidden("pix-result", !pix);
     if (!pix) return;
+    const validationError = validatePixPayload(pix.qr_code, amount);
+    const expiresAt = pix.expiration_time ? new Date(pix.expiration_time) : null;
+    const expired = expiresAt && Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= Date.now();
+    const payable = ["pending", "action_required"].includes(status) && !expired;
+    const validCode = payable && !validationError;
+    if (validationError) diagnostic("pix_validation", validationError);
+    if (expired) diagnostic("pix_lifecycle", "expired");
     const image = $("pix-qr");
-    const base64 = typeof pix.qr_code_base64 === "string" && /^[A-Za-z0-9+/=\r\n]+$/.test(pix.qr_code_base64)
-        ? pix.qr_code_base64.replace(/\s/g, "") : "";
-    image.src = base64 ? `data:image/png;base64,${base64}` : "";
-    image.classList.toggle("hidden", !base64);
-    $("pix-code").value = pix.qr_code || "";
-    setHidden("pix-code", !pix.qr_code);
-    setHidden("copy-pix", !pix.qr_code);
-    const ticket = safeHttps(pix.ticket_url);
+    const base64 = validCode ? pix.qr_code_base64?.replace(/\s/g, "") : "";
+    const mime = pixImageMime(base64);
+    if (validCode && base64 && !mime) diagnostic("pix_qr_image", "invalid_image_data");
+    image.src = mime ? `data:${mime};base64,${base64}` : "";
+    image.classList.toggle("hidden", !mime);
+    $("pix-code").value = validCode ? pix.qr_code : "";
+    setHidden("pix-code", !validCode);
+    setHidden("copy-pix", !validCode);
+    const ticket = payable ? safeHttps(pix.ticket_url) : "";
     $("pix-ticket").href = ticket;
     setHidden("pix-ticket", !ticket);
-    const expiration = pix.expiration_time ? new Date(pix.expiration_time) : null;
-    $("pix-expiration").textContent = expiration && Number.isFinite(expiration.getTime())
-        ? `Válido até ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(expiration)} (horário local).` : "";
+    $("pix-expiration").textContent = expiresAt && Number.isFinite(expiresAt.getTime())
+        ? `Válido até ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(expiresAt)} (horário local).` : "";
+    const validationMessage = $("pix-validation-message");
+    if (expired) {
+        validationMessage.textContent = "Este Pix expirou. Não pague nem tente gerar outra cobrança; consulte o suporte para verificar o estado do pagamento.";
+    } else if (!payable && status !== "approved") {
+        validationMessage.textContent = "Esta tentativa não está mais disponível para pagamento. Consulte o estado atualizado antes de tentar novamente.";
+    } else if (!validCode && status !== "approved") {
+        validationMessage.textContent = "O provedor retornou um código Pix inválido. Não copie nem pague este código; a tentativa foi preservada para verificação.";
+    } else if (!mime && validCode) {
+        validationMessage.textContent = "A imagem do QR Code não pôde ser validada. Use o código Pix conferido ou o link do Mercado Pago.";
+    } else {
+        validationMessage.textContent = "";
+    }
+    setHidden("pix-validation-message", !validationMessage.textContent);
 }
 
 function isMercadoPagoUrl(value) {
@@ -233,6 +255,10 @@ async function loadMercadoPago() {
     await new Promise((resolve, reject) => {
         const existing = document.querySelector("script[data-mercado-pago-sdk]");
         if (existing) {
+            if (existing.dataset.loaded === "true") {
+                reject(new Error("sdk_global_missing"));
+                return;
+            }
             existing.addEventListener("load", resolve, { once: true });
             existing.addEventListener("error", reject, { once: true });
             return;
@@ -240,13 +266,19 @@ async function loadMercadoPago() {
         const script = document.createElement("script");
         script.src = "https://sdk.mercadopago.com/js/v2";
         script.dataset.mercadoPagoSdk = "true";
-        script.addEventListener("load", resolve, { once: true });
+        script.addEventListener("load", () => {
+            script.dataset.loaded = "true";
+            resolve();
+        }, { once: true });
         script.addEventListener("error", reject, { once: true });
         document.head.appendChild(script);
     });
+    if (!window.MercadoPago) throw new Error("sdk_global_missing");
 }
 
 async function renderCard() {
+    const renderId = ++state.cardRenderId;
+    let stage = "brick_unmount";
     const error = $("card-error");
     error.textContent = "";
     error.classList.add("hidden");
@@ -254,33 +286,82 @@ async function renderCard() {
     try {
         await state.cardController?.unmount?.();
         state.cardController = null;
-        await loadMercadoPago();
+        if (renderId !== state.cardRenderId) return;
+        stage = "config_request";
         const config = await api("checkout/config");
+        if (renderId !== state.cardRenderId) return;
+        stage = "public_key_validation";
+        const publicKey = config?.mercado_pago_public_key;
+        if (typeof publicKey !== "string" || !publicKey.trim() || publicKey.trim().length > 200 || /\s/.test(publicKey)) {
+            throw new Error("public_key_missing_or_invalid");
+        }
+        stage = "sdk_load";
+        await loadMercadoPago();
+        if (renderId !== state.cardRenderId) return;
         const current = state.summary.opcoes.find(option => option.tipo === state.option);
-        if (!current) throw new Error("Opção de pagamento indisponível.");
-        const mp = new window.MercadoPago(config.mercado_pago_public_key, { locale: "pt-BR" });
-        state.cardController = await mp.bricks().create("cardPayment", "card-payment-brick", {
-            initialization: { amount: Number(current.valor) },
+        const amount = Number(current?.valor);
+        if (!Number.isFinite(amount) || amount <= 0) throw new Error("invalid_initialization_amount");
+        stage = "brick_init";
+        const mp = new window.MercadoPago(publicKey.trim(), { locale: "pt-BR" });
+        const controller = await mp.bricks().create("cardPayment", "card-payment-brick", {
+            initialization: { amount },
             callbacks: {
-                onReady: () => $("card-loading").classList.add("hidden"),
-                onError: () => {
-                    error.textContent = "Não foi possível carregar o formulário do cartão.";
+                onReady: () => {
+                    if (renderId !== state.cardRenderId) return;
+                    $("card-loading").classList.add("hidden");
+                },
+                onError: brickError => {
+                    if (renderId !== state.cardRenderId) return;
+                    const cause = typeof brickError?.cause === "string" && /^[a-z0-9_]{1,64}$/i.test(brickError.cause)
+                        ? brickError.cause : "unknown_brick_error";
+                    diagnostic("brick_callback", cause);
+                    error.textContent = cause === "amount_is_not_number" || cause === "missing_amount_property"
+                        ? "O valor do cartão está inválido. Atualize o checkout ou use Pix."
+                        : "O formulário seguro do cartão não pôde ser inicializado. O Pix continua disponível.";
                     error.classList.remove("hidden");
+                    $("card-loading").classList.add("hidden");
                 },
                 onSubmit: (formData, additionalData) => processCard(formData, additionalData),
             },
         });
-    } catch {
+        if (renderId !== state.cardRenderId) await controller?.unmount?.();
+        else state.cardController = controller;
+    } catch (failure) {
+        if (renderId !== state.cardRenderId) return;
+        const status = Number.isInteger(failure?.status) ? failure.status : undefined;
+        const category = stage === "config_request" && status
+            ? `http_${status}`
+            : stage === "config_request" ? "network_failed"
+            : failure?.message === "public_key_missing_or_invalid" ? "public_key_missing_or_invalid"
+                : failure?.message === "invalid_initialization_amount" ? "invalid_initialization_amount"
+                    : stage === "sdk_load" ? "sdk_load_failed" : "initialization_failed";
+        diagnostic(stage, category, status);
         $("card-loading").classList.add("hidden");
-        error.textContent = "Pagamento por cartão indisponível agora. O Pix continua disponível.";
+        error.textContent = category === "http_503" || category === "public_key_missing_or_invalid"
+            ? "O cartão está temporariamente indisponível por configuração. O Pix continua disponível."
+            : category === "sdk_load_failed"
+                ? "O formulário seguro do cartão não carregou. Verifique sua conexão ou use Pix."
+                : category === "invalid_initialization_amount"
+                    ? "O valor do cartão está inválido. Atualize o checkout ou use Pix."
+                    : "O formulário seguro do cartão não pôde ser inicializado. O Pix continua disponível.";
         error.classList.remove("hidden");
     }
+}
+
+function diagnostic(stage, category, httpStatus) {
+    const safeStage = /^[a-z0-9_]{1,40}$/i.test(stage) ? stage : "unknown";
+    const safeCategory = /^[a-z0-9_]{1,64}$/i.test(category) ? category : "unknown";
+    const metadata = { stage: safeStage, category: safeCategory };
+    if (Number.isInteger(httpStatus) && httpStatus >= 100 && httpStatus <= 599) metadata.http_status = httpStatus;
+    console.warn("checkout_diagnostic", metadata);
 }
 
 async function processCard(formData, additionalData) {
     if (state.busy) throw new Error("payment_in_progress");
     state.busy = true;
     try {
+        const paymentTypeId = additionalData?.paymentTypeId;
+        if (!["credit_card", "debit_card"].includes(paymentTypeId)) throw new Error("unsupported_payment_type");
         const identification = formData.payer?.identification ?? {};
         const result = await api(`checkout/${state.token}/card`, {
             method: "POST",
@@ -289,7 +370,7 @@ async function processCard(formData, additionalData) {
                 payment_option: state.option,
                 card_token: formData.token,
                 payment_method_id: formData.payment_method_id,
-                payment_method_type: additionalData.paymentTypeId,
+                payment_method_type: paymentTypeId,
                 installments: Number(formData.installments),
                 payer_email: formData.payer?.email || null,
                 identification_type: identification.type || null,
@@ -299,6 +380,7 @@ async function processCard(formData, additionalData) {
         track("payment_attempt", { payment_method: "card", payment_option: state.option, outcome: result.status });
         renderPayment(result);
     } catch (error) {
+        diagnostic("payment_processing", error.status ? `http_${error.status}` : error.message === "unsupported_payment_type" ? "unsupported_payment_type" : "request_failed", error.status);
         $("card-error").textContent = error.status === 409
             ? error.message
             : "Não foi possível processar o cartão agora. Tente novamente.";
@@ -380,6 +462,7 @@ async function loadCheckout() {
 
 function selectMethod(method) {
     state.method = method;
+    if (method !== "card") state.cardRenderId += 1;
     for (const name of ["pix", "card"]) {
         const selected = name === method;
         $(`method-${name}`).classList.toggle("is-active", selected);

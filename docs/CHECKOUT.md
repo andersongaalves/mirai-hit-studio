@@ -31,13 +31,13 @@ Parcelamento comercial e `installments` do cartao sao conceitos distintos. O Mer
 
 ## Pix
 
-O backend cria uma Order com chave de idempotencia persistida antes da chamada externa. A resposta publica normaliza status, QR, copia-e-cola, expiracao e ticket URL. Gerar o Pix nao significa pagamento aprovado.
+O backend cria uma Order com chave de idempotencia persistida antes da chamada externa. A resposta publica normaliza status, QR, copia-e-cola, expiracao e ticket URL. Gerar o Pix nao significa pagamento aprovado. Antes de exibir o copia-e-cola, o navegador valida a estrutura EMV, o CRC e, quando presente, a igualdade do valor com o checkout. Codigo invalido, expirado ou de estado terminal nao pode ser copiado. O MIME da imagem QR e identificado pela assinatura binaria, sem presumir PNG/JPEG.
 
 Uma tentativa pendente equivalente e reutilizada. Se ela possui Order, a recuperacao consulta o provider uma vez e atualiza o banco por reconciliacao. Se ocorreu timeout antes de obter a Order, o checkout bloqueia nova tentativa automatica e aguarda webhook/conciliacao; nao cria duplicata ambigua.
 
 ## Cartao e 3DS
 
-O navegador usa MercadoPago.js v2 e Card Payment Brick, recomendados para Checkout API via Orders API. PAN, CVV e validade ficam nos campos seguros do Mercado Pago. A Mirai recebe apenas token temporario, meio de pagamento, tipo, parcelas e os dados minimos do pagador exigidos pelo provider.
+O navegador carrega MercadoPago.js v2 e cria o Card Payment Brick com `initialization.amount` numerico. Falhas de configuração HTTP, Public Key ausente, carregamento do SDK, inicialização e callbacks do Brick são diferenciadas por metadados técnicos seguros (etapa, categoria e HTTP status); erros brutos não são registrados. PAN, CVV e validade ficam nos campos seguros do Mercado Pago. A Mirai recebe apenas token temporario, meio de pagamento, tipo, parcelas e os dados minimos do pagador exigidos pelo provider.
 
 O token nao e persistido, logado, colocado em URL, storage ou analytics. Orders de cartao ativam 3DS com `on_fraud_risk` e `liability_shift=required`. Quando o provider retorna `action_required/pending_challenge`, a URL HTTPS validada do Mercado Pago e exibida em iframe. A conclusao do iframe apenas inicia nova consulta; webhook/reconciliacao continua sendo autoridade.
 
