@@ -199,10 +199,6 @@ jobs:
           for attempt in $(seq 1 24); do
             curl --fail-with-body --silent --show-error \
               --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio/deployments?env=production&per_page=100" \
-              > /tmp/pages-production-deployments.json
-            curl --fail-with-body --silent --show-error \
-              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio" \
               > /tmp/pages-project-current.json
             set +e
@@ -211,32 +207,27 @@ jobs:
           import os
           from pathlib import Path
 
-          with Path('/tmp/pages-production-deployments.json').open(encoding='utf-8') as source:
+          with Path('/tmp/pages-project-current.json').open(encoding='utf-8') as source:
               response = json.load(source)
           if not response.get('success'):
               raise SystemExit(2)
-          deployments = response.get('result') or []
-          match = next((item for item in deployments if
-              ((item.get('deployment_trigger') or {}).get('metadata') or {}).get('commit_hash') == os.environ['TARGET_SHA']
-              and item.get('environment') == 'production'
-              and not item.get('is_skipped')), None)
-          if match is None:
+          project = response['result']
+          canonical = project.get('canonical_deployment') or {}
+          metadata = (canonical.get('deployment_trigger') or {}).get('metadata') or {}
+          if metadata.get('commit_hash') != os.environ['TARGET_SHA']:
               raise SystemExit(3)
-          status = (match.get('latest_stage') or {}).get('status')
+          if canonical.get('environment') != 'production' or canonical.get('is_skipped'):
+              raise SystemExit(4)
+          status = (canonical.get('latest_stage') or {}).get('status')
           if status in {'failure', 'canceled', 'skipped'}:
               raise SystemExit(4)
           if status != 'success':
               raise SystemExit(3)
 
-          with Path('/tmp/pages-project-current.json').open(encoding='utf-8') as source:
-              project = json.load(source)['result']
-          canonical = project.get('canonical_deployment') or {}
           aliases = set(canonical.get('aliases') or [])
-          if canonical.get('id') != match.get('id'):
-              raise SystemExit(5)
           if 'https://miraihitstudio.com.br' not in aliases:
               raise SystemExit(6)
-          print(json.dumps({'id': match['id'], 'url': match['url']}))
+          print(json.dumps({'id': canonical['id'], 'url': canonical['url']}))
           PY
           )"
             result=$?
