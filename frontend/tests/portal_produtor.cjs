@@ -58,7 +58,7 @@ async function staticResponse(route) {
             body: await fs.readFile(file),
             contentType: {
                 '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html',
-                '.png': 'image/png', '.webp': 'image/webp', '.ttf': 'font/ttf',
+                '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ttf': 'font/ttf',
             }[path.extname(file)] || 'application/octet-stream',
         });
     } catch {
@@ -131,6 +131,14 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.producer-metric').count(), 5);
         assert.match(await page.locator('#producer-metrics').textContent(), /Produções ativas2/);
         assert.match(await page.locator('#producer-metrics').textContent(), /Em revisão1/);
+        await page.setViewportSize({ width: 390, height: 900 });
+        const producerMenu = page.locator('.integrado-portal__menu-toggle');
+        await producerMenu.click();
+        assert.equal(await producerMenu.getAttribute('aria-expanded'), 'true');
+        assert.equal(await page.locator('#producer-navigation').isVisible(), true);
+        await page.keyboard.press('Escape');
+        assert.equal(await producerMenu.getAttribute('aria-expanded'), 'false');
+        await page.setViewportSize({ width: 1440, height: 900 });
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });
@@ -173,7 +181,7 @@ async function staticResponse(route) {
             }
         }
 
-        await page.getByRole('link', { name: 'Recebimentos' }).click();
+        await page.getByRole('link', { name: 'Financeiro' }).click();
         await page.waitForURL('**/produtor/financeiro');
         assert.match(await page.locator('#producer-payouts').textContent(), /R\$\s*350,00/);
         assert.equal(await page.locator('#producer-payouts img, #producer-payouts script').count(), 0);

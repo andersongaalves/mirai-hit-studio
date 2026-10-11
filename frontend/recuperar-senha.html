@@ -8,29 +8,40 @@
         <title>Recuperar senha | Mirai Hit Studio</title>
         <link rel="stylesheet" href="/css/main.css" />
         <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="stylesheet" href="/css/integrado.css" />
         <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
     </head>
-    <body class="producer-body">
+    <body class="producer-body integrado-auth integrado-auth--recovery">
         <a class="skip-link" href="#recovery-content">Ir para o conteúdo</a>
+        <header class="integrado-auth__header">
+            <a class="integrado-auth__brand" href="/" aria-label="Mirai Hit Studio, página inicial"><img src="/assets/mirai-logo-header-symbol.svg" alt="" width="45" height="32" /><img src="/assets/mirai-logo-header-lettering.svg" alt="" width="110" height="14" /></a>
+            <a href="/acesso">Voltar</a>
+        </header>
         <main class="producer-entry" id="recovery-content">
+            <aside class="integrado-auth__intro" aria-label="Mirai Hit Studio">
+                <p class="producer-eyebrow">Área de acesso / Mirai Hit Studio</p>
+                <h2>Mais clareza para criar.</h2>
+                <p>Propostas, produções e entregas em um único lugar. Cada conta vê somente o que está autorizado.</p>
+                <div class="integrado-auth__logo" aria-hidden="true"><img src="/assets/mirai-logo-symbol.svg" alt="" width="154" height="108" /><img src="/assets/mirai-logo-lettering.svg" alt="" width="270" height="32" /><span>STUDIO</span></div>
+                <p>Seu espaço de trabalho, sem ruído.</p>
+            </aside>
             <section class="producer-login" aria-labelledby="recovery-title">
-                <a href="/" aria-label="Mirai Hit Studio, página inicial">
-                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
-                </a>
                 <div>
-                    <p class="producer-eyebrow">Portal do Cliente</p>
-                    <h1 id="recovery-title">Recupere sua senha</h1>
-                    <p class="producer-lead">Informe o e-mail verificado da sua conta de cliente.</p>
+                    <h1 id="recovery-title">Recupere seu acesso.</h1>
+                    <p class="producer-lead">Informe seu e-mail para receber as orientações de recuperação.</p>
                 </div>
                 <form id="recovery-form" class="producer-login__form">
                     <label for="recovery-email">E-mail</label>
-                    <input id="recovery-email" name="email" type="email" autocomplete="email" maxlength="150" required />
+                    <input id="recovery-email" name="email" type="email" autocomplete="email" placeholder="nome@example.com" maxlength="150" required />
                     <button class="btn-cta" type="submit">Enviar instruções</button>
                     <p id="recovery-message" class="producer-message hidden" role="status"></p>
                 </form>
-                <p class="producer-login__secondary"><a href="/acesso">Voltar para o acesso</a></p>
+                <div class="integrado-auth__info"><strong>Confira as orientações</strong><p>Se for possível recuperar o acesso com os dados informados, você receberá instruções por e-mail.</p></div>
+                <p class="integrado-auth__hint">Verifique também a pasta de spam. Use apenas o link mais recente recebido.</p>
+                <a class="integrado-auth__quiet-link" href="/acesso">Voltar ao acesso</a>
             </section>
         </main>
+        <footer class="integrado-auth__footer">Mirai Hit Studio · Privacidade</footer>
         <script type="module" src="/js/recuperar-senha.js"></script>
     </body>
 </html>

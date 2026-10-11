@@ -2,8 +2,8 @@ import { safeURL } from "./utils/security.js";
 import { $, clear } from "./utils/dom.js";
 
 const VERTICAL_LABELS = {
-    artists: "Artists",
-    creators: "Creators",
+    artists: "Artistas",
+    creators: "Criadores",
     media_games: "Media & Games",
 };
 
@@ -119,6 +119,14 @@ export function renderizarProjetos(projects, segmentLabels = {}) {
     published.forEach(project => container.append(createProjectCard(project, segmentLabels)));
 }
 
+export function renderizarErro(message) {
+    const container = $("render-portfolio");
+    if (!container) return;
+    const notice = element("p", "portfolio-empty", message);
+    notice.setAttribute("role", "alert");
+    container.replaceChildren(notice);
+}
+
 function createFilterGroup(label, kind, options, selected, onChange) {
     const group = element("div", "portfolio-filter-group");
     group.setAttribute("role", "group");
@@ -137,19 +145,36 @@ function createFilterGroup(label, kind, options, selected, onChange) {
     return group;
 }
 
-export function renderizarFiltros(projects, filters, onChange) {
+function createSelectFilter(label, kind, options, selected, onChange) {
+    const wrapper = element("label", "portfolio-filter-select");
+    const caption = element("span", "", label);
+    const select = element("select", "");
+    select.dataset.filterKind = kind;
+    options.forEach(option => {
+        const item = element("option", "", option.label);
+        item.value = option.value;
+        item.selected = selected === option.value;
+        select.append(item);
+    });
+    select.addEventListener("change", () => onChange(kind, select.value));
+    wrapper.append(caption, select);
+    return wrapper;
+}
+
+export function renderizarFiltros(projects, filters, onChange, segmentLabels = {}) {
     const container = $("filtros-portfolio");
     if (!container) return;
     const published = Array.isArray(projects) ? projects.filter(isPublicProject) : [];
-    const verticals = [...new Set(published.map(project => project.vertical))];
-    const categories = [...new Set(published.map(project => project.categoria).filter(Boolean))].sort();
+    const segments = [...new Set(published.flatMap(project => Array.isArray(project.segmentos_json) ? project.segmentos_json : []))].sort();
     clear(container);
 
-    if (verticals.length > 1) {
-        container.append(createFilterGroup("Vertical", "vertical", verticals.map(value => ({ value, label: VERTICAL_LABELS[value] })), filters.vertical, onChange));
-    }
-    if (categories.length > 1) {
-        container.append(createFilterGroup("Serviço", "categoria", categories.map(value => ({ value, label: value })), filters.categoria, onChange));
-    }
-    container.classList.toggle("hidden", !container.childElementCount);
+    container.append(createFilterGroup("Vertical", "vertical", Object.entries(VERTICAL_LABELS).map(([value, label]) => ({ value, label })), filters.vertical, onChange));
+    container.append(createSelectFilter("Segmento", "segment", [
+        { value: "", label: "Todos os segmentos" },
+        ...segments.map(value => ({ value, label: segmentLabels[value] || value.replaceAll("_", " ") })),
+    ], filters.segment, onChange));
+    container.append(createSelectFilter("Classificação", "case_type", [
+        { value: "", label: "Todos · Demo · Concept Project · Study" },
+        ...Object.entries(CASE_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+    ], filters.case_type, onChange));
 }

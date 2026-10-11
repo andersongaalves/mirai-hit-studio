@@ -214,7 +214,8 @@ async function staticResponse(route) {
         await page.locator('#proj_segmentos_opcoes input[value="rock"]').check();
         await page.getByRole("button", { name: "Salvar Projeto" }).click();
         message = page.locator(".notification.error .notification-message").last();
-        await page.waitForFunction(() => document.querySelectorAll(".notification.error").length >= 2);
+        await page.waitForFunction(() => [...document.querySelectorAll(".notification.error .notification-message")]
+            .some(element => element.textContent.includes("Título:") && element.textContent.includes("Segmentos:")));
         const multipleMessage = await message.textContent();
         assert.match(multipleMessage, /Título:/);
         assert.match(multipleMessage, /Segmentos:/);

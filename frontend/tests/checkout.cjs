@@ -82,7 +82,11 @@ async function staticResponse(route) {
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' });
     try {
         const context = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
-        await context.addInitScript(() => localStorage.setItem('mirai.analytics_consent.v1', 'rejected'));
+        await context.addInitScript(() => {
+            if (sessionStorage.getItem('mirai.test_unknown_consent') !== 'yes') {
+                localStorage.setItem('mirai.analytics_consent.v1', 'rejected');
+            }
+        });
         let pixRequests = 0;
         let authenticatedPixRequests = 0;
         let cardPayload = null;
@@ -180,6 +184,15 @@ async function staticResponse(route) {
         pixPage.on('pageerror', error => pageErrors.push(error.message));
         await pixPage.goto(`http://localhost:4173/checkout/${tokenA}`);
         await pixPage.waitForSelector('#checkout-content:not(.hidden)');
+        await pixPage.evaluate(() => {
+            sessionStorage.setItem('mirai.test_unknown_consent', 'yes');
+            localStorage.removeItem('mirai.analytics_consent.v1');
+        });
+        await pixPage.reload();
+        await pixPage.waitForSelector('#checkout-content:not(.hidden)');
+        await pixPage.locator('#analytics-consent-dialog').waitFor({ state: 'visible' });
+        assert.equal(await pixPage.locator('#analytics-consent-dialog').evaluate(element => getComputedStyle(element).position), 'static');
+        await pixPage.getByRole('button', { name: 'Gerar Pix' }).click({ trial: true });
         const pixValidation = await pixPage.evaluate(async ({ code, mercadoPagoSample, invalidInitiation }) => {
             const { validatePixPayload, pixImageMime } = await import('/js/pix.js');
             return {

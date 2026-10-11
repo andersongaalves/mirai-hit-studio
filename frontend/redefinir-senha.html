@@ -8,31 +8,44 @@
         <title>Redefinir senha | Mirai Hit Studio</title>
         <link rel="stylesheet" href="/css/main.css" />
         <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="stylesheet" href="/css/integrado.css" />
         <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
     </head>
-    <body class="producer-body">
+    <body class="producer-body integrado-auth">
         <a class="skip-link" href="#reset-content">Ir para o conteúdo</a>
+        <header class="integrado-auth__header">
+            <a class="integrado-auth__brand" href="/" aria-label="Mirai Hit Studio, página inicial"><img src="/assets/mirai-logo-header-symbol.svg" alt="" width="45" height="32" /><img src="/assets/mirai-logo-header-lettering.svg" alt="" width="110" height="14" /></a>
+            <a href="/acesso">Voltar</a>
+        </header>
         <main class="producer-entry" id="reset-content">
+            <aside class="integrado-auth__intro" aria-label="Mirai Hit Studio">
+                <p class="producer-eyebrow">Área de acesso / Mirai Hit Studio</p>
+                <h2>Mais clareza para criar.</h2>
+                <p>Propostas, produções e entregas em um único lugar. Cada conta vê somente o que está autorizado.</p>
+                <div class="integrado-auth__logo" aria-hidden="true"><img src="/assets/mirai-logo-symbol.svg" alt="" width="154" height="108" /><img src="/assets/mirai-logo-lettering.svg" alt="" width="270" height="32" /><span>STUDIO</span></div>
+                <p>Seu espaço de trabalho, sem ruído.</p>
+            </aside>
             <section class="producer-login" aria-labelledby="reset-title">
-                <a href="/" aria-label="Mirai Hit Studio, página inicial">
-                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
-                </a>
                 <div>
-                    <p class="producer-eyebrow">Portal do Cliente</p>
-                    <h1 id="reset-title">Crie uma nova senha</h1>
+                    <h1 id="reset-title">Defina uma nova senha.</h1>
                     <p id="reset-lead" class="producer-lead">O link será validado com segurança ao salvar.</p>
                 </div>
                 <form id="reset-form" class="producer-login__form">
                     <label for="reset-password">Nova senha</label>
-                    <input id="reset-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+                    <input id="reset-password" name="password" type="password" autocomplete="new-password" placeholder="••••••••••••" minlength="8" maxlength="72" required />
+                    <button class="integrado-auth__password-toggle" type="button" data-password-toggle="reset-password" aria-pressed="false"><img src="/assets/mirai-integrado-eye.svg" width="18" height="18" alt="" /><span>Mostrar senha</span></button>
+                    <p class="integrado-auth__hint">Use uma senha longa e diferente das outras contas.</p>
                     <label for="reset-confirm">Confirmar nova senha</label>
-                    <input id="reset-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="72" required />
+                    <input id="reset-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="••••••••••••" minlength="8" maxlength="72" required />
+                    <button class="integrado-auth__password-toggle" type="button" data-password-toggle="reset-confirm" aria-pressed="false"><img src="/assets/mirai-integrado-eye.svg" width="18" height="18" alt="" /><span>Mostrar confirmação</span></button>
                     <button class="btn-cta" type="submit">Redefinir senha</button>
                     <p id="reset-message" class="producer-message hidden" role="status"></p>
                 </form>
                 <a id="reset-login" class="btn-cta hidden" href="/acesso">Entrar na sua conta</a>
             </section>
         </main>
+        <footer class="integrado-auth__footer">Mirai Hit Studio · Privacidade</footer>
+        <script type="module" src="/js/integrado_auth.js"></script>
         <script type="module" src="/js/redefinir-senha.js"></script>
     </body>
 </html>

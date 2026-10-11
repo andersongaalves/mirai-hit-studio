@@ -9,12 +9,15 @@
     <link rel="icon" type="image/png" href="/assets/favicon.png">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/pages/checkout.css">
+    <link rel="stylesheet" href="/css/integrado.css">
 </head>
-<body class="checkout-page">
+<body class="public-page checkout-page">
+    <div id="nav-placeholder"></div>
     <main id="main-content" class="checkout-shell">
-        <header class="checkout-brand">
-            <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="460" height="121">
-            <p>Pagamento da sua proposta</p>
+        <header class="checkout-intro">
+            <p class="public-eyebrow">Pagamento / proposta aprovada</p>
+            <h1>Conclua sua contratação.</h1>
+            <p>Confira o resumo antes de escolher como pagar.</p>
         </header>
 
         <section id="checkout-loading" class="checkout-state" role="status">
@@ -30,7 +33,7 @@
         <div id="checkout-content" class="checkout-layout hidden">
             <section class="checkout-summary card" aria-labelledby="summary-title">
                 <div class="checkout-eyebrow" id="proposal-number"></div>
-                <h1 id="summary-title">Resumo</h1>
+                <h2 id="summary-title">Resumo da contratação</h2>
                 <dl class="checkout-totals">
                     <div><dt>Projeto</dt><dd id="project-description"></dd></div>
                     <div><dt>Valor contratado</dt><dd id="total-value"></dd></div>
@@ -43,7 +46,7 @@
             <section class="checkout-payment card" aria-labelledby="payment-title">
                 <div id="checkout-terminal" class="checkout-terminal hidden" role="status" aria-live="polite"></div>
                 <div id="checkout-form">
-                    <h2 id="payment-title">Escolha como pagar</h2>
+                    <h2 id="payment-title">Escolha seu método</h2>
                     <fieldset id="payment-options" class="checkout-options" aria-describedby="payment-option-help">
                         <legend>Quanto você quer pagar agora?</legend>
                     </fieldset>
@@ -52,6 +55,7 @@
                         <button id="method-pix" class="checkout-method is-active" type="button" aria-pressed="true">Pix</button>
                         <button id="method-card" class="checkout-method" type="button" aria-pressed="false">Cartão</button>
                     </div>
+                    <p class="checkout-provider-note">O aceite ou retorno do navegador não garantem início imediato da produção. Aguarde o status confirmado.</p>
 
                     <div id="pix-panel" class="checkout-panel">
                         <p>O Pix será gerado com o valor da opção selecionada.</p>
@@ -84,6 +88,7 @@
             </section>
         </div>
     </main>
+    <div id="footer-placeholder"></div>
     <script type="module" src="/js/checkout.js"></script>
 </body>
 </html>

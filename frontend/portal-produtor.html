@@ -7,9 +7,10 @@
         <title>Portal do Produtor | Mirai Hit Studio</title>
         <link rel="stylesheet" href="/css/main.css" />
         <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="stylesheet" href="/css/integrado.css" />
         <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
     </head>
-    <body class="producer-body">
+    <body class="producer-body integrado-portal">
         <a class="skip-link" href="#producer-content">Ir para o conteúdo</a>
 
         <main class="producer-entry" id="producer-content">
@@ -33,15 +34,17 @@
                 <aside class="producer-sidebar">
                     <header class="producer-header">
                         <a class="producer-brand" href="/produtor" data-route="dashboard" aria-label="Portal do Produtor, início">
-                            <img src="/img/logo-horizontal.png" alt="" width="184" height="57" />
-                            <span>Portal do Produtor</span>
+                            <img src="/assets/mirai-logo-header-symbol.svg" alt="" width="45" height="32" />
+                            <img src="/assets/mirai-logo-header-lettering.svg" alt="" width="110" height="14" />
                         </a>
+                        <button class="integrado-portal__menu-toggle" type="button" aria-controls="producer-navigation" aria-expanded="false">Menu</button>
                     </header>
 
-                    <nav class="producer-nav" aria-label="Portal do Produtor">
-                        <a href="/produtor" data-route="dashboard">Visão geral</a>
-                        <a href="/produtor/producoes" data-route="producoes">Minhas produções</a>
-                        <a href="/produtor/financeiro" data-route="financeiro">Recebimentos</a>
+                    <p class="integrado-portal__role">PRODUTOR</p>
+                    <nav id="producer-navigation" class="producer-nav" aria-label="Portal do Produtor">
+                        <a href="/produtor" data-route="dashboard">Dashboard</a>
+                        <a href="/produtor/producoes" data-route="producoes" aria-label="Minhas produções">Produções</a>
+                        <a href="/produtor/financeiro" data-route="financeiro">Financeiro</a>
                     </nav>
 
                     <div class="producer-account">
@@ -128,5 +131,6 @@
         </main>
 
         <script type="module" src="/js/produtor/index.js"></script>
+        <script type="module" src="/js/integrado_portal.js"></script>
     </body>
 </html>
