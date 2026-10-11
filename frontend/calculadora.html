@@ -20,24 +20,26 @@
         <link rel="apple-touch-icon" href="assets/favicon.png" />
         <link rel="stylesheet" href="css/main.css" />
         <link rel="stylesheet" href="css/pages/calculator.css" />
+        <link rel="stylesheet" href="css/integrado.css" />
     </head>
     <body class="public-page quote-page">
         <div id="nav-placeholder"></div>
         <main id="main-content" class="quote-main" tabindex="-1">
             <header class="quote-header public-container">
-                <p class="public-eyebrow">Solicitação de orçamento</p>
+                <p class="public-eyebrow">Começar um projeto</p>
                 <h1>Comece pelo que o projeto precisa.</h1>
-                <p>Escolha uma referência de serviço, organize o briefing e envie a solicitação. A equipe revisa o escopo antes de preparar a proposta comercial.</p>
+                <p>A seleção do serviço orienta o briefing. O escopo final será confirmado na proposta.</p>
             </header>
 
+            <div class="quote-stepper-band">
+                <div class="public-container stepper-container" aria-label="Etapas da solicitação">
+                    <div class="step-indicator active" id="ind-1" aria-current="step"><span>1</span> Serviço</div>
+                    <div class="step-indicator" id="ind-2"><span>2</span> Briefing</div>
+                    <div class="step-indicator" id="ind-3"><span>3</span> Contato</div>
+                </div>
+            </div>
             <div class="public-container quote-layout">
                 <form id="orcamento-form" class="quote-form">
-                    <div class="stepper-container" aria-label="Etapas da solicitação">
-                        <div class="step-indicator active" id="ind-1" aria-current="step"><span>1</span> Serviço</div>
-                        <div class="step-indicator" id="ind-2"><span>2</span> Briefing</div>
-                        <div class="step-indicator" id="ind-3"><span>3</span> Contato</div>
-                    </div>
-
                     <div id="calculator-status" class="quote-status" role="status" aria-live="polite">Carregando serviços...</div>
 
                     <section id="step-1" class="step-content active" aria-labelledby="step-1-title">
@@ -103,14 +105,20 @@
                 </form>
 
                 <aside class="quote-context" aria-labelledby="quote-context-title">
-                    <h2 id="quote-context-title">O que acontece depois?</h2>
+                    <div class="quote-investment">
+                        <h2 id="quote-context-title">Investimento estimado</h2>
+                        <strong id="quote-context-estimate" aria-live="polite">A confirmar</strong>
+                        <p>A estimativa não substitui o total da proposta.</p>
+                        <div class="quote-investment__terms"><strong>Condições na proposta</strong><span>Serviço, itens, descontos, pagamento e prazo serão confirmados após análise.</span></div>
+                    </div>
+                    <h2>O que acontece depois?</h2>
                     <ol>
                         <li><span>1</span><p><strong>Análise</strong> A equipe revisa o pedido e alinha dúvidas quando necessário.</p></li>
                         <li><span>2</span><p><strong>Proposta</strong> Escopo, valores, prazo, revisões e entregas ficam documentados.</p></li>
                         <li><span>3</span><p><strong>Contratação</strong> O checkout seguro só é disponibilizado quando existe uma cobrança vinculada à proposta.</p></li>
                         <li><span>4</span><p><strong>Produção</strong> O trabalho começa conforme as condições aprovadas.</p></li>
                     </ol>
-                    <p class="quote-context__note">Projetos custom ou premium passam por conversa humana antes do fechamento.</p>
+                    <p class="quote-context__note">A produção depende de aprovação e confirmação financeira conforme a política acordada.</p>
                 </aside>
             </div>
         </main>

@@ -27,6 +27,7 @@
         <link rel="stylesheet" href="css/main.css" />
         <link rel="stylesheet" href="css/pages/home.css" />
         <link rel="stylesheet" href="css/pages/mix-comparison.css" />
+        <link rel="stylesheet" href="css/integrado.css" />
         <link rel="preload" as="image" href="assets/mirai-logo-symbol.svg" fetchpriority="high" />
     </head>
     <body class="public-page home-page">
@@ -94,41 +95,28 @@
             <section class="home-services" id="servicos" aria-labelledby="services-title">
                 <div class="home-container">
                     <div class="home-section-heading">
-                        <p class="home-kicker">Um estúdio, três universos</p>
-                        <h2 id="services-title">Encontre o seu ponto de partida</h2>
+                        <h2 id="services-title">O que você quer colocar no mundo?</h2>
                     </div>
                     <div class="home-service-list">
                         <a class="home-service vertical-card" href="/artists">
                             <span class="home-service__number">01</span>
                             <span class="home-service__content"><strong>Artistas</strong><small>Produção, vocal, mixagem e masterização para músicas com identidade.</small></span>
-                            <img src="assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
+                            <span class="home-service__link">Conhecer →</span>
                         </a>
                         <a class="home-service vertical-card" href="/creators">
                             <span class="home-service__number">02</span>
                             <span class="home-service__content"><strong>Criadores</strong><small>Temas, intros e sound branding para conteúdo que precisa ser reconhecido.</small></span>
-                            <img src="assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
+                            <span class="home-service__link">Conhecer →</span>
                         </a>
                         <a class="home-service vertical-card" href="/media-games">
                             <span class="home-service__number">03</span>
                             <span class="home-service__content"><strong>Media &amp; Games</strong><small>Trilha e áudio sob medida para narrativas, mundos e experiências digitais.</small></span>
-                            <img src="assets/mirai-arrow-light.svg" alt="" width="54" height="24" />
+                            <span class="home-service__link">Conhecer →</span>
                         </a>
                     </div>
                     <div class="home-capabilities" aria-label="Principais capacidades">
                         <span>Produção musical</span><span>Vocal production</span><span>Mix &amp; master</span><span>Sound branding</span><span>Trilhas</span>
                     </div>
-                </div>
-            </section>
-
-            <section class="home-portfolio" aria-labelledby="portfolio-title">
-                <div class="home-container home-section-heading home-section-heading--row">
-                    <div><p class="home-kicker">Portfólio</p><h2 id="portfolio-title">Trabalhos publicados</h2></div>
-                    <a class="home-text-link" href="/portfolio">Ver portfólio completo <img src="assets/mirai-arrow-light.svg" alt="" width="42" height="19" /></a>
-                </div>
-                <div class="carousel-container home-carousel">
-                    <button class="carousel-btn left-btn" type="button" aria-label="Projetos anteriores" aria-controls="home-portfolio-track" data-carousel-direction="-1">&#10094;</button>
-                    <div class="scrolling-wrapper" id="home-portfolio-track" aria-live="polite"><p class="public-empty">Carregando trabalhos...</p></div>
-                    <button class="carousel-btn right-btn" type="button" aria-label="Próximos projetos" aria-controls="home-portfolio-track" data-carousel-direction="1">&#10095;</button>
                 </div>
             </section>
 
@@ -143,6 +131,18 @@
                         <li><span>05</span><strong>Revisão</strong><p>Ajustes previstos no projeto.</p></li>
                         <li><span>06</span><strong>Entrega</strong><p>Arquivos prontos para o destino.</p></li>
                     </ol>
+                </div>
+            </section>
+
+            <section class="home-portfolio" aria-labelledby="portfolio-title">
+                <div class="home-container home-section-heading home-section-heading--row">
+                    <div><h2 id="portfolio-title">Resultado não se explica. Se escuta.</h2><p>Compare a mesma música antes e depois da mixagem.</p></div>
+                    <a class="home-text-link" href="/portfolio">Ver portfólio completo <img src="assets/mirai-arrow-light.svg" alt="" width="42" height="19" /></a>
+                </div>
+                <div class="carousel-container home-carousel">
+                    <button class="carousel-btn left-btn" type="button" aria-label="Projetos anteriores" aria-controls="home-portfolio-track" data-carousel-direction="-1">&#10094;</button>
+                    <div class="scrolling-wrapper" id="home-portfolio-track" aria-live="polite"><p class="public-empty">Carregando trabalhos...</p></div>
+                    <button class="carousel-btn right-btn" type="button" aria-label="Próximos projetos" aria-controls="home-portfolio-track" data-carousel-direction="1">&#10095;</button>
                 </div>
             </section>
 

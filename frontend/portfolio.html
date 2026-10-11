@@ -23,6 +23,7 @@
         <link rel="manifest" href="site.webmanifest" />
         <link rel="stylesheet" href="css/main.css" />
         <link rel="stylesheet" href="css/pages/portfolio.css" />
+        <link rel="stylesheet" href="css/integrado.css" />
         <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png" />
         <link rel="apple-touch-icon" href="assets/favicon.png" />
     </head>
@@ -32,38 +33,44 @@
             <header class="portfolio-hero">
                 <div class="public-container portfolio-hero__layout">
                     <div>
-                        <p class="public-eyebrow">Da ideia ao som final</p>
+                        <p class="public-eyebrow">Portfólio Mirai</p>
                         <h1>Portfólio de produção musical e áudio</h1>
-                        <p>Produções, demos e estudos de música e áudio. Cada material identifica o contexto e os créditos do trabalho.</p>
+                        <p>Produções, demos e estudos com contexto e crédito. Apenas projetos autorizados.</p>
                     </div>
-                    <img class="portfolio-hero__visual" src="assets/mirai-visual-disc.svg" width="600" height="540" alt="" decoding="async" fetchpriority="high" />
                 </div>
             </header>
 
             <section class="public-section portfolio-catalog" aria-labelledby="portfolio-catalog-title">
                 <div class="public-container">
-                    <div class="public-section__heading">
-                        <div>
-                            <p class="public-eyebrow">Trabalhos publicados</p>
-                            <h2 id="portfolio-catalog-title">Explore o catálogo</h2>
-                        </div>
-                    </div>
-                    <div class="portfolio-filters hidden" id="filtros-portfolio" aria-label="Filtros do portfólio"></div>
+                    <h2 id="portfolio-catalog-title" class="sr-only">Trabalhos publicados</h2>
+                    <div class="portfolio-filters" id="filtros-portfolio" aria-label="Filtros do portfólio"></div>
                     <div class="portfolio-grid" id="render-portfolio" aria-live="polite">
-                        <p class="portfolio-empty">Carregando materiais...</p>
+                        <p class="portfolio-empty">Carregando trabalhos...</p>
                     </div>
                 </div>
             </section>
 
-            <section class="public-band portfolio-policy" aria-labelledby="portfolio-policy-title">
-                <div class="public-container proof-callout__inner">
-                    <div>
-                        <p class="public-eyebrow">Critério editorial</p>
-                        <h2 id="portfolio-policy-title">Cada material precisa dizer o que realmente é.</h2>
-                        <p class="section-copy">Cases de cliente dependem de autorização. Demo, Concept Project e Study nunca são apresentados como contratação real.</p>
-                        <p class="section-copy">Para criar uma faixa, conheça a produção para <a class="text-link" href="/artists">artistas</a>. Para conteúdo e projetos digitais, veja as soluções para <a class="text-link" href="/creators">criadores</a> e <a class="text-link" href="/media-games">Media &amp; Games</a>.</p>
+            <details class="portfolio-policy public-container">
+                <summary>Como classificamos os trabalhos</summary>
+                <p>Cases de cliente dependem de autorização. Demo, Concept Project e Study identificam materiais de demonstração, não contratações reais.</p>
+                <p>Conheça também a produção para <a href="/artists">artistas</a>, as soluções para <a href="/creators">criadores</a> e para <a href="/media-games">Media &amp; Games</a>.</p>
+            </details>
+
+            <section class="portfolio-comparison" aria-labelledby="portfolio-comparison-title">
+                <div class="public-container">
+                    <h2 id="portfolio-comparison-title">Resultado não se explica. Se escuta.</h2>
+                    <p>Compare a mesma música antes e depois da mixagem.</p>
+                    <div id="portfolio-comparison-status" class="portfolio-comparison__status" role="status">
+                        <strong>Antes / Depois indisponível</strong>
+                        <span>A comparação aparece quando houver áudio A/B autorizado no projeto publicado.</span>
                     </div>
-                    <a class="btn-cta" href="/orcamento">Falar sobre um projeto</a>
+                </div>
+            </section>
+            <section class="portfolio-invitation" aria-labelledby="portfolio-invitation-title">
+                <div class="public-container">
+                    <h2 id="portfolio-invitation-title">Pronto para dar vida ao seu universo?</h2>
+                    <p>Conte o que você está criando. A gente transforma intenção em uma direção sonora clara.</p>
+                    <a class="btn-cta" href="/orcamento">Começar projeto</a>
                 </div>
             </section>
         </main>
