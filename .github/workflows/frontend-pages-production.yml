@@ -128,8 +128,16 @@ jobs:
             > /tmp/pages-project.json
           curl --fail-with-body --silent --show-error \
             --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio/deployments?env=production&per_page=100" \
-            > /tmp/pages-production-deployments.json
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio/deployments?env=production&per_page=25&page=1" \
+            > /tmp/pages-production-deployments-1.json
+          pages="$(jq -er '.result_info.total_pages | select(type == "number" and . >= 1 and . <= 1000)' /tmp/pages-production-deployments-1.json)"
+          export PAGES_COUNT="$pages"
+          for ((page=2; page<=pages; page++)); do
+            curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio/deployments?env=production&per_page=25&page=$page" \
+              > "/tmp/pages-production-deployments-$page.json"
+          done
           python - <<'PY'
           import json
           import os
@@ -154,14 +162,17 @@ jobs:
           if not expected_domains.issubset(set(project.get('domains') or [])):
               raise SystemExit('expected_production_domain_not_attached')
 
-          with Path('/tmp/pages-production-deployments.json').open(encoding='utf-8') as source:
-              response = json.load(source)
-          if not response.get('success'):
-              raise SystemExit('cloudflare_pages_deployment_history_read_failed')
-          for deployment in response.get('result') or []:
-              metadata = (deployment.get('deployment_trigger') or {}).get('metadata') or {}
-              if metadata.get('commit_hash') == os.environ['TARGET_SHA'] and not deployment.get('is_skipped'):
-                  raise SystemExit('deployment_attempt_for_authorized_sha_already_exists')
+          pages = int(os.environ['PAGES_COUNT'])
+          for page in range(1, pages + 1):
+              with Path(f'/tmp/pages-production-deployments-{page}.json').open(encoding='utf-8') as source:
+                  response = json.load(source)
+              info = response.get('result_info') or {}
+              if not response.get('success') or info.get('page') != page or info.get('total_pages') != pages:
+                  raise SystemExit('cloudflare_pages_deployment_history_read_failed')
+              for deployment in response.get('result') or []:
+                  metadata = (deployment.get('deployment_trigger') or {}).get('metadata') or {}
+                  if metadata.get('commit_hash') == os.environ['TARGET_SHA'] and not deployment.get('is_skipped'):
+                      raise SystemExit('deployment_attempt_for_authorized_sha_already_exists')
           PY
 
       - name: Publish the exact frontend once
