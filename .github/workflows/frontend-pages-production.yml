@@ -3,6 +3,10 @@ name: Frontend-only Cloudflare Pages Production Publish
 on:
   workflow_dispatch:
     inputs:
+      target_sha:
+        description: Exact current main commit to publish
+        required: true
+        type: string
       authorization_ref:
         description: Fresh authorization reference for this one-time frontend publication
         required: true
@@ -18,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TARGET_SHA: e25c4504176cd166d2aa0767e210b6fd35ef61e2
+  TARGET_SHA: ${{ inputs.target_sha }}
   AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
 
 jobs:
@@ -39,7 +43,8 @@ jobs:
           test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
           test "$GITHUB_REF" = "refs/heads/main"
           test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/frontend-pages-production.yml@refs/heads/main"
-          test "$TARGET_SHA" = "e25c4504176cd166d2aa0767e210b6fd35ef61e2"
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$TARGET_SHA" = "$GITHUB_SHA"
           [[ "$AUTHORIZATION_REF" =~ ^CTRL-[A-Za-z0-9._-]{3,100}$ ]]
 
           gh api "repos/$GITHUB_REPOSITORY/compare/$TARGET_SHA...$GITHUB_SHA" > /tmp/main-target-ancestry.json
@@ -54,13 +59,15 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TARGET_SHA&per_page=100" > /tmp/target-workflow-runs.json
           python - <<'PY'
           import json
+          import os
           required = {'Storage Integration Gate', 'Portals E2E PostgreSQL 17'}
           with open('/tmp/target-workflow-runs.json', encoding='utf-8') as source:
               runs = json.load(source).get('workflow_runs', [])
           passed = {
               run.get('name')
               for run in runs
-              if run.get('head_sha') == 'e25c4504176cd166d2aa0767e210b6fd35ef61e2'
+              if run.get('head_sha') == os.environ['TARGET_SHA']
+              and run.get('head_branch') == 'main'
               and run.get('status') == 'completed'
               and run.get('conclusion') == 'success'
           }
@@ -83,10 +90,19 @@ jobs:
       actions: read
       deployments: read
     steps:
+      - name: Confirm main has not advanced during approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$current_sha" = "$TARGET_SHA"
+
       - name: Check out only the authorized frontend SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: e25c4504176cd166d2aa0767e210b6fd35ef61e2
+          ref: ${{ inputs.target_sha }}
           persist-credentials: false
 
       - name: Verify exact clean checkout
@@ -116,6 +132,7 @@ jobs:
             > /tmp/pages-production-deployments.json
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           with Path('/tmp/pages-project.json').open(encoding='utf-8') as source:
@@ -143,7 +160,7 @@ jobs:
               raise SystemExit('cloudflare_pages_deployment_history_read_failed')
           for deployment in response.get('result') or []:
               metadata = (deployment.get('deployment_trigger') or {}).get('metadata') or {}
-              if metadata.get('commit_hash') == 'e25c4504176cd166d2aa0767e210b6fd35ef61e2' and not deployment.get('is_skipped'):
+              if metadata.get('commit_hash') == os.environ['TARGET_SHA'] and not deployment.get('is_skipped'):
                   raise SystemExit('deployment_attempt_for_authorized_sha_already_exists')
           PY
 
@@ -180,6 +197,7 @@ jobs:
             set +e
             verified="$(python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           with Path('/tmp/pages-production-deployments.json').open(encoding='utf-8') as source:
@@ -188,7 +206,7 @@ jobs:
               raise SystemExit(2)
           deployments = response.get('result') or []
           match = next((item for item in deployments if
-              ((item.get('deployment_trigger') or {}).get('metadata') or {}).get('commit_hash') == 'e25c4504176cd166d2aa0767e210b6fd35ef61e2'
+              ((item.get('deployment_trigger') or {}).get('metadata') or {}).get('commit_hash') == os.environ['TARGET_SHA']
               and item.get('environment') == 'production'
               and not item.get('is_skipped')), None)
           if match is None:
