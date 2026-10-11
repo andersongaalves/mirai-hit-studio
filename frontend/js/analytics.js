@@ -120,7 +120,9 @@ function showDialog() {
     accept.addEventListener("click", () => setAnalyticsConsent("accepted"));
     actions.append(reject, accept);
     dialog.append(title, text, actions);
-    document.body.appendChild(dialog);
+    const checkoutIntro = document.querySelector(".checkout-page .checkout-intro");
+    if (checkoutIntro) checkoutIntro.after(dialog);
+    else document.body.appendChild(dialog);
     accept.focus();
 }
 

@@ -147,6 +147,8 @@ async function staticResponse(route) {
         await page.locator("#username").fill("admin");
         await page.locator("#password").fill("password");
         await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
+        await page.locator("#admin-area:not(.hidden)").waitFor();
+        await page.locator("#dashboard-metrics .dashboard-kpi").first().waitFor();
         await page.evaluate(() => window.mostrarSecao("section-custos"));
         await page.locator('[data-segment-id="rock"]').waitFor();
 
@@ -187,6 +189,8 @@ async function staticResponse(route) {
         assert.deepEqual(projectWrites.at(-1).segmentos_json, ["rock", "legacy_mix", "brazilian_phonk"]);
 
         await page.evaluate(() => window.mostrarSecao("section-custos"));
+        await page.getByRole("tab", { name: "Preços e descontos" }).click();
+        assert.equal(await page.getByRole("tab", { name: "Preços e descontos" }).getAttribute("aria-selected"), "true");
         await page.getByRole("button", { name: "SALVAR TABELA" }).click();
         assert.deepEqual(financialWrites, [configValues]);
 

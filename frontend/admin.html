@@ -91,7 +91,7 @@
                                 Portfólio
                             </button>
                             <button type="button" class="admin-nav__item" data-admin-target="section-custos">
-                                Custos extras
+                                Configurações
                             </button>
                             <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-usuarios">
                                 Usuários
@@ -379,11 +379,16 @@
                         <header class="admin-page-header">
                             <div class="admin-page-header__content">
                                 <span class="admin-page-header__eyebrow">Configurações</span>
-                                <h1>Custos Extras</h1>
-                                <p>Ajuste os multiplicadores usados pela calculadora.</p>
+                                <h1>Configurações</h1>
+                                <p>Gerencie segmentos e parâmetros de preço autorizados.</p>
                             </div>
                         </header>
 
+                        <div class="integrado-admin__config-tabs" role="tablist" aria-label="Configurações">
+                            <button type="button" role="tab" id="admin-config-segments-tab" aria-controls="admin-config-segments" aria-selected="true">Segmentos</button>
+                            <button type="button" role="tab" id="admin-config-pricing-tab" aria-controls="admin-config-pricing" aria-selected="false">Preços e descontos</button>
+                        </div>
+                        <div id="admin-config-segments" role="tabpanel" aria-labelledby="admin-config-segments-tab">
                         <section class="portfolio-segment-settings" aria-labelledby="portfolio-segments-title">
                             <div class="portfolio-segment-settings__header">
                                 <div>
@@ -408,7 +413,9 @@
                             <p id="portfolio-segments-status" class="admin-field-help" aria-live="polite"></p>
                             <div id="portfolio-segments-list" class="portfolio-segment-list"></div>
                         </section>
+                        </div>
 
+                        <div id="admin-config-pricing" role="tabpanel" aria-labelledby="admin-config-pricing-tab" hidden>
                         <div class="admin-section-divider">
                             <h2>Parâmetros financeiros</h2>
                         </div>
@@ -493,6 +500,7 @@
                         >
                             SALVAR TABELA
                         </button>
+                        </div>
                     </div>
 
                     <div id="section-orcamentos" class="admin-section hidden">
@@ -1581,5 +1589,6 @@
         </main>
 
         <script type="module" src="js/admin/index.js"></script>
+        <script type="module" src="js/integrado_admin.js"></script>
     </body>
 </html>
