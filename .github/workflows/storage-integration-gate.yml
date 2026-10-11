@@ -196,6 +196,7 @@ jobs:
                   node frontend/tests/portfolio_admin.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
+                  node frontend/tests/checkout.cjs
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend
@@ -286,6 +287,9 @@ jobs:
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs
                   node --check frontend/tests/portal_cliente.cjs
+                  node --check frontend/js/pix.js
+                  node --check frontend/js/checkout.js
+                  node --check frontend/tests/checkout.cjs
                   git diff --check origin/main...HEAD
 
             - name: Verify disposable data cleanup

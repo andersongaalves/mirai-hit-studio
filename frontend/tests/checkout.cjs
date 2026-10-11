@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const tokenA = '11111111-1111-4111-8111-111111111111';
@@ -13,9 +14,10 @@ const tokenF = '66666666-6666-4666-8666-666666666666';
 const tokenG = '77777777-7777-4777-8777-777777777777';
 const tokenH = '88888888-8888-4888-8888-888888888888';
 const tokenI = '99999999-9999-4999-8999-999999999999';
-function pixCode(amount = '99.00') {
+const tokenJ = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab';
+function pixCode(amount = '99.00', initiation = '12') {
     const fields = [
-        ['00', '01'], ['01', '12'],
+        ['00', '01'], ...(initiation === null ? [] : [['01', initiation]]),
         ['26', `0014br.gov.bcb.pix013600000000-0000-0000-0000-000000000000`],
         ['52', '0000'], ['53', '986'], ['54', amount], ['58', 'BR'],
         ['59', 'Mirai Studio'], ['60', 'SAO'], ['62', '0503***'],
@@ -27,6 +29,16 @@ function pixCode(amount = '99.00') {
     }
     return `${fields}6304${crc.toString(16).toUpperCase().padStart(4, '0')}`;
 }
+
+function qrCodec(mode, input) {
+    const result = spawnSync('python', [path.join(__dirname, 'checkout_qr.py')], {
+        input: JSON.stringify({ mode, ...input }), encoding: 'utf8', maxBuffer: 1024 * 1024,
+    });
+    assert.equal(result.status, 0, `QR codec failed: ${result.stderr}`);
+    return JSON.parse(result.stdout);
+}
+
+const mercadoPagoSample = '00020126580014br.gov.bcb.pix0136b76aa9c2-2ec4-4110-954e-ebfe34f05b61520400005303986540510.005802BR5912TESTPVBWOSBE6009Sao Paulo62240520mpqrinter715936942186304C3C0';
 const summaries = new Map([
     [tokenA, summary('<img src=x onerror="window.xss=true">Mixagem')],
     [tokenB, summary('Trilha original')],
@@ -37,6 +49,7 @@ const summaries = new Map([
     [tokenG, summary('Beat exclusivo')],
     [tokenH, summary('Pix malformado')],
     [tokenI, summary('Pix expirado')],
+    [tokenJ, { ...summary('Pix sem campo 01'), opcoes: [{ tipo: 'integral', titulo: 'Pagamento completo', valor: '10.00' }] }],
 ]);
 
 function summary(description) {
@@ -64,6 +77,8 @@ async function staticResponse(route) {
 }
 
 (async () => {
+    const qrImage = qrCodec('encode', { payload: pixCode() }).image;
+    const mercadoPagoQrImage = qrCodec('encode', { payload: mercadoPagoSample }).image;
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' });
     try {
         const context = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
@@ -128,10 +143,11 @@ async function staticResponse(route) {
                     await new Promise(resolve => setTimeout(resolve, 80));
                     const malformed = token === tokenH;
                     const expired = token === tokenI;
+                    const documentedPix = token === tokenJ;
                     return route.fulfill({ json: {
                         status: 'pending', checkout_status: 'pendente', payment_option: route.request().postDataJSON().payment_option,
-                        valor: '99.00', moeda: 'BRL', challenge_url: null,
-                        pix: { qr_code: malformed ? '000201-pix-code' : pixCode(), qr_code_base64: 'iVBORw0KGgo=', ticket_url: 'https://www.mercadopago.com.br/pay', expiration_time: expired ? '2020-09-21T12:00:00Z' : '2099-09-21T12:00:00Z' },
+                        valor: documentedPix ? '10.00' : '99.00', moeda: 'BRL', challenge_url: null,
+                        pix: { qr_code: malformed ? '000201-pix-code' : documentedPix ? mercadoPagoSample : pixCode(), qr_code_base64: documentedPix ? mercadoPagoQrImage : qrImage, ticket_url: 'https://www.mercadopago.com.br/pay', expiration_time: expired ? '2020-09-21T12:00:00Z' : '2099-09-21T12:00:00Z' },
                     } });
                 }
                 if (suffix === '/card' && route.request().method() === 'POST') {
@@ -164,20 +180,24 @@ async function staticResponse(route) {
         pixPage.on('pageerror', error => pageErrors.push(error.message));
         await pixPage.goto(`http://localhost:4173/checkout/${tokenA}`);
         await pixPage.waitForSelector('#checkout-content:not(.hidden)');
-        const pixValidation = await pixPage.evaluate(async code => {
+        const pixValidation = await pixPage.evaluate(async ({ code, mercadoPagoSample, invalidInitiation }) => {
             const { validatePixPayload, pixImageMime } = await import('/js/pix.js');
             return {
                 valid: validatePixPayload(code, '99.00'),
                 malformed: validatePixPayload('000201-pix-code', '99.00'),
                 badCrc: validatePixPayload(`${code.slice(0, -4)}0000`, '99.00'),
                 amountMismatch: validatePixPayload(code, '98.00'),
+                mercadoPagoWithoutOptionalTag: validatePixPayload(mercadoPagoSample, '10.00'),
+                invalidInitiationMethod: validatePixPayload(invalidInitiation, '99.00'),
                 jpegMime: pixImageMime('/9j/4AAQSkZJRgABAQ=='),
             };
-        }, pixCode());
+        }, { code: pixCode(), mercadoPagoSample, invalidInitiation: pixCode('99.00', '99') });
         assert.equal(pixValidation.valid, null);
         assert.equal(pixValidation.malformed, 'malformed_payload');
         assert.equal(pixValidation.badCrc, 'invalid_crc');
         assert.equal(pixValidation.amountMismatch, 'amount_mismatch');
+        assert.equal(pixValidation.mercadoPagoWithoutOptionalTag, null);
+        assert.equal(pixValidation.invalidInitiationMethod, 'malformed_payload');
         assert.equal(pixValidation.jpegMime, 'image/jpeg');
         assert.equal(await pixPage.locator('#project-description').textContent(), '<img src=x onerror="window.xss=true">Mixagem');
         assert.equal(await pixPage.locator('#project-description img').count(), 0);
@@ -192,14 +212,32 @@ async function staticResponse(route) {
         await pixPage.waitForSelector('#pix-result:not(.hidden)');
         assert.equal(pixRequests, 1);
         assert.equal(await pixPage.locator('#pix-code').inputValue(), pixCode());
-        assert.equal(await pixPage.locator('#pix-qr').getAttribute('src'), 'data:image/png;base64,iVBORw0KGgo=');
+        const renderedQr = await pixPage.locator('#pix-qr').getAttribute('src');
+        assert.ok(renderedQr.startsWith('data:image/png;base64,'));
+        await pixPage.waitForFunction(() => document.getElementById('pix-qr')?.naturalWidth > 0);
+        const decodedQr = qrCodec('decode', { image: renderedQr.slice('data:image/png;base64,'.length) }).payload;
+        assert.equal(decodedQr, pixCode(), 'the rendered QR must encode the provider copy-and-paste code');
+        assert.equal(decodedQr, await pixPage.locator('#pix-code').inputValue());
         assert.match(await pixPage.locator('#pix-expiration').textContent(), /21\/09\/2099.*horário local/);
         assert.equal(await pixPage.locator('#payment-options').getAttribute('aria-describedby'), 'payment-option-help');
         await pixPage.locator('#copy-pix').click();
         await pixPage.waitForFunction(() => document.getElementById('copy-pix')?.textContent === 'Código copiado');
         assert.equal(await pixPage.locator('#copy-pix').textContent(), 'Código copiado');
         assert.equal(await pixPage.locator('#pix-code').inputValue(), pixCode(), 'the displayed copy-and-paste code is unchanged');
+        assert.equal(await pixPage.evaluate(() => navigator.clipboard.readText()), decodedQr);
         assert.equal(await pixPage.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+
+        const documentedPixPage = await context.newPage();
+        await documentedPixPage.goto(`http://localhost:4173/checkout/${tokenJ}`);
+        await documentedPixPage.waitForSelector('#checkout-content:not(.hidden)');
+        await documentedPixPage.locator('#generate-pix').click();
+        await documentedPixPage.waitForSelector('#pix-result:not(.hidden)');
+        assert.equal(await documentedPixPage.locator('#pix-code').inputValue(), mercadoPagoSample);
+        await documentedPixPage.waitForFunction(() => document.getElementById('pix-qr')?.naturalWidth > 0);
+        const documentedQr = await documentedPixPage.locator('#pix-qr').getAttribute('src');
+        assert.equal(qrCodec('decode', { image: documentedQr.slice('data:image/png;base64,'.length) }).payload, mercadoPagoSample);
+        assert.equal(await documentedPixPage.locator('#copy-pix').isVisible(), true);
+        await documentedPixPage.close();
 
         for (const token of [tokenH, tokenI]) {
             const guardedPixPage = await context.newPage();

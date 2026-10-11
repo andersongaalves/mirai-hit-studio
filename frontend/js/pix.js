@@ -34,7 +34,7 @@ export function validatePixPayload(value, expectedAmount) {
         }
     }
 
-    if (fields.get("00") !== "01" || !["11", "12"].includes(fields.get("01")) || fields.get("53") !== "986" || fields.get("58") !== "BR" || !fields.has("63")) {
+    if (fields.get("00") !== "01" || (fields.has("01") && !["11", "12"].includes(fields.get("01"))) || fields.get("53") !== "986" || fields.get("58") !== "BR" || !fields.has("63")) {
         return "malformed_payload";
     }
     if (![...fields.entries()].some(([tag, content]) => /^[2-5]\d$/.test(tag) && content.includes("br.gov.bcb.pix"))) {
