@@ -7,34 +7,51 @@
         <title>Área de acesso | Mirai Hit Studio</title>
         <link rel="stylesheet" href="/css/main.css" />
         <link rel="stylesheet" href="/css/pages/produtor.css" />
+        <link rel="stylesheet" href="/css/integrado.css" />
         <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
     </head>
-    <body class="producer-body">
+    <body class="producer-body integrado-auth integrado-auth--access">
         <a class="skip-link" href="#access-content">Ir para o conteúdo</a>
-
+        <header class="integrado-auth__header">
+            <a class="integrado-auth__brand" href="/" aria-label="Mirai Hit Studio, página inicial"><img src="/assets/mirai-logo-header-symbol.svg" alt="" width="45" height="32" /><img src="/assets/mirai-logo-header-lettering.svg" alt="" width="110" height="14" /></a>
+            <a href="/">Voltar</a>
+        </header>
         <main class="producer-entry" id="access-content">
+            <aside class="integrado-auth__intro" aria-label="Mirai Hit Studio">
+                <p class="producer-eyebrow">Área de acesso / Mirai Hit Studio</p>
+                <h2>Mais clareza para criar.</h2>
+                <p>Propostas, produções e entregas em um único lugar. Cada conta vê somente o que está autorizado.</p>
+                <div class="integrado-auth__logo" aria-hidden="true"><img src="/assets/mirai-logo-symbol.svg" alt="" width="154" height="108" /><img src="/assets/mirai-logo-lettering.svg" alt="" width="270" height="32" /><span>STUDIO</span></div>
+                <p>Seu espaço de trabalho, sem ruído.</p>
+            </aside>
             <section class="producer-login" aria-labelledby="access-title">
-                <a href="/" aria-label="Mirai Hit Studio, página inicial">
-                    <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
-                </a>
                 <div>
-                    <p class="producer-eyebrow">Área de acesso</p>
-                    <h1 id="access-title">Entre na sua conta</h1>
-                    <p class="producer-lead">Você será direcionado ao ambiente correto.</p>
+                    <h1 id="access-title">Entre no seu espaço.</h1>
+                    <p class="producer-lead">Um acesso para clientes, produtores e equipe Mirai.</p>
                 </div>
                 <form id="access-login-form" class="producer-login__form">
-                    <label for="username">Usuário</label>
-                    <input id="username" name="username" autocomplete="username" required />
-                    <label for="password">Senha</label>
-                    <input id="password" name="password" type="password" autocomplete="current-password" required />
-                    <p class="producer-login__secondary"><a href="/recuperar-senha">Esqueci minha senha</a></p>
+                    <div class="integrado-auth__field">
+                        <label for="username">E-mail <span class="sr-only">ou usuário</span></label>
+                        <input id="username" name="username" autocomplete="username" placeholder="nome@example.com" required />
+                    </div>
+                    <div class="integrado-auth__field">
+                        <label for="password">Senha</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••••••" required />
+                        <button class="integrado-auth__password-toggle" type="button" data-password-toggle="password" aria-pressed="false"><img src="/assets/mirai-integrado-eye.svg" width="18" height="18" alt="" /><span>Mostrar senha</span></button>
+                    </div>
+                    <a class="integrado-auth__forgot" href="/recuperar-senha">Esqueci minha senha</a>
                     <button class="btn-cta" type="submit">Entrar</button>
                     <p id="login-error" class="producer-message producer-message--error hidden" role="alert"></p>
                 </form>
-                <p class="producer-login__secondary">Ainda não tem conta? <a href="/cadastro">Criar conta</a></p>
+                <div class="integrado-auth__signup">
+                    <p class="producer-login__secondary">Ainda não tem acesso?</p>
+                    <a href="/cadastro">Criar conta</a>
+                </div>
+                <p class="producer-login__secondary">As permissões da sua conta determinam o espaço disponível.</p>
             </section>
         </main>
-
+        <footer class="integrado-auth__footer">Mirai Hit Studio · Privacidade</footer>
+        <script type="module" src="/js/integrado_auth.js"></script>
         <script type="module" src="/js/acesso.js"></script>
     </body>
 </html>
