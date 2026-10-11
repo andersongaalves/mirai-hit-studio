@@ -1,0 +1,246 @@
+name: Frontend-only Cloudflare Pages Production Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization_ref:
+        description: Fresh authorization reference for this one-time frontend publication
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: frontend-pages-production-publish
+  cancel-in-progress: false
+
+env:
+  TARGET_SHA: e25c4504176cd166d2aa0767e210b6fd35ef61e2
+  AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
+
+jobs:
+  request-guard:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Validate trusted main workflow and exact target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/frontend-pages-production.yml@refs/heads/main"
+          test "$TARGET_SHA" = "e25c4504176cd166d2aa0767e210b6fd35ef61e2"
+          [[ "$AUTHORIZATION_REF" =~ ^CTRL-[A-Za-z0-9._-]{3,100}$ ]]
+
+          gh api "repos/$GITHUB_REPOSITORY/compare/$TARGET_SHA...$GITHUB_SHA" > /tmp/main-target-ancestry.json
+          python - <<'PY'
+          import json
+          with open('/tmp/main-target-ancestry.json', encoding='utf-8') as source:
+              status = json.load(source).get('status')
+          if status not in {'ahead', 'identical'}:
+              raise SystemExit('authorized_frontend_sha_not_in_main_history')
+          PY
+
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TARGET_SHA&per_page=100" > /tmp/target-workflow-runs.json
+          python - <<'PY'
+          import json
+          required = {'Storage Integration Gate', 'Portals E2E PostgreSQL 17'}
+          with open('/tmp/target-workflow-runs.json', encoding='utf-8') as source:
+              runs = json.load(source).get('workflow_runs', [])
+          passed = {
+              run.get('name')
+              for run in runs
+              if run.get('head_sha') == 'e25c4504176cd166d2aa0767e210b6fd35ef61e2'
+              and run.get('status') == 'completed'
+              and run.get('conclusion') == 'success'
+          }
+          missing = required - passed
+          if missing:
+              raise SystemExit('required_ci_not_successful_for_target_sha: ' + ','.join(sorted(missing)))
+          PY
+
+  publish-frontend:
+    needs: request-guard
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cloudflare-pages-production
+    outputs:
+      deployment_id: ${{ steps.verify.outputs.deployment_id }}
+      deployment_url: ${{ steps.verify.outputs.deployment_url }}
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+    steps:
+      - name: Check out only the authorized frontend SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: e25c4504176cd166d2aa0767e210b6fd35ef61e2
+          persist-credentials: false
+
+      - name: Verify exact clean checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -d frontend
+          test -z "$(git status --porcelain)"
+
+      - name: Verify Pages project, production branch, domain, and no prior publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio" \
+            > /tmp/pages-project.json
+          curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio/deployments?env=production&per_page=100" \
+            > /tmp/pages-production-deployments.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          with Path('/tmp/pages-project.json').open(encoding='utf-8') as source:
+              response = json.load(source)
+          if not response.get('success'):
+              raise SystemExit('cloudflare_pages_project_read_failed')
+          project = response['result']
+          source = project.get('source') or {}
+          source_config = source.get('config') or {}
+          expected_domains = {'miraihitstudio.com.br', 'www.miraihitstudio.com.br'}
+          if project.get('name') != 'mirai-hit-studio':
+              raise SystemExit('unexpected_cloudflare_pages_project')
+          if source.get('type') != 'github' or source_config.get('owner') != 'andersongaalves' or source_config.get('repo_name') != 'mirai-hit-studio':
+              raise SystemExit('unexpected_cloudflare_pages_repository')
+          if source_config.get('production_branch') != 'main' or project.get('production_branch') != 'main':
+              raise SystemExit('unexpected_cloudflare_production_branch')
+          if source_config.get('production_deployments_enabled') is not False:
+              raise SystemExit('automatic_production_deploy_state_changed')
+          if not expected_domains.issubset(set(project.get('domains') or [])):
+              raise SystemExit('expected_production_domain_not_attached')
+
+          with Path('/tmp/pages-production-deployments.json').open(encoding='utf-8') as source:
+              response = json.load(source)
+          if not response.get('success'):
+              raise SystemExit('cloudflare_pages_deployment_history_read_failed')
+          for deployment in response.get('result') or []:
+              metadata = (deployment.get('deployment_trigger') or {}).get('metadata') or {}
+              if metadata.get('commit_hash') == 'e25c4504176cd166d2aa0767e210b6fd35ef61e2' and not deployment.get('is_skipped'):
+                  raise SystemExit('deployment_attempt_for_authorized_sha_already_exists')
+          PY
+
+      - name: Publish the exact frontend once
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          npm_config_cache: /tmp/mirai-pages-npm-cache
+        shell: bash
+        run: >-
+          npx --yes wrangler@4.149.0 pages deploy frontend
+          --project-name mirai-hit-studio
+          --branch main
+          --commit-hash "$TARGET_SHA"
+
+      - name: Verify production deployment, domain, and public routes
+        id: verify
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          verified=''
+          for attempt in $(seq 1 24); do
+            curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio/deployments?env=production&per_page=100" \
+              > /tmp/pages-production-deployments.json
+            curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/mirai-hit-studio" \
+              > /tmp/pages-project-current.json
+            set +e
+            verified="$(python - <<'PY'
+          import json
+          from pathlib import Path
+
+          with Path('/tmp/pages-production-deployments.json').open(encoding='utf-8') as source:
+              response = json.load(source)
+          if not response.get('success'):
+              raise SystemExit(2)
+          deployments = response.get('result') or []
+          match = next((item for item in deployments if
+              ((item.get('deployment_trigger') or {}).get('metadata') or {}).get('commit_hash') == 'e25c4504176cd166d2aa0767e210b6fd35ef61e2'
+              and item.get('environment') == 'production'
+              and not item.get('is_skipped')), None)
+          if match is None:
+              raise SystemExit(3)
+          status = (match.get('latest_stage') or {}).get('status')
+          if status in {'failure', 'canceled', 'skipped'}:
+              raise SystemExit(4)
+          if status != 'success':
+              raise SystemExit(3)
+
+          with Path('/tmp/pages-project-current.json').open(encoding='utf-8') as source:
+              project = json.load(source)['result']
+          canonical = project.get('canonical_deployment') or {}
+          aliases = set(canonical.get('aliases') or [])
+          if canonical.get('id') != match.get('id'):
+              raise SystemExit(5)
+          if 'https://miraihitstudio.com.br' not in aliases:
+              raise SystemExit(6)
+          print(json.dumps({'id': match['id'], 'url': match['url']}))
+          PY
+          )"
+            result=$?
+            set -e
+            if [ "$result" -eq 0 ]; then
+              break
+            elif [ "$result" -eq 3 ]; then
+              sleep 5
+            else
+              exit "$result"
+            fi
+          done
+          test -n "$verified"
+          deployment_id="$(python -c 'import json,sys; print(json.loads(sys.argv[1])["id"])' "$verified")"
+          deployment_url="$(python -c 'import json,sys; print(json.loads(sys.argv[1])["url"])' "$verified")"
+          [[ "$deployment_id" =~ ^[A-Za-z0-9-]+$ ]]
+          [[ "$deployment_url" =~ ^https://[A-Za-z0-9.-]+\.mirai-hit-studio\.pages\.dev$ ]]
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+          for path in / /portfolio /acesso; do
+            code="$(curl --location --max-redirs 3 --silent --output /dev/null --write-out '%{http_code}' "https://miraihitstudio.com.br$path")"
+            test "$code" = "200"
+          done
+
+          {
+            echo "## Frontend Cloudflare Pages publication"
+            echo "- SHA: `$TARGET_SHA`"
+            echo "- Authorization reference: `$AUTHORIZATION_REF`"
+            echo "- Triggered by: `$GITHUB_ACTOR` (Actions run `$GITHUB_RUN_ID`)"
+            echo "- Environment: production"
+            echo "- Deployment ID: `$deployment_id`"
+            echo "- Deployment URL: $deployment_url"
+            echo "- Production domain: https://miraihitstudio.com.br (home, /portfolio, /acesso returned HTTP 200)"
+            echo "- Backend/Render: not deployed by this workflow"
+          } >> "$GITHUB_STEP_SUMMARY"
