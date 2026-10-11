@@ -18,7 +18,7 @@ async function staticResponse(route) {
     try {
         return route.fulfill({
             body: await fs.readFile(file),
-            contentType: { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html' }[path.extname(file)] || 'application/octet-stream',
+            contentType: { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream',
         });
     } catch {
         return route.fulfill({ status: 404, body: '' });

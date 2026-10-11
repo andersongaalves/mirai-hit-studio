@@ -78,6 +78,16 @@ async function login(page, username) {
     });
 
     try {
+        await page.goto('http://localhost:4173/acesso');
+        const passwordToggle = page.locator('[data-password-toggle="password"]');
+        assert.equal(await passwordToggle.textContent(), 'Mostrar senha');
+        await passwordToggle.click();
+        assert.equal(await page.locator('#password').getAttribute('type'), 'text');
+        assert.equal(await passwordToggle.getAttribute('aria-pressed'), 'true');
+        await passwordToggle.click();
+        assert.equal(await page.locator('#password').getAttribute('type'), 'password');
+        assert.equal(await passwordToggle.getAttribute('aria-pressed'), 'false');
+
         for (const [role, destination] of Object.entries({
             admin: '/admin',
             produtor: '/produtor',

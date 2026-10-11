@@ -1,6 +1,7 @@
 import { API_URL } from "./config.js";
 import { initAnalytics, track, trackOnce } from "./analytics.js";
 import { AUTH_CONTEXTS, createAuthContext } from "./admin/auth.js";
+import { initComponents } from "./modules/components.js";
 
 const $ = id => document.getElementById(id);
 const TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -410,4 +411,5 @@ window.addEventListener("message", event => {
 window.addEventListener("pagehide", stopPolling);
 
 initAnalytics();
+initComponents();
 loadCheckout();

@@ -8,9 +8,10 @@
         <link rel="stylesheet" href="/css/main.css" />
         <link rel="stylesheet" href="/css/pages/produtor.css" />
         <link rel="stylesheet" href="/css/pages/cliente.css" />
+        <link rel="stylesheet" href="/css/integrado.css" />
         <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" />
     </head>
-    <body class="producer-body client-body">
+    <body class="producer-body client-body integrado-portal">
         <a class="skip-link" href="#client-content">Ir para o conteúdo</a>
 
         <main class="producer-entry" id="client-content">
@@ -34,15 +35,17 @@
                 <aside class="producer-sidebar">
                     <header class="producer-header">
                         <a class="producer-brand" href="/cliente" data-route="dashboard" aria-label="Portal do Cliente, início">
-                            <img src="/img/logo-horizontal.png" alt="" width="184" height="57" />
-                            <span>Portal do Cliente</span>
+                            <img src="/assets/mirai-logo-header-symbol.svg" alt="" width="45" height="32" />
+                            <img src="/assets/mirai-logo-header-lettering.svg" alt="" width="110" height="14" />
                         </a>
+                        <button class="integrado-portal__menu-toggle" type="button" aria-controls="client-navigation" aria-expanded="false">Menu</button>
                     </header>
 
-                    <nav class="producer-nav" aria-label="Portal do Cliente">
-                        <a href="/cliente" data-route="dashboard">Visão geral</a>
+                    <p class="integrado-portal__role">CLIENTE</p>
+                    <nav id="client-navigation" class="producer-nav" aria-label="Portal do Cliente">
+                        <a href="/cliente" data-route="dashboard">Dashboard</a>
                         <a id="client-proposals-link" class="hidden" href="/cliente/propostas" data-route="proposals">Propostas</a>
-                        <a href="/cliente/projetos" data-route="projects">Meus projetos</a>
+                        <a href="/cliente/projetos" data-route="projects" aria-label="Meus projetos">Projetos</a>
                     </nav>
 
                     <div class="producer-account">
@@ -141,5 +144,6 @@
         </main>
 
         <script type="module" src="/js/cliente/index.js"></script>
+        <script type="module" src="/js/integrado_portal.js"></script>
     </body>
 </html>

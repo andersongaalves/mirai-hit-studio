@@ -10,6 +10,7 @@ let projects = [
     { id: 2, titulo: "Estudo de interface", artista: "Mirai Hit Studio", categoria: "Sound design", link_audio: "https://www.youtube.com/watch?v=abcdefghijk", link_capa: "https://example.com/cover.webp", descricao: "Material conceitual", destaque: false, vertical: "media_games", segmentos_json: ["games"], case_type: "study" },
     { id: 3, titulo: "Nao classificado", artista: "Interno", categoria: "Outro", link_audio: "https://example.com/private.mp3", link_capa: "https://example.com/private.webp", descricao: "Nao publicar", destaque: false, vertical: null, segmentos_json: [], case_type: null },
 ];
+let failProjects = false;
 
 async function staticResponse(route) {
     const url = new URL(route.request().url());
@@ -34,13 +35,16 @@ async function staticResponse(route) {
         await context.route("**/*", async route => {
             const url = new URL(route.request().url());
             if (url.origin === "http://localhost:4173") return staticResponse(route);
-            if (url.origin === "http://localhost:8000" && url.pathname === "/projetos") return route.fulfill({ json: projects });
+            if (url.origin === "http://localhost:8000" && url.pathname === "/projetos") {
+                return failProjects ? route.fulfill({ status: 503, json: { detail: "unavailable" } }) : route.fulfill({ json: projects });
+            }
             if (url.origin === "http://localhost:8000" && url.pathname === "/config/portfolio-segments/public") {
                 return route.fulfill({ json: [
                     { id: "rap", label: "Rap/Geek" },
                     { id: "games", label: "Games" },
                 ] });
             }
+            if (url.origin === "http://localhost:8000" && url.pathname === "/projetos/public/mix-comparisons") return route.fulfill({ json: [] });
             if (url.origin === "https://www.googletagmanager.com") return route.fulfill({ contentType: "text/javascript", body: "" });
             if (url.origin === "https://example.com" || url.origin === "https://img.youtube.com") return route.fulfill({ status: 200, body: "" });
             return route.fulfill({ status: 404, body: "" });
@@ -51,7 +55,8 @@ async function staticResponse(route) {
         await page.waitForSelector(".portfolio-card");
         assert.equal(await page.locator(".portfolio-card").count(), 2);
         assert.equal(await page.getByText("Nao classificado", { exact: true }).count(), 0);
-        assert.equal(await page.locator(".portfolio-filter-group").count(), 2);
+        assert.equal(await page.locator(".portfolio-filter-group").count(), 1);
+        assert.equal(await page.locator(".portfolio-filter-select").count(), 2);
         assert.equal(await page.locator("script").filter({ hasText: "alert(1)" }).count(), 0);
         assert.match(await page.locator(".portfolio-card").first().textContent(), /<script>alert\(1\)<\/script>/);
         assert.match(await page.locator(".portfolio-card").first().textContent(), /Rap\/Geek/);
@@ -69,6 +74,15 @@ async function staticResponse(route) {
         assert.equal(await page.locator(".portfolio-card").count(), 1);
         assert.match(await page.locator(".portfolio-card").textContent(), /Artista teste/);
 
+        await page.locator('[data-filter-kind="vertical"][data-filter-value=""]').click();
+        await page.locator('select[data-filter-kind="segment"]').selectOption("games");
+        assert.equal(await page.locator(".portfolio-card").count(), 1);
+        assert.match(await page.locator(".portfolio-card").textContent(), /Estudo de interface/);
+        await page.locator('select[data-filter-kind="case_type"]').selectOption("client_case");
+        assert.equal(await page.locator(".portfolio-card").count(), 0);
+        await page.locator('select[data-filter-kind="segment"]').selectOption("");
+        assert.equal(await page.locator(".portfolio-card").count(), 1);
+
         for (const width of [320, 375, 390, 414, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 900 });
             const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -79,7 +93,11 @@ async function staticResponse(route) {
         await page.reload();
         await page.waitForFunction(() => document.querySelector(".portfolio-empty")?.textContent.includes("Ainda não há materiais"));
         assert.match(await page.locator(".portfolio-empty").textContent(), /Ainda não há materiais/);
-        assert.equal(await page.locator("#filtros-portfolio").isVisible(), false);
+        assert.equal(await page.locator("#filtros-portfolio").isVisible(), true);
+        assert.match(await page.locator("#portfolio-comparison-status").textContent(), /indisponível/);
+        failProjects = true;
+        await page.reload();
+        await page.getByRole("alert").filter({ hasText: "Não foi possível carregar o portfólio" }).waitFor();
         assert.deepEqual(errors, []);
         console.log("PASS: classified portfolio, honest labels, filters, accessible audio, analytics, XSS and empty state.");
     } finally {

@@ -65,6 +65,12 @@ async function staticResponse(route) {
             localStorage.setItem('mirai.auth.cliente.access_token', 'client-token');
         });
         await page.goto(`http://localhost:4173/redefinir-senha?token=${token}`);
+        const confirmationToggle = page.locator('[data-password-toggle="reset-confirm"]');
+        assert.equal(await confirmationToggle.textContent(), 'Mostrar confirmação');
+        await confirmationToggle.click();
+        assert.equal(await page.locator('#reset-confirm').getAttribute('type'), 'text');
+        await confirmationToggle.click();
+        assert.equal(await page.locator('#reset-confirm').getAttribute('type'), 'password');
         await page.getByLabel('Nova senha', { exact: true }).fill('new-secure-password');
         await page.getByLabel('Confirmar nova senha').fill('new-secure-password');
         await page.getByRole('button', { name: 'Redefinir senha' }).click();

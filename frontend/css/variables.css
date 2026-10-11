@@ -1,15 +1,15 @@
 :root {
     --cor-fundo: #06101f;
-    --cor-ciano: #00d5ed;
-    --cor-roxo: #d430ef;
-    --cor-branco: #f5f7ff;
+    --cor-ciano: #00d4ff;
+    --cor-roxo: #b22af0;
+    --cor-branco: #f7f9fc;
     --cor-azul-transicao: #008bff;
     --cor-sucesso: #4ade80;
     --cor-aviso: #fbbf24;
     --cor-perigo: #f87171;
-    --cor-texto-secundario: #aeb9cb;
+    --cor-texto-secundario: #aab3c2;
     --cor-cinza-claro: var(--cor-texto-secundario);
-    --cor-borda-sutil: rgba(255, 255, 255, 0.1);
+    --cor-borda-sutil: rgba(127, 139, 163, 0.32);
     --cor-superficie: #0a1729;
     --cor-superficie-elevada: #102039;
 
@@ -26,12 +26,12 @@
     --color-warning: var(--cor-aviso);
     --color-danger: var(--cor-perigo);
     --color-transition: var(--cor-azul-transicao);
-    --color-on-accent: var(--cor-fundo);
+    --color-on-accent: #071018;
     --color-accent-hover: #6deaf8;
     --font-logo: "Ethnocentric", sans-serif;
-    --font-titulos: "Oxanium", sans-serif;
-    --font-subtitulos: "Rajdhani", sans-serif;
-    --font-texto: "Calibri", sans-serif;
+    --font-titulos: "Michroma", sans-serif;
+    --font-subtitulos: "Manrope", sans-serif;
+    --font-texto: "Manrope", sans-serif;
     --spacing-xs: 8px;
     --spacing-sm: 16px;
     --spacing-md: 32px;
@@ -60,8 +60,11 @@
     --border-accent: 1px solid var(--cor-ciano);
     --shadow-sm: 0 8px 16px rgba(0, 0, 0, 0.24);
     --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.42);
-    --shadow-glow: 0 0 12px rgba(0, 213, 237, 0.18);
-    --transition-fast: 160ms ease;
+    --shadow-glow: 0 0 12px rgba(0, 212, 255, 0.18);
+    --transition-fast: 120ms ease;
+    --transition-standard: 180ms ease;
+    --integrado-header-height: 72px;
+    --integrado-rail-width: 248px;
 }
 
 @media (max-width: 768px) {

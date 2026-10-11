@@ -297,7 +297,7 @@ function expectStatus(result, status, label) {
 
         await resetSession(page);
         await login(page, '/produtor', 'e2e-producer-a');
-        await page.getByRole('link', { name: 'Recebimentos' }).click();
+        await page.getByRole('link', { name: 'Financeiro' }).click();
         await page.waitForURL('**/produtor/financeiro');
         const payouts = await page.locator('#producer-payouts').textContent();
         assert.match(payouts, /R\$\s*275,90/);

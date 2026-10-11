@@ -87,6 +87,8 @@ export function calcular() {
     if (valor) {
         valor.innerText = money(total);
     }
+    const contextualEstimate = $("quote-context-estimate");
+    if (contextualEstimate) contextualEstimate.textContent = money(total);
 }
 
 export async function initEventosCalculadora() {
