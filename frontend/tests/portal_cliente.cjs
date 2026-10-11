@@ -78,7 +78,7 @@ async function staticResponse(route) {
             body: await fs.readFile(file),
             contentType: {
                 '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html',
-                '.png': 'image/png', '.webp': 'image/webp', '.ttf': 'font/ttf',
+                '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ttf': 'font/ttf',
             }[path.extname(file)] || 'application/octet-stream',
         });
     } catch {
@@ -185,6 +185,13 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Aceitar proposta' }).click();
         await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Proposta aceita'));
         assert.equal(await page.getByRole('button', { name: 'Aceitar proposta' }).count(), 0);
+        await page.setViewportSize({ width: 390, height: 900 });
+        const clientMenu = page.locator('.integrado-portal__menu-toggle');
+        await clientMenu.click();
+        assert.equal(await clientMenu.getAttribute('aria-expanded'), 'true');
+        assert.equal(await page.locator('#client-navigation').isVisible(), true);
+        await page.keyboard.press('Escape');
+        assert.equal(await clientMenu.getAttribute('aria-expanded'), 'false');
         for (const width of [320, 375, 390, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 800 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
