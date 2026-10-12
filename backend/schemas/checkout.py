@@ -52,6 +52,7 @@ class CheckoutConfig(CheckoutContract):
 
 class CheckoutPaymentRequest(CheckoutContract):
     payment_option: PaymentOption
+    device_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9._:-]{1,256}$")
 
 
 class CheckoutCardRequest(CheckoutPaymentRequest):

@@ -49,7 +49,8 @@ def _execute(callback):
 @router.get("/config", response_model=CheckoutConfig)
 def config():
     key = settings.MERCADO_PAGO_PUBLIC_KEY
-    if not isinstance(key, str) or not key.strip():
+    token = settings.MERCADO_PAGO_ACCESS_TOKEN
+    if not isinstance(key, str) or not key.strip() or not isinstance(token, str) or not token.strip():
         raise HTTPException(status_code=503, detail="Pagamento por cartao indisponivel.")
     return CheckoutConfig(mercado_pago_public_key=key.strip())
 
@@ -105,6 +106,7 @@ def pix(
             db,
             token,
             dados.payment_option,
+            device_id=dados.device_id,
             client=client,
             request_id=request.state.request_id,
         )

@@ -23,6 +23,7 @@ SENSITIVE_VALUE_PATTERN = re.compile(
     r"(?i)\b(access[_ -]?token|authorization|card[_ -]?token|token|pan|cvv)\b"
     r"\s*[:=]\s*[^\s,;]+"
 )
+DEVICE_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,256}$")
 
 
 class MercadoPagoError(Exception):
@@ -269,6 +270,8 @@ class MercadoPagoClient:
         idempotency_key: str,
         payer: MercadoPagoPayer,
         expiration_time: str | None = None,
+        service_title: str = "Servico Mirai Hit Studio",
+        device_id: str | None = None,
     ) -> ProviderPaymentResult:
         if expiration_time is not None and (
             not isinstance(expiration_time, str) or not 1 <= len(expiration_time) <= 40
@@ -286,6 +289,8 @@ class MercadoPagoClient:
             idempotency_key=idempotency_key,
             payer=payer,
             payment=payment,
+            service_title=service_title,
+            device_id=device_id,
         )
 
     def create_card(
@@ -299,6 +304,8 @@ class MercadoPagoClient:
         payment_method_id: str,
         installments: int,
         payment_method_type: str = "credit_card",
+        service_title: str = "Servico Mirai Hit Studio",
+        device_id: str | None = None,
     ) -> ProviderPaymentResult:
         if not isinstance(card_token, str) or not card_token.strip() or len(card_token) > 256:
             raise MercadoPagoValidationError()
@@ -315,6 +322,7 @@ class MercadoPagoClient:
                 "type": payment_method_type,
                 "token": card_token,
                 "installments": installments,
+                "statement_descriptor": "MIRAI HIT",
             },
         }
         return self._create_order(
@@ -323,6 +331,8 @@ class MercadoPagoClient:
             idempotency_key=idempotency_key,
             payer=payer,
             payment=payment,
+            service_title=service_title,
+            device_id=device_id,
             transaction_security=True,
         )
 
@@ -340,6 +350,8 @@ class MercadoPagoClient:
         idempotency_key,
         payer,
         payment,
+        service_title,
+        device_id,
         transaction_security=False,
     ):
         if not SAFE_ID_PATTERN.fullmatch(external_reference or ""):
@@ -347,11 +359,19 @@ class MercadoPagoClient:
         if not isinstance(idempotency_key, str) or not 1 <= len(idempotency_key) <= 128:
             raise MercadoPagoValidationError()
         amount_string = f"{_money(amount):.2f}"
+        if not isinstance(service_title, str) or not service_title.strip() or len(service_title) > 120:
+            raise MercadoPagoValidationError()
+        if device_id is not None and (
+            not isinstance(device_id, str) or not DEVICE_ID_PATTERN.fullmatch(device_id)
+        ):
+            raise MercadoPagoValidationError()
         payload = {
             "type": "online",
             "processing_mode": "automatic",
             "total_amount": amount_string,
             "external_reference": external_reference,
+            "description": service_title,
+            "items": [{"title": service_title, "quantity": 1, "unit_price": amount_string}],
             "payer": payer.payload(),
             "transactions": {"payments": [payment]},
         }
@@ -372,6 +392,7 @@ class MercadoPagoClient:
             "/v1/orders",
             json=payload,
             idempotency_key=idempotency_key,
+            device_id=device_id,
         )
         return self._parse_result(
             data,
@@ -381,7 +402,7 @@ class MercadoPagoClient:
             allow_unidentified_rejection=True,
         )
 
-    def _request(self, method, path, *, json=None, idempotency_key=None):
+    def _request(self, method, path, *, json=None, idempotency_key=None, device_id=None):
         self.ensure_configured()
         headers = {
             "Accept": "application/json",
@@ -390,6 +411,8 @@ class MercadoPagoClient:
         }
         if idempotency_key:
             headers["X-Idempotency-Key"] = idempotency_key
+        if device_id:
+            headers["X-meli-session-id"] = device_id
         try:
             response = self._session.request(
                 method,

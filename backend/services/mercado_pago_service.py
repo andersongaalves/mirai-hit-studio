@@ -19,6 +19,19 @@ logger = logging.getLogger(__name__)
 PROVIDER = "mercado_pago"
 
 
+def _service_title(payment: PagamentoModel) -> str:
+    title = str(payment.cobranca.proposta.objeto or "Servico musical").strip()
+    title = " ".join(title.split())[:90] or "Servico musical"
+    label = {
+        PagamentoTipo.INTEGRAL.value: "Integral",
+        PagamentoTipo.ENTRADA.value: "Entrada",
+        PagamentoTipo.SALDO.value: "Saldo",
+    }.get(payment.tipo)
+    if label is None:
+        raise financial_service.FinanceiroInvalido("Tipo de pagamento invalido.")
+    return f"Mirai Hit Studio - {label}: {title}"
+
+
 @dataclass(frozen=True)
 class PaymentExecution:
     payment_id: int
@@ -92,6 +105,7 @@ def criar_pix(
     tipo: PagamentoTipo | str,
     payer: MercadoPagoPayer,
     expiration_time: str | None = None,
+    device_id: str | None = None,
     client: MercadoPagoClient | None = None,
     request_id: str | None = None,
 ) -> PaymentExecution:
@@ -103,6 +117,7 @@ def criar_pix(
         payment.id,
         payer=payer,
         expiration_time=expiration_time,
+        device_id=device_id,
         client=provider,
         request_id=request_id,
     )
@@ -114,6 +129,7 @@ def enviar_pix(
     *,
     payer: MercadoPagoPayer,
     expiration_time: str | None = None,
+    device_id: str | None = None,
     client: MercadoPagoClient | None = None,
     request_id: str | None = None,
 ) -> PaymentExecution:
@@ -126,6 +142,8 @@ def enviar_pix(
             idempotency_key=payment.provider_idempotency_key,
             payer=payer,
             expiration_time=expiration_time,
+            service_title=_service_title(payment),
+            device_id=device_id,
         )
     except MercadoPagoError as error:
         error.payment_id = payment.id
@@ -147,6 +165,7 @@ def criar_cartao(
     payment_method_id: str,
     installments: int,
     payment_method_type: str = "credit_card",
+    device_id: str | None = None,
     client: MercadoPagoClient | None = None,
     request_id: str | None = None,
 ) -> PaymentExecution:
@@ -161,6 +180,7 @@ def criar_cartao(
         payment_method_id=payment_method_id,
         installments=installments,
         payment_method_type=payment_method_type,
+        device_id=device_id,
         client=provider,
         request_id=request_id,
     )
@@ -175,6 +195,7 @@ def enviar_cartao(
     payment_method_id: str,
     installments: int,
     payment_method_type: str = "credit_card",
+    device_id: str | None = None,
     client: MercadoPagoClient | None = None,
     request_id: str | None = None,
 ) -> PaymentExecution:
@@ -190,6 +211,8 @@ def enviar_cartao(
             payment_method_id=payment_method_id,
             installments=installments,
             payment_method_type=payment_method_type,
+            service_title=_service_title(payment),
+            device_id=device_id,
         )
     except MercadoPagoError as error:
         error.payment_id = payment.id

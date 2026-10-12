@@ -184,7 +184,11 @@ with Session(engine) as db:
     provider = MercadoPagoClient(access_token='private-access-token', session=FakeSession([]))
     client = checkout_app(db, provider)
     config.settings.MERCADO_PAGO_PUBLIC_KEY = 'public-key-only'
+    config.settings.MERCADO_PAGO_ACCESS_TOKEN = 'test-token-only'
     assert client.get('/checkout/config').json() == {'mercado_pago_public_key': 'public-key-only'}
+    config.settings.MERCADO_PAGO_ACCESS_TOKEN = ''
+    assert client.get('/checkout/config').status_code == 503
+    config.settings.MERCADO_PAGO_ACCESS_TOKEN = 'test-token-only'
     assert client.post(f'/checkout/{token}/pix', json={'payment_option':'entrada','amount':'0.01'}).status_code == 422
 
     original_request = provider._session
@@ -199,7 +203,9 @@ with Session(engine) as db:
             self.calls.append((method, url, kwargs))
             return FakeResponse(201 if method == 'POST' else 200, data)
     provider._session = DynamicSession([])
-    first = client.post(f'/checkout/{token}/pix', json={'payment_option':'entrada'})
+    first = client.post(f'/checkout/{token}/pix', json={
+        'payment_option':'entrada', 'device_id':'official-device-123'
+    })
     assert first.status_code == 200, first.text
     payload = first.json()
     assert payload['status'] == 'pending' and payload['valor'] == '75.12'
@@ -211,6 +217,12 @@ with Session(engine) as db:
     assert [call[0] for call in provider._session.calls] == ['POST', 'GET']
     sent = provider._session.calls[0][2]['json']
     assert sent['total_amount'] == '75.12' and sent['transactions']['payments'][0]['amount'] == '75.12'
+    assert sent['items'][0]['unit_price'] == '75.12'
+    assert provider._session.calls[0][2]['headers']['X-meli-session-id'] == 'official-device-123'
+    assert 'X-meli-session-id' not in provider._session.calls[1][2]['headers']
+    assert client.post(f'/checkout/{token}/pix', json={
+        'payment_option':'entrada', 'device_id':'unsafe\r\nheader:value'
+    }).status_code == 422
     assert 'amount' not in {'payment_option':'entrada'}
 ''')
 
@@ -248,6 +260,7 @@ with Session(engine) as db:
         'validation':'on_fraud_risk', 'liability_shift':'required'}
     method = provider_payload['transactions']['payments'][0]['payment_method']
     assert method['installments'] == 3 and method['token'] == card_token
+    assert method['statement_descriptor'] == 'MIRAI HIT'
     persisted = db.query(PagamentoModel).one()
     assert card_token not in str(persisted.__dict__)
     assert card_token not in response.text and 'private-access-token' not in response.text

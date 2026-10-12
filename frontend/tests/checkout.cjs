@@ -90,7 +90,9 @@ async function staticResponse(route) {
         let pixRequests = 0;
         let authenticatedPixRequests = 0;
         let cardPayload = null;
+        let pixPayload = null;
         let sdkFailure = false;
+        let securityFailure = false;
         let missingPublicKey = false;
         let configStatus = 200;
         const pageErrors = [];
@@ -111,6 +113,10 @@ async function staticResponse(route) {
                         } }; }
                     };
                 ` });
+            }
+            if (url.pathname === '/v2/security.js' && url.hostname === 'www.mercadopago.com') {
+                if (securityFailure) return route.abort();
+                return route.fulfill({ contentType: 'text/javascript', body: "window.MP_DEVICE_SESSION_ID = 'official-device-123';" });
             }
             if (url.origin === 'http://localhost:8000') {
                 if (url.pathname === '/portal/cliente/propostas/42/checkout' && route.request().method() === 'GET') {
@@ -144,6 +150,7 @@ async function staticResponse(route) {
                 }
                 if (suffix === '/pix' && route.request().method() === 'POST') {
                     pixRequests += 1;
+                    pixPayload = route.request().postDataJSON();
                     await new Promise(resolve => setTimeout(resolve, 80));
                     const malformed = token === tokenH;
                     const expired = token === tokenI;
@@ -275,6 +282,10 @@ async function staticResponse(route) {
         await cardPage.locator('#method-card').click();
         await cardPage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
         assert.equal(await cardPage.evaluate(() => window.__brickSettings.initialization.amount), 198);
+        await cardPage.locator('input[name="payment_option"][value="entrada"]').check();
+        await cardPage.waitForFunction(() => window.__brickSettings.initialization.amount === 99);
+        await cardPage.locator('input[name="payment_option"][value="integral"]').check();
+        await cardPage.waitForFunction(() => window.__brickSettings.initialization.amount === 198);
         await cardPage.evaluate(() => window.__brickSettings.callbacks.onError({ cause: 'no_installments_in_selected_range', message: 'sensitive provider detail' }));
         assert.match(await cardPage.locator('#card-error').textContent(), /Pix continua disponível/);
         assert.equal(cardConsole.some(message => message.includes('sensitive provider detail')), false);
@@ -285,6 +296,7 @@ async function staticResponse(route) {
         assert.equal(cardPayload.payment_option, 'integral');
         assert.equal(cardPayload.installments, 3);
         assert.equal(cardPayload.card_token, 'transient-token');
+        assert.equal(cardPayload.device_id, 'official-device-123');
         assert.equal('amount' in cardPayload, false);
         assert.equal('pan' in cardPayload || 'cvv' in cardPayload, false);
         assert.equal(await cardPage.locator('#challenge-container').isVisible(), true);
@@ -317,6 +329,19 @@ async function staticResponse(route) {
         assert.match(await failurePage.locator('#card-error').textContent(), /use Pix/i);
         await failurePage.locator('#method-pix').click();
         assert.equal(await failurePage.locator('#generate-pix').isVisible(), true);
+        sdkFailure = false;
+        await failurePage.locator('#method-card').click();
+        await failurePage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
+
+        securityFailure = true;
+        const noDevicePage = await context.newPage();
+        await noDevicePage.goto(`http://localhost:4173/checkout/${tokenC}`);
+        await noDevicePage.waitForSelector('#checkout-content:not(.hidden)');
+        await noDevicePage.locator('#generate-pix').click();
+        await noDevicePage.waitForSelector('#pix-result:not(.hidden)');
+        assert.equal(pixPayload.device_id, null);
+        await noDevicePage.close();
+        securityFailure = false;
 
         for (const [width, height] of [[375, 800], [390, 844], [414, 896], [768, 900], [1024, 900], [1440, 1000]]) {
             await failurePage.setViewportSize({ width, height });
@@ -333,7 +358,6 @@ async function staticResponse(route) {
         assert.equal(await statePage.locator('#checkout-form').isHidden(), true);
         await statePage.goto(`http://localhost:4173/checkout/${tokenF}`);
         assert.match(await statePage.locator('#checkout-terminal').textContent(), /cancelada/);
-        sdkFailure = false;
         await statePage.goto(`http://localhost:4173/checkout/${tokenG}`);
         await statePage.locator('#method-card').click();
         await statePage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
@@ -341,6 +365,10 @@ async function staticResponse(route) {
             token: 'retry-token', payment_method_id: 'visa', installments: 1, payer: { email: 'buyer@example.com' },
         }, { paymentTypeId: 'credit_card' })).catch(() => {});
         assert.match(await statePage.locator('#payment-result').textContent(), /não foi aprovado/);
+        await statePage.evaluate(async () => window.__brickSettings.callbacks.onSubmit({
+            token: 'debit-token', payment_method_id: 'debvisa', installments: 1, payer: { email: 'buyer@example.com' },
+        }, { paymentTypeId: 'debit_card' })).catch(() => {});
+        assert.equal(cardPayload.payment_method_type, 'debit_card');
         await statePage.goto('http://localhost:4173/checkout/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
         await statePage.waitForSelector('#checkout-error:not(.hidden)');
         assert.match(await statePage.locator('#checkout-error-message').textContent(), /não encontrado/i);

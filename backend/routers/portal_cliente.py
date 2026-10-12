@@ -173,6 +173,7 @@ def pagar_checkout_pix(
             proposta_id,
             user.cliente_id,
             data.payment_option,
+            device_id=data.device_id,
             client=client,
             request_id=getattr(request.state, "request_id", None),
         )
