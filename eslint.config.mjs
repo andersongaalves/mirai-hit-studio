@@ -25,6 +25,23 @@ export default [
                 setTimeout: "readonly",
                 clearTimeout: "readonly",
                 Event: "readonly",
+                URL: "readonly",
+                URLSearchParams: "readonly",
+                HTMLElement: "readonly",
+                CustomEvent: "readonly",
+                Option: "readonly",
+                AbortController: "readonly",
+                ResizeObserver: "readonly",
+                MutationObserver: "readonly",
+                location: "readonly",
+                history: "readonly",
+                navigator: "readonly",
+                sessionStorage: "readonly",
+                innerHeight: "readonly",
+                atob: "readonly",
+                structuredClone: "readonly",
+                queueMicrotask: "readonly",
+                setInterval: "readonly",
 
                 confirm: "readonly"
             }

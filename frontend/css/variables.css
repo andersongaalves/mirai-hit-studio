@@ -28,6 +28,17 @@
     --color-transition: var(--cor-azul-transicao);
     --color-on-accent: #071018;
     --color-accent-hover: #6deaf8;
+    /* Compatibility aliases for the integrated visual layer. */
+    --integrado-page: var(--cor-fundo);
+    --integrado-surface: var(--cor-superficie);
+    --integrado-cyan: var(--cor-ciano);
+    --integrado-purple: var(--cor-roxo);
+    --integrado-primary: var(--cor-branco);
+    --integrado-secondary: var(--cor-texto-secundario);
+    --integrado-control: #7f8ba3;
+    --integrado-border: var(--cor-borda-sutil);
+    --integrado-cyan-hover: #62e5ff;
+    --integrado-brand-detail: #eaf2ff;
     --font-logo: "Ethnocentric", sans-serif;
     --font-titulos: "Oxanium", sans-serif;
     --font-subtitulos: "Rajdhani", sans-serif;
