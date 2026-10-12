@@ -1,0 +1,70 @@
+/* Public header and footer are used across the site, quote and checkout. */
+.public-page #nav-placeholder { min-height: 72px; }
+.public-page .site-header {
+    height: 72px;
+    border-bottom: 1px solid var(--integrado-border);
+    background: rgba(6, 16, 31, .92);
+    backdrop-filter: blur(10px);
+}
+.public-page .site-nav,
+.public-page .site-footer__inner {
+    width: min(100% - 48px, 1264px);
+}
+.public-page .site-brand img,
+.public-page .site-footer__brand img { filter: none; }
+.public-page .site-nav__links { gap: 22px; }
+.public-page .site-nav__links > a:not(.btn-cta) {
+    color: var(--integrado-secondary);
+    font: 700 14px/20px var(--font-acoes);
+}
+.public-page .site-nav__links > a:not(.btn-cta):hover,
+.public-page .site-nav__links > a[aria-current="page"] { color: var(--integrado-primary); }
+.public-page .site-nav__cta { padding: 12px 20px; }
+.public-page .site-nav__links .site-nav__cta,
+.public-page .public-actions .btn-cta {
+    font: 700 14px/20px var(--font-acoes);
+    text-transform: none;
+}
+.public-page .site-footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--integrado-border);
+    background: var(--integrado-page);
+}
+.public-page .site-footer__inner { grid-template-columns: auto 1fr auto; }
+.public-page .site-footer__brand img { width: 135px; }
+.public-page .site-footer p { text-align: center; }
+.public-page .site-footer nav :is(a, span) {
+    color: var(--integrado-secondary);
+    font: 700 14px/20px var(--font-acoes);
+}
+.public-page .site-footer small { display: none; }
+
+/* Public headings use the display face from the identity manual. */
+.public-page :where(h1, h2, .section-title) {
+    color: var(--integrado-primary);
+    font-family: var(--font-titulos);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    text-shadow: none;
+}
+.public-page h1 { font-size: clamp(26px, 3vw, 36px); line-height: 1.33; }
+.public-page h2 { font-size: clamp(21px, 2.2vw, 26px); line-height: 1.46; }
+.public-page :where(h1, h2, h3)::after { content: none; }
+.public-page :where(.public-eyebrow, .home-kicker) {
+    color: var(--integrado-cyan);
+    font: 400 13px/20px var(--font-texto);
+    letter-spacing: 0;
+}
+
+@media (max-width: 767px) {
+    .public-page #nav-placeholder { min-height: 64px; }
+    .public-page .site-header { height: 64px; }
+    .public-page .site-nav__toggle { display: inline-flex; align-items: center; justify-content: center; width: 80px; min-height: 46px; height: 46px; }
+    .public-page .site-nav__toggle-label { color: var(--integrado-primary); font: 700 13px/20px var(--font-acoes); }
+    .public-page .site-nav__toggle > span:not(.site-nav__toggle-label) { display: none; }
+    .public-page .site-nav, .public-page .site-footer__inner { width: calc(100% - 48px); }
+    .public-page .site-footer__inner { grid-template-columns: 1fr; justify-items: start; gap: 16px; }
+    .public-page .site-footer p { text-align: left; }
+    .public-page .site-footer nav { align-items: flex-start; flex-direction: column; justify-content: flex-start; gap: 16px; }
+}

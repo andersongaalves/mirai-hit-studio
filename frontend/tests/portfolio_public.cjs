@@ -53,7 +53,7 @@ async function staticResponse(route) {
 
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("http://localhost:4173/portfolio");
-        assert.ok((await page.locator('link[href*="integrado.css"]').getAttribute("href")).endsWith(`?v=${assetVersion}`));
+        assert.ok((await page.locator('link[href*="integrado-portfolio.css"]').getAttribute("href")).endsWith(`?v=${assetVersion}`));
         assert.ok((await page.locator('script[src*="js/main.js"]').getAttribute("src")).endsWith(`?v=${assetVersion}`));
         assert.match(await fs.readFile(path.join(root, "js", "main.js"), "utf8"), /modules\/portfolio\.js\?v=20261012-portfolio-card/);
         assert.match(await fs.readFile(path.join(root, "js", "modules", "portfolio.js"), "utf8"), /portfolio_ui\.js\?v=20261012-portfolio-card/);
@@ -81,6 +81,7 @@ async function staticResponse(route) {
         const popupPromise = page.waitForEvent("popup");
         await page.mouse.click(coverBox.x + coverBox.width / 2, coverBox.y + coverBox.height / 2);
         const popup = await popupPromise;
+        await popup.waitForURL('https://example.com/audio.mp3');
         assert.equal(new URL(popup.url()).pathname, "/audio.mp3");
         await popup.close();
         await page.locator(".portfolio-card").first().hover();

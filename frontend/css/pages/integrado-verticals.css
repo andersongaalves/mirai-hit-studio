@@ -1,0 +1,167 @@
+/* Site / Artistas, Criadores, Media & Games. */
+:is(.artists-page, .creators-page, .media-games-page) .public-hero {
+    min-height: 520px;
+    padding-block: 96px;
+    background: var(--integrado-page);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-hero__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 64px;
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-hero__content h1 {
+    max-width: 600px;
+    margin: 16px 0;
+    font: 600 36px/48px var(--font-titulos);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-hero__content > p:not(.public-eyebrow) {
+    max-width: 600px;
+    color: var(--integrado-secondary);
+    font: 400 16px/24px var(--font-texto);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-eyebrow {
+    font: 400 13px/20px var(--font-texto);
+    text-transform: uppercase;
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-hero__visual {
+    justify-self: center;
+    width: min(100%, 440px);
+    height: 240px;
+    aspect-ratio: auto;
+    object-fit: contain;
+}
+.artists-page .public-hero__visual {
+    width: min(100%, 520px);
+    height: 370px;
+    animation: mirai-record-float 7s ease-in-out infinite;
+}
+@keyframes mirai-record-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+:is(.creators-page, .media-games-page) .public-hero__visual--modules span {
+    left: 20%;
+    width: 62%;
+    height: 15%;
+    border: 1px solid var(--integrado-cyan);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: rotate(9deg);
+}
+:is(.creators-page, .media-games-page) .public-hero__visual--modules span:nth-child(even) {
+    left: 23%;
+    border-color: var(--integrado-purple);
+    background: transparent;
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-band--compact,
+:is(.artists-page, .creators-page, .media-games-page) .proof-callout,
+:is(.creators-page, .media-games-page) .public-band:not(.public-band--compact):not(.proof-callout) {
+    display: none;
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-section {
+    padding-block: 72px;
+    background: var(--integrado-page);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-section h2,
+:is(.artists-page, .creators-page, .media-games-page) .public-band h2 {
+    max-width: none;
+    margin: 0;
+    font: 600 26px/38px var(--font-titulos);
+}
+:is(.artists-page, .creators-page, .media-games-page) .integrado-section-lead {
+    margin-top: 16px;
+    color: var(--integrado-secondary);
+    font: 400 16px/24px var(--font-texto);
+}
+:is(.artists-page, .creators-page, .media-games-page) .service-capabilities {
+    margin-top: 24px;
+}
+:is(.artists-page, .creators-page, .media-games-page) .service-capabilities article,
+:is(.artists-page, .creators-page, .media-games-page) .service-capabilities article:nth-child(4),
+:is(.artists-page, .creators-page, .media-games-page) .service-capabilities article:last-child {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 4px 24px;
+    padding: 20px 0;
+    border-top: 1px solid var(--integrado-border);
+}
+:is(.artists-page, .creators-page, .media-games-page) .service-capabilities article > span {
+    color: var(--integrado-cyan);
+    font: 700 13px/20px var(--font-texto);
+}
+:is(.artists-page, .creators-page, .media-games-page) .service-capabilities h3 {
+    font: 700 18px/26px var(--font-texto);
+}
+:is(.artists-page, .creators-page, .media-games-page) .service-capabilities p {
+    color: var(--integrado-secondary);
+    font: 400 13px/20px var(--font-texto);
+}
+:is(.artists-page, .creators-page, .media-games-page) .offers-layout {
+    display: block;
+}
+:is(.artists-page, .creators-page, .media-games-page) .artist-process {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 18px;
+}
+:is(.artists-page, .creators-page, .media-games-page) .artist-process li {
+    display: inline-flex;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+:is(.artists-page, .creators-page, .media-games-page) .artist-process li > span,
+:is(.artists-page, .creators-page, .media-games-page) .artist-process li p {
+    display: none;
+}
+:is(.artists-page, .creators-page, .media-games-page) .artist-process strong {
+    color: var(--integrado-primary);
+    font: 400 13px/20px var(--font-texto);
+}
+:is(.artists-page, .creators-page, .media-games-page) .artist-process li:not(:last-child) strong::after {
+    margin-left: 16px;
+    content: "→";
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-cta {
+    padding-block: 72px;
+    background: var(--integrado-surface);
+    text-align: left;
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-cta :is(h2, .public-eyebrow) {
+    color: var(--integrado-primary);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-cta h2 {
+    margin: 0;
+    color: var(--integrado-primary);
+    font: 600 36px/48px var(--font-titulos);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-cta .public-eyebrow {
+    color: var(--integrado-cyan);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-cta p:not(.public-eyebrow) {
+    margin: 16px 0 24px;
+    color: var(--integrado-secondary);
+    font: 400 16px/24px var(--font-texto);
+}
+:is(.artists-page, .creators-page, .media-games-page) .public-cta .btn-cta {
+    border-color: var(--integrado-cyan);
+    background: var(--integrado-cyan);
+    color: var(--color-on-accent);
+}
+
+@media (max-width: 767px) {
+    :is(.artists-page, .creators-page, .media-games-page) .public-hero { min-height: 0; padding-block: 32px; }
+    :is(.artists-page, .creators-page, .media-games-page) .public-hero__layout { grid-template-columns: 1fr; gap: 16px; }
+    :is(.artists-page, .creators-page, .media-games-page) .public-hero__content h1 { font: 600 26px/36px var(--font-titulos); }
+    :is(.artists-page, .creators-page, .media-games-page) .public-hero__visual,
+    .artists-page .public-hero__visual { width: min(100%, 340px); height: 160px; }
+    :is(.artists-page, .creators-page, .media-games-page) .public-section { padding-block: 48px; }
+    :is(.artists-page, .creators-page, .media-games-page) .service-capabilities article { grid-template-columns: 32px minmax(0, 1fr); gap: 4px 12px; }
+    :is(.artists-page, .creators-page, .media-games-page) .public-cta { padding-block: 48px; }
+    :is(.artists-page, .creators-page, .media-games-page) .public-cta h2 { font: 600 26px/36px var(--font-titulos); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .artists-page .public-hero__visual { animation: none; }
+}

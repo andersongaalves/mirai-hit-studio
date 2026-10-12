@@ -1,0 +1,42 @@
+/* Checkout: the approved proposal remains the sole source of prices. */
+.checkout-page .checkout-shell { width: min(100% - 48px, 1264px); padding: 48px 0 72px; }
+.checkout-page .checkout-intro { margin-bottom: 56px; }
+.checkout-page .checkout-intro h1 { margin: 12px 0 8px; font: 600 clamp(26px, 3vw, 36px)/1.33 var(--font-titulos); }
+.checkout-page .checkout-intro > p:last-child { margin: 0; color: var(--integrado-secondary); }
+.checkout-page .checkout-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, .5fr); gap: 40px; }
+.checkout-page .checkout-payment, .checkout-page .checkout-summary, .checkout-page .checkout-state {
+    padding: 20px 0;
+    border: 0;
+    border-top: 1px solid var(--integrado-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.checkout-page .checkout-payment h2, .checkout-page .checkout-summary h2 { margin: 0 0 20px; font: 700 20px/26px var(--font-subtitulos); }
+.checkout-page .checkout-summary { grid-column: 2; grid-row: 1; }
+.checkout-page .checkout-payment { grid-column: 1; grid-row: 1; }
+.checkout-page .checkout-options { padding: 0; }
+.checkout-page .checkout-options legend { color: var(--integrado-secondary); font: 700 14px/20px var(--font-texto); }
+.checkout-page .checkout-option { min-height: 48px; border: 1px solid var(--integrado-control); border-radius: var(--radius-sm); background: var(--integrado-surface); }
+.checkout-page .checkout-option:has(input:checked) { border-color: var(--integrado-cyan); }
+.checkout-page .checkout-methods { max-width: 480px; }
+.checkout-page .checkout-method { min-height: 48px; border-color: var(--integrado-control); border-radius: var(--radius-sm); background: var(--integrado-surface); }
+.checkout-page .checkout-method.is-active { border-color: var(--integrado-cyan); background: var(--integrado-surface); color: var(--integrado-cyan); }
+.checkout-page .checkout-panel { padding-top: 12px; }
+.checkout-page .checkout-panel > p, .checkout-page .checkout-provider-note { color: var(--integrado-secondary); font: 400 13px/20px var(--font-texto); }
+.checkout-page .checkout-submit { width: auto; padding: 12px 18px; }
+.checkout-page .checkout-totals div { border-color: var(--integrado-border); }
+.checkout-page .checkout-totals dt { color: var(--integrado-secondary); }
+.checkout-page .checkout-totals dd { color: var(--integrado-primary); }
+.checkout-page .checkout-eyebrow { color: var(--integrado-cyan); }
+.checkout-page .analytics-preferences { position: static; box-shadow: none; backdrop-filter: none; }
+.checkout-page .checkout-intro:has(+ .analytics-consent) { margin-bottom: 20px; }
+.checkout-page .analytics-consent { position: static; width: 100%; max-height: none; margin: 0 0 24px; box-shadow: none; }
+
+@media (max-width: 767px) {
+    .checkout-page .checkout-shell { padding-top: 36px; }
+    .checkout-page .checkout-intro { margin-bottom: 32px; }
+    .checkout-page .checkout-layout { grid-template-columns: 1fr; gap: 24px; }
+    .checkout-page .checkout-payment, .checkout-page .checkout-summary { grid-column: 1; grid-row: auto; }
+    .checkout-page .checkout-summary { order: -1; }
+}
