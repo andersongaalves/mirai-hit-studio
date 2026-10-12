@@ -85,7 +85,7 @@
     display: inline-flex;
     align-items: center;
     color: var(--color-text-secondary);
-    font-family: var(--font-titulos);
+    font-family: var(--font-acoes);
     font-size: var(--font-size-small);
     font-weight: 700;
 }

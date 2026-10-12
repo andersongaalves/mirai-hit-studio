@@ -182,7 +182,7 @@ export async function renderizarPortfolio() {
         track.replaceChildren();
         const empty = document.createElement("p");
         empty.className = "public-empty";
-        empty.textContent = "O portfólio público está sendo preparado com trabalhos identificados e autorizados.";
+        empty.textContent = "Ainda não há trabalhos publicados.";
         track.appendChild(empty);
         return;
     }

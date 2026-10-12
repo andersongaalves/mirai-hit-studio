@@ -69,7 +69,7 @@ async function staticResponse(route) {
         assert.equal(await page.locator(".process-list > li").count(), 6);
         assert.equal(await page.getByText("estúdio de rap geek", { exact: false }).count(), 0);
         assert.equal(await page.locator("#particles-container").count(), 0);
-        assert.ok((await page.locator("#home-portfolio-track").textContent()).includes("identificados e autorizados"));
+        assert.ok((await page.locator("#home-portfolio-track").textContent()).includes("Ainda não há trabalhos publicados."));
 
         for (const width of [320, 375, 390, 414, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 900 });

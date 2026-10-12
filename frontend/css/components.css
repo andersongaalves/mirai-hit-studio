@@ -191,7 +191,7 @@
     cursor: pointer;
     transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
-.btn-cta, .btn-outline, .btn-small { min-height: 44px; font-family: var(--font-titulos); letter-spacing: 0; }
+.btn-cta, .btn-outline, .btn-small { min-height: 44px; font-family: var(--font-acoes); font-weight: 700; letter-spacing: 0; }
 .btn-cta:hover {
     background: var(--color-accent-hover);
     box-shadow: var(--shadow-glow);

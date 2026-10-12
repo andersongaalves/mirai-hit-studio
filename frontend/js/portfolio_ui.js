@@ -112,7 +112,7 @@ export function renderizarProjetos(projects, segmentLabels = {}) {
     clear(container);
 
     if (!published.length) {
-        container.append(element("p", "portfolio-empty", "Ainda não há materiais classificados e autorizados para esta seleção."));
+        container.append(element("p", "portfolio-empty", "Nenhum trabalho encontrado para esta seleção."));
         return;
     }
 

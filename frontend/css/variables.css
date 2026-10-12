@@ -29,9 +29,11 @@
     --color-on-accent: #071018;
     --color-accent-hover: #6deaf8;
     --font-logo: "Ethnocentric", sans-serif;
-    --font-titulos: "Michroma", sans-serif;
-    --font-subtitulos: "Manrope", sans-serif;
-    --font-texto: "Manrope", sans-serif;
+    --font-titulos: "Oxanium", sans-serif;
+    --font-subtitulos: "Rajdhani", sans-serif;
+    --font-texto: "Calibri", Arial, sans-serif;
+    --font-acoes: "Oxanium", sans-serif;
+    --font-valores: "Rajdhani", sans-serif;
     --spacing-xs: 8px;
     --spacing-sm: 16px;
     --spacing-md: 32px;

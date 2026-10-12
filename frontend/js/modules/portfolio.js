@@ -53,7 +53,7 @@ export async function initPortfolioPage() {
             if (status) {
                 const link = document.createElement("a");
                 link.href = "/#mix-comparison";
-                link.textContent = "Ouvir comparação autorizada";
+                link.textContent = "Ouvir comparação";
                 status.replaceChildren(link);
             }
         }
