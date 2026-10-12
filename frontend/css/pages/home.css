@@ -107,9 +107,9 @@
     position: relative;
     padding: 12px 0;
     color: var(--home-muted);
-    font-family: var(--font-titulos);
+    font-family: var(--font-acoes);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.2;
     text-decoration: none;
     transition: color 160ms ease;

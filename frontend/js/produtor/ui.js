@@ -107,7 +107,7 @@ function filesPanel(production, files, handlers) {
     const panel = element("section", "producer-files");
     panel.append(element("h2", "", "Arquivos"));
     const list = element("ul", "producer-file-list");
-    if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo autorizado disponível."));
+    if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo disponível."));
     else files.forEach(file => list.append(fileItem(file, handlers.onDownload)));
     panel.append(list);
 

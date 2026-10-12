@@ -91,8 +91,8 @@ async function staticResponse(route) {
 
         projects = [];
         await page.reload();
-        await page.waitForFunction(() => document.querySelector(".portfolio-empty")?.textContent.includes("Ainda não há materiais"));
-        assert.match(await page.locator(".portfolio-empty").textContent(), /Ainda não há materiais/);
+        await page.waitForFunction(() => document.querySelector(".portfolio-empty")?.textContent.includes("Nenhum trabalho encontrado"));
+        assert.match(await page.locator(".portfolio-empty").textContent(), /Nenhum trabalho encontrado/);
         assert.equal(await page.locator("#filtros-portfolio").isVisible(), true);
         assert.match(await page.locator("#portfolio-comparison-status").textContent(), /indisponível/);
         failProjects = true;
