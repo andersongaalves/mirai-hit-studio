@@ -40,6 +40,12 @@ sidebar, mas conserva seu shell em `pages/admin.css` e
 `pages/integrado-admin.css`. Não foi introduzido um template ou framework para
 estruturas que não têm o mesmo contrato de conteúdo.
 
+Após a publicação inicial, uma regra legada de `pages/cliente.css` ainda
+organizava a sidebar como grade horizontal e deixava a navegação ultrapassar
+seu espaço no portal do cliente. A regra estrutural foi removida; o layout
+compartilhado é agora a única fonte para shell, sidebar e navegação. O link de
+`cliente.css` recebeu uma versão para evitar HTML novo com CSS antigo em cache.
+
 Nos módulos integrados, 23 raios literais de 4px, sete usos de `#071018`, dois
 de `#62e5ff` e quatro de `#eaf2ff` passaram a referenciar tokens existentes ou
 novos, sem mudar seus valores calculados. Nenhuma regra foi removida por mera
