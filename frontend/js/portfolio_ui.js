@@ -51,13 +51,15 @@ function isDirectAudio(url) {
 
 function createProjectCard(project, segmentLabels = {}) {
     const card = element("article", "portfolio-card");
+    const coverFrame = element("div", "portfolio-card__cover-frame");
     const cover = element("img", "portfolio-card__cover");
     cover.src = obterCapaInteligente(project.link_audio, project.link_capa);
     cover.alt = project.titulo ? `Capa de ${project.titulo}` : "Capa do projeto";
     cover.width = 640;
-    cover.height = 400;
+    cover.height = 360;
     cover.loading = "lazy";
     cover.decoding = "async";
+    coverFrame.append(cover);
 
     const body = element("div", "portfolio-card__body");
     const badges = element("div", "portfolio-card__badges");
@@ -65,11 +67,16 @@ function createProjectCard(project, segmentLabels = {}) {
         element("span", "portfolio-card__badge portfolio-card__badge--type", CASE_TYPE_LABELS[project.case_type]),
         element("span", "portfolio-card__badge", VERTICAL_LABELS[project.vertical]),
     );
-    if (project.categoria) badges.append(element("span", "portfolio-card__badge", project.categoria));
-
     const title = element("h2", "", project.titulo || "Projeto sem título");
     const credit = element("p", "portfolio-card__credit", project.artista || "Mirai Hit Studio");
     const description = element("p", "portfolio-card__description", project.descricao || "Material publicado no portfólio Mirai.");
+    const service = element("div", "portfolio-card__service");
+    if (project.categoria) {
+        service.append(
+            element("span", "portfolio-card__service-label", "Serviço"),
+            element("span", "portfolio-card__service-name", project.categoria),
+        );
+    }
     const segments = element("div", "portfolio-card__segments");
     (Array.isArray(project.segmentos_json) ? project.segmentos_json : []).forEach(segment => {
         segments.append(element(
@@ -89,19 +96,24 @@ function createProjectCard(project, segmentLabels = {}) {
         media.dataset.analyticsListen = "";
         media.dataset.projectId = String(project.id);
         media.setAttribute("aria-label", `Ouvir ${project.titulo}`);
-    } else {
-        media = element("a", "portfolio-card__listen", "Ouvir projeto");
-        media.href = audioURL;
-        media.target = "_blank";
-        media.rel = "noopener noreferrer";
-        media.dataset.analyticsListen = "";
-        media.dataset.projectId = String(project.id);
     }
 
-    body.append(badges, title, credit, description);
+    const listen = element("a", "portfolio-card__listen", "Ouvir projeto");
+    listen.href = audioURL;
+    listen.target = "_blank";
+    listen.rel = "noopener noreferrer";
+    listen.dataset.analyticsListen = "";
+    listen.dataset.projectId = String(project.id);
+    listen.setAttribute("aria-label", `Ouvir ${project.titulo || "projeto"}`);
+    listen.append(element("span", "portfolio-card__listen-arrow", "↗"));
+
+    body.append(badges, title, credit);
+    if (service.childElementCount) body.append(service);
     if (segments.childElementCount) body.append(segments);
-    body.append(media);
-    card.append(cover, body);
+    body.append(description);
+    if (media) body.append(media);
+    body.append(listen);
+    card.append(coverFrame, body);
     return card;
 }
 

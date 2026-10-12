@@ -132,7 +132,7 @@ async function staticResponse(route) {
             headingTop: document.querySelector(".mix-showcase__heading").getBoundingClientRect().top,
         }));
         assert.ok(anchorLayout.headingTop >= anchorLayout.headerBottom - 1, JSON.stringify(anchorLayout));
-        assert.match(await page.locator("#mix-comparison-title").textContent(), /Resultado não se explica/);
+        assert.match(await page.locator("#mix-comparison-title").textContent(), /Compare a mesma música antes e depois da mixagem/);
         assert.equal(await page.locator("#mix-project-selector button").count(), 4);
         assert.equal(await page.locator('[data-mix-version="before"]').getAttribute("aria-pressed"), "true");
         assert.equal(await page.locator('[data-mix-version="after"]').getAttribute("aria-pressed"), "false");
