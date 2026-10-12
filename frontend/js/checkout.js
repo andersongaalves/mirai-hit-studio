@@ -7,6 +7,9 @@ import { initComponents } from "./modules/components.js";
 const $ = id => document.getElementById(id);
 const TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,256}$/;
+const CHALLENGE_HOSTS = new Set([
+    "www.mercadopago.com", "www.mercadopago.com.ar",
+]);
 let sdkLoadPromise = null;
 let deviceLoadPromise = null;
 const state = {
@@ -18,6 +21,7 @@ const state = {
     busy: false,
     cardController: null,
     cardRenderId: 0,
+    cardUnmount: Promise.resolve(),
     polling: null,
     pollCount: 0,
 };
@@ -161,6 +165,7 @@ function safeHttps(value) {
 
 function renderPayment(result) {
     const message = $("payment-result");
+    const challengeAvailable = renderChallenge(result.challenge_url);
     message.classList.remove("hidden");
     message.dataset.kind = result.status === "approved" ? "success" : "warning";
     if (result.status === "approved") {
@@ -170,12 +175,13 @@ function renderPayment(result) {
     } else if (result.status === "rejected") {
         message.textContent = "O pagamento não foi aprovado. Revise os dados ou tente outra forma de pagamento.";
     } else if (result.status === "action_required") {
-        message.textContent = "Confirme a compra com seu banco.";
+        message.textContent = challengeAvailable
+            ? "Confirme a compra com seu banco."
+            : "A autenticação do cartão não pôde ser exibida. Aguarde a atualização do pagamento antes de tentar novamente.";
     } else {
         message.textContent = "Pagamento em processamento. A confirmação será atualizada automaticamente.";
     }
     renderPix(result.pix, result.status, result.valor);
-    renderChallenge(result.challenge_url);
     if (["pending", "action_required"].includes(result.status)) startPolling();
     if (result.status === "approved") refreshSummary();
 }
@@ -221,16 +227,23 @@ function renderPix(pix, status, amount) {
 }
 
 function isMercadoPagoUrl(value) {
-    const url = safeHttps(value);
-    if (!url) return "";
-    const host = new URL(url).hostname.toLowerCase();
-    return host === "mercadopago.com" || host.startsWith("www.mercadopago.") || host.includes(".mercadopago.") ? url : "";
+    if (typeof value !== "string" || !value || value.length > 2000 || /[\u0000-\u0020\u007f\\]/.test(value)) return "";
+    const authority = /^https:\/\/([^/?#]+)(?:[/?#]|$)/i.exec(value)?.[1];
+    if (!authority || !CHALLENGE_HOSTS.has(authority.toLowerCase())) return "";
+    try {
+        const url = new URL(value);
+        return url.protocol === "https:" && !url.username && !url.password && !url.port && !url.hash
+            && CHALLENGE_HOSTS.has(url.hostname.toLowerCase()) ? url.href : "";
+    } catch {
+        return "";
+    }
 }
 
 function renderChallenge(value) {
     const url = isMercadoPagoUrl(value);
     setHidden("challenge-container", !url);
     $("challenge-frame").src = url || "about:blank";
+    return Boolean(url);
 }
 
 async function generatePix() {
@@ -301,8 +314,15 @@ async function loadDeviceId() {
         script.addEventListener("load", finish, { once: true });
         script.addEventListener("error", finish, { once: true });
         document.head.appendChild(script);
-    }).finally(() => { deviceLoadPromise = null; });
+    }).catch(() => null).finally(() => { deviceLoadPromise = null; });
     return deviceLoadPromise;
+}
+
+function unmountCard() {
+    const controller = state.cardController;
+    state.cardController = null;
+    state.cardUnmount = state.cardUnmount.catch(() => {}).then(() => controller?.unmount?.());
+    return state.cardUnmount;
 }
 
 async function renderCard() {
@@ -313,8 +333,7 @@ async function renderCard() {
     error.classList.add("hidden");
     $("card-loading").classList.remove("hidden");
     try {
-        await state.cardController?.unmount?.();
-        state.cardController = null;
+        await unmountCard();
         if (renderId !== state.cardRenderId) return;
         stage = "config_request";
         const config = await api("checkout/config");
@@ -494,7 +513,10 @@ async function loadCheckout() {
 
 function selectMethod(method) {
     state.method = method;
-    if (method !== "card") state.cardRenderId += 1;
+    if (method !== "card") {
+        state.cardRenderId += 1;
+        void unmountCard().catch(() => diagnostic("brick_unmount", "failed"));
+    }
     for (const name of ["pix", "card"]) {
         const selected = name === method;
         $(`method-${name}`).classList.toggle("is-active", selected);
@@ -519,10 +541,15 @@ $("copy-pix").addEventListener("click", async () => {
     }
 });
 window.addEventListener("message", event => {
-    if (!isMercadoPagoUrl(event.origin) || event.data?.status !== "COMPLETE") return;
+    if (event.source !== $("challenge-frame").contentWindow
+        || !isMercadoPagoUrl(event.origin) || event.data?.status !== "COMPLETE") return;
     refreshStatus();
 });
-window.addEventListener("pagehide", stopPolling);
+window.addEventListener("pagehide", () => {
+    stopPolling();
+    state.cardRenderId += 1;
+    void unmountCard().catch(() => diagnostic("brick_unmount", "failed"));
+});
 
 initAnalytics();
 initComponents();

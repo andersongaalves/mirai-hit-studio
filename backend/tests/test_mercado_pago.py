@@ -88,6 +88,50 @@ class MercadoPagoTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(MP_SETUP + source)
 
+    def test_3ds_challenge_urls_reject_lookalikes_and_ambiguous_authorities(self):
+        self.run_case(r'''
+from integrations.mercado_pago.client import _verified_challenge_url
+
+valid = [
+    'https://www.mercadopago.com/auth/card/validation/pages/remedies/example?guest_token=opaque',
+    'https://www.mercadopago.com.ar/auth/card/validation/pages/remedies/example',
+    'https://WWW.MERCADOPAGO.COM/auth/card/validation/pages/remedies/example',
+]
+invalid = [
+    'https://www.mercadopago.exemplo-malicioso.com/auth/challenge',
+    'https://mercadopago.com.evil.example/auth/challenge',
+    'https://foo.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com.br/auth/challenge',
+    'https://mercadopago.com/auth/challenge',
+    'https://notmercadopago.com/auth/challenge',
+    'http://www.mercadopago.com/auth/challenge',
+    'https://user:password@www.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com@evil.example/auth/challenge',
+    'https://www.mercadopago.com:443/auth/challenge',
+    'https://www.mercadopago.com:8443/auth/challenge',
+    'https://www.mercadopago.com./auth/challenge',
+    'https://%77ww.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com\\@evil.example/auth/challenge',
+    ' https://www.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com/auth/challenge#fragment',
+    'https://[',
+    'javascript:alert(1)',
+]
+for url in valid:
+    assert _verified_challenge_url(url) == url, url
+for url in invalid:
+    assert _verified_challenge_url(url) is None, url
+
+provider_order = order(status='action_required', detail='pending_challenge', method='visa', pix=False)
+provider_order['transactions']['payments'][0]['payment_method']['transaction_security'] = {
+    'url': invalid[0]
+}
+result = MercadoPagoClient(access_token='test-token', session=FakeSession([
+    FakeResponse(200, provider_order)
+])).get_order('ORD-test')
+assert result.status == PagamentoStatus.PENDENTE and result.challenge_url is None
+''')
+
     def test_configuration_status_mapping_and_error_categories(self):
         self.run_case(r'''
 client = MercadoPagoClient(access_token='', session=FakeSession([]))

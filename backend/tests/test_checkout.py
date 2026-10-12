@@ -234,7 +234,7 @@ with Session(engine) as db:
     card_order = order(amount='150.25', status='action_required', detail='pending_challenge',
                        method='visa', pix=False, provider_id='ORD-card', external_reference='placeholder')
     card_order['transactions']['payments'][0]['payment_method']['transaction_security'] = {
-        'url': 'https://www.mercadopago.com.br/auth/challenge'
+        'url': 'https://www.mercadopago.com/auth/challenge'
     }
     class CardSession(FakeSession):
         def request(self, method, url, **kwargs):
@@ -254,7 +254,7 @@ with Session(engine) as db:
     assert response.status_code == 200, response.text
     body = response.json()
     assert body['status'] == 'action_required'
-    assert body['challenge_url'] == 'https://www.mercadopago.com.br/auth/challenge'
+    assert body['challenge_url'] == 'https://www.mercadopago.com/auth/challenge'
     provider_payload = session.calls[0][2]['json']
     assert provider_payload['config']['online']['transaction_security'] == {
         'validation':'on_fraud_risk', 'liability_shift':'required'}

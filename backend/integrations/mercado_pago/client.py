@@ -24,6 +24,24 @@ SENSITIVE_VALUE_PATTERN = re.compile(
     r"\s*[:=]\s*[^\s,;]+"
 )
 DEVICE_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,256}$")
+CHALLENGE_HOSTS = frozenset({
+    "www.mercadopago.com",
+    "www.mercadopago.com.ar",
+})
+
+
+def _verified_challenge_url(value: str | None) -> str | None:
+    if not isinstance(value, str) or not 1 <= len(value) <= 2000:
+        return None
+    if "\\" in value or any(ord(character) < 33 or ord(character) > 126 for character in value):
+        return None
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return None
+    if parts.scheme != "https" or parts.netloc.lower() not in CHALLENGE_HOSTS or parts.fragment:
+        return None
+    return value
 
 
 class MercadoPagoError(Exception):
@@ -525,20 +543,9 @@ class MercadoPagoClient:
                 ticket_url=method_data.get("ticket_url"),
                 expiration_time=payment.get("expiration_time") or payment.get("date_of_expiration"),
             )
-        challenge_url = None
         security = method_data.get("transaction_security") or {}
         candidate_url = security.get("url") if isinstance(security, dict) else None
-        if isinstance(candidate_url, str):
-            parts = urlsplit(candidate_url)
-            hostname = (parts.hostname or "").lower()
-            if (
-                parts.scheme == "https"
-                and parts.netloc
-                and not parts.username
-                and (hostname == "mercadopago.com" or hostname.startswith("www.mercadopago.")
-                     or ".mercadopago." in hostname)
-            ):
-                challenge_url = candidate_url
+        challenge_url = _verified_challenge_url(candidate_url)
         return ProviderPaymentResult(
             provider_id=provider_id,
             external_reference=str(

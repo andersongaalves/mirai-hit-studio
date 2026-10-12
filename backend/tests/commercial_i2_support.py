@@ -52,7 +52,7 @@ class PaymentTransport:
             method_data.update(qr_code='I2-SYNTHETIC-NOT-PAYABLE',
                                ticket_url='https://www.mercadopago.com.br/payments/i2-test')
         elif self.next_status == 'action_required':
-            method_data['transaction_security'] = {'url': 'https://www.mercadopago.com.br/auth/challenge'}
+            method_data['transaction_security'] = {'url': 'https://www.mercadopago.com/auth/challenge'}
         identifier = 'I2-' + uuid4().hex
         status = self.next_status
         detail = 'waiting_transfer' if is_pix else 'pending_challenge'

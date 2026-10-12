@@ -93,6 +93,7 @@ async function staticResponse(route) {
         let pixPayload = null;
         let sdkFailure = false;
         let securityFailure = false;
+        let challengeUrl = 'https://www.mercadopago.com/auth/challenge';
         let missingPublicKey = false;
         let configStatus = 200;
         const pageErrors = [];
@@ -109,7 +110,10 @@ async function staticResponse(route) {
                             button.type = 'button'; button.textContent = 'Pagar cartão';
                             document.getElementById(id).appendChild(button);
                             settings.callbacks.onReady();
-                            return { unmount: async () => document.getElementById(id).replaceChildren() };
+                            return { unmount: async () => {
+                                window.__brickUnmounts = (window.__brickUnmounts || 0) + 1;
+                                document.getElementById(id).replaceChildren();
+                            } };
                         } }; }
                     };
                 ` });
@@ -166,7 +170,7 @@ async function staticResponse(route) {
                     return route.fulfill({ json: {
                         status: token === tokenG ? 'rejected' : 'action_required', checkout_status: 'pendente', payment_option: cardPayload.payment_option,
                         valor: '198.00', moeda: 'BRL', pix: null,
-                        challenge_url: token === tokenG ? null : 'https://www.mercadopago.com.br/auth/challenge',
+                        challenge_url: token === tokenG ? null : challengeUrl,
                     } });
                 }
                 if (suffix === '/status') return route.fulfill({ json: { status: 'pendente', valor_pago: '0.00', saldo: '198.00', pagamento_status: 'processando' } });
@@ -286,6 +290,12 @@ async function staticResponse(route) {
         await cardPage.waitForFunction(() => window.__brickSettings.initialization.amount === 99);
         await cardPage.locator('input[name="payment_option"][value="integral"]').check();
         await cardPage.waitForFunction(() => window.__brickSettings.initialization.amount === 198);
+        await cardPage.locator('#method-pix').click();
+        await cardPage.waitForFunction(() => window.__brickUnmounts === 3);
+        assert.equal(await cardPage.getByRole('button', { name: 'Pagar cartão' }).count(), 0);
+        await cardPage.locator('#method-card').click();
+        await cardPage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
+        assert.equal(await cardPage.evaluate(() => window.__brickSettings.initialization.amount), 198);
         await cardPage.evaluate(() => window.__brickSettings.callbacks.onError({ cause: 'no_installments_in_selected_range', message: 'sensitive provider detail' }));
         assert.match(await cardPage.locator('#card-error').textContent(), /Pix continua disponível/);
         assert.equal(cardConsole.some(message => message.includes('sensitive provider detail')), false);
@@ -300,6 +310,32 @@ async function staticResponse(route) {
         assert.equal('amount' in cardPayload, false);
         assert.equal('pan' in cardPayload || 'cvv' in cardPayload, false);
         assert.equal(await cardPage.locator('#challenge-container').isVisible(), true);
+        const challengeCases = [
+            ['https://www.mercadopago.com/auth/card/validation/pages/remedies/opaque', true],
+            ['https://www.mercadopago.com.ar/auth/card/validation/pages/remedies/opaque', true],
+            ['https://www.mercadopago.exemplo-malicioso.com/auth/challenge', false],
+            ['https://mercadopago.com.evil.example/auth/challenge', false],
+            ['https://foo.mercadopago.com/auth/challenge', false],
+            ['https://www.mercadopago.com.br/auth/challenge', false],
+            ['http://www.mercadopago.com/auth/challenge', false],
+            ['https://user:pass@www.mercadopago.com/auth/challenge', false],
+            ['https://www.mercadopago.com:443/auth/challenge', false],
+            ['https://%77ww.mercadopago.com/auth/challenge', false],
+            ['https://www.mercadopago.com\\@evil.example/auth/challenge', false],
+        ];
+        for (const [url, allowed] of challengeCases) {
+            challengeUrl = url;
+            await cardPage.evaluate(async () => window.__brickSettings.callbacks.onSubmit({
+                token: 'challenge-token', payment_method_id: 'visa', installments: 1,
+                payer: { email: 'buyer@example.com' },
+            }, { paymentTypeId: 'credit_card' }));
+            assert.equal(await cardPage.locator('#challenge-container').isVisible(), allowed, url);
+            if (!allowed) {
+                assert.equal(await cardPage.locator('#challenge-frame').getAttribute('src'), 'about:blank');
+                assert.match(await cardPage.locator('#payment-result').textContent(), /não pôde ser exibida/);
+            }
+        }
+        challengeUrl = 'https://www.mercadopago.com/auth/challenge';
         assert.equal(await cardPage.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
 
         missingPublicKey = true;
@@ -342,6 +378,23 @@ async function staticResponse(route) {
         assert.equal(pixPayload.device_id, null);
         await noDevicePage.close();
         securityFailure = false;
+
+        const blockedDevicePage = await context.newPage();
+        await blockedDevicePage.addInitScript(() => {
+            const appendChild = Element.prototype.appendChild;
+            Element.prototype.appendChild = function (child) {
+                if (child?.src === 'https://www.mercadopago.com/v2/security.js') {
+                    throw new Error('security_script_blocked');
+                }
+                return appendChild.call(this, child);
+            };
+        });
+        await blockedDevicePage.goto(`http://localhost:4173/checkout/${tokenC}`);
+        await blockedDevicePage.waitForSelector('#checkout-content:not(.hidden)');
+        await blockedDevicePage.locator('#generate-pix').click();
+        await blockedDevicePage.waitForSelector('#pix-result:not(.hidden)');
+        assert.equal(pixPayload.device_id, null);
+        await blockedDevicePage.close();
 
         for (const [width, height] of [[375, 800], [390, 844], [414, 896], [768, 900], [1024, 900], [1440, 1000]]) {
             await failurePage.setViewportSize({ width, height });
