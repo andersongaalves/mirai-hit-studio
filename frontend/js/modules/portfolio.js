@@ -1,6 +1,6 @@
 import { state } from "../state.js";
 import * as API from "../api.js";
-import * as PUI from "../portfolio_ui.js";
+import * as PUI from "../portfolio_ui.js?v=20261012-portfolio-card";
 import { safeURL } from "../utils/security.js";
 
 const filters = { vertical: "", segment: "", case_type: "" };
