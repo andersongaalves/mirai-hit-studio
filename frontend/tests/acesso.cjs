@@ -79,6 +79,7 @@ async function login(page, username) {
 
     try {
         await page.goto('http://localhost:4173/acesso');
+        assert.equal(await page.getByLabel('Usuário').getAttribute('placeholder'), 'Seu usuário');
         const passwordToggle = page.locator('[data-password-toggle="password"]');
         assert.equal(await passwordToggle.textContent(), 'Mostrar senha');
         await passwordToggle.click();

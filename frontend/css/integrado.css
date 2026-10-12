@@ -673,9 +673,9 @@ body .hidden, body [hidden] { display: none !important; }
     position: relative;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--integrado-border);
+    border: 1px solid #223248;
     border-radius: 8px;
-    background: var(--integrado-page);
+    background: var(--integrado-surface);
     transition: transform 200ms ease, border-color 200ms ease;
 }
 .portfolio-page .portfolio-card:hover,
@@ -703,7 +703,7 @@ body .hidden, body [hidden] { display: none !important; }
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: 24px;
+    padding: 28px;
 }
 .portfolio-page .portfolio-card__badges { gap: 0; color: var(--integrado-secondary); }
 .portfolio-page .portfolio-card__badge {
@@ -725,9 +725,9 @@ body .hidden, body [hidden] { display: none !important; }
 }
 .portfolio-page .portfolio-card__service {
     display: grid;
-    gap: 2px;
-    margin-top: 18px;
-    padding-top: 18px;
+    gap: 6px;
+    margin-top: 20px;
+    padding-top: 20px;
     border-top: 1px solid var(--integrado-border);
 }
 .portfolio-page .portfolio-card__service-label {
@@ -735,7 +735,7 @@ body .hidden, body [hidden] { display: none !important; }
     font: 700 12px/18px var(--font-texto);
     text-transform: uppercase;
 }
-.portfolio-page .portfolio-card__service-name { font: 400 16px/24px var(--font-texto); }
+.portfolio-page .portfolio-card__service-name { font: 400 17px/24px var(--font-texto); }
 .portfolio-page .portfolio-card__segments { margin: 16px 0 0; }
 .portfolio-page .portfolio-card__description {
     margin: 16px 0 24px;
@@ -1186,6 +1186,8 @@ body .hidden, body [hidden] { display: none !important; }
     .portfolio-page .portfolio-filters { grid-template-columns: 1fr; }
     .portfolio-page .portfolio-filter-group { grid-column: 1; overflow-x: auto; flex-wrap: nowrap; }
     .portfolio-page .filter-btn { flex: 0 0 auto; }
+    .portfolio-page .portfolio-card__body { padding: 24px; }
+    .portfolio-page .portfolio-card h2 { font-size: 25px; line-height: 30px; }
     .public-page .site-nav, .public-page .site-footer__inner { width: calc(100% - 48px); }
     .public-page .site-footer__inner { grid-template-columns: 1fr; justify-items: start; gap: 16px; }
     .public-page .site-footer p { text-align: left; }
