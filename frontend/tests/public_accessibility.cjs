@@ -130,7 +130,7 @@ function apiResponse(route) {
                 assert.ok(overflow <= 1, `${pathname}: overflow at ${width}px (${overflow}px)`);
                 if (pathname === '/portfolio') {
                     const cover = await page.locator('.portfolio-card__cover').first().boundingBox();
-                    assert.ok(Math.abs(cover.width / cover.height - 1.6) < 0.02, 'cover follows its responsive ratio, not fixed HTML height');
+                    assert.ok(Math.abs(cover.width / cover.height - 16 / 9) < 0.02, 'cover fills its responsive 16:9 frame');
                 }
                 if (process.env.VISUAL_OUTPUT && [390, 1440].includes(width)) {
                     const name = pathname.startsWith('/checkout/') ? 'checkout' : pathname.slice(1) || 'home';
@@ -140,11 +140,18 @@ function apiResponse(route) {
             if (pathname === '/') {
                 await page.setViewportSize({ width: 375, height: 700 });
                 const heroBottom = await page.locator('.home-hero').evaluate(element => element.getBoundingClientRect().bottom);
-                assert.ok(Math.abs(heroBottom - 700) <= 1, `/: hero must fill the visible viewport (${heroBottom})`);
+                assert.ok(Math.abs(heroBottom - 588) <= 1, `/: hero leaves a visible preview of the next section (${heroBottom})`);
+                assert.ok((await page.locator('#services-title').boundingBox()).y < 700, '/: next section heading is visible');
             } else if (['/artists', '/creators', '/media-games'].includes(pathname)) {
                 await page.setViewportSize({ width: 375, height: 700 });
                 const heroBottom = await page.locator('.public-hero').evaluate(element => element.getBoundingClientRect().bottom);
                 assert.ok(heroBottom <= 668, `${pathname}: next section must be visible (${heroBottom})`);
+                const ctaColors = await page.locator('.public-cta').evaluate(section => ({
+                    heading: getComputedStyle(section.querySelector('h2')).color,
+                    eyebrow: getComputedStyle(section.querySelector('.public-eyebrow')).color,
+                }));
+                assert.equal(ctaColors.heading, 'rgb(247, 249, 252)', `${pathname}: CTA heading contrast`);
+                assert.equal(ctaColors.eyebrow, 'rgb(0, 212, 255)', `${pathname}: CTA eyebrow contrast`);
             }
             if (pathname === '/orcamento') {
                 await page.setViewportSize({ width: 390, height: 844 });

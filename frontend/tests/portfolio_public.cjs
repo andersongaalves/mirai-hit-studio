@@ -63,6 +63,23 @@ async function staticResponse(route) {
         assert.equal(await page.locator("audio").getAttribute("autoplay"), null);
         assert.equal(await page.locator("audio").getAttribute("preload"), "none");
         assert.ok((await page.locator(".portfolio-card__cover").first().getAttribute("src")).includes("logo-principal.webp"));
+        assert.equal(await page.locator(".portfolio-card__listen").count(), 2);
+        assert.equal(await page.locator(".portfolio-card__listen").first().getAttribute("href"), "https://example.com/audio.mp3");
+        assert.equal(await page.locator(".portfolio-policy").count(), 0);
+        assert.equal(await page.locator("#portfolio-comparison-title").textContent(), "Compare a mesma música antes e depois da mixagem.");
+        assert.equal(await page.locator(".site-footer nav > span").count(), 0);
+        assert.equal(await page.locator("#analytics-preferences").count(), 1);
+        const coverBox = await page.locator(".portfolio-card__cover-frame").first().boundingBox();
+        assert.ok(Math.abs(coverBox.width / coverBox.height - 16 / 9) < 0.02);
+        const popupPromise = page.waitForEvent("popup");
+        await page.mouse.click(coverBox.x + coverBox.width / 2, coverBox.y + coverBox.height / 2);
+        const popup = await popupPromise;
+        assert.equal(new URL(popup.url()).pathname, "/audio.mp3");
+        await popup.close();
+        await page.locator(".portfolio-card").first().hover();
+        await page.waitForTimeout(250);
+        const hoverScale = await page.locator(".portfolio-card").first().evaluate(card => new DOMMatrix(getComputedStyle(card).transform).a);
+        assert.ok(hoverScale > 1 && hoverScale < 1.03, `card hover scale: ${hoverScale}`);
 
         await page.locator("audio").evaluate(audio => audio.dispatchEvent(new Event("play")));
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === "event" && item[1] === "listen_portfolio"));
