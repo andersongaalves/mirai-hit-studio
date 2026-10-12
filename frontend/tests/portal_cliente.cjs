@@ -161,6 +161,17 @@ async function staticResponse(route) {
         await page.locator('#password').fill('synthetic-password');
         await page.getByRole('button', { name: 'Entrar' }).click();
         await page.waitForSelector('.producer-metric');
+        if (process.env.VISUAL_OUTPUT) {
+            for (const width of [390, 1440]) {
+                await page.setViewportSize({ width, height: 900 });
+                await page.screenshot({
+                    path: path.join(process.env.VISUAL_OUTPUT, `client-overview-${width}.png`),
+                    fullPage: true,
+                    animations: 'disabled',
+                });
+            }
+            await page.setViewportSize({ width: 1024, height: 800 });
+        }
         assert.equal(await page.locator('.producer-metric').count(), 4);
         const metrics = await page.locator('#client-metrics').textContent();
         assert.match(metrics, /Projetos em andamento1/);
@@ -192,9 +203,30 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#client-navigation').isVisible(), true);
         await page.keyboard.press('Escape');
         assert.equal(await clientMenu.getAttribute('aria-expanded'), 'false');
-        for (const width of [320, 375, 390, 768, 1024, 1440]) {
+        for (const width of [320, 375, 390, 768, 1024, 1366, 1440]) {
             await page.setViewportSize({ width, height: 800 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+            const geometry = await page.evaluate(() => {
+                const sidebar = document.querySelector('.producer-sidebar').getBoundingClientRect();
+                const navigation = document.querySelector('#client-navigation').getBoundingClientRect();
+                const workspace = document.querySelector('.producer-workspace').getBoundingClientRect();
+                return {
+                    sidebarLeft: sidebar.left,
+                    sidebarRight: sidebar.right,
+                    sidebarBottom: sidebar.bottom,
+                    navigationLeft: navigation.left,
+                    navigationRight: navigation.right,
+                    workspaceLeft: workspace.left,
+                    workspaceTop: workspace.top,
+                };
+            });
+            if (width >= 768) {
+                assert.ok(geometry.navigationLeft >= geometry.sidebarLeft - 1, JSON.stringify({ width, geometry }));
+                assert.ok(geometry.navigationRight <= geometry.sidebarRight + 1, JSON.stringify({ width, geometry }));
+                assert.ok(geometry.sidebarRight <= geometry.workspaceLeft + 1, JSON.stringify({ width, geometry }));
+            } else {
+                assert.ok(geometry.sidebarBottom <= geometry.workspaceTop + 1, JSON.stringify({ width, geometry }));
+            }
         }
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {

@@ -79,8 +79,10 @@ for (const name of ['404.html', 'index.html', 'artists.html', 'creators.html', '
 assert.doesNotMatch(main, /(?:layout|pages\/public)\.css/);
 assert.doesNotMatch(admin, /css\/pages\/public\.css/);
 assert.match(client, /\/css\/layouts\/portal-base\.css/);
+assert.match(client, /\/css\/pages\/cliente\.css\?v=20261012-client-layout/);
 assert.match(producer, /\/css\/layouts\/portal-base\.css/);
 assert.doesNotMatch(client, /\/css\/pages\/produtor\.css/);
+assert.doesNotMatch(styles('css/pages/cliente.css'), /\.client-body \.producer-(?:shell|sidebar|header|brand|nav|account|workspace)\b/);
 assert.match(producer, /\/css\/pages\/produtor\.css/);
 assert.match(admin, /css\/pages\/integrado-admin\.css/);
 assert.doesNotMatch(styles('css/integrado.css'), /\.(?:home-page|portfolio-page|quote-page|checkout-page|integrado-admin|integrado-portal)\b/);
