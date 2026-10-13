@@ -219,7 +219,9 @@ function expectStatus(result, status, label) {
             buffer: Buffer.from('RIFF-browser-client-material'),
         });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Arquivo enviado'));
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado com sucesso'));
+        assert.match(await page.locator('.producer-file-list').last().textContent(), /material-cliente\.wav/);
+        assert.equal(await page.locator('#client-alert').textContent(), '');
         assert.equal(expectStatus(
             await api(page, 'GET', `/portal/cliente/producoes/${otherProductionId}`),
             404,

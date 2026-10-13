@@ -17,6 +17,7 @@ let proposalsEnabled = false;
 let finances = new Map();
 const objectUrls = new Set();
 const filters = { status: "todos", order: "recente" };
+let uploadFeedback = null;
 
 function route() {
     const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
@@ -53,6 +54,7 @@ function releaseObjectUrls() {
 function navigate(path) {
     releaseObjectUrls();
     setAlert();
+    uploadFeedback = null;
     history.pushState({}, "", path);
     renderRoute();
 }
@@ -68,8 +70,10 @@ async function openDetail(id) {
         finances.set(id, finance);
         renderDetail(production, files, finance, {
             onUpload: uploadFile,
+            onRefreshFiles: refreshFiles,
             onDownload: downloadFile,
             onPreview: playPreview,
+            uploadFeedback,
         });
         showView("detail");
     } catch (error) {
@@ -189,16 +193,62 @@ async function playPreview(file, player, button) {
     }
 }
 
-async function uploadFile(production, file, type, replacesId, button) {
-    button.disabled = true;
-    setAlert();
+function uploadError(error) {
+    if (error.status === 403) return "Você não tem permissão para enviar arquivos a este projeto.";
+    if (error.status === 409) return "O projeto ou a versão mudou. Atualize a lista antes de tentar novamente.";
+    if (error.status === 413) return "O arquivo excede o tamanho permitido.";
+    if (error.status === 422 || error.status === 415) return "Arquivo não permitido. Confira o formato e o tamanho.";
+    if (!error.status) return "Falha de conexão. O envio não foi confirmado; confira a lista antes de tentar novamente.";
+    return "Não foi possível enviar o arquivo. Tente novamente.";
+}
+
+async function refreshFiles(production, setFeedback) {
+    if (route().view !== "detail" || route().id !== production.id) return;
+    try {
+        const files = await api.listarArquivos(production.id);
+        if (route().view !== "detail" || route().id !== production.id) return;
+        uploadFeedback = { kind: "success", message: uploadFeedback?.successMessage || "Lista atualizada." };
+        renderDetail(production, files, finances.get(production.id), {
+            onUpload: uploadFile,
+            onRefreshFiles: refreshFiles,
+            onDownload: downloadFile,
+            onPreview: playPreview,
+            uploadFeedback,
+        });
+    } catch (error) {
+        uploadFeedback = {
+            kind: "error",
+            message: "Arquivo enviado, mas a lista não pôde ser atualizada. Não reenvie; tente atualizar a lista.",
+            retry: true,
+            successMessage: uploadFeedback?.successMessage,
+        };
+        setFeedback("error", uploadFeedback.message, true);
+    }
+}
+
+async function uploadFile(production, file, type, replacesId, form, setFeedback) {
+    if (form.dataset.busy === "true") return;
+    form.dataset.busy = "true";
+    form.querySelectorAll("input, select, button").forEach(control => { control.disabled = true; });
+    const submit = form.querySelector('button[type="submit"]');
+    submit.textContent = "Enviando arquivo...";
+    setFeedback("loading", "Enviando arquivo...");
     try {
         await api.enviarArquivo(production.id, file, type, replacesId);
-        await openDetail(production.id);
-        setAlert(replacesId ? "Nova versão enviada." : "Arquivo enviado.");
+        if (route().view !== "detail" || route().id !== production.id) return;
+        uploadFeedback = {
+            kind: "success",
+            message: replacesId ? "Nova versão enviada com sucesso!" : "Arquivo enviado com sucesso!",
+        };
+        uploadFeedback.successMessage = uploadFeedback.message;
+        await refreshFiles(production, setFeedback);
     } catch (error) {
-        setAlert(error.message, true);
-        button.disabled = false;
+        uploadFeedback = { kind: "error", message: uploadError(error) };
+        setFeedback("error", uploadFeedback.message);
+    } finally {
+        form.dataset.busy = "false";
+        form.querySelectorAll("input, select, button").forEach(control => { control.disabled = false; });
+        submit.textContent = "Enviar arquivo";
     }
 }
 
@@ -272,10 +322,12 @@ document.querySelectorAll("a[data-route]").forEach(link => link.addEventListener
 window.addEventListener("client:open", event => navigate(`/cliente/projetos/${event.detail}`));
 window.addEventListener("popstate", () => {
     releaseObjectUrls();
+    uploadFeedback = null;
     renderRoute();
 });
 document.addEventListener("admin:logout", () => {
     releaseObjectUrls();
+    uploadFeedback = null;
     productions = [];
     proposals = [];
     proposalsEnabled = false;

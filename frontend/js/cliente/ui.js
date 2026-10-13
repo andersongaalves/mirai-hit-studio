@@ -158,6 +158,15 @@ function filesPanel(production, files, handlers) {
         input.required = true;
         input.accept = ".pdf,.zip,.mp3,.wav,.flac,.m4a,.mp4";
         input.setAttribute("aria-label", "Arquivo para enviar");
+        const filePicker = element("label", "producer-upload__picker");
+        const fileButton = element("span", "producer-upload__pick-button", "Escolher arquivo");
+        const fileName = element("span", "producer-upload__filename", "Nenhum arquivo selecionado");
+        fileName.title = fileName.textContent;
+        input.addEventListener("change", () => {
+            fileName.textContent = input.files[0]?.name || "Nenhum arquivo selecionado";
+            fileName.title = fileName.textContent;
+        });
+        filePicker.append(input, fileButton, fileName);
         const replaces = element("select");
         replaces.setAttribute("aria-label", "Versão substituída");
         const updateReplacementOptions = () => {
@@ -175,10 +184,30 @@ function filesPanel(production, files, handlers) {
         updateReplacementOptions();
         const submit = element("button", "btn-cta", "Enviar arquivo");
         submit.type = "submit";
-        form.append(type, input, replaces, submit);
+        const feedback = element("div", "producer-upload__feedback hidden");
+        const setFeedback = (kind, message, retry = false) => {
+            feedback.replaceChildren();
+            feedback.classList.toggle("hidden", !message);
+            feedback.dataset.kind = kind || "";
+            feedback.setAttribute("role", kind === "error" ? "alert" : "status");
+            feedback.setAttribute("aria-live", kind === "error" ? "assertive" : "polite");
+            if (message) feedback.append(element("span", "", message));
+            if (retry) {
+                const refresh = element("button", "btn-outline", "Atualizar lista");
+                refresh.type = "button";
+                refresh.addEventListener("click", () => handlers.onRefreshFiles(production, setFeedback));
+                feedback.append(refresh);
+            }
+        };
+        if (handlers.uploadFeedback) {
+            const { kind, message, retry } = handlers.uploadFeedback;
+            setFeedback(kind, message, retry);
+        }
+        form.append(type, filePicker, replaces, submit, feedback);
         form.addEventListener("submit", event => {
             event.preventDefault();
-            if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit);
+            if (form.dataset.busy === "true" || !input.files[0]) return;
+            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback);
         });
         panel.append(form);
     }

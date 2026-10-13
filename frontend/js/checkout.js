@@ -182,8 +182,10 @@ function syncPixView() {
     const pending = pendingPix();
     const notice = $("pix-pending-notice");
     setHidden("pix-pending-notice", !pending);
+    const sameOption = pending && state.summary.tentativa.tipo === state.option;
+    if (!state.busy) $("generate-pix").textContent = pending ? "Visualizar Pix existente" : "Gerar Pix";
+    $("generate-pix").disabled = state.busy || (pending && (!state.summary.tentativa.recuperavel || !sameOption));
     if (pending) {
-        const sameOption = state.summary.tentativa.tipo === state.option;
         $("pix-pending-message").textContent = !state.summary.tentativa.recuperavel
             ? "O Pix está em conciliação. Aguarde a confirmação antes de tentar outro pagamento."
             : sameOption
@@ -205,8 +207,8 @@ function syncPixView() {
 
 function setBusy(busy, text = "") {
     state.busy = busy;
-    $("generate-pix").disabled = busy;
-    $("generate-pix").textContent = busy ? text : "Gerar Pix";
+    if (busy) $("generate-pix").textContent = text;
+    syncPixView();
 }
 
 function safeHttps(value) {
@@ -218,7 +220,7 @@ function safeHttps(value) {
     }
 }
 
-function renderPayment(result) {
+function renderPayment(result, recovered = false) {
     const message = $("payment-result");
     const challengeAvailable = renderChallenge(result.challenge_url);
     if (result.pix && ["pending", "action_required"].includes(result.status)) {
@@ -240,7 +242,10 @@ function renderPayment(result) {
     message.classList.remove("hidden");
     message.dataset.kind = "warning";
     if (result.status === "rejected") {
+        state.pixPayment = null;
         message.textContent = "O pagamento não foi aprovado. Revise os dados ou tente outra forma de pagamento.";
+    } else if (recovered && result.pix) {
+        message.textContent = "Você já possui um Pix pendente. Confira a validade dos dados abaixo antes de pagar.";
     } else if (result.status === "action_required") {
         message.textContent = challengeAvailable
             ? "Confirme a compra com seu banco."
@@ -314,6 +319,12 @@ function renderChallenge(value) {
 
 async function generatePix() {
     if (state.busy || !state.option) return;
+    if (pendingPix()) {
+        if (state.summary.tentativa.recuperavel && state.summary.tentativa.tipo === state.option) {
+            await recoverPending();
+        }
+        return;
+    }
     setBusy(true, "Gerando Pix...");
     try {
         const deviceId = await loadDeviceId();
@@ -330,6 +341,30 @@ async function generatePix() {
             : "Não foi possível gerar o Pix agora. Tente novamente.";
         $("payment-result").dataset.kind = "warning";
         setHidden("payment-result", false);
+    } finally {
+        setBusy(false);
+    }
+}
+
+async function recoverPending() {
+    if (state.busy || !pendingPix() || !state.summary.tentativa.recuperavel) return;
+    setBusy(true, "Consultando Pix...");
+    try {
+        const result = await api(`checkout/${state.token}/pending-payment`);
+        const option = state.summary.opcoes.find(item => item.tipo === state.summary.tentativa.tipo);
+        if (result.payment_option !== state.summary.tentativa.tipo || result.moeda !== "BRL"
+            || !option || Number(result.valor) !== Number(option.valor)) {
+            throw new Error("pending_identity_mismatch");
+        }
+        renderPayment(result, true);
+        if (result.status === "rejected") await refreshSummary();
+    } catch {
+        state.pixPayment = null;
+        setHidden("pix-result", true);
+        $("payment-result").textContent = "Não foi possível recuperar os dados do Pix. A cobrança continua pendente; aguarde a atualização ou contate o suporte antes de tentar outra forma de pagamento.";
+        $("payment-result").dataset.kind = "warning";
+        setHidden("payment-result", false);
+        startPolling();
     } finally {
         setBusy(false);
     }
@@ -559,13 +594,7 @@ async function resumePending(summary) {
         startPolling();
         return;
     }
-    try {
-        renderPayment(await api(`checkout/${state.token}/pending-payment`));
-    } catch {
-        $("payment-result").textContent = "Pagamento em processamento. O status será atualizado automaticamente.";
-        setHidden("payment-result", false);
-        startPolling();
-    }
+    await recoverPending();
 }
 
 async function loadCheckout() {
