@@ -21,6 +21,7 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
             / "storage-integration-gate.yml"
         ).read_text(encoding="utf-8")
         cls.guard_path = root / "backend" / "scripts" / "production_release_guard.py"
+        cls.signer_path = root / "backend" / "scripts" / "storage_evidence.py"
         cls.issuer_source = (
             root / ".github" / "workflows" / "storage-provider-rollout.yml"
         ).read_text(encoding="utf-8")
@@ -76,10 +77,18 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("SIMULATION ONLY", plan)
         self.assertIn("does not authorize publication", plan)
 
-    def test_storage_preflight_and_v2_off_are_mandatory(self):
+    def test_storage_preflight_and_explicit_v2_state_are_mandatory(self):
         self.assertIn("--require-rollout-ready", self.source)
-        self.assertIn("COMMERCIAL_PIPELINE_V2_ENABLED", self.source)
-        self.assertNotIn("COMMERCIAL_PIPELINE_V2_ENABLED: true", self.source)
+        self.assertIn("options: ['false', 'true']", self.source)
+        self.assertIn("case \"$COMMERCIAL_PIPELINE_V2\" in true|false)", self.source)
+        self.assertIn("--commercial-pipeline-v2 \"$COMMERCIAL_PIPELINE_V2\"", self.source)
+        self.assertIn(
+            "STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED: ${{ inputs.commercial_pipeline_v2 }}",
+            self.source,
+        )
+        self.assertIn("EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED: ${{ inputs.commercial_pipeline_v2 }}", self.source)
+        self.assertIn("case \"$COMMERCIAL_PIPELINE_V2_ENABLED\" in true|false)", self.issuer_source)
+        self.assertNotIn('test "$COMMERCIAL_PIPELINE_V2_ENABLED" = "false"', self.issuer_source)
 
     def test_optional_storage_settings_keep_the_application_defaults(self):
         for source in (self.source, self.issuer_source, self.preflight_source):
@@ -103,11 +112,12 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertIn('"head_branch": "main"', guard)
         self.assertIn('allowed_events=("workflow_dispatch",)', guard)
 
-    def test_render_readiness_requires_effective_v2_off(self):
+    def test_render_readiness_requires_effective_authorized_v2_state(self):
         self.assertIn(
             "/env-vars/COMMERCIAL_PIPELINE_V2_ENABLED", self.source
         )
         self.assertIn("validate_render_v2_environment", self.source)
+        self.assertIn("expected_state=os.environ['EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED']", self.source)
 
     def test_hmac_issuer_and_preflight_require_solo_admin_main_protection(self):
         for source in (self.issuer_source, self.preflight_source):
@@ -167,6 +177,11 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         for source in (self.issuer_source, self.preflight_source):
             pins = re.findall(r"([a-f0-9]{64})  scripts/storage_preflight\.py", source)
             self.assertEqual(pins, [digest, digest])
+
+    def test_signer_source_pins_match_the_reviewed_script(self):
+        digest = hashlib.sha256(self.signer_path.read_bytes()).hexdigest()
+        pins = re.findall(r"([a-f0-9]{64})  scripts/storage_evidence\.py", self.issuer_source)
+        self.assertEqual(pins, [digest, digest])
 
 
 if __name__ == "__main__":

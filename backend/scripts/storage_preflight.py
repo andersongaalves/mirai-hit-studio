@@ -21,7 +21,6 @@ _COMPONENTS = (
 _SHA256 = re.compile(r"[a-f0-9]{64}")
 _COMMIT_SHA = re.compile(r"[a-f0-9]{40}")
 _CONFIG_KEYS = (
-    "COMMERCIAL_PIPELINE_V2_ENABLED",
     "R2_ACCOUNT_ID",
     "R2_ACCESS_KEY_ID",
     "R2_SECRET_ACCESS_KEY",
@@ -268,8 +267,16 @@ def build_report(environ=None, evidence=None, now=None):
             components[component_name]["evidence_sha256"] = component_evidence["evidence_sha256"]
 
     v2 = env.get("COMMERCIAL_PIPELINE_V2_ENABLED")
+    expected_v2 = env.get("STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED")
+    v2_valid = isinstance(v2, str) and v2 in {"true", "false"}
+    v2_consistent = expected_v2 is None or (
+        isinstance(expected_v2, str)
+        and expected_v2 in {"true", "false"}
+        and v2 == expected_v2
+    )
     ready = (
-        v2 == "false"
+        v2_valid
+        and v2_consistent
         and evidence_valid
         and all(
             component["configuration_valid"]
@@ -281,7 +288,8 @@ def build_report(environ=None, evidence=None, now=None):
     )
     return {
         "components": components,
-        "commercial_pipeline_v2": "off" if v2 == "false" else "not_confirmed_off",
+        "commercial_pipeline_v2": "on" if v2 == "true" else "off" if v2 == "false" else "invalid",
+        "commercial_pipeline_v2_consistent": v2_consistent,
         "provider_connectivity_probed": False,
         "provider_connectivity_evidence_verified": evidence_valid,
         "evidence_status": evidence_status,
@@ -294,7 +302,7 @@ def main(argv=None):
     parser.add_argument(
         "--require-rollout-ready",
         action="store_true",
-        help="exit nonzero unless config, signed provider evidence and V2-off gates pass",
+        help="exit nonzero unless config, signed provider evidence and valid V2 state pass",
     )
     parser.add_argument(
         "--evidence",

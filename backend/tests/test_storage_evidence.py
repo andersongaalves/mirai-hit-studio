@@ -93,9 +93,16 @@ class StorageEvidenceTests(unittest.TestCase):
         legacy_only["all_passed"] = True
         with self.assertRaisesRegex(ValueError, "provider_smoke_evidence_incomplete"):
             build_signed_evidence(legacy_only, self.env)
-        disabled = dict(self.env, COMMERCIAL_PIPELINE_V2_ENABLED="true")
+        enabled = dict(self.env, COMMERCIAL_PIPELINE_V2_ENABLED="true")
+        signed = build_signed_evidence(self.smoke, enabled)
+        self.assertEqual(signed["configuration_fingerprint"], build_signed_evidence(self.smoke, self.env)["configuration_fingerprint"])
+        for state in ("", "TRUE", "0"):
+            with self.subTest(state=state), self.assertRaisesRegex(ValueError, "effective_configuration_not_ready"):
+                build_signed_evidence(self.smoke, {**self.env, "COMMERCIAL_PIPELINE_V2_ENABLED": state})
+        missing = dict(self.env)
+        del missing["COMMERCIAL_PIPELINE_V2_ENABLED"]
         with self.assertRaisesRegex(ValueError, "effective_configuration_not_ready"):
-            build_signed_evidence(self.smoke, disabled)
+            build_signed_evidence(self.smoke, missing)
 
 
 if __name__ == "__main__":

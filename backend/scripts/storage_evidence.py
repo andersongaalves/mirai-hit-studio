@@ -38,7 +38,7 @@ def build_signed_evidence(smoke_report: object, env=None, now=None) -> dict:
         raise ValueError("trusted_signing_context_invalid")
     configuration = build_report(env)
     if (
-        configuration["commercial_pipeline_v2"] != "off"
+        configuration["commercial_pipeline_v2"] not in {"on", "off"}
         or not all(
             component["configuration_valid"]
             and component.get("write_backend_valid", True)
