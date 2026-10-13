@@ -39,6 +39,12 @@ let files = [{
     sha256: 'a'.repeat(64), grupo_versao: 'synthetic-group', versao: 1,
     substitui_arquivo_id: null, visivel_produtor: true, visivel_cliente: false,
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+}, {
+    id: 8, producao_id: 1, remetente_usuario_id: 2, tipo: 'previa',
+    nome_exibicao: 'historical.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 1024,
+    sha256: 'b'.repeat(64), grupo_versao: 'historical-group', versao: 1,
+    substitui_arquivo_id: null, visivel_produtor: true, visivel_cliente: false,
+    created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
 }];
 let payouts = [{
     id: 4, producao_id: 1, producao_titulo: '<b>Faixa</b>', produtor_id: 2,
@@ -106,7 +112,7 @@ async function staticResponse(route) {
         }
         if (fileList && request.method() === 'POST') {
             uploads++;
-            files.push({ ...files[0], id: 10, tipo: 'previa', nome_exibicao: 'preview.mp3', versao: 1 });
+            files.push({ ...files[0], id: 10, tipo: 'previa', nome_exibicao: 'preview.mp3', versao: 1, visivel_cliente: true });
             return route.fulfill({ status: 201, json: files.at(-1) });
         }
         const detail = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)$/);
@@ -165,14 +171,16 @@ async function staticResponse(route) {
         assert.equal(await page.getByRole('heading', { name: '<img src=x onerror=alert(1)>' }).count(), 1);
         assert.equal(await page.locator('.producer-file img, .producer-file script').count(), 0);
         assert.match(await page.locator('.producer-file').first().textContent(), /<img src=x>/);
+        assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Não compartilhada com o cliente/);
         await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'preview.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('preview') });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('nova versão'));
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Prévia enviada ao cliente com sucesso!'));
         assert.equal(uploads, 1);
+        assert.match(await page.locator('.producer-file').filter({ hasText: 'preview.mp3' }).textContent(), /Compartilhada com o cliente/);
         // AUD-S08-001: replacement options follow the selected type.
         const replacementValues = () => page.getByLabel('Versão substituída').locator('option')
             .evaluateAll(options => options.map(option => option.value));
-        assert.deepEqual(await replacementValues(), ['', '10']);
+        assert.deepEqual(await replacementValues(), ['', '8', '10']);
         await page.getByLabel('Tipo de arquivo').selectOption('entrega');
         assert.deepEqual(await replacementValues(), ['']);
         await page.getByLabel('Tipo de arquivo').selectOption('previa');

@@ -123,7 +123,7 @@ async function uploadFile(production, file, type, replacesId, button) {
     try {
         await api.enviarArquivo(production.id, file, type, replacesId);
         await openDetail(production.id);
-        setAlert("Arquivo enviado como uma nova versão.");
+        setAlert(type === "previa" ? "Prévia enviada ao cliente com sucesso!" : "Arquivo enviado como uma nova versão.");
     } catch (error) {
         setAlert(error.message, true);
         button.disabled = false;
