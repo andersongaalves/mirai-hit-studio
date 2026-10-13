@@ -14,7 +14,7 @@ from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from threading import Barrier
+from threading import Barrier, Event
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -183,6 +183,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             ConfigModel,
             OrcamentoModel,
             PagamentoModel,
+            ProviderWebhookEventModel,
             ProducaoArquivoModel,
             ProducaoModel,
             PropostaModel,
@@ -198,6 +199,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 ClienteAcessoModel,
                 RepasseProdutorModel,
                 ProducaoArquivoModel,
+                ProviderWebhookEventModel,
                 PagamentoModel,
                 CobrancaModel,
                 ProducaoModel,
@@ -1348,6 +1350,101 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             self.assertEqual(refused.status_code, 409, refused.text)
         finally:
             settings.COMMERCIAL_PIPELINE_V2_ENABLED = previous
+
+    def test_pix_cancel_and_webhook_approval_race_postgresql17(self):
+        from commercial_i2_support import FakeResponse, signed_webhook
+        from core.config import settings
+        from models import CobrancaModel, PagamentoModel, ProducaoModel, PropostaModel
+        from routers.webhooks import get_mercado_pago_client as webhook_provider
+
+        previous_v2 = settings.COMMERCIAL_PIPELINE_V2_ENABLED
+        previous_secret = settings.MERCADO_PAGO_WEBHOOK_SECRET
+        previous_status = self.payment_transport.next_status
+        previous_session = self.payment_client._session
+        previous_webhook_override = self.app.dependency_overrides.get(webhook_provider)
+        secret = "e2e-synthetic-webhook-secret"
+        cancel_started, allow_cancel = Event(), Event()
+        transport = self.payment_transport
+
+        class PaymentWinsCancel:
+            def request(self, method, url, **kwargs):
+                if method == "POST" and url.endswith("/cancel"):
+                    cancel_started.set()
+                    if not allow_cancel.wait(timeout=10):
+                        raise AssertionError("synthetic cancel race timed out")
+                    return FakeResponse({"code": "cannot_cancel_order"}, status=409)
+                return transport.request(method, url, **kwargs)
+
+        settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+        settings.MERCADO_PAGO_WEBHOOK_SECRET = secret
+        transport.next_status = "action_required"
+        self.payment_client._session = PaymentWinsCancel()
+        self.app.dependency_overrides[webhook_provider] = lambda: self.payment_client
+        try:
+            owner = self._login("e2e-client-a")
+            proposal_id = self.ids["client_proposal_id"]
+            accepted = self.http.post(
+                f"/portal/cliente/propostas/{proposal_id}/aceitar",
+                headers=owner,
+                json={"versao": self.ids["client_proposal_version"]},
+            )
+            self.assertEqual(accepted.status_code, 200, accepted.text)
+            pix = self.http.post(
+                f"/portal/cliente/propostas/{proposal_id}/checkout/pix",
+                headers=owner,
+                json={"payment_option": "entrada"},
+            )
+            self.assertEqual(pix.status_code, 200, pix.text)
+            self.assertEqual(pix.json()["status"], "pending")
+            with self.SessionLocal() as db:
+                charge = db.scalar(select(CobrancaModel).where(CobrancaModel.proposta_id == proposal_id))
+                payment = db.scalar(select(PagamentoModel).where(PagamentoModel.cobranca_id == charge.id))
+                order_id = payment.provider_order_id
+                charge_id = charge.id
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                cancel = executor.submit(
+                    self.http.post,
+                    f"/portal/cliente/propostas/{proposal_id}/checkout/cancel-pix",
+                    headers=owner,
+                )
+                self.assertTrue(cancel_started.wait(timeout=10))
+                transport.change(order_id, "processed", "accredited")
+                webhook = executor.submit(signed_webhook, self.http, order_id, secret)
+                allow_cancel.set()
+                cancel_response = cancel.result(timeout=30)
+                webhook_response = webhook.result(timeout=30)
+
+            self.assertEqual(cancel_response.status_code, 409, cancel_response.text)
+            self.assertEqual(webhook_response.status_code, 200, webhook_response.text)
+            self.assertEqual(webhook_response.json()["status"], "processed")
+            blocked_card = self.http.post(
+                f"/portal/cliente/propostas/{proposal_id}/checkout/card",
+                headers=owner,
+                json={
+                    "payment_option": "entrada", "card_token": "synthetic-token",
+                    "payment_method_id": "visa", "installments": 1,
+                },
+            )
+            self.assertEqual(blocked_card.status_code, 409, blocked_card.text)
+            with self.SessionLocal() as db:
+                self.assertEqual(db.query(CobrancaModel).filter_by(proposta_id=proposal_id).count(), 1)
+                self.assertEqual(db.query(PagamentoModel).filter_by(cobranca_id=charge_id).count(), 1)
+                self.assertEqual(db.get(PagamentoModel, payment.id).status, "aprovado")
+                proposal = db.get(PropostaModel, proposal_id)
+                self.assertEqual(
+                    db.query(ProducaoModel).filter_by(orcamento_id=proposal.orcamento_id).count(), 1
+                )
+        finally:
+            allow_cancel.set()
+            self.payment_client._session = previous_session
+            transport.next_status = previous_status
+            settings.MERCADO_PAGO_WEBHOOK_SECRET = previous_secret
+            settings.COMMERCIAL_PIPELINE_V2_ENABLED = previous_v2
+            if previous_webhook_override is None:
+                self.app.dependency_overrides.pop(webhook_provider, None)
+            else:
+                self.app.dependency_overrides[webhook_provider] = previous_webhook_override
 
     def test_integral_checkout_policy_postgresql17(self):
         from core.config import settings
