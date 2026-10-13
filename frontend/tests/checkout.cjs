@@ -15,6 +15,7 @@ const tokenG = '77777777-7777-4777-8777-777777777777';
 const tokenH = '88888888-8888-4888-8888-888888888888';
 const tokenI = '99999999-9999-4999-8999-999999999999';
 const tokenJ = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab';
+const tokenK = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function pixCode(amount = '99.00', initiation = '12') {
     const fields = [
         ['00', '01'], ...(initiation === null ? [] : [['01', initiation]]),
@@ -50,6 +51,7 @@ const summaries = new Map([
     [tokenH, summary('Pix malformado')],
     [tokenI, summary('Pix expirado')],
     [tokenJ, { ...summary('Pix sem campo 01'), opcoes: [{ tipo: 'integral', titulo: 'Pagamento completo', valor: '10.00' }] }],
+    [tokenK, summary('Pagamento total')],
 ]);
 
 function summary(description) {
@@ -89,6 +91,9 @@ async function staticResponse(route) {
         });
         let pixRequests = 0;
         let authenticatedPixRequests = 0;
+        let cancelPixRequests = 0;
+        let authenticatedPaid = false;
+        let publicPaid = false;
         let cardPayload = null;
         let pixPayload = null;
         let sdkFailure = false;
@@ -137,12 +142,22 @@ async function staticResponse(route) {
                     assert.equal(route.request().headers().authorization, 'Bearer client-token');
                     return route.fulfill({ headers: corsHeaders, json: {
                         proposta_numero: 'MHS-000070', descricao: 'Proposta autenticada', valor_total: '200.00',
-                        valor_pago: '0.00', saldo: '200.00', moeda: 'BRL', politica_pagamento: 'entrada_50_50',
-                        status: 'pendente', tentativa: null,
-                        opcoes: [
+                        valor_pago: authenticatedPaid ? '100.00' : '0.00',
+                        saldo: authenticatedPaid ? '100.00' : '200.00', moeda: 'BRL', politica_pagamento: 'entrada_50_50',
+                        status: authenticatedPaid ? 'parcialmente_paga' : 'pendente', tentativa: null,
+                        opcoes: authenticatedPaid ? [{ tipo: 'saldo', titulo: 'Saldo restante', valor: '100.00' }] : [
                             { tipo: 'integral', titulo: 'Pagamento completo', valor: '200.00' },
                             { tipo: 'entrada', titulo: 'Entrada', valor: '100.00' },
                         ],
+                    } });
+                }
+                if (url.pathname === '/portal/cliente/propostas/70/checkout/card' && route.request().method() === 'POST') {
+                    assert.equal(route.request().headers().authorization, 'Bearer client-token');
+                    assert.equal(route.request().postDataJSON().payment_option, 'entrada');
+                    authenticatedPaid = true;
+                    return route.fulfill({ headers: corsHeaders, json: {
+                        status: 'approved', checkout_status: 'parcialmente_paga', payment_option: 'entrada',
+                        valor: '100.00', moeda: 'BRL', pix: null, challenge_url: null,
                     } });
                 }
                 if (url.pathname === '/portal/cliente/propostas/42/checkout' && route.request().method() === 'GET') {
@@ -173,7 +188,10 @@ async function staticResponse(route) {
                 const [, token, suffix] = match;
                 if (suffix === '' && route.request().method() === 'GET') {
                     const data = summaries.get(token);
-                    return data ? route.fulfill({ json: data }) : route.fulfill({ status: 404, json: { detail: 'Checkout não encontrado.' } });
+                    const current = token === tokenK && publicPaid
+                        ? { ...data, status: 'paga', valor_pago: '198.00', saldo: '0.00', opcoes: [] }
+                        : data;
+                    return current ? route.fulfill({ json: current }) : route.fulfill({ status: 404, json: { detail: 'Checkout não encontrado.' } });
                 }
                 if (suffix === '/pix' && route.request().method() === 'POST') {
                     pixRequests += 1;
@@ -188,10 +206,16 @@ async function staticResponse(route) {
                         pix: { qr_code: malformed ? '000201-pix-code' : documentedPix ? mercadoPagoSample : pixCode(), qr_code_base64: documentedPix ? mercadoPagoQrImage : qrImage, ticket_url: 'https://www.mercadopago.com.br/pay', expiration_time: expired ? '2020-09-21T12:00:00Z' : '2099-09-21T12:00:00Z' },
                     } });
                 }
+                if (suffix === '/cancel-pix' && route.request().method() === 'POST') {
+                    cancelPixRequests += 1;
+                    return route.fulfill({ json: { status: 'cancelado' } });
+                }
                 if (suffix === '/card' && route.request().method() === 'POST') {
                     cardPayload = route.request().postDataJSON();
+                    if (token === tokenK) publicPaid = true;
                     return route.fulfill({ json: {
-                        status: token === tokenG ? 'rejected' : 'action_required', checkout_status: 'pendente', payment_option: cardPayload.payment_option,
+                        status: token === tokenG ? 'rejected' : token === tokenK ? 'approved' : 'action_required',
+                        checkout_status: token === tokenK ? 'paga' : 'pendente', payment_option: cardPayload.payment_option,
                         valor: '198.00', moeda: 'BRL', pix: null,
                         challenge_url: token === tokenG ? null : challengeUrl,
                     } });
@@ -261,6 +285,33 @@ async function staticResponse(route) {
         assert.equal(await pixPage.locator('#pix-code').inputValue(), pixCode());
         const renderedQr = await pixPage.locator('#pix-qr').getAttribute('src');
         assert.ok(renderedQr.startsWith('data:image/png;base64,'));
+
+        const cancelPage = await context.newPage();
+        await cancelPage.goto(`http://localhost:4173/checkout/${tokenB}`);
+        await cancelPage.waitForSelector('#checkout-content:not(.hidden)');
+        await cancelPage.getByLabel('Entrada').check();
+        await cancelPage.locator('#generate-pix').click();
+        await cancelPage.waitForSelector('#pix-result:not(.hidden)');
+        const pixBeforeSwitch = pixRequests;
+        await cancelPage.locator('#method-card').click();
+        assert.equal(await cancelPage.locator('#pix-result').isHidden(), true);
+        assert.equal(await cancelPage.locator('#pix-code').isVisible(), false);
+        assert.equal(await cancelPage.locator('#pix-ticket').isVisible(), false);
+        assert.match(await cancelPage.locator('#card-error').textContent(), /Pix pendente/);
+        assert.equal(await cancelPage.getByRole('button', { name: 'Pagar cartão' }).count(), 0);
+        await cancelPage.locator('#method-pix').click();
+        assert.equal(await cancelPage.locator('#pix-result').isVisible(), true);
+        await cancelPage.getByLabel('Pagamento completo').check();
+        assert.equal(await cancelPage.locator('#pix-result').isHidden(), true);
+        await cancelPage.getByLabel('Entrada').check();
+        assert.equal(await cancelPage.locator('#pix-result').isVisible(), true);
+        assert.equal(pixRequests, pixBeforeSwitch);
+        await cancelPage.locator('#method-card').click();
+        await cancelPage.locator('#cancel-pix').click();
+        await cancelPage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
+        assert.equal(cancelPixRequests, 1);
+        assert.equal(await cancelPage.locator('#pix-pending-notice').isHidden(), true);
+        await cancelPage.close();
         await pixPage.waitForFunction(() => document.getElementById('pix-qr')?.naturalWidth > 0);
         const decodedQr = qrCodec('decode', { image: renderedQr.slice('data:image/png;base64,'.length) }).payload;
         assert.equal(decodedQr, pixCode(), 'the rendered QR must encode the provider copy-and-paste code');
@@ -431,6 +482,9 @@ async function staticResponse(route) {
         assert.equal(await statePage.locator('input[name="payment_option"]:checked').getAttribute('value'), 'saldo');
         await statePage.goto(`http://localhost:4173/checkout/${tokenE}`);
         assert.match(await statePage.locator('#checkout-terminal').textContent(), /Pagamento confirmado/);
+        assert.equal((await statePage.locator('#checkout-terminal').textContent()).match(/Pagamento confirmado/g).length, 1);
+        assert.equal(await statePage.locator('#checkout-terminal a').getAttribute('href'), '/acesso');
+        assert.equal(await statePage.locator('#payment-result').isHidden(), true);
         assert.equal(await statePage.locator('#checkout-form').isHidden(), true);
         await statePage.goto(`http://localhost:4173/checkout/${tokenF}`);
         assert.match(await statePage.locator('#checkout-terminal').textContent(), /cancelada/);
@@ -445,6 +499,16 @@ async function staticResponse(route) {
             token: 'debit-token', payment_method_id: 'debvisa', installments: 1, payer: { email: 'buyer@example.com' },
         }, { paymentTypeId: 'debit_card' })).catch(() => {});
         assert.equal(cardPayload.payment_method_type, 'debit_card');
+        await statePage.goto(`http://localhost:4173/checkout/${tokenK}`);
+        await statePage.locator('#method-card').click();
+        await statePage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
+        await statePage.evaluate(async () => window.__brickSettings.callbacks.onSubmit({
+            token: 'synthetic-token', payment_method_id: 'visa', installments: 1,
+            payer: { email: 'buyer@example.invalid' },
+        }, { paymentTypeId: 'credit_card' }));
+        await statePage.waitForFunction(() => document.querySelector('#checkout-terminal').textContent.includes('Pagamento confirmado!'));
+        assert.equal(await statePage.locator('#payment-result').isHidden(), true);
+        assert.equal(await statePage.locator('#checkout-terminal a').getAttribute('href'), '/acesso');
         await statePage.goto('http://localhost:4173/checkout/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
         await statePage.waitForSelector('#checkout-error:not(.hidden)');
         assert.match(await statePage.locator('#checkout-error-message').textContent(), /não encontrado/i);
@@ -472,6 +536,14 @@ async function staticResponse(route) {
         assert.equal(await previewPage.evaluate(() => window.__brickSettings.initialization.amount), 200);
         await previewPage.getByLabel('Entrada').check();
         await previewPage.waitForFunction(() => window.__brickSettings.initialization.amount === 100);
+        await previewPage.evaluate(async () => window.__brickSettings.callbacks.onSubmit({
+            token: 'synthetic-token', payment_method_id: 'visa', installments: 1,
+            payer: { email: 'buyer@example.invalid' },
+        }, { paymentTypeId: 'credit_card' }));
+        await previewPage.waitForFunction(() => document.querySelector('#checkout-terminal').textContent.includes('Saldo restante'));
+        assert.equal(await previewPage.locator('#payment-result').isHidden(), true);
+        assert.equal(await previewPage.locator('#checkout-terminal a').getAttribute('href'), '/cliente');
+        assert.match(await previewPage.locator('#checkout-terminal').textContent(), /R\$\s*100,00/);
         assert.ok(previewApiRequests.includes('https://mirai-hit-studio.onrender.com/portal/cliente/propostas/70/checkout'));
         assert.ok(previewApiRequests.includes('https://mirai-hit-studio.onrender.com/checkout/config'));
         assert.equal(previewApiRequests.some(url => url.includes('mirai-hit-studio.onrender.comcheckout')), false);

@@ -108,6 +108,7 @@ async def check():
             json={'payment_option': 'entrada'},
         )
         assert foreign_payment.status_code == 404
+        assert (await http.post(f'/portal/cliente/propostas/{split_id}/checkout/cancel-pix')).status_code == 404
 
         current['user'] = types.SimpleNamespace(id=user_b_id, role='cliente', is_admin=False, ativo=True, cliente_id=client_b_id)
         split_summary = await http.get(f'/portal/cliente/propostas/{split_id}/checkout')
@@ -116,6 +117,7 @@ async def check():
         paid = await http.post(f'/portal/cliente/propostas/{split_id}/checkout/pix', json={'payment_option':'entrada'})
         assert paid.status_code == 200, paid.text
         assert paid.json()['status'] == 'approved'
+        assert (await http.post(f'/portal/cliente/propostas/{split_id}/checkout/cancel-pix')).status_code == 409
         with Session(engine) as check_db:
             assert check_db.query(ProducaoModel).filter_by(orcamento_id=2).count() == 1
             charge = check_db.scalar(select(CobrancaModel).where(CobrancaModel.proposta_id == split_id))
@@ -124,6 +126,66 @@ async def check():
         again = await http.get(f'/portal/cliente/propostas/{split_id}/checkout')
         assert again.status_code == 200 and [item['tipo'] for item in again.json()['opcoes']] == ['saldo']
         assert (await http.get(f'/portal/cliente/propostas/{integral_id}/checkout')).status_code == 404
+
+asyncio.run(check())
+''')
+
+    def test_owner_can_cancel_only_confirmed_pending_pix(self):
+        self.run_case(r'''
+class PendingProvider(FakeSession):
+    def __init__(self):
+        super().__init__([])
+        self.reference = None
+        self.amount = None
+        self.canceled = False
+
+    def request(self, method, url, **kwargs):
+        self.calls.append((method, url, kwargs))
+        if method == 'POST' and url.endswith('/v1/orders'):
+            self.reference = kwargs['json']['external_reference']
+            self.amount = kwargs['json']['total_amount']
+        elif method == 'POST' and url.endswith('/cancel'):
+            self.canceled = True
+            return FakeResponse(200, {'id': 'ORD-owned', 'status': 'canceled'})
+        return FakeResponse(200, order(
+            amount=self.amount, provider_id='ORD-owned', external_reference=self.reference,
+            status='canceled' if self.canceled else 'action_required',
+            detail='canceled_transaction' if self.canceled else 'waiting_transfer',
+        ))
+
+with Session(engine) as db:
+    owner = ClienteModel(nome='Owner', email='owner@example.invalid', telefone='', observacoes='', ativo=True)
+    foreign = ClienteModel(nome='Foreign', email='foreign@example.invalid', telefone='', observacoes='', ativo=True)
+    db.add_all([owner, foreign])
+    db.flush()
+    proposal = accepted_for_client(db, 1, owner)
+    db.commit()
+    proposal_id, owner_id, foreign_id = proposal.id, owner.id, foreign.id
+
+app = FastAPI()
+app.include_router(portal_router)
+def session():
+    with Session(engine) as db:
+        yield db
+app.dependency_overrides[get_db] = session
+provider = MercadoPagoClient(access_token='synthetic-token', session=PendingProvider())
+app.dependency_overrides[portal_provider] = lambda: provider
+current = {'user': types.SimpleNamespace(id=1, role='cliente', is_admin=False, ativo=True, cliente_id=owner_id)}
+app.dependency_overrides[get_current_user] = lambda: current['user']
+
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as http:
+        pix = await http.post(f'/portal/cliente/propostas/{proposal_id}/checkout/pix', json={'payment_option': 'entrada'})
+        assert pix.status_code == 200, pix.text
+        current['user'] = types.SimpleNamespace(id=2, role='cliente', is_admin=False, ativo=True, cliente_id=foreign_id)
+        assert (await http.post(f'/portal/cliente/propostas/{proposal_id}/checkout/cancel-pix')).status_code == 404
+        assert not provider._session.canceled
+        current['user'] = types.SimpleNamespace(id=1, role='cliente', is_admin=False, ativo=True, cliente_id=owner_id)
+        canceled = await http.post(f'/portal/cliente/propostas/{proposal_id}/checkout/cancel-pix')
+        assert canceled.status_code == 200, canceled.text
+        assert canceled.json()['status'] == 'cancelado'
+        assert (await http.post(f'/portal/cliente/propostas/{proposal_id}/checkout/cancel-pix')).status_code == 200
+        assert sum(url.endswith('/cancel') for _, url, _ in provider._session.calls) == 1
 
 asyncio.run(check())
 ''')

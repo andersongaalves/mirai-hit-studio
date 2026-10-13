@@ -88,5 +88,9 @@ class CheckoutPaymentResponse(CheckoutContract):
     challenge_url: str | None = Field(default=None, max_length=2000)
 
 
+class CheckoutCancelResponse(CheckoutContract):
+    status: Literal["cancelado"]
+
+
 class CheckoutLinkResponse(CheckoutContract):
     checkout_url: str = Field(min_length=1, max_length=2000)

@@ -12,6 +12,7 @@ from integrations.mercado_pago import (
 )
 from models.usuario import UsuarioModel
 from schemas.checkout import (
+    CheckoutCancelResponse,
     CheckoutCardRequest,
     CheckoutPaymentRequest,
     CheckoutPaymentResponse,
@@ -174,6 +175,29 @@ def pagar_checkout_pix(
             user.cliente_id,
             data.payment_option,
             device_id=data.device_id,
+            client=client,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except _CHECKOUT_EXCEPTIONS as exc:
+        raise _checkout_error(exc) from None
+
+
+@router.post(
+    "/propostas/{proposta_id}/checkout/cancel-pix",
+    response_model=CheckoutCancelResponse,
+)
+def cancelar_checkout_pix(
+    proposta_id: int,
+    request: Request,
+    db: Db,
+    user: CurrentClient,
+    client: MercadoPagoClient = Depends(get_mercado_pago_client),
+):
+    try:
+        return checkout_service.cancelar_pix_proposta(
+            db,
+            proposta_id,
+            user.cliente_id,
             client=client,
             request_id=getattr(request.state, "request_id", None),
         )

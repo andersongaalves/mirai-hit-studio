@@ -13,6 +13,7 @@ from models.orcamento import OrcamentoModel
 from models.proposta import PropostaModel
 from schemas.checkout import (
     CheckoutAttempt,
+    CheckoutCancelResponse,
     CheckoutOption,
     CheckoutPaymentResponse,
     CheckoutPixData,
@@ -559,6 +560,55 @@ def recuperar_proposta(
         db, payment.id, client=client, request_id=request_id
     )
     return _result_response(db, payment.id, reconciled.provider_result)
+
+
+def _cancelar_pix(db: Session, cobranca: CobrancaModel, authorize, *, client=None, request_id=None):
+    pending = _tentativa_atual(cobranca)
+    payment = pending or _ultimo_pagamento(cobranca)
+    if payment is None or payment.metodo != "pix" or (
+        pending is None and payment.status != PagamentoStatus.CANCELADO.value
+    ):
+        raise CheckoutConflito("Nao existe Pix pendente para cancelar.")
+    payment_id, cobranca_id = payment.id, cobranca.id
+    db.rollback()
+    try:
+        mercado_pago_service.cancelar_pix_pendente(
+            db,
+            payment_id,
+            expected_cobranca_id=cobranca_id,
+            authorize_charge=authorize,
+            client=client,
+            request_id=request_id,
+        )
+    except mercado_pago_service.CancellationBlocked:
+        raise CheckoutConflito(
+            "Este Pix nao pode ser cancelado. Aguarde a confirmacao ou a conciliacao antes de tentar outro pagamento."
+        ) from None
+    except (mercado_pago_service.ReconciliationRequired, mercado_pago_service.ReconciliationConflict):
+        raise CheckoutConflito(
+            "Cancelamento nao confirmado. O pagamento permanece bloqueado para conciliacao."
+        ) from None
+    return CheckoutCancelResponse(status="cancelado")
+
+
+def cancelar_pix(db: Session, token: str, *, client=None, request_id=None):
+    cobranca = carregar(db, token)
+
+    def authorize(locked: CobrancaModel):
+        if carregar(db, token).id != locked.id:
+            raise CheckoutNaoEncontrado("Checkout nao encontrado.")
+
+    return _cancelar_pix(db, cobranca, authorize, client=client, request_id=request_id)
+
+
+def cancelar_pix_proposta(db: Session, proposta_id: int, cliente_id: int, *, client=None, request_id=None):
+    cobranca = carregar_proposta(db, proposta_id, cliente_id)
+
+    def authorize(locked: CobrancaModel):
+        if carregar_proposta(db, proposta_id, cliente_id).id != locked.id:
+            raise CheckoutNaoEncontrado("Checkout nao encontrado.")
+
+    return _cancelar_pix(db, cobranca, authorize, client=client, request_id=request_id)
 
 
 def link_por_proposta(db: Session, proposta_id: int, base_url: str) -> str:

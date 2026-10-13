@@ -162,7 +162,9 @@ function expectStatus(result, status, label) {
         await page.locator('#checkout-content').waitFor({ state: 'visible' });
         assert.equal(await page.locator('input[name="payment_option"]').count(), 2);
         await page.getByRole('button', { name: 'Gerar Pix' }).click();
-        await page.waitForFunction(() => document.getElementById('payment-result').textContent.includes('Pagamento confirmado'));
+        await page.locator('#checkout-terminal').getByText('Pagamento confirmado!', { exact: true }).waitFor();
+        assert.equal(await page.getByText('Pagamento confirmado!', { exact: true }).count(), 1);
+        assert.equal(await page.locator('#payment-result').isHidden(), true);
 
         await resetSession(page);
         await login(page, '/admin', 'e2e-admin');
