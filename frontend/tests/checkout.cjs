@@ -96,14 +96,16 @@ async function staticResponse(route) {
         let challengeUrl = 'https://www.mercadopago.com/auth/challenge';
         let missingPublicKey = false;
         let configStatus = 200;
+        const previewApiRequests = [];
         const pageErrors = [];
         await context.route('**/*', async route => {
             const url = new URL(route.request().url());
-            if (url.origin === 'http://localhost:4173') return staticResponse(route);
+            if (url.origin === 'http://localhost:4173' || url.origin === 'https://deploy-preview-19--miraihitstudio.netlify.app') return staticResponse(route);
             if (url.origin === 'https://sdk.mercadopago.com') {
                 if (sdkFailure) return route.abort();
                 return route.fulfill({ contentType: 'text/javascript', body: `
                     window.MercadoPago = class {
+                        constructor(publicKey) { window.__publicKey = publicKey; }
                         bricks() { return { create: async (_name, id, settings) => {
                             window.__brickSettings = settings;
                             const button = document.createElement('button');
@@ -122,7 +124,27 @@ async function staticResponse(route) {
                 if (securityFailure) return route.abort();
                 return route.fulfill({ contentType: 'text/javascript', body: "window.MP_DEVICE_SESSION_ID = 'official-device-123';" });
             }
-            if (url.origin === 'http://localhost:8000') {
+            if (url.origin === 'http://localhost:8000' || url.origin === 'https://mirai-hit-studio.onrender.com') {
+                const previewRequest = url.origin === 'https://mirai-hit-studio.onrender.com';
+                const corsHeaders = previewRequest ? {
+                    'Access-Control-Allow-Origin': 'https://deploy-preview-19--miraihitstudio.netlify.app',
+                    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                } : {};
+                if (previewRequest) previewApiRequests.push(route.request().url());
+                if (previewRequest && route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders });
+                if (url.pathname === '/portal/cliente/propostas/70/checkout' && route.request().method() === 'GET') {
+                    assert.equal(route.request().headers().authorization, 'Bearer client-token');
+                    return route.fulfill({ headers: corsHeaders, json: {
+                        proposta_numero: 'MHS-000070', descricao: 'Proposta autenticada', valor_total: '200.00',
+                        valor_pago: '0.00', saldo: '200.00', moeda: 'BRL', politica_pagamento: 'entrada_50_50',
+                        status: 'pendente', tentativa: null,
+                        opcoes: [
+                            { tipo: 'integral', titulo: 'Pagamento completo', valor: '200.00' },
+                            { tipo: 'entrada', titulo: 'Entrada', valor: '100.00' },
+                        ],
+                    } });
+                }
                 if (url.pathname === '/portal/cliente/propostas/42/checkout' && route.request().method() === 'GET') {
                     assert.equal(route.request().headers().authorization, 'Bearer client-token');
                     return route.fulfill({ json: {
@@ -143,8 +165,9 @@ async function staticResponse(route) {
                 }
                 const match = url.pathname.match(/^\/checkout\/([0-9a-f-]{36})(.*)$/i);
                 if (url.pathname === '/checkout/config') {
+                    if (previewRequest) assert.equal(route.request().headers().authorization, 'Bearer client-token');
                     if (configStatus !== 200) return route.fulfill({ status: configStatus, json: { detail: 'Pagamento indisponível.' } });
-                    return route.fulfill({ json: missingPublicKey ? {} : { mercado_pago_public_key: 'TEST-public-key' } });
+                    return route.fulfill({ headers: corsHeaders, json: missingPublicKey ? {} : { mercado_pago_public_key: 'TEST-public-key' } });
                 }
                 if (!match) return route.fulfill({ status: 404, json: { detail: 'not found' } });
                 const [, token, suffix] = match;
@@ -438,8 +461,24 @@ async function staticResponse(route) {
         assert.equal(authenticatedPixRequests, 1);
         await authenticatedPage.close();
 
+        const previewPage = await context.newPage();
+        previewPage.on('pageerror', error => pageErrors.push(error.message));
+        await previewPage.addInitScript(() => localStorage.setItem('mirai.auth.cliente.access_token', 'client-token'));
+        await previewPage.goto('https://deploy-preview-19--miraihitstudio.netlify.app/checkout?proposta=70');
+        await previewPage.waitForSelector('#checkout-content:not(.hidden)');
+        await previewPage.locator('#method-card').click();
+        await previewPage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
+        assert.equal(await previewPage.evaluate(() => window.__publicKey), 'TEST-public-key');
+        assert.equal(await previewPage.evaluate(() => window.__brickSettings.initialization.amount), 200);
+        await previewPage.getByLabel('Entrada').check();
+        await previewPage.waitForFunction(() => window.__brickSettings.initialization.amount === 100);
+        assert.ok(previewApiRequests.includes('https://mirai-hit-studio.onrender.com/portal/cliente/propostas/70/checkout'));
+        assert.ok(previewApiRequests.includes('https://mirai-hit-studio.onrender.com/checkout/config'));
+        assert.equal(previewApiRequests.some(url => url.includes('mirai-hit-studio.onrender.comcheckout')), false);
+        await previewPage.close();
+
         assert.deepEqual(pageErrors, []);
-        console.log('PASS: guest summary, XSS safety, Pix, double-submit, card tokenization, 3DS, SDK failure and mobile structure.');
+        console.log('PASS: guest checkout, authenticated preview card config, Pix, card tokenization, 3DS and mobile structure.');
     } finally {
         await browser.close();
     }

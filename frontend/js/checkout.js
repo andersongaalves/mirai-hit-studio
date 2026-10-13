@@ -44,7 +44,7 @@ function readProposalId() {
 
 function authenticatedPath(path) {
     const base = `/portal/cliente/propostas/${state.proposalId}/checkout`;
-    if (path === "checkout/config") return path;
+    if (path === "checkout/config") return "/checkout/config";
     if (path === `checkout/${state.token}`) return base;
     if (path === `checkout/${state.token}/status`) return `${base}/status`;
     if (path === `checkout/${state.token}/pending-payment`) return `${base}/pending-payment`;
