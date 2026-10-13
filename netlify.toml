@@ -1,0 +1,11 @@
+[[redirects]]
+  from = "/checkout"
+  to = "/checkout.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/checkout/*"
+  to = "/checkout.html"
+  status = 200
+  force = true

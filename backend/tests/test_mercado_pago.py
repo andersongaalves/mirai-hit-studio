@@ -88,6 +88,50 @@ class MercadoPagoTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(MP_SETUP + source)
 
+    def test_3ds_challenge_urls_reject_lookalikes_and_ambiguous_authorities(self):
+        self.run_case(r'''
+from integrations.mercado_pago.client import _verified_challenge_url
+
+valid = [
+    'https://www.mercadopago.com/auth/card/validation/pages/remedies/example?guest_token=opaque',
+    'https://www.mercadopago.com.ar/auth/card/validation/pages/remedies/example',
+    'https://WWW.MERCADOPAGO.COM/auth/card/validation/pages/remedies/example',
+]
+invalid = [
+    'https://www.mercadopago.exemplo-malicioso.com/auth/challenge',
+    'https://mercadopago.com.evil.example/auth/challenge',
+    'https://foo.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com.br/auth/challenge',
+    'https://mercadopago.com/auth/challenge',
+    'https://notmercadopago.com/auth/challenge',
+    'http://www.mercadopago.com/auth/challenge',
+    'https://user:password@www.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com@evil.example/auth/challenge',
+    'https://www.mercadopago.com:443/auth/challenge',
+    'https://www.mercadopago.com:8443/auth/challenge',
+    'https://www.mercadopago.com./auth/challenge',
+    'https://%77ww.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com\\@evil.example/auth/challenge',
+    ' https://www.mercadopago.com/auth/challenge',
+    'https://www.mercadopago.com/auth/challenge#fragment',
+    'https://[',
+    'javascript:alert(1)',
+]
+for url in valid:
+    assert _verified_challenge_url(url) == url, url
+for url in invalid:
+    assert _verified_challenge_url(url) is None, url
+
+provider_order = order(status='action_required', detail='pending_challenge', method='visa', pix=False)
+provider_order['transactions']['payments'][0]['payment_method']['transaction_security'] = {
+    'url': invalid[0]
+}
+result = MercadoPagoClient(access_token='test-token', session=FakeSession([
+    FakeResponse(200, provider_order)
+])).get_order('ORD-test')
+assert result.status == PagamentoStatus.PENDENTE and result.challenge_url is None
+''')
+
     def test_configuration_status_mapping_and_error_categories(self):
         self.run_case(r'''
 client = MercadoPagoClient(access_token='', session=FakeSession([]))
@@ -171,6 +215,8 @@ with Session(engine) as db:
     assert persisted.provider_idempotency_key == first_key
     assert [call[2]['headers']['X-Idempotency-Key'] for call in session.calls] == [first_key, first_key]
     assert session.calls[0][2]['json']['total_amount'] == '150.25'
+    assert session.calls[0][2]['json']['items'][0]['unit_price'] == '150.25'
+    assert session.calls[0][2]['json']['items'][0]['quantity'] == 1
     assert session.calls[0][2]['json']['external_reference'] == first_key
     assert session.calls[0][2]['json']['payer']['identification']['number'] == '11122233344'
     second = mp_service.criar_tentativa(db, current_charge.id, tipo='integral', metodo='pix')
@@ -197,7 +243,9 @@ with Session(engine) as db:
     assert payload['config']['online']['transaction_security'] == {
         'validation': 'on_fraud_risk', 'liability_shift': 'required'
     }
-    assert method == {'id': 'visa', 'type': 'credit_card', 'token': card_token, 'installments': 2}
+    assert method == {'id': 'visa', 'type': 'credit_card', 'token': card_token,
+                      'installments': 2, 'statement_descriptor': 'MIRAI HIT'}
+    assert session.calls[0][2]['json']['description'].startswith('Mirai Hit Studio - Integral:')
     payment = db.get(PagamentoModel, result.payment_id)
     assert payment.status == 'aprovado' and payment.provider_order_id == 'ORD-1'
     assert payment.cobranca.status == 'paga'
@@ -251,9 +299,21 @@ with Session(engine) as db:
         client=MercadoPagoClient(access_token='test-token', session=entry_session),
     )
     assert db.get(PagamentoModel, entry.payment_id).valor == Decimal('75.12')
+    entry_payload = entry_session.calls[0][2]['json']
+    assert entry_payload['items'] == [{
+        'title': entry_payload['description'], 'quantity': 1, 'unit_price': '75.12'
+    }]
+    assert 'Entrada' in entry_payload['description']
     assert db.get(CobrancaModel, current_charge.id).status == 'parcialmente_paga'
     balance = mp_service.criar_tentativa(db, current_charge.id, tipo='saldo', metodo='pix')
     assert balance.valor == Decimal('75.13')
+    balance_session = FakeSession([FakeResponse(201, order(
+        amount='75.13', provider_id='ORD-balance', external_reference=balance.provider_reference
+    ))])
+    mp_service.enviar_pix(db, balance.id, payer=MercadoPagoPayer(email='payer@example.com'),
+                          client=MercadoPagoClient(access_token='test-token', session=balance_session))
+    assert balance_session.calls[0][2]['json']['items'][0]['unit_price'] == '75.13'
+    assert 'Saldo' in balance_session.calls[0][2]['json']['description']
 
 lookup_session = FakeSession([FakeResponse(200, order(
     amount='99.90', status='processed', detail='accredited', provider_id='ORD-lookup'

@@ -21,7 +21,7 @@ O resumo nao inclui e-mail, telefone, observacoes, IDs administrativos, provider
 
 ## Valores e opcoes
 
-O frontend envia apenas `payment_option`: `integral`, `entrada` ou `saldo`. O backend calcula o valor usando `financial_service` e rejeita campos extras, inclusive `amount`.
+O frontend envia `payment_option` (`integral`, `entrada` ou `saldo`) e, quando o script oficial o fornece, `device_id`. O backend calcula o valor usando `financial_service` e rejeita campos extras, inclusive `amount`.
 
 - `integral`: total, antes de qualquer pagamento aprovado.
 - `entrada`: metade comercial definida pelo dominio, antes de qualquer pagamento aprovado.
@@ -37,9 +37,9 @@ Uma tentativa pendente equivalente e reutilizada. Se ela possui Order, a recuper
 
 ## Cartao e 3DS
 
-O navegador carrega MercadoPago.js v2 e cria o Card Payment Brick com `initialization.amount` numerico. Falhas de configuração HTTP, Public Key ausente, carregamento do SDK, inicialização e callbacks do Brick são diferenciadas por metadados técnicos seguros (etapa, categoria e HTTP status); erros brutos não são registrados. PAN, CVV e validade ficam nos campos seguros do Mercado Pago. A Mirai recebe apenas token temporario, meio de pagamento, tipo, parcelas e os dados minimos do pagador exigidos pelo provider.
+O navegador carrega MercadoPago.js v2 e cria o Card Payment Brick com `initialization.amount` numerico. Um carregamento falho do SDK possui timeout e pode ser repetido apos selecionar o cartao novamente. Falhas de configuração HTTP, Public Key ausente, carregamento do SDK, inicialização e callbacks do Brick são diferenciadas por metadados técnicos seguros (etapa, categoria e HTTP status); erros brutos não são registrados. PAN, CVV e validade ficam nos campos seguros do Mercado Pago. A Mirai recebe apenas token temporario, meio de pagamento, tipo, parcelas e os dados minimos do pagador exigidos pelo provider.
 
-O token nao e persistido, logado, colocado em URL, storage ou analytics. Orders de cartao ativam 3DS com `on_fraud_risk` e `liability_shift=required`. Quando o provider retorna `action_required/pending_challenge`, a URL HTTPS validada do Mercado Pago e exibida em iframe. A conclusao do iframe apenas inicia nova consulta; webhook/reconciliacao continua sendo autoridade.
+O token nao e persistido, logado, colocado em URL, storage ou analytics. Orders de cartao ativam 3DS com `on_fraud_risk` e `liability_shift=required`. Quando o provider retorna `action_required/pending_challenge`, apenas URLs HTTPS com host oficial explicitamente permitido sao exibidas no iframe. A validacao cobre a URL inicial, nao garante o destino de redirecionamentos internos do iframe; a politica de frames do navegador e as restricoes do provider continuam relevantes. Mensagens de conclusao exigem origem permitida e o proprio iframe como fonte. A conclusao apenas inicia nova consulta; webhook/reconciliacao continua sendo autoridade. O Brick e desmontado ao sair do cartao e recriado com o valor atual ao voltar.
 
 ## Estados e polling
 
@@ -69,6 +69,8 @@ Com consentimento aceito, o checkout pode emitir `begin_checkout`, `payment_meth
 
 ## Configuracao e limites
 
-Configurar `MERCADO_PAGO_PUBLIC_KEY`, `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET` e `PUBLIC_FRONTEND_URL`. A Pages Function `functions/checkout/[[path]].js` serve o shell para a rota dinamica sem remover a referencia da URL.
+Configurar `MERCADO_PAGO_PUBLIC_KEY`, `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET` e `PUBLIC_FRONTEND_URL`. O endpoint de configuracao do cartao falha quando falta uma das duas credenciais de pagamento, sem expor o Access Token. A Pages Function `functions/checkout/[[path]].js` serve o shell para a rota dinamica sem remover a referencia da URL.
+
+As credenciais Public Key e Access Token precisam pertencer ao mesmo ambiente e integracao. Nao e seguro inferir essa identidade somente pelo prefixo do token. Com credenciais de teste, o Pix pode conter recebedor de teste e nao serve para pagamento bancario real; valide apenas com os fluxos de teste oficiais. Antes de publicar credenciais produtivas, confirme a dupla de chaves, a configuracao do topico `orders` no painel Mercado Pago e a conciliacao de uma Order de teste controlada. Nunca altere o status financeiro diretamente no banco para simular aprovacao.
 
 O rate limit atual usa armazenamento SQLite compartilhado pelo processo/host e nao substitui protecao de borda em multiplas instancias. Compartilhamento automatico por e-mail e gestao financeira permanecem para F3.5.

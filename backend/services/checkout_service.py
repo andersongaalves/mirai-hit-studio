@@ -229,7 +229,8 @@ def _payer(cobranca: CobrancaModel, *, email=None, identification_type=None, ide
     customer = snapshot.get("cliente") if isinstance(snapshot, dict) else {}
     customer = customer if isinstance(customer, dict) else {}
     stored_email = cobranca.cliente.email if cobranca.cliente and cobranca.cliente.email else customer.get("email")
-    name = str(customer.get("nome") or "").strip().split(maxsplit=1)
+    stored_name = cobranca.cliente.nome if cobranca.cliente else None
+    name = str(customer.get("nome") or stored_name or "").strip().split(maxsplit=1)
     return MercadoPagoPayer(
         email=str(email or stored_email or ""),
         first_name=name[0] if name else None,
@@ -357,7 +358,7 @@ def _result_response(db: Session, payment_id: int, result: ProviderPaymentResult
     )
 
 
-def criar_pix(db: Session, token: str, tipo: str, *, client=None, request_id=None):
+def criar_pix(db: Session, token: str, tipo: str, *, device_id=None, client=None, request_id=None):
     cobranca = carregar(db, token)
     pipeline_v2 = _public_pipeline_v2(cobranca)
     if pipeline_v2:
@@ -377,6 +378,7 @@ def criar_pix(db: Session, token: str, tipo: str, *, client=None, request_id=Non
         db,
         payment_id,
         payer=_payer(cobranca),
+        device_id=device_id,
         client=provider,
         request_id=request_id,
     )
@@ -389,6 +391,7 @@ def criar_pix_proposta(
     cliente_id: int,
     tipo: str,
     *,
+    device_id=None,
     client=None,
     request_id=None,
 ):
@@ -410,6 +413,7 @@ def criar_pix_proposta(
         db,
         payment_id,
         payer=_payer(cobranca),
+        device_id=device_id,
         client=provider,
         request_id=request_id,
     )
@@ -445,6 +449,7 @@ def criar_cartao(db: Session, token: str, dados, *, client=None, request_id=None
         payment_method_id=dados.payment_method_id,
         payment_method_type=dados.payment_method_type,
         installments=dados.installments,
+        device_id=dados.device_id,
         client=provider,
         request_id=request_id,
     )
@@ -486,6 +491,7 @@ def criar_cartao_proposta(
         payment_method_id=dados.payment_method_id,
         payment_method_type=dados.payment_method_type,
         installments=dados.installments,
+        device_id=dados.device_id,
         client=provider,
         request_id=request_id,
     )

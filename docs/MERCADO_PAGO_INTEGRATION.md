@@ -19,6 +19,8 @@ Referencias oficiais:
 - [Credenciais](https://www.mercadopago.com.br/developers/pt/docs/your-integrations/credentials)
 - [Notificacoes de Orders](https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/notifications)
 - [Status de Orders](https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/payment-management/status/order-status)
+- [Campos da Orders API e migracao](https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/resources/migrate-payments-to-orders)
+- [Device ID](https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/payment-management/improve-payment-approval/recommendations)
 
 ## Configuracao
 
@@ -36,7 +38,7 @@ O Access Token e privado e usado somente pelo backend. O segredo de webhook e um
 1. O backend valida a cobranca e resolve o valor de `integral`, `entrada` ou `saldo`.
 2. Cria e confirma no banco uma tentativa `Pagamento` pendente.
 3. Persiste um UUID em `provider_idempotency_key` e usa a mesma referencia opaca em `external_reference`.
-4. Envia a order com `X-Idempotency-Key`.
+4. Envia a order com `X-Idempotency-Key`, `items` (um item de quantidade 1 e preco igual a tentativa atual), `description` e, no cartao, `payment_method.statement_descriptor`. O Device ID oficial, quando disponivel, segue no header `X-meli-session-id`.
 5. Normaliza a resposta, grava o ID da order em `provider_order_id` e recalcula a cobranca pelo `financial_service`.
 
 O navegador nunca define o valor autoritativo. Uma cobranca parcialmente paga nao aceita nova intencao integral ou entrada; o saldo e sempre calculado pelo backend.
@@ -46,6 +48,8 @@ O navegador nunca define o valor autoritativo. Uma cobranca parcialmente paga na
 Pix retorna transitoriamente codigo copia-e-cola, QR base64 e `ticket_url` no DTO normalizado. Esses dados nao sao persistidos nem registrados em log. O frontend valida formato EMV e CRC do copia-e-cola, compara o valor EMV quando informado com o valor da tentativa e não apresenta código em estado terminal ou após a expiração. A imagem base64 usa o MIME detectado pela assinatura de bytes. Ambos os campos são preservados sem reformatar o payload do provider.
 
 Cartao aceita somente token temporario, identificador do meio, tipo e parcelas. PAN, CVV e validade bruta nao fazem parte da API interna. O token e enviado ao provider e descartado, sem persistencia ou log.
+
+O script oficial `security.js` e carregado somente apos interacao no checkout e fornece `MP_DEVICE_SESSION_ID` quando disponivel. Falha de coleta nao gera ID falso e nao interrompe a tentativa; o header e omitido. O ID e validado contra caracteres de controle e nao e logado. Os dados de item usam o objeto real da proposta e o valor da tentativa calculado pelo backend; uma entrada nunca anuncia o total do contrato. Categoria de item e data de cadastro nao sao inventadas. Identificacao do comprador so e enviada quando legitimamente fornecida.
 
 ## Idempotencia e falhas
 
@@ -98,7 +102,8 @@ Status desconhecido nunca aprova pagamento. Reembolso integral e suportado; reem
 
 ## Limites atuais
 
-- sem endpoint publico de checkout;
+Antes de operar com credenciais produtivas, conferir manualmente Public Key e Access Token da mesma integracao, chave de assinatura, topico `orders` configurado no painel e callback recebido com assinatura valida. Codigo Pix de TESTUSER gerado em sandbox nao comprova liquidacao real. O SDK JavaScript oficial tokeniza o cartao; o cliente HTTP de backend continua responsavel por Orders e nao foi trocado apenas para satisfazer indicador de qualidade. Testes com fakes nao validam elegibilidade da conta, 3DS real, conectividade dos webhooks ou aprovacao financeira.
+
 - sem acao ativa de refund, suporte contabil a refund parcial/chargeback, boleto, assinatura ou split;
 - o rate limit do checkout e local por processo; protecao distribuida fica para a infraestrutura de release;
 - sem worker/fila propria para reprocessamento;
@@ -106,4 +111,4 @@ Status desconhecido nunca aprova pagamento. Reembolso integral e suportado; reem
 - sem persistencia de payload bruto;
 - sem chamada real nos testes.
 
-F3.4 implementara checkout e tokenizacao frontend. F3.5 implementara a operacao administrativa financeira e a fila operacional de conciliacao.
+O checkout publico e o checkout autenticado do Portal Cliente compartilham a mesma criacao de Orders e reconciliacao. Operacoes administrativas de conciliacao seguem seus controles proprios.
