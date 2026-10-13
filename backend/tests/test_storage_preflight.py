@@ -9,6 +9,10 @@ from datetime import datetime, timedelta, timezone
 from io import StringIO
 from unittest.mock import mock_open, patch
 
+from scripts.production_release_guard import (
+    validate_render_v2_environment,
+    validate_requested_commercial_v2,
+)
 from scripts.storage_preflight import _configuration_fingerprint, build_report, main
 
 
@@ -125,7 +129,48 @@ class StoragePreflightTests(unittest.TestCase):
         self.assertTrue(report["provider_connectivity_evidence_verified"])
         self.assertEqual(report["components"]["r2_private_temp"]["smoke"], "passed_with_evidence")
         env["COMMERCIAL_PIPELINE_V2_ENABLED"] = "true"
-        self.assertFalse(build_report(env, self.valid_evidence())["rollout_ready"])
+        enabled = build_report(env, self.valid_evidence())
+        self.assertTrue(enabled["rollout_ready"])
+        self.assertEqual(enabled["commercial_pipeline_v2"], "on")
+        env["STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED"] = "false"
+        mismatched = build_report(env, self.valid_evidence())
+        self.assertFalse(mismatched["rollout_ready"])
+        self.assertFalse(mismatched["commercial_pipeline_v2_consistent"])
+        env["STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED"] = "true"
+        self.assertTrue(build_report(env, self.valid_evidence())["rollout_ready"])
+
+    def test_release_v2_state_matrix_fails_closed(self):
+        evidence = self.valid_evidence()
+        cases = (
+            ("true", "true", "true", True),
+            ("false", "false", "false", True),
+            ("true", "false", "true", False),
+            ("false", "true", "false", False),
+            ("true", "true", "false", False),
+            ("false", "false", "true", False),
+            (None, "true", "true", False),
+            ("TRUE", "true", "true", False),
+            ("true", None, "true", False),
+            ("true", "TRUE", "true", False),
+            ("true", "true", "", False),
+        )
+        for github_state, render_state, release_state, expected in cases:
+            with self.subTest(github=github_state, render=render_state, release=release_state):
+                env = self.valid_environment()
+                if github_state is None:
+                    del env["COMMERCIAL_PIPELINE_V2_ENABLED"]
+                else:
+                    env["COMMERCIAL_PIPELINE_V2_ENABLED"] = github_state
+                env["STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED"] = release_state
+                render_response = {"key": "COMMERCIAL_PIPELINE_V2_ENABLED", "value": render_state}
+                ready = (
+                    build_report(env, evidence)["rollout_ready"]
+                    and validate_requested_commercial_v2(release_state) == "verified"
+                    and validate_render_v2_environment(
+                        render_response, expected_state=release_state
+                    ) == "verified"
+                )
+                self.assertEqual(ready, expected)
 
     def test_unsigned_tampered_or_wrong_sha_evidence_fails_closed(self):
         env = self.valid_environment()
@@ -161,6 +206,20 @@ class StoragePreflightTests(unittest.TestCase):
         self.assertTrue(cli_report["provider_connectivity_evidence_verified"])
         self.assertFalse(cli_report["provider_connectivity_probed"])
         self.assertEqual(cli_report["commercial_pipeline_v2"], "off")
+
+    def test_production_release_accepts_enabled_v2_with_unchanged_storage_evidence(self):
+        env = self.production_release_environment()
+        env["COMMERCIAL_PIPELINE_V2_ENABLED"] = "true"
+        env["STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED"] = "true"
+        evidence = self.valid_evidence()
+        self.assertTrue(build_report(env, evidence)["rollout_ready"])
+
+        output = StringIO()
+        with patch.dict("os.environ", env, clear=True), patch(
+            "builtins.open", mock_open(read_data=json.dumps(evidence))
+        ), redirect_stdout(output):
+            self.assertEqual(main(["--require-rollout-ready"]), 0)
+        self.assertEqual(json.loads(output.getvalue())["commercial_pipeline_v2"], "on")
 
     def test_production_release_rejects_untrusted_verification_contexts(self):
         env = self.production_release_environment()
@@ -265,8 +324,21 @@ class StoragePreflightTests(unittest.TestCase):
             build_report(self.valid_environment(), too_long, now)["evidence_status"],
             "evidence_expired_or_invalid",
         )
-        env["COMMERCIAL_PIPELINE_V2_ENABLED"] = "true"
-        self.assertFalse(build_report(env)["rollout_ready"])
+        for state in ("", "TRUE", "0", None):
+            with self.subTest(state=state):
+                changed = dict(env)
+                if state is None:
+                    del changed["COMMERCIAL_PIPELINE_V2_ENABLED"]
+                else:
+                    changed["COMMERCIAL_PIPELINE_V2_ENABLED"] = state
+                report = build_report(changed, self.valid_evidence())
+                self.assertFalse(report["rollout_ready"])
+                self.assertEqual(report["commercial_pipeline_v2"], "invalid")
+        valid_env = self.valid_environment()
+        valid_env["STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED"] = "TRUE"
+        report = build_report(valid_env, self.valid_evidence())
+        self.assertFalse(report["rollout_ready"])
+        self.assertFalse(report["commercial_pipeline_v2_consistent"])
 
     def test_verification_requires_manual_main_workflow_context(self):
         env = self.valid_environment()

@@ -59,6 +59,7 @@ jobs:
             PUBLIC_FRONTEND_URL: http://localhost:4173
             AI_ENABLED: "false"
             AI_EMAIL_ENABLED: "false"
+            # Disposable CI fixture for legacy-mode regression, not the Render runtime state.
             COMMERCIAL_PIPELINE_V2_ENABLED: "false"
             PUBLIC_IMAGE_STORAGE_BACKEND: memory
             PORTFOLIO_AUDIO_STORAGE_BACKEND: memory

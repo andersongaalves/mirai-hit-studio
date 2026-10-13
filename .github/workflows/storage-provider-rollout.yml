@@ -92,8 +92,8 @@ jobs:
         run: |
           set -euo pipefail
           echo '10903c832ebbb7d52dd94427af946e92d89977440084db092fb24c1c79c50f47  scripts/storage_provider_smoke.py' | /usr/bin/sha256sum --check --status
-          echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
-          echo '0df4129fc8cd0a2c954c43b407c79c496c5c795bd8b9eaeb4647837b243d7a06  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+          echo 'f4cbdcd094312e7ace64f4f3ab0d5c38bbeba77d436f183be0a6d48d758bf784  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
+          echo '11be280d5079970a7328f78bb4c384a65cb2bc2fc68add298bead1b2821ae7ef  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Assert release and provider configuration
         shell: bash
         env:
@@ -102,7 +102,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$STORAGE_PREFLIGHT_TARGET_SHA" = "$GITHUB_SHA"
-          test "$COMMERCIAL_PIPELINE_V2_ENABLED" = "false"
+          case "$COMMERCIAL_PIPELINE_V2_ENABLED" in true|false) ;; *) exit 1 ;; esac
       - name: Create short-lived Ruleset inspection token
         id: ruleset-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
@@ -198,8 +198,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo 'acbc9ad7c6070da81e600e9f8c0d848e5fd075cbb9201fe610d88282ac1d62f0  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
-          echo '0df4129fc8cd0a2c954c43b407c79c496c5c795bd8b9eaeb4647837b243d7a06  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
+          echo 'f4cbdcd094312e7ace64f4f3ab0d5c38bbeba77d436f183be0a6d48d758bf784  scripts/storage_evidence.py' | /usr/bin/sha256sum --check --status
+          echo '11be280d5079970a7328f78bb4c384a65cb2bc2fc68add298bead1b2821ae7ef  scripts/storage_preflight.py' | /usr/bin/sha256sum --check --status
       - name: Sign only a complete successful smoke report
         if: inputs.smoke_scope == 'all'
         working-directory: backend

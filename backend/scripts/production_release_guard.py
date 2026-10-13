@@ -7,9 +7,13 @@ import json
 import re
 from pathlib import Path
 
-
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 RUN_ID_RE = re.compile(r"^[1-9][0-9]*$")
+V2_STATES = frozenset({"true", "false"})
+
+
+def validate_requested_commercial_v2(value: str) -> str:
+    return "verified" if isinstance(value, str) and value in V2_STATES else "commercial_v2_request_invalid"
 
 
 def validate_request(context: dict, *, target_sha: str, workflow_path: str) -> str:
@@ -67,14 +71,20 @@ def validate_render_service(service: dict, *, service_id: str) -> str:
     return "verified"
 
 
-def validate_render_v2_environment(env_var: dict) -> str:
+def validate_render_v2_environment(env_var: dict, *, expected_state: str) -> str:
+    if validate_requested_commercial_v2(expected_state) != "verified":
+        return "commercial_v2_request_invalid"
+    if not isinstance(env_var, dict):
+        return "render_v2_setting_missing"
     value = env_var.get("envVar", env_var)
     if not isinstance(value, dict):
         return "render_v2_setting_missing"
     if value.get("key") != "COMMERCIAL_PIPELINE_V2_ENABLED":
         return "render_v2_setting_missing"
-    if str(value.get("value", "")).lower() != "false":
-        return "render_v2_not_disabled"
+    if not isinstance(value.get("value"), str) or value["value"] not in V2_STATES:
+        return "render_v2_setting_invalid"
+    if value["value"] != expected_state:
+        return "render_v2_setting_mismatch"
     return "verified"
 
 
@@ -98,6 +108,7 @@ def build_report(
     integration_run_id: str,
     issuer_run: dict,
     issuer_run_id: str,
+    commercial_pipeline_v2: str,
     render_service: dict | None = None,
     render_service_id: str = "",
     cloudflare_project: dict | None = None,
@@ -106,6 +117,7 @@ def build_report(
 ) -> dict:
     statuses = {
         "request": validate_request(context, target_sha=target_sha, workflow_path=workflow_path),
+        "commercial_pipeline_v2": validate_requested_commercial_v2(commercial_pipeline_v2),
         "integration_ci": validate_workflow_run(
             integration_run,
             run_id=integration_run_id,
@@ -139,9 +151,11 @@ def build_plan_report(
     workflow_path: str,
     integration_run: dict,
     integration_run_id: str,
+    commercial_pipeline_v2: str,
 ) -> dict:
     statuses = {
         "request": validate_request(context, target_sha=target_sha, workflow_path=workflow_path),
+        "commercial_pipeline_v2": validate_requested_commercial_v2(commercial_pipeline_v2),
         "integration_ci": validate_workflow_run(
             integration_run,
             run_id=integration_run_id,
@@ -185,6 +199,7 @@ def main(argv=None) -> int:
     parser.add_argument("--cloudflare-project-name", default="mirai-hit-studio")
     parser.add_argument("--require-provider-state", action="store_true")
     parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument("--commercial-pipeline-v2", required=True)
     args = parser.parse_args(argv)
 
     if args.plan_only:
@@ -194,6 +209,7 @@ def main(argv=None) -> int:
             workflow_path=args.workflow_path,
             integration_run=_load(args.integration_run),
             integration_run_id=args.integration_run_id,
+            commercial_pipeline_v2=args.commercial_pipeline_v2,
         )
         print(json.dumps(report, sort_keys=True))
         return 0 if report["plan_valid"] else 1
@@ -208,6 +224,7 @@ def main(argv=None) -> int:
         integration_run_id=args.integration_run_id,
         issuer_run=_load(args.issuer_run),
         issuer_run_id=args.issuer_run_id,
+        commercial_pipeline_v2=args.commercial_pipeline_v2,
         render_service=_load(args.render_service) if args.render_service else None,
         render_service_id=args.render_service_id,
         cloudflare_project=_load(args.cloudflare_project) if args.cloudflare_project else None,

@@ -43,6 +43,7 @@ class ProductionReleaseGuardTests(unittest.TestCase):
             "integration_run_id": "101",
             "issuer_run": self.workflow_run("202", ".github/workflows/storage-provider-rollout.yml"),
             "issuer_run_id": "202",
+            "commercial_pipeline_v2": "false",
         }
         values.update(overrides)
         return build_report(**values)
@@ -149,20 +150,23 @@ class ProductionReleaseGuardTests(unittest.TestCase):
         self.assertEqual(report["statuses"]["cloudflare_pages"], "cloudflare_project_mismatch")
 
     def test_plan_only_requires_exact_main_ci_but_never_claims_homologation(self):
-        report = build_plan_report(
-            context=self.context(),
-            target_sha=self.SHA,
-            workflow_path=self.WORKFLOW,
-            integration_run=self.workflow_run(
-                "101", ".github/workflows/storage-integration-gate.yml", event="push"
-            ),
-            integration_run_id="101",
-        )
-        self.assertTrue(report["plan_valid"])
-        self.assertTrue(report["simulation_only"])
-        self.assertFalse(report["publication_authorized"])
-        self.assertEqual(report["storage_evidence"], "not_checked")
-        self.assertEqual(report["provider_state"], "not_checked")
+        for state in ("true", "false"):
+            with self.subTest(state=state):
+                report = build_plan_report(
+                    context=self.context(),
+                    target_sha=self.SHA,
+                    workflow_path=self.WORKFLOW,
+                    integration_run=self.workflow_run(
+                        "101", ".github/workflows/storage-integration-gate.yml", event="push"
+                    ),
+                    integration_run_id="101",
+                    commercial_pipeline_v2=state,
+                )
+                self.assertTrue(report["plan_valid"])
+                self.assertTrue(report["simulation_only"])
+                self.assertFalse(report["publication_authorized"])
+                self.assertEqual(report["storage_evidence"], "not_checked")
+                self.assertEqual(report["provider_state"], "not_checked")
 
         missing_ci = self.workflow_run(
             "101", ".github/workflows/storage-integration-gate.yml", event="push"
@@ -174,28 +178,51 @@ class ProductionReleaseGuardTests(unittest.TestCase):
             workflow_path=self.WORKFLOW,
             integration_run=missing_ci,
             integration_run_id="101",
+            commercial_pipeline_v2="false",
         )["plan_valid"])
 
-    def test_render_effective_v2_setting_must_be_explicitly_false(self):
+    def test_release_request_requires_exact_commercial_v2_state(self):
+        for state in ("true", "false"):
+            with self.subTest(state=state):
+                self.assertTrue(self.report(commercial_pipeline_v2=state)["release_ready"])
+        for state in ("", "TRUE", "0", None, []):
+            with self.subTest(state=state):
+                report = self.report(commercial_pipeline_v2=state)
+                self.assertFalse(report["release_ready"])
+                self.assertEqual(report["statuses"]["commercial_pipeline_v2"], "commercial_v2_request_invalid")
+
+    def test_render_effective_v2_setting_must_match_authorized_state(self):
+        for state in ("true", "false"):
+            with self.subTest(state=state):
+                response = {"envVar": {"key": "COMMERCIAL_PIPELINE_V2_ENABLED", "value": state}}
+                self.assertEqual(
+                    validate_render_v2_environment(response, expected_state=state), "verified"
+                )
+                other = "false" if state == "true" else "true"
+                self.assertEqual(
+                    validate_render_v2_environment(response, expected_state=other),
+                    "render_v2_setting_mismatch",
+                )
+        for value in ("", "TRUE", "0", None, [], False):
+            with self.subTest(value=value):
+                self.assertEqual(
+                    validate_render_v2_environment(
+                        {"key": "COMMERCIAL_PIPELINE_V2_ENABLED", "value": value},
+                        expected_state="true",
+                    ),
+                    "render_v2_setting_invalid",
+                )
         self.assertEqual(
-            validate_render_v2_environment({
-                "envVar": {
-                    "key": "COMMERCIAL_PIPELINE_V2_ENABLED",
-                    "value": "false",
-                }
-            }),
-            "verified",
-        )
-        self.assertEqual(
-            validate_render_v2_environment({
-                "key": "COMMERCIAL_PIPELINE_V2_ENABLED",
-                "value": "true",
-            }),
-            "render_v2_not_disabled",
-        )
-        self.assertEqual(
-            validate_render_v2_environment({}),
+            validate_render_v2_environment({}, expected_state="true"),
             "render_v2_setting_missing",
+        )
+        self.assertEqual(
+            validate_render_v2_environment(None, expected_state="true"),
+            "render_v2_setting_missing",
+        )
+        self.assertEqual(
+            validate_render_v2_environment({}, expected_state="TRUE"),
+            "commercial_v2_request_invalid",
         )
 
 

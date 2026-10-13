@@ -51,13 +51,15 @@ The protected workflow supplies the evidence file path through
 `STORAGE_PREFLIGHT_EVIDENCE_PATH`; the optional `--evidence` argument is for
 explicit controlled invocations and does not weaken validation.
 
-The gate fails closed unless all required configuration is valid, the current
-environment explicitly sets `COMMERCIAL_PIPELINE_V2_ENABLED=false`, and the
-evidence manifest:
+The gate fails closed unless all required Storage configuration is valid,
+`COMMERCIAL_PIPELINE_V2_ENABLED` is exactly `true` or `false`, and the evidence
+manifest:
 
 - has an HMAC-SHA256 signature made with `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY`;
 - is bound to the exact target `GITHUB_SHA` and a keyed fingerprint of the
-  effective storage configuration (the fingerprint does not disclose secrets);
+  effective Storage configuration (the fingerprint does not disclose secrets).
+  The commercial flag is deliberately excluded: changing it does not invalidate
+  otherwise valid Storage evidence;
 - identifies the GitHub repository, workflow run URL/ID, the allowlisted
   `.github/workflows/storage-provider-rollout.yml` on `main`, actor, and CTRL
   authorization reference;
@@ -129,6 +131,18 @@ calls a deployment API. The `publish` path deploys the exact SHA to Render first
 then the static `frontend` directory to the existing Pages project, performs a
 read-only smoke, and retains only sanitized release evidence.
 
+For every release request, select `commercial_pipeline_v2` explicitly as
+`true` or `false`; the CTRL authorization must name that state and the target
+SHA. The protected Storage job requires the `storage-rollout` Environment
+variable `COMMERCIAL_PIPELINE_V2_ENABLED` to equal the selection. The protected
+Render readiness job then reads the service's effective variable through the
+Render API and requires the same exact value before any deploy. Missing,
+uppercase, or conflicting values fail closed. The Storage issuer also requires
+the `storage-rollout` variable to be exactly `true` or `false`, but its signed
+provider evidence is independent of the commercial state. Changing the V2
+state does not authorize a commercial transition and does not require a new
+provider smoke solely for that change; SHA and evidence expiry still apply.
+
 The publisher is **prepared code, not an operational gate**. Existing
 production publication is external. A read-only Cloudflare API audit confirmed
 that Pages project `mirai-hit-studio` uses GitHub `main`, has production
@@ -177,10 +191,11 @@ Required secret/variable placement is deliberately separated:
 - `render-production`: `RENDER_API_KEY` secret and `RENDER_SERVICE_ID` variable;
   neither belongs in ordinary CI or Storage evidence jobs. Before publication,
   the protected readiness job reads only the exact
-  `COMMERCIAL_PIPELINE_V2_ENABLED` service variable and requires `false`. If
-  that value is inherited from an Environment Group and cannot be proved by
-  the scoped service endpoint, release fails closed until an authenticated
-  effective-configuration audit is added.
+  `COMMERCIAL_PIPELINE_V2_ENABLED` service variable and requires it to match
+  the `commercial_pipeline_v2` value explicitly selected in the release request
+  (`true` or `false`). If that value is inherited from an Environment Group and
+  cannot be proved by the scoped service endpoint, release fails closed until
+  an authenticated effective-configuration audit is added.
 - `cloudflare-pages-production`: `CLOUDFLARE_API_TOKEN` secret and
   `CLOUDFLARE_ACCOUNT_ID` variable; token must be limited to the existing Pages
   project/account operations needed by the publisher.
@@ -273,9 +288,11 @@ The transition is an ordered, separately authorized operation:
    never accepted by `production-release.yml` as main release evidence.
 7. Run the authorized real-provider smokes on the same `main` SHA and emit the
    short-lived HMAC evidence only from the protected manual main workflow.
-8. Optionally run `plan-only` first; treat it only as a no-secret planning
+8. Select the authorized `commercial_pipeline_v2` state and confirm that the
+   protected GitHub variable and effective Render service variable match it.
+   Optionally run `plan-only` first; treat it only as a no-secret planning
    simulation. Then run `dry-run`, review the bound CI and real signed evidence,
-   and obtain publication approval for that exact SHA.
+   and obtain publication approval for that exact SHA and V2 state.
 9. Publish with `release_mode=publish`; both provider APIs must still report
    direct auto-deploy disabled before deployment credentials are used.
 10. If Render fails before becoming live, stop. If Pages fails after Render is
@@ -284,7 +301,8 @@ The transition is an ordered, separately authorized operation:
    operational authorization. Never downgrade the database or delete Storage
    objects as an automatic rollback.
 
-Rollback disables further release runs, keeps Commercial V2 off, redeploys the
+Rollback disables further release runs, preserves the authorized Commercial V2
+state, and redeploys the
 last known-good application commits through each provider's official rollback
 mechanism, and preserves all new and legacy objects for reconciliation. A
 rollback cannot be claimed tested until both real provider paths are exercised
@@ -403,7 +421,9 @@ scheduler; it cannot recover already deleted objects, so deletion stays off.
 
 ## Commercial and production controls
 
-- `COMMERCIAL_PIPELINE_V2_ENABLED=false` throughout this gate.
+- This historical phase 3.8 integration gate kept
+  `COMMERCIAL_PIPELINE_V2_ENABLED=false`; the current protected release accepts
+  either exact boolean string with the checks above.
 - Phase 3.7 remains BLOCKED pending administrative reconciliation of historical
   proposal payment policies.
 - Production remains unchanged. Real-provider smoke and rollout require a new
