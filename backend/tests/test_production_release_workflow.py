@@ -37,6 +37,7 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", self.source)
         self.assertIn("github.ref == 'refs/heads/main'", self.source)
         self.assertIn('test "$TARGET_SHA" = "$GITHUB_SHA"', self.source)
+        self.assertIn('[[ "$AUTHORIZATION_REF" =~ ^CTRL-[A-Za-z0-9._-]{3,100}$ ]]', self.source)
 
     def test_deploy_requires_protected_environments_and_provider_readiness(self):
         for environment in (
@@ -182,6 +183,12 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         digest = hashlib.sha256(self.signer_path.read_bytes()).hexdigest()
         pins = re.findall(r"([a-f0-9]{64})  scripts/storage_evidence\.py", self.issuer_source)
         self.assertEqual(pins, [digest, digest])
+
+    def test_smoke_source_pin_matches_the_reviewed_script(self):
+        script = Path(__file__).resolve().parents[1] / "scripts/storage_provider_smoke.py"
+        digest = hashlib.sha256(script.read_bytes()).hexdigest()
+        pins = re.findall(r"([a-f0-9]{64})  scripts/storage_provider_smoke\.py", self.issuer_source)
+        self.assertEqual(pins, [digest])
 
 
 if __name__ == "__main__":

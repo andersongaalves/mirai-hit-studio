@@ -71,6 +71,8 @@ class StorageEvidenceTests(unittest.TestCase):
             ("GITHUB_REF", "refs/heads/feature/untrusted"),
             ("GITHUB_SHA", "b" * 40),
             ("GITHUB_WORKFLOW_REF", "attacker/workflow.yml@refs/heads/main"),
+            ("STORAGE_ROLLOUT_AUTHORIZATION_REF", "unapproved"),
+            ("GITHUB_ACTOR", ""),
         ):
             changed = dict(self.env)
             changed[name] = value

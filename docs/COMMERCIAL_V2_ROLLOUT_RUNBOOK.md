@@ -1,9 +1,14 @@
 # Runbook de rollout da pipeline comercial V2
 
-## Regra de ouro
+## Escopo historico
 
-Manter `COMMERCIAL_PIPELINE_V2_ENABLED=false` ate todos os gates abaixo serem
-aprovados. A mudanca da flag nao substitui conciliacao nem rollback de dados.
+Este runbook descreve a ativacao inicial da V2. Antes dessa ativacao, a flag
+deveria permanecer `false` ate a aprovacao dos gates. A V2 ja ativa em producao
+nao deve ser desligada por este documento. Em publicacoes subsequentes,
+selecionar explicitamente `true` ou `false` em `production-release.yml` e
+confirmar que a variavel do Environment `storage-rollout` e o valor efetivo do
+Render correspondem ao estado autorizado. A mudanca da flag nao substitui
+conciliacao nem rollback de dados.
 
 ## Pre-requisitos
 
@@ -30,7 +35,7 @@ cliente, textos, tokens ou referencias privadas. Revisar:
 Preservar Producao historica existente. Corrigir politica somente com evidencia
 contratual e dupla revisao. Registro ambiguo permanece bloqueado.
 
-## Ativacao
+## Ativacao inicial (historica)
 
 1. Congelar alteracoes comerciais durante a janela.
 2. Confirmar backup e estado do banco imediatamente antes da mudanca.
@@ -67,7 +72,7 @@ pagamento aprovado sem convergencia ou Producao sem condicao satisfeita.
 6. Portais mostram a mesma Producao respeitando ownership.
 7. Checkout guest legado continua disponivel durante a transicao.
 
-## Rollback
+## Rollback da ativacao inicial (nao automatico)
 
 1. Suspender novos aceites/pagamentos se houver risco financeiro.
 2. Registrar o horario e desabilitar a flag.
@@ -84,4 +89,5 @@ pagamento aprovado sem convergencia ou Producao sem condicao satisfeita.
 
 O rollout passa quando nao houver duplicacao, mismatch nao tratado, 5xx comercial,
 Producao indevida ou pagamento aprovado sem convergencia durante a janela definida.
-Caso contrario, manter a V2 desligada e concluir a conciliacao antes de nova tentativa.
+Na ativacao inicial, falhas exigiam conciliacao antes de nova tentativa.
+Uma publicacao subsequente nao deve desativar a V2 ativa automaticamente.

@@ -9,6 +9,10 @@ from datetime import datetime, timedelta, timezone
 from io import StringIO
 from unittest.mock import mock_open, patch
 
+from scripts.production_release_guard import (
+    validate_render_v2_environment,
+    validate_requested_commercial_v2,
+)
 from scripts.storage_preflight import _configuration_fingerprint, build_report, main
 
 
@@ -134,6 +138,39 @@ class StoragePreflightTests(unittest.TestCase):
         self.assertFalse(mismatched["commercial_pipeline_v2_consistent"])
         env["STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED"] = "true"
         self.assertTrue(build_report(env, self.valid_evidence())["rollout_ready"])
+
+    def test_release_v2_state_matrix_fails_closed(self):
+        evidence = self.valid_evidence()
+        cases = (
+            ("true", "true", "true", True),
+            ("false", "false", "false", True),
+            ("true", "false", "true", False),
+            ("false", "true", "false", False),
+            ("true", "true", "false", False),
+            ("false", "false", "true", False),
+            (None, "true", "true", False),
+            ("TRUE", "true", "true", False),
+            ("true", None, "true", False),
+            ("true", "TRUE", "true", False),
+            ("true", "true", "", False),
+        )
+        for github_state, render_state, release_state, expected in cases:
+            with self.subTest(github=github_state, render=render_state, release=release_state):
+                env = self.valid_environment()
+                if github_state is None:
+                    del env["COMMERCIAL_PIPELINE_V2_ENABLED"]
+                else:
+                    env["COMMERCIAL_PIPELINE_V2_ENABLED"] = github_state
+                env["STORAGE_PREFLIGHT_EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED"] = release_state
+                render_response = {"key": "COMMERCIAL_PIPELINE_V2_ENABLED", "value": render_state}
+                ready = (
+                    build_report(env, evidence)["rollout_ready"]
+                    and validate_requested_commercial_v2(release_state) == "verified"
+                    and validate_render_v2_environment(
+                        render_response, expected_state=release_state
+                    ) == "verified"
+                )
+                self.assertEqual(ready, expected)
 
     def test_unsigned_tampered_or_wrong_sha_evidence_fails_closed(self):
         env = self.valid_environment()
