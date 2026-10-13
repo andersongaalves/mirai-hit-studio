@@ -16,6 +16,7 @@ const tokenH = '88888888-8888-4888-8888-888888888888';
 const tokenI = '99999999-9999-4999-8999-999999999999';
 const tokenJ = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab';
 const tokenK = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const tokenL = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 function pixCode(amount = '99.00', initiation = '12') {
     const fields = [
         ['00', '01'], ...(initiation === null ? [] : [['01', initiation]]),
@@ -52,6 +53,7 @@ const summaries = new Map([
     [tokenI, summary('Pix expirado')],
     [tokenJ, { ...summary('Pix sem campo 01'), opcoes: [{ tipo: 'integral', titulo: 'Pagamento completo', valor: '10.00' }] }],
     [tokenK, summary('Pagamento total')],
+    [tokenL, { ...summary('Pix recuperável'), tentativa: { metodo: 'pix', tipo: 'entrada', status: 'processando', recuperavel: true } }],
 ]);
 
 function summary(description) {
@@ -92,6 +94,11 @@ async function staticResponse(route) {
         let pixRequests = 0;
         let authenticatedPixRequests = 0;
         let cancelPixRequests = 0;
+        let pendingRequests = 0;
+        let pendingFailure = false;
+        let pendingStatus = 'pending';
+        let pendingExpired = false;
+        let pendingAmount = '99.00';
         let authenticatedPaid = false;
         let publicPaid = false;
         let cardPayload = null;
@@ -178,6 +185,19 @@ async function staticResponse(route) {
                         pix: { qr_code: 'auth-pix-code', qr_code_base64: null, ticket_url: null, expiration_time: null },
                     } });
                 }
+                if (url.pathname === '/portal/cliente/propostas/71/checkout' && route.request().method() === 'GET') {
+                    return route.fulfill({ json: {
+                        ...summary('Pix autenticado'), tentativa: { metodo: 'pix', tipo: 'entrada', status: 'processando', recuperavel: true },
+                    } });
+                }
+                if (url.pathname === '/portal/cliente/propostas/71/checkout/pending-payment' && route.request().method() === 'GET') {
+                    assert.equal(route.request().headers().authorization, 'Bearer client-token');
+                    pendingRequests++;
+                    return route.fulfill({ json: {
+                        status: 'pending', checkout_status: 'pendente', payment_option: 'entrada', valor: '99.00', moeda: 'BRL',
+                        pix: { qr_code: pixCode(), qr_code_base64: qrImage, ticket_url: 'https://www.mercadopago.com.br/pay', expiration_time: '2099-09-21T12:00:00Z' },
+                    } });
+                }
                 const match = url.pathname.match(/^\/checkout\/([0-9a-f-]{36})(.*)$/i);
                 if (url.pathname === '/checkout/config') {
                     if (previewRequest) assert.equal(route.request().headers().authorization, 'Bearer client-token');
@@ -190,6 +210,10 @@ async function staticResponse(route) {
                     const data = summaries.get(token);
                     const current = token === tokenK && publicPaid
                         ? { ...data, status: 'paga', valor_pago: '198.00', saldo: '0.00', opcoes: [] }
+                        : token === tokenL && pendingStatus === 'approved'
+                            ? { ...data, status: 'paga', valor_pago: '198.00', saldo: '0.00', opcoes: [], tentativa: null }
+                            : token === tokenL && pendingStatus === 'rejected'
+                                ? { ...data, tentativa: null }
                         : data;
                     return current ? route.fulfill({ json: current }) : route.fulfill({ status: 404, json: { detail: 'Checkout não encontrado.' } });
                 }
@@ -204,6 +228,18 @@ async function staticResponse(route) {
                         status: 'pending', checkout_status: 'pendente', payment_option: route.request().postDataJSON().payment_option,
                         valor: documentedPix ? '10.00' : '99.00', moeda: 'BRL', challenge_url: null,
                         pix: { qr_code: malformed ? '000201-pix-code' : documentedPix ? mercadoPagoSample : pixCode(), qr_code_base64: documentedPix ? mercadoPagoQrImage : qrImage, ticket_url: 'https://www.mercadopago.com.br/pay', expiration_time: expired ? '2020-09-21T12:00:00Z' : '2099-09-21T12:00:00Z' },
+                    } });
+                }
+                if (suffix === '/pending-payment' && token === tokenL) {
+                    pendingRequests++;
+                    if (pendingFailure) return route.fulfill({ status: 503, json: { detail: 'Indisponível.' } });
+                    return route.fulfill({ json: {
+                        status: pendingStatus, checkout_status: pendingStatus === 'approved' ? 'paga' : 'pendente',
+                        payment_option: 'entrada', valor: pendingAmount, moeda: 'BRL',
+                        pix: pendingStatus === 'pending' ? {
+                            qr_code: pixCode(), qr_code_base64: qrImage, ticket_url: 'https://www.mercadopago.com.br/pay',
+                            expiration_time: pendingExpired ? '2020-09-21T12:00:00Z' : '2099-09-21T12:00:00Z',
+                        } : null,
                     } });
                 }
                 if (suffix === '/cancel-pix' && route.request().method() === 'POST') {
@@ -312,6 +348,7 @@ async function staticResponse(route) {
         assert.equal(cancelPixRequests, 1);
         assert.equal(await cancelPage.locator('#pix-pending-notice').isHidden(), true);
         await cancelPage.close();
+
         await pixPage.waitForFunction(() => document.getElementById('pix-qr')?.naturalWidth > 0);
         const decodedQr = qrCodec('decode', { image: renderedQr.slice('data:image/png;base64,'.length) }).payload;
         assert.equal(decodedQr, pixCode(), 'the rendered QR must encode the provider copy-and-paste code');
@@ -324,7 +361,70 @@ async function staticResponse(route) {
         assert.equal(await pixPage.locator('#pix-code').inputValue(), pixCode(), 'the displayed copy-and-paste code is unchanged');
         assert.equal(await pixPage.evaluate(() => navigator.clipboard.readText()), decodedQr);
         assert.equal(await pixPage.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+        const recoveredPage = await context.newPage();
+        await recoveredPage.goto(`http://localhost:4173/checkout/${tokenL}`);
+        await recoveredPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('Você já possui um Pix pendente'));
+        assert.equal(await recoveredPage.locator('#pix-result').isHidden(), true, 'Entrada Pix stays hidden while Integral is selected');
+        assert.equal(await recoveredPage.locator('#generate-pix').isDisabled(), true);
+        await recoveredPage.getByLabel('Entrada').check();
+        assert.equal(await recoveredPage.locator('#pix-code').inputValue(), pixCode());
+        assert.equal(await recoveredPage.locator('#generate-pix').textContent(), 'Visualizar Pix existente');
+        const beforeRecovery = pendingRequests;
+        await recoveredPage.locator('#generate-pix').click();
+        await recoveredPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('Você já possui um Pix pendente'));
+        assert.equal(pendingRequests, beforeRecovery + 1);
+        assert.equal(pixRequests, pixBeforeSwitch, 'recovery must not create another Order');
+        await recoveredPage.locator('#method-card').click();
+        assert.equal(await recoveredPage.locator('#pix-result').isHidden(), true);
+        await recoveredPage.locator('#method-pix').click();
+        assert.equal(await recoveredPage.locator('#pix-code').inputValue(), pixCode());
+        await recoveredPage.reload();
+        await recoveredPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('Você já possui um Pix pendente'));
+        await recoveredPage.getByLabel('Entrada').check();
+        assert.equal(await recoveredPage.locator('#pix-code').inputValue(), pixCode());
+        pendingAmount = '98.00';
+        await recoveredPage.locator('#generate-pix').click();
+        await recoveredPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('Não foi possível recuperar'));
+        assert.equal(await recoveredPage.locator('#pix-result').isHidden(), true);
+        pendingAmount = '99.00';
+        pendingExpired = true;
+        await recoveredPage.locator('#generate-pix').click();
+        await recoveredPage.waitForFunction(() => document.querySelector('#pix-validation-message')?.textContent.includes('expirou'));
+        assert.equal(await recoveredPage.locator('#pix-code').isHidden(), true);
+        assert.equal(await recoveredPage.locator('#pix-ticket').isHidden(), true);
+        pendingExpired = false;
+        pendingFailure = true;
+        await recoveredPage.locator('#generate-pix').click();
+        await recoveredPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('cobrança continua pendente'));
+        assert.equal(await recoveredPage.locator('#pix-result').isHidden(), true, 'unconfirmed Pix data is not reused');
+        pendingFailure = false;
+        pendingStatus = 'approved';
+        await recoveredPage.locator('#generate-pix').click();
+        await recoveredPage.waitForFunction(() => document.querySelector('#checkout-terminal')?.textContent.includes('Pagamento confirmado!'));
+        assert.equal(await recoveredPage.locator('#pix-result').isHidden(), true);
+        assert.equal(pixRequests, pixBeforeSwitch);
+        await recoveredPage.close();
 
+        pendingStatus = 'pending';
+        const rejectedRecoveryPage = await context.newPage();
+        await rejectedRecoveryPage.goto(`http://localhost:4173/checkout/${tokenL}`);
+        await rejectedRecoveryPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('Você já possui um Pix pendente'));
+        await rejectedRecoveryPage.getByLabel('Entrada').check();
+        pendingStatus = 'rejected';
+        await rejectedRecoveryPage.locator('#generate-pix').click();
+        await rejectedRecoveryPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('não foi aprovado'));
+        assert.equal(await rejectedRecoveryPage.locator('#pix-result').isHidden(), true);
+        await rejectedRecoveryPage.close();
+        pendingStatus = 'pending';
+
+        const authRecoveryPage = await context.newPage();
+        await authRecoveryPage.addInitScript(() => localStorage.setItem('mirai.auth.cliente.access_token', 'client-token'));
+        await authRecoveryPage.goto('http://localhost:4173/checkout?proposta=71');
+        await authRecoveryPage.waitForFunction(() => document.querySelector('#payment-result')?.textContent.includes('Você já possui um Pix pendente'));
+        await authRecoveryPage.getByLabel('Entrada').check();
+        assert.equal(await authRecoveryPage.locator('#pix-code').inputValue(), pixCode());
+        assert.equal(authenticatedPixRequests, 0);
+        await authRecoveryPage.close();
         const documentedPixPage = await context.newPage();
         await documentedPixPage.goto(`http://localhost:4173/checkout/${tokenJ}`);
         await documentedPixPage.waitForSelector('#checkout-content:not(.hidden)');

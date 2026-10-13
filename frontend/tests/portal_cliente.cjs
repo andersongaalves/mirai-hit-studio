@@ -8,6 +8,9 @@ const now = Date.now();
 let loginRole = 'cliente';
 let failList = false;
 let uploads = 0;
+let failFileList = false;
+let uploadFailure = null;
+let slowUpload = false;
 let proposals = [{
     id: 11,
     numero: 'PROP-CLIENT-011',
@@ -136,11 +139,15 @@ async function staticResponse(route) {
         if (financial) return route.fulfill({ json: finances.get(Number(financial[1])) });
         const fileList = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/arquivos$/);
         if (fileList && request.method() === 'GET') {
+            if (failFileList) return route.fulfill({ status: 503, json: { detail: 'Lista indisponível.' } });
             return route.fulfill({ json: files.filter(file => file.producao_id === Number(fileList[1])) });
         }
         if (fileList && request.method() === 'POST') {
             uploads++;
-            const uploaded = { ...files[1], id: 10, nome_exibicao: 'nova-voz.wav', versao: 2, substitui_arquivo_id: 8 };
+            if (slowUpload) await new Promise(resolve => setTimeout(resolve, 200));
+            if (uploadFailure === 'network') return route.abort();
+            if (uploadFailure) return route.fulfill({ status: uploadFailure, json: { detail: 'Falha controlada.' } });
+            const uploaded = { ...files[1], id: 9 + uploads, nome_exibicao: request.postData()?.includes('nome-longo') ? 'nome-longo.wav' : 'nova-voz.wav', versao: 1 + uploads, substitui_arquivo_id: 8 };
             files.push(uploaded);
             return route.fulfill({ status: 201, json: uploaded });
         }
@@ -256,11 +263,51 @@ async function staticResponse(route) {
         await page.waitForSelector('audio.client-player', { state: 'attached' });
         assert.equal(await page.locator('audio.client-player').count(), 1);
 
-        await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'nova-voz.wav', mimeType: 'audio/wav', buffer: Buffer.from('RIFF-client') });
+        const longName = `${'nome-longo-'.repeat(18)}.wav`;
+        await page.getByLabel('Arquivo para enviar').setInputFiles({ name: longName, mimeType: 'audio/wav', buffer: Buffer.from('RIFF-client') });
+        for (const width of [1440, 1024, 768, 390, 320]) {
+            await page.setViewportSize({ width, height: 800 });
+            const bounds = await page.evaluate(() => {
+                const form = document.querySelector('.producer-upload').getBoundingClientRect();
+                const controls = [...document.querySelector('.producer-upload').children]
+                    .filter(element => !element.classList.contains('producer-upload__feedback'))
+                    .map(element => ({ left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right }));
+                return { left: form.left, right: form.right, controls, scrollWidth: document.documentElement.scrollWidth, viewport: innerWidth };
+            });
+            assert.ok(bounds.scrollWidth <= bounds.viewport, JSON.stringify({ width, bounds }));
+            assert.ok(bounds.controls.every(item => item.left >= bounds.left - 1 && item.right <= bounds.right + 1), JSON.stringify({ width, bounds }));
+            assert.equal(await page.locator('.producer-upload__filename').getAttribute('title'), longName);
+        }
         await page.getByLabel('Versão substituída').selectOption('8');
+        slowUpload = true;
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Nova versão'));
+        assert.equal(await page.getByRole('button', { name: 'Enviando arquivo...' }).isDisabled(), true);
+        assert.match(await page.locator('.producer-upload__feedback').textContent(), /Enviando arquivo/);
+        await page.locator('.producer-upload').evaluate(form => form.requestSubmit());
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Nova versão enviada com sucesso'));
+        slowUpload = false;
         assert.equal(uploads, 1);
+        assert.match(await page.locator('.producer-file-list').last().textContent(), /nome-longo/);
+        assert.match(await page.locator('.producer-file-list').last().textContent(), /Versão 2/);
+        assert.equal(await page.locator('#client-alert').textContent(), '');
+        uploadFailure = 422;
+        await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'erro.wav', mimeType: 'audio/wav', buffer: Buffer.from('RIFF-client') });
+        await page.getByRole('button', { name: 'Enviar arquivo' }).click();
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo não permitido'));
+        assert.equal(await page.getByLabel('Arquivo para enviar').evaluate(input => input.files[0].name), 'erro.wav');
+        uploadFailure = 'network';
+        await page.getByRole('button', { name: 'Enviar arquivo' }).click();
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Falha de conexão'));
+        uploadFailure = null;
+        failFileList = true;
+        await page.getByRole('button', { name: 'Enviar arquivo' }).click();
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado, mas a lista'));
+        assert.equal(uploads, 4);
+        assert.equal(await page.getByRole('button', { name: 'Atualizar lista' }).count(), 1);
+        failFileList = false;
+        await page.getByRole('button', { name: 'Atualizar lista' }).click();
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado com sucesso'));
+        assert.equal(uploads, 4);
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });
