@@ -22,6 +22,8 @@ const state = {
     cardController: null,
     cardRenderId: 0,
     cardUnmount: Promise.resolve(),
+    pixPayment: null,
+    cancelingPix: false,
     polling: null,
     pollCount: 0,
 };
@@ -48,6 +50,7 @@ function authenticatedPath(path) {
     if (path === `checkout/${state.token}`) return base;
     if (path === `checkout/${state.token}/status`) return `${base}/status`;
     if (path === `checkout/${state.token}/pending-payment`) return `${base}/pending-payment`;
+    if (path === `checkout/${state.token}/cancel-pix`) return `${base}/cancel-pix`;
     if (path === `checkout/${state.token}/pix`) return `${base}/pix`;
     if (path === `checkout/${state.token}/card`) return `${base}/card`;
     return path;
@@ -87,16 +90,18 @@ function showError(message, retry = false) {
 function renderOptions(options) {
     const host = $("payment-options");
     host.querySelectorAll("label").forEach(element => element.remove());
-    for (const [index, option] of options.entries()) {
+    const selected = options.some(option => option.tipo === state.option) ? state.option : options[0]?.tipo;
+    for (const option of options) {
         const label = document.createElement("label");
         label.className = "checkout-option";
         const input = document.createElement("input");
         input.type = "radio";
         input.name = "payment_option";
         input.value = option.tipo;
-        input.checked = option.tipo === state.option || (!state.option && index === 0);
+        input.checked = option.tipo === selected;
         input.addEventListener("change", async () => {
             state.option = option.tipo;
+            syncPixView();
             if (state.method === "card") await renderCard();
         });
         const title = document.createElement("span");
@@ -119,32 +124,82 @@ function renderSummary(summary) {
     setHidden("paid-row", Number(summary.valor_pago) <= 0);
     renderOptions(summary.opcoes);
     renderTerminal(summary.status, summary.saldo);
+    if (!summary.tentativa || ["paga", "cancelada"].includes(summary.status)) state.pixPayment = null;
+    syncPixView();
 }
 
 function renderTerminal(status, balance) {
     const terminal = $("checkout-terminal");
     const form = $("checkout-form");
     terminal.dataset.kind = "";
+    terminal.replaceChildren();
+    if (["paga", "parcialmente_paga"].includes(status)) {
+        setHidden("payment-result", true);
+        setHidden("pix-result", true);
+    }
     if (status === "paga") {
-        terminal.textContent = "Pagamento confirmado. Obrigado!";
+        const message = document.createElement("p");
+        message.textContent = "Pagamento confirmado!";
+        terminal.appendChild(message);
         terminal.dataset.kind = "success";
         terminal.classList.remove("hidden");
         form.classList.add("hidden");
         stopPolling();
     } else if (status === "cancelada") {
-        terminal.textContent = "Esta cobrança foi cancelada.";
+        const message = document.createElement("p");
+        message.textContent = "Esta cobrança foi cancelada.";
+        terminal.appendChild(message);
         terminal.dataset.kind = "warning";
         terminal.classList.remove("hidden");
         form.classList.add("hidden");
         stopPolling();
     } else if (status === "parcialmente_paga") {
-        terminal.textContent = `Entrada confirmada. Saldo restante: ${money(balance)}.`;
+        const message = document.createElement("p");
+        message.textContent = `Entrada confirmada. Saldo restante: ${money(balance)}.`;
+        terminal.appendChild(message);
         terminal.dataset.kind = "success";
         terminal.classList.remove("hidden");
         form.classList.remove("hidden");
     } else {
         terminal.classList.add("hidden");
         form.classList.remove("hidden");
+    }
+    if (["paga", "parcialmente_paga"].includes(status)) {
+        const link = document.createElement("a");
+        link.className = "btn-cta";
+        link.href = state.proposalId ? "/cliente" : "/acesso";
+        link.textContent = state.proposalId ? "Ir para meu painel" : "Acessar portal do cliente";
+        terminal.appendChild(link);
+    }
+}
+
+function pendingPix() {
+    return state.summary?.tentativa?.metodo === "pix"
+        && state.summary.tentativa.status === "processando";
+}
+
+function syncPixView() {
+    const pending = pendingPix();
+    const notice = $("pix-pending-notice");
+    setHidden("pix-pending-notice", !pending);
+    if (pending) {
+        const sameOption = state.summary.tentativa.tipo === state.option;
+        $("pix-pending-message").textContent = !state.summary.tentativa.recuperavel
+            ? "O Pix está em conciliação. Aguarde a confirmação antes de tentar outro pagamento."
+            : sameOption
+                ? "Há um Pix pendente. Para usar cartão, cancele o Pix e aguarde a confirmação."
+                : "Há um Pix pendente de outra opção de valor. Volte à opção anterior ou cancele o Pix.";
+        setHidden("cancel-pix", !state.summary.tentativa.recuperavel);
+        $("cancel-pix").disabled = state.cancelingPix;
+    } else {
+        notice.classList.add("hidden");
+    }
+    const payment = state.pixPayment;
+    if (pending && state.method === "pix" && payment?.pix
+        && payment.payment_option === state.option) {
+        renderPix(payment.pix, payment.status, payment.valor);
+    } else {
+        setHidden("pix-result", true);
     }
 }
 
@@ -166,13 +221,25 @@ function safeHttps(value) {
 function renderPayment(result) {
     const message = $("payment-result");
     const challengeAvailable = renderChallenge(result.challenge_url);
-    message.classList.remove("hidden");
-    message.dataset.kind = result.status === "approved" ? "success" : "warning";
+    if (result.pix && ["pending", "action_required"].includes(result.status)) {
+        state.pixPayment = result;
+        state.summary.tentativa = {
+            metodo: "pix", tipo: result.payment_option, status: "processando", recuperavel: true,
+        };
+    }
     if (result.status === "approved") {
-        message.textContent = result.checkout_status === "parcialmente_paga"
-            ? "Entrada confirmada. O saldo permanece disponível neste checkout."
-            : "Pagamento confirmado.";
-    } else if (result.status === "rejected") {
+        state.pixPayment = null;
+        state.summary.tentativa = null;
+        setHidden("payment-result", true);
+        setHidden("pix-result", true);
+        syncPixView();
+        if (result.checkout_status === "paga") renderTerminal("paga", 0);
+        void refreshSummary().catch(() => diagnostic("summary_refresh", "request_failed"));
+        return;
+    }
+    message.classList.remove("hidden");
+    message.dataset.kind = "warning";
+    if (result.status === "rejected") {
         message.textContent = "O pagamento não foi aprovado. Revise os dados ou tente outra forma de pagamento.";
     } else if (result.status === "action_required") {
         message.textContent = challengeAvailable
@@ -181,9 +248,8 @@ function renderPayment(result) {
     } else {
         message.textContent = "Pagamento em processamento. A confirmação será atualizada automaticamente.";
     }
-    renderPix(result.pix, result.status, result.valor);
+    syncPixView();
     if (["pending", "action_required"].includes(result.status)) startPolling();
-    if (result.status === "approved") refreshSummary();
 }
 
 function renderPix(pix, status, amount) {
@@ -335,6 +401,12 @@ async function renderCard() {
     try {
         await unmountCard();
         if (renderId !== state.cardRenderId) return;
+        if (pendingPix()) {
+            $("card-loading").classList.add("hidden");
+            error.textContent = "Há um Pix pendente. Cancele-o e aguarde a confirmação antes de usar cartão.";
+            error.classList.remove("hidden");
+            return;
+        }
         stage = "config_request";
         const config = await api("checkout/config");
         if (renderId !== state.cardRenderId) return;
@@ -444,7 +516,10 @@ async function processCard(formData, additionalData) {
 
 async function refreshSummary() {
     const summary = await api(`checkout/${state.token}`);
+    const wasPending = pendingPix();
     renderSummary(summary);
+    if (wasPending && !pendingPix() && !["paga", "cancelada"].includes(summary.status)
+        && state.method === "card" && !state.busy) await renderCard();
 }
 
 async function refreshStatus() {
@@ -523,13 +598,35 @@ function selectMethod(method) {
         $(`method-${name}`).setAttribute("aria-pressed", String(selected));
         setHidden(`${name}-panel`, !selected);
     }
+    syncPixView();
     track("payment_method_selected", { payment_method: method });
     if (method === "card") renderCard();
+}
+
+async function cancelPix() {
+    if (!pendingPix() || !state.summary.tentativa.recuperavel || state.cancelingPix) return;
+    state.cancelingPix = true;
+    syncPixView();
+    try {
+        await api(`checkout/${state.token}/cancel-pix`, { method: "POST" });
+        await refreshSummary();
+        state.pixPayment = null;
+        setHidden("pix-result", true);
+        setHidden("payment-result", true);
+    } catch (error) {
+        $("pix-pending-message").textContent = error.status === 409
+            ? error.message
+            : "Não foi possível confirmar o cancelamento. Aguarde antes de tentar outro pagamento.";
+    } finally {
+        state.cancelingPix = false;
+        $("cancel-pix").disabled = false;
+    }
 }
 
 $("method-pix").addEventListener("click", () => selectMethod("pix"));
 $("method-card").addEventListener("click", () => selectMethod("card"));
 $("generate-pix").addEventListener("click", generatePix);
+$("cancel-pix").addEventListener("click", cancelPix);
 $("checkout-retry").addEventListener("click", loadCheckout);
 $("copy-pix").addEventListener("click", async () => {
     try {

@@ -150,6 +150,7 @@ class ProviderPaymentResult:
     challenge_url: str | None = None
     provider_code: str | None = None
     provider_message: str | None = None
+    order_status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -359,6 +360,17 @@ class MercadoPagoClient:
             raise MercadoPagoValidationError()
         data = self._request("GET", f"/v1/orders/{provider_id}")
         return self._parse_result(data)
+
+    def cancel_order(self, provider_id: str, *, idempotency_key: str) -> None:
+        if not isinstance(provider_id, str) or not PROVIDER_ID_PATTERN.fullmatch(provider_id):
+            raise MercadoPagoValidationError()
+        if not isinstance(idempotency_key, str) or not 1 <= len(idempotency_key) <= 128:
+            raise MercadoPagoValidationError()
+        data = self._request(
+            "POST", f"/v1/orders/{provider_id}/cancel", idempotency_key=idempotency_key
+        )
+        if data.get("id") != provider_id or data.get("status") != "canceled":
+            raise MercadoPagoInvalidResponse()
 
     def _create_order(
         self,
@@ -579,4 +591,5 @@ class MercadoPagoClient:
             challenge_url=challenge_url,
             provider_code=failure.code,
             provider_message=failure.message,
+            order_status=str(order_status)[:40] if order_status is not None else None,
         )

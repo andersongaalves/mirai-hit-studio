@@ -9,6 +9,7 @@ from core.dependencies import require_admin
 from database import get_db
 from integrations.mercado_pago import MercadoPagoClient, MercadoPagoError, MercadoPagoNotConfigured
 from schemas.checkout import (
+    CheckoutCancelResponse,
     CheckoutCardRequest,
     CheckoutConfig,
     CheckoutLinkResponse,
@@ -109,6 +110,20 @@ def pix(
             device_id=dados.device_id,
             client=client,
             request_id=request.state.request_id,
+        )
+    )
+
+
+@router.post("/{token}/cancel-pix", response_model=CheckoutCancelResponse)
+def cancel_pix(
+    token: Token,
+    request: Request,
+    db: Session = Depends(get_db),
+    client: MercadoPagoClient = Depends(get_mercado_pago_client),
+):
+    return _execute(
+        lambda: checkout_service.cancelar_pix(
+            db, token, client=client, request_id=request.state.request_id
         )
     )
 

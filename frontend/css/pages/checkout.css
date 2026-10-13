@@ -159,6 +159,8 @@
 .checkout-result[data-kind="warning"],
 .checkout-terminal[data-kind="warning"] { color: var(--color-warning); }
 .checkout-result:not(.hidden), .checkout-terminal:not(.hidden) { border-left: 3px solid currentColor; padding: var(--space-3); overflow-wrap: anywhere; }
+.checkout-terminal .btn-cta { margin-top: var(--space-3); text-decoration: none; }
+.checkout-inline-status .btn-outline { margin-top: var(--space-2); }
 
 .checkout-pix {
     display: grid;

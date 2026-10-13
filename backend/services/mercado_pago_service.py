@@ -1,10 +1,12 @@
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from integrations.mercado_pago import (
     MercadoPagoClient,
+    MercadoPagoConflict,
     MercadoPagoError,
     MercadoPagoPayer,
     ProviderPaymentResult,
@@ -60,6 +62,100 @@ class ReconciliationConflict(Exception):
         super().__init__(reason)
         self.reason = reason
         self.payment_id = payment_id
+
+
+class CancellationBlocked(Exception):
+    pass
+
+
+def cancelar_pix_pendente(
+    db: Session,
+    payment_id: int,
+    *,
+    expected_cobranca_id: int,
+    authorize_charge: Callable[[CobrancaModel], None],
+    client: MercadoPagoClient | None = None,
+    request_id: str | None = None,
+) -> None:
+    provider = client or MercadoPagoClient()
+    provider.ensure_configured()
+    try:
+        payment = db.scalar(
+            select(PagamentoModel).where(PagamentoModel.id == payment_id).with_for_update()
+        )
+        if payment is None or payment.cobranca_id != expected_cobranca_id:
+            raise CancellationBlocked()
+        cobranca = financial_service.bloquear_cobranca(db, payment.cobranca_id)
+        if cobranca is None:
+            raise CancellationBlocked()
+        authorize_charge(cobranca)
+        if payment.provider != PROVIDER or payment.metodo != "pix":
+            raise CancellationBlocked()
+        if payment.status == PagamentoStatus.CANCELADO.value and not payment.reconciliation_status:
+            return
+        if payment.status != PagamentoStatus.PENDENTE.value or payment.reconciliation_status == "conflict":
+            raise CancellationBlocked()
+        if not payment.provider_order_id or not payment.provider_reference:
+            raise ReconciliationRequired("missing_provider_order_id", payment.id)
+        latest_pending = db.scalar(
+            select(PagamentoModel.id)
+            .where(
+                PagamentoModel.cobranca_id == cobranca.id,
+                PagamentoModel.provider == PROVIDER,
+                PagamentoModel.status == PagamentoStatus.PENDENTE.value,
+            )
+            .order_by(PagamentoModel.id.desc())
+            .limit(1)
+        )
+        if latest_pending != payment.id:
+            raise CancellationBlocked()
+
+        order_id = payment.provider_order_id
+
+        def reconcile(result: ProviderPaymentResult) -> bool:
+            incoming, reason = _validated_provider_result(
+                payment, result, expected_order_id=order_id
+            )
+            if reason:
+                _raise_conflict(db, payment, reason)
+            if result.order_status == "canceled" and incoming != PagamentoStatus.CANCELADO:
+                _raise_conflict(db, payment, "cancel_status_mismatch")
+            if result.order_status == "canceled":
+                outcome = _apply_reconciliation(
+                    db, payment.id, result, expected_order_id=order_id, request_id=request_id
+                )
+                if outcome.current_status != PagamentoStatus.CANCELADO.value:
+                    raise CancellationBlocked()
+                return True
+            if incoming != PagamentoStatus.PENDENTE:
+                _apply_reconciliation(
+                    db, payment.id, result, expected_order_id=order_id, request_id=request_id
+                )
+                raise CancellationBlocked()
+            return False
+
+        current = provider.get_order(order_id)
+        if reconcile(current):
+            return
+        if current.order_status not in {"created", "action_required"}:
+            raise CancellationBlocked()
+
+        cancel_key = str(uuid5(NAMESPACE_URL, f"mirai:order-cancel:{payment.id}:{order_id}"))
+        try:
+            provider.cancel_order(order_id, idempotency_key=cancel_key)
+        except MercadoPagoConflict:
+            latest = provider.get_order(order_id)
+            if reconcile(latest):
+                return
+            raise CancellationBlocked() from None
+
+        confirmed = provider.get_order(order_id)
+        if reconcile(confirmed):
+            return
+        _mark_reconciliation(db, payment.id, "required", "cancel_confirmation_pending")
+        raise ReconciliationRequired("cancel_confirmation_pending", payment.id)
+    finally:
+        db.rollback()
 
 
 def criar_tentativa(

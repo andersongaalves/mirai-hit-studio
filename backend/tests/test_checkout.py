@@ -226,6 +226,192 @@ with Session(engine) as db:
     assert 'amount' not in {'payment_option':'entrada'}
 ''')
 
+    def test_cancel_pending_pix_requires_confirmed_provider_state(self):
+        self.run_case(r'''
+import requests
+
+class CancelSession(FakeSession):
+    def __init__(self):
+        super().__init__([])
+        self.reference = None
+        self.created_key = None
+        self.cancel_keys = []
+        self.provider_status = 'action_required'
+        self.refuse = False
+        self.timeout = False
+
+    def request(self, method, url, **kwargs):
+        self.calls.append((method, url, kwargs))
+        if method == 'POST' and url.endswith('/v1/orders'):
+            self.reference = kwargs['json']['external_reference']
+            self.created_key = kwargs['headers']['X-Idempotency-Key']
+            return FakeResponse(201, order(
+                amount='150.25', provider_id='ORD-cancel', external_reference=self.reference,
+            ))
+        if method == 'POST' and url.endswith('/cancel'):
+            self.cancel_keys.append(kwargs['headers']['X-Idempotency-Key'])
+            if self.timeout:
+                raise requests.Timeout()
+            if self.refuse:
+                return FakeResponse(409, {'code': 'cannot_cancel_order'})
+            self.provider_status = 'canceled'
+            return FakeResponse(200, {'id': 'ORD-cancel', 'status': 'canceled'})
+        status = self.provider_status
+        detail = {'action_required': 'waiting_transfer', 'canceled': 'canceled_transaction',
+                  'processed': 'accredited'}[status]
+        return FakeResponse(200, order(
+            amount='150.25', status=status, detail=detail, provider_id='ORD-cancel',
+            external_reference=self.reference,
+        ))
+
+with Session(engine) as db:
+    current = accepted_charge(db)
+    token = current.referencia_externa
+    session = CancelSession()
+    provider = MercadoPagoClient(access_token='synthetic-token', session=session)
+    client = checkout_app(db, provider)
+    first = client.post(f'/checkout/{token}/pix', json={'payment_option': 'integral'})
+    assert first.status_code == 200, first.text
+    payment = db.query(PagamentoModel).one()
+    assert payment.status == 'pendente'
+
+    session.refuse = True
+    refused = client.post(f'/checkout/{token}/cancel-pix')
+    assert refused.status_code == 409
+    assert db.query(PagamentoModel).one().status == 'pendente'
+    assert client.post(f'/checkout/{token}/card', json={
+        'payment_option': 'integral', 'card_token': 'synthetic-card',
+        'payment_method_id': 'visa', 'installments': 1,
+    }).status_code == 409
+    assert db.query(PagamentoModel).count() == 1
+
+    session.refuse = False
+    session.timeout = True
+    timed_out = client.post(f'/checkout/{token}/cancel-pix')
+    assert timed_out.status_code == 503
+    assert db.query(PagamentoModel).one().status == 'pendente'
+    session.timeout = False
+    canceled = client.post(f'/checkout/{token}/cancel-pix')
+    assert canceled.status_code == 200, canceled.text
+    assert canceled.json() == {'status': 'cancelado'}
+    assert db.query(PagamentoModel).one().status == 'cancelado'
+    assert len(session.cancel_keys) == 3
+    assert len(set(session.cancel_keys)) == 1
+    assert session.cancel_keys[0] != session.created_key
+    assert client.post(f'/checkout/{token}/cancel-pix').status_code == 200
+    assert len(session.cancel_keys) == 3
+    assert db.query(PagamentoModel).count() == 1
+
+    stale = order(amount='150.25', provider_id='ORD-cancel', external_reference=session.reference)
+    reconciliation = mp_service._apply_reconciliation(
+        db, payment.id, provider._parse_result(stale), expected_order_id='ORD-cancel'
+    )
+    assert reconciliation.current_status == 'cancelado'
+    assert db.query(PagamentoModel).one().status == 'cancelado'
+''')
+
+    def test_cancel_pix_never_cancels_an_approved_order(self):
+        self.run_case(r'''
+class ApprovedBeforeCancel(FakeSession):
+    def __init__(self):
+        super().__init__([])
+        self.reference = None
+
+    def request(self, method, url, **kwargs):
+        self.calls.append((method, url, kwargs))
+        if method == 'POST':
+            self.reference = kwargs['json']['external_reference']
+            return FakeResponse(201, order(
+                amount='150.25', provider_id='ORD-paid', external_reference=self.reference,
+            ))
+        return FakeResponse(200, order(
+            amount='150.25', status='processed', detail='accredited',
+            provider_id='ORD-paid', external_reference=self.reference,
+        ))
+
+with Session(engine) as db:
+    current = accepted_charge(db)
+    provider = MercadoPagoClient(access_token='synthetic-token', session=ApprovedBeforeCancel())
+    client = checkout_app(db, provider)
+    assert client.post(f'/checkout/{current.referencia_externa}/pix', json={
+        'payment_option': 'integral',
+    }).status_code == 200
+    blocked = client.post(f'/checkout/{current.referencia_externa}/cancel-pix')
+    assert blocked.status_code == 409
+    assert db.query(PagamentoModel).one().status == 'aprovado'
+    assert not any(url.endswith('/cancel') for _, url, _ in provider._session.calls)
+''')
+
+    def test_cancel_pix_rejects_provider_identity_mismatch(self):
+        self.run_case(r'''
+class MismatchedOrder(FakeSession):
+    def __init__(self):
+        super().__init__([])
+        self.reference = None
+        self.currency = 'USD'
+
+    def request(self, method, url, **kwargs):
+        self.calls.append((method, url, kwargs))
+        if method == 'POST':
+            self.reference = kwargs['json']['external_reference']
+            return FakeResponse(201, order(
+                provider_id='ORD-identity', external_reference=self.reference,
+            ))
+        return FakeResponse(200, order(
+            provider_id='ORD-identity', external_reference=self.reference,
+            currency=self.currency,
+        ))
+
+with Session(engine) as db:
+    current = accepted_charge(db)
+    provider = MercadoPagoClient(access_token='synthetic-token', session=MismatchedOrder())
+    client = checkout_app(db, provider)
+    assert client.post(f'/checkout/{current.referencia_externa}/pix', json={
+        'payment_option': 'integral',
+    }).status_code == 200
+    blocked = client.post(f'/checkout/{current.referencia_externa}/cancel-pix')
+    assert blocked.status_code == 409
+    payment = db.query(PagamentoModel).one()
+    assert payment.status == 'pendente'
+    assert payment.reconciliation_status == 'conflict'
+    assert not any(url.endswith('/cancel') for _, url, _ in provider._session.calls)
+''')
+
+    def test_cancel_conflict_reconciles_payment_that_won_race(self):
+        self.run_case(r'''
+class PaymentWinsRace(FakeSession):
+    def __init__(self):
+        super().__init__([])
+        self.reference = None
+        self.approved = False
+
+    def request(self, method, url, **kwargs):
+        self.calls.append((method, url, kwargs))
+        if method == 'POST' and url.endswith('/v1/orders'):
+            self.reference = kwargs['json']['external_reference']
+        elif method == 'POST' and url.endswith('/cancel'):
+            self.approved = True
+            return FakeResponse(409, {'code': 'cannot_cancel_order'})
+        return FakeResponse(200, order(
+            provider_id='ORD-race', external_reference=self.reference,
+            status='processed' if self.approved else 'action_required',
+            detail='accredited' if self.approved else 'waiting_transfer',
+        ))
+
+with Session(engine) as db:
+    current = accepted_charge(db)
+    provider = MercadoPagoClient(access_token='synthetic-token', session=PaymentWinsRace())
+    client = checkout_app(db, provider)
+    assert client.post(f'/checkout/{current.referencia_externa}/pix', json={
+        'payment_option': 'integral',
+    }).status_code == 200
+    blocked = client.post(f'/checkout/{current.referencia_externa}/cancel-pix')
+    assert blocked.status_code == 409
+    assert db.query(PagamentoModel).one().status == 'aprovado'
+    assert db.query(PagamentoModel).count() == 1
+    assert client.get(f'/checkout/{current.referencia_externa}').json()['status'] == 'paga'
+''')
+
     def test_card_token_is_transient_and_3ds_is_normalized(self):
         self.run_case(r'''
 with Session(engine) as db:
