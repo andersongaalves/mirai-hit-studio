@@ -1,6 +1,6 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
-import { renderDashboard, renderDetail, renderList, renderPayouts, setAlert, showView } from "./ui.js";
+import { renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
 let payouts = [];
@@ -117,11 +117,11 @@ async function downloadReceipt(id, button) {
     }
 }
 
-async function uploadFile(production, file, type, replacesId, button) {
+async function uploadFile(production, file, type, replacesId, button, note = "") {
     button.disabled = true;
     setAlert();
     try {
-        await api.enviarArquivo(production.id, file, type, replacesId);
+        await api.enviarArquivo(production.id, file, type, replacesId, note);
         await openDetail(production.id);
         setAlert(type === "previa" ? "Prévia enviada ao cliente com sucesso!" : "Arquivo enviado como uma nova versão.");
     } catch (error) {
@@ -143,6 +143,7 @@ async function enterPortal() {
         denyWrongRole();
         return;
     }
+    setCurrentUserId(user.id);
     document.getElementById("producer-username").textContent = user.username;
     document.getElementById("producer-greeting").textContent = user.username;
     document.getElementById("producer-loading").classList.remove("hidden");

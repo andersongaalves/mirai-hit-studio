@@ -8,6 +8,7 @@ const now = Date.now();
 let loginRole = 'produtor';
 let failList = false;
 let failPayouts = false;
+let lastUploadBody = '';
 let uploads = 0;
 let productions = [
     {
@@ -44,6 +45,7 @@ let files = [{
     nome_exibicao: 'historical.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 1024,
     sha256: 'b'.repeat(64), grupo_versao: 'historical-group', versao: 1,
     substitui_arquivo_id: null, visivel_produtor: true, visivel_cliente: false,
+    observacao: 'Primeira ideia <i>sem master</i>',
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
 }];
 let payouts = [{
@@ -112,6 +114,7 @@ async function staticResponse(route) {
         }
         if (fileList && request.method() === 'POST') {
             uploads++;
+            lastUploadBody = request.postData() || '';
             files.push({ ...files[0], id: 10, tipo: 'previa', nome_exibicao: 'preview.mp3', versao: 1, visivel_cliente: true });
             return route.fulfill({ status: 201, json: files.at(-1) });
         }
@@ -172,10 +175,14 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.producer-file img, .producer-file script').count(), 0);
         assert.match(await page.locator('.producer-file').first().textContent(), /<img src=x>/);
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Não compartilhada com o cliente/);
+        assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Sua observação: Primeira ideia <i>sem master<\/i>/);
+        assert.equal(await page.locator('.file-note i').count(), 0);
+        await page.getByLabel('Observação para esta versão').fill('Mix com graves reduzidos');
         await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'preview.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('preview') });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Prévia enviada ao cliente com sucesso!'));
         assert.equal(uploads, 1);
+        assert.match(lastUploadBody, /name="observacao"[\s\S]*Mix com graves reduzidos/);
         assert.match(await page.locator('.producer-file').filter({ hasText: 'preview.mp3' }).textContent(), /Compartilhada com o cliente/);
         // AUD-S08-001: replacement options follow the selected type.
         const replacementValues = () => page.getByLabel('Versão substituída').locator('option')

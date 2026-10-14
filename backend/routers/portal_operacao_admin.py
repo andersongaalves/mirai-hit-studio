@@ -79,6 +79,7 @@ async def upload_file(
     visivel_produtor: Annotated[bool, Form()] = False,
     visivel_cliente: Annotated[bool, Form()] = False,
     substitui_arquivo_id: Annotated[int | None, Form()] = None,
+    observacao: Annotated[str | None, Form(max_length=1000)] = None,
 ):
     production = _production(db, producao_id)
     try:
@@ -93,6 +94,7 @@ async def upload_file(
             visible_to_producer=visivel_produtor,
             visible_to_client=visivel_cliente,
             replaces_id=substitui_arquivo_id,
+            note=observacao,
             request_id=getattr(request.state, "request_id", None),
         )
     except producao_arquivo_service.ProducaoArquivoError as exc:
