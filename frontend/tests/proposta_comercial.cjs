@@ -162,7 +162,12 @@ const root = path.resolve(__dirname, '..');
         assert.equal(await page.locator('#btn-convidar-cliente').textContent(), 'Notificar cliente');
         const notificationsBefore = calls.filter(call => call.endsWith('/acesso-cliente/convidar')).length;
         page.once('dialog', dialog => dialog.accept());
-        await page.locator('#btn-convidar-cliente').click();
+        // Wait for the request itself: the click returns before the async handler fires it.
+        await Promise.all([
+            page.waitForRequest(request => request.url().endsWith('/acesso-cliente/convidar')),
+            page.locator('#btn-convidar-cliente').click(),
+        ]);
+        await page.waitForFunction(() => /Conta ativa/.test(document.getElementById('proposta-client-access-status')?.textContent || ''));
         assert.equal(calls.filter(call => call.endsWith('/acesso-cliente/convidar')).length, notificationsBefore + 1);
         assert.match(await page.locator('#proposta-client-access-status').textContent(), /Conta ativa/);
 

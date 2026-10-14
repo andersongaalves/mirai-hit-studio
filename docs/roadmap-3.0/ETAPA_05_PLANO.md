@@ -130,3 +130,16 @@ entao as migrations foram aplicadas e verificadas antes de disparar o release.
 
 **Publicacao:** aplicar `e5a7c9d1f246` antes do release (duas colunas novas e nulas em
 `propostas`, sem backfill).
+
+### Publicacao da 5.05 (14/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #37 (registro anterior) e #38 (5.05) |
+| Commit publicado | `c5a50dff1d94f0bc299b83f6e9484088219f8d9d` |
+| Migration | `e5a7c9d1f246`, aplicada pelo responsavel no SQL Editor do Supabase antes do release; conferida (`alembic_version = e5a7c9d1f246`, duas colunas nulas, nenhuma proposta com snapshot ainda) |
+| Storage Integration Gate | run `38565620992` (sucesso) |
+| Portals E2E | run `38565620921`: falha intermitente em `proposta_comercial.cjs` (corrida do teste, anterior a 5.05), verde na reexecucao; corrigido no PR #39 |
+| Storage Provider Rollout Evidence | run `38567428573` (sucesso) |
+| Protected Production Release | run `38568360462`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261014-R3-505` |
