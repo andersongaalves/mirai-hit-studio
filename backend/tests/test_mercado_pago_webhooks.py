@@ -134,6 +134,23 @@ with Session(engine) as db:
     assert db.scalar(select(func.count()).select_from(ProviderWebhookEventModel)) == 0
 ''')
 
+    def test_signature_accepts_documented_lowercase_manifest_for_uppercase_order_id(self):
+        self.run_case(r'''
+with Session(engine) as db:
+    payment = payment_attempt(db, provider_order_id='ORD01JQ4S4KY8HWQ6NA5PXB65B3D3')
+    provider = ResultClient(provider_result(payment, provider_id='ORD01JQ4S4KY8HWQ6NA5PXB65B3D3'))
+client = webhook_app(provider)
+order_id = 'ORD01JQ4S4KY8HWQ6NA5PXB65B3D3'
+response = post_webhook(client, order_id, sig=signature(order_id.lower()))
+assert response.status_code == 200, response.text
+assert provider.calls == [order_id]
+response = post_webhook(
+    client, order_id, request_id='request-2', sig=signature('ord-other', 'request-2'),
+)
+assert response.status_code == 401
+assert provider.calls == [order_id]
+''')
+
     def test_authoritative_lookup_timeout_recovery_and_duplicate_delivery(self):
         self.run_case(r'''
 with Session(engine) as db:

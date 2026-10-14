@@ -51,6 +51,12 @@ function releaseObjectUrls() {
     objectUrls.clear();
 }
 
+function rememberProduction(production) {
+    if (!production || typeof production.id !== "number") return;
+    const index = productions.findIndex(item => item.id === production.id);
+    if (index >= 0) productions = productions.map(item => item.id === production.id ? { ...item, ...production } : item);
+}
+
 function navigate(path) {
     releaseObjectUrls();
     setAlert();
@@ -62,12 +68,18 @@ function navigate(path) {
 async function openDetail(id) {
     setAlert();
     try {
-        const [production, files, finance] = await Promise.all([
+        // Finance is secondary: its failure must not hide the project and its files.
+        const [production, files, financeResult] = await Promise.all([
             api.obterProducao(id),
             api.listarArquivos(id),
-            api.obterFinanceiro(id),
+            api.obterFinanceiro(id).then(
+                value => ({ ok: true, value }),
+                () => ({ ok: false, value: finances.get(id) ?? { indisponivel: true } }),
+            ),
         ]);
-        finances.set(id, finance);
+        const finance = financeResult.value;
+        if (financeResult.ok) finances.set(id, finance);
+        rememberProduction(production);
         renderDetail(production, files, finance, {
             onUpload: uploadFile,
             onRefreshFiles: refreshFiles,
@@ -76,6 +88,9 @@ async function openDetail(id) {
             uploadFeedback,
         });
         showView("detail");
+        if (!financeResult.ok) {
+            setAlert("Não foi possível atualizar as informações de pagamento agora. Os demais dados estão disponíveis.", true);
+        }
     } catch (error) {
         setAlert(error.message, true);
         history.replaceState({}, "", "/cliente/projetos");
@@ -114,7 +129,8 @@ function saveBlob({ blob, filename }) {
     link.href = url;
     link.download = filename;
     link.click();
-    URL.revokeObjectURL(url);
+    // Revoking synchronously can cancel the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 async function downloadFile(id, button) {
@@ -333,6 +349,28 @@ document.addEventListener("admin:logout", () => {
     proposalsEnabled = false;
     finances = new Map();
     setAlert();
+});
+
+let summaryRefresh = null;
+async function refreshSummary() {
+    if (summaryRefresh || !getCurrentUser()) return;
+    const view = route().view;
+    if (view !== "dashboard" && view !== "projects") return;
+    summaryRefresh = (async () => {
+        try {
+            productions = await api.listarProducoes();
+            finances = await loadFinances(productions);
+            const current = route().view;
+            if (current === "dashboard" || current === "projects") renderRoute();
+        } catch {
+            // Keep the last known list; the next visit retries.
+        } finally {
+            summaryRefresh = null;
+        }
+    })();
+}
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshSummary();
 });
 
 if (await restaurarSessao()) await enterPortal();

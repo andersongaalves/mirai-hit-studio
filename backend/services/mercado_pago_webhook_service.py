@@ -65,11 +65,24 @@ def verify_signature(
         raise WebhookSignatureError()
     if any(not SIGNATURE_PART_PATTERN.fullmatch(value) for value in digests):
         raise WebhookSignatureError()
-    manifest = f"id:{resource_id};request-id:{request_id};ts:{timestamps[0]};"
-    expected = hmac.new(
-        secret.encode("utf-8"), manifest.encode("utf-8"), hashlib.sha256
-    ).hexdigest()
-    if not any(hmac.compare_digest(expected, value) for value in digests):
+    # Mercado Pago's current notification guide signs alphanumeric data.id values in
+    # lowercase, while the TEST simulator validated in I.4 signed the original case.
+    # Both manifests are keyed by the same secret, so accepting either keeps real
+    # Orders deliveries (uppercase "ORD...") from being rejected without weakening HMAC.
+    candidate_ids = dict.fromkeys((resource_id, resource_id.lower()))
+    expected_digests = [
+        hmac.new(
+            secret.encode("utf-8"),
+            f"id:{candidate};request-id:{request_id};ts:{timestamps[0]};".encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        for candidate in candidate_ids
+    ]
+    if not any(
+        hmac.compare_digest(expected, value)
+        for expected in expected_digests
+        for value in digests
+    ):
         raise WebhookSignatureError()
     return WebhookSignature(timestamp=timestamps[0])
 
