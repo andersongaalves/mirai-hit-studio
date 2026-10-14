@@ -143,3 +143,33 @@ entao as migrations foram aplicadas e verificadas antes de disparar o release.
 | Storage Provider Rollout Evidence | run `38567428573` (sucesso) |
 | Protected Production Release | run `38568360462`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
 | Autorizacao | `CTRL-20261014-R3-505` |
+
+## 5.06 - Etapas automaticas na producao
+
+- Tabela `producao_etapas` (migration `f7b9d1e3a568`): uma linha por etapa do contrato, com
+  origem (proposta, item, servico), ordem geral e dentro do item, nome, peso, valor, prazo
+  em dias, unidade, revisoes incluidas, dependencia, etapa administrativa, status, prazo,
+  responsavel e datas de inicio e conclusao.
+- Criacao automatica e unica quando a producao nasce (aceite no fluxo v1, liberacao por
+  pagamento no fluxo v2), a partir dos valores congelados na proposta (5.05). Nome, peso e
+  valor sao dados do contrato: editar o catalogo depois nao muda a producao.
+- Prazo inicial: soma dos dias das etapas do mesmo item a partir da liberacao; o Admin pode
+  ajustar ou remover o prazo de cada etapa. O responsavel inicial e o produtor da producao
+  (atribuicao por etapa e a fase 5.07).
+- Status: pendente -> em andamento -> em revisao -> concluida. O produtor inicia, envia para
+  revisao e retoma; concluir e aprovacao do Admin. Uma etapa que depende da anterior so
+  avanca depois que a anterior for concluida; reabrir uma etapa concluida e bloqueado se a
+  seguinte ja comecou. Cada mudanca exige o status atual (409 se outra pessoa mudou antes) e
+  gera AuditLog (`production.stage_status_changed`, `production.stage_deadline_changed`).
+- Status da producao e das etapas sao independentes: concluir todas as etapas nao finaliza
+  a producao automaticamente.
+- Progresso: percentual do valor das etapas concluidas (ou da contagem, se o valor for zero).
+- Visibilidade: cliente ve nome, status, prazo e progresso; produtor ve tambem unidade,
+  revisoes e as acoes permitidas; valores e pesos so no Admin.
+- Producoes criadas antes da 5.06 com proposta congelada: botao "Gerar etapas do contrato"
+  no Admin. Producoes sem etapas de catalogo continuam com o checklist antigo.
+- Telas: painel "Etapas do contrato" no Admin (aprovar, reabrir, prazo, gerar) e nos
+  detalhes dos portais do produtor e do cliente, substituindo o checklist antigo quando o
+  contrato tem etapas.
+
+**Publicacao:** aplicar `f7b9d1e3a568` antes do release (tabela nova, sem alterar dados).

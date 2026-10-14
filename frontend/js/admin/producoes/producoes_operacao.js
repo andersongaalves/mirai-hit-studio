@@ -1,6 +1,7 @@
 import * as Notify from "../../utils/notifications.js";
 import * as API from "./producoes_api.js";
 import { messagesPanel } from "../../modules/production_messages.js";
+import { stagesPanel } from "../../modules/production_stages.js";
 
 let productionId = null;
 let files = [];
@@ -158,6 +159,46 @@ function bindActions() {
     );
 }
 
+// Roadmap 5.06: contract stages load independently, like the message thread.
+async function carregarEtapas(id, revision) {
+    const slot = byId("prod_etapas_contratuais");
+    if (!slot) return;
+    let data = null;
+    let error = "";
+    try {
+        data = await API.buscarEtapasContratuais(id);
+    } catch {
+        error = "Não foi possível carregar as etapas do contrato agora.";
+    }
+    if (revision !== loadRevision || productionId !== id) return;
+    const reload = () => carregarEtapas(id, revision);
+    slot.replaceChildren(stagesPanel({
+        role: "admin",
+        heading: false,
+        data,
+        error,
+        onChange: async (stage, destino) => {
+            await API.atualizarEtapaContratual(id, stage.id, { status: destino, status_atual: stage.status });
+            Notify.success("Etapa atualizada.");
+            await reload();
+        },
+        onDeadline: async (stage, prazo) => {
+            await API.atualizarEtapaContratual(id, stage.id, { prazo });
+            Notify.success("Prazo da etapa salvo.");
+            await reload();
+        },
+        onGenerate: async () => {
+            try {
+                await API.gerarEtapasContratuais(id);
+                Notify.success("Etapas do contrato geradas.");
+            } catch (generateError) {
+                Notify.error(generateError.message || "Não foi possível gerar as etapas.");
+            }
+            await reload();
+        },
+    }));
+}
+
 // Roadmap 5.03: thread loads independently so a failure never blocks files or payouts.
 async function carregarMensagens(id, revision) {
     const slot = byId("prod_mensagens");
@@ -196,6 +237,7 @@ export async function carregarOperacao(id) {
         renderFiles();
         renderPayout();
         bindActions();
+        carregarEtapas(id, revision);
         carregarMensagens(id, revision);
     } catch (error) {
         byId("prod_arquivos").textContent = "Não foi possível carregar arquivos e repasse.";
@@ -211,4 +253,5 @@ export function limparOperacao() {
     payout = null;
     byId("prod_arquivo_form")?.reset();
     byId("prod_mensagens")?.replaceChildren();
+    byId("prod_etapas_contratuais")?.replaceChildren();
 }

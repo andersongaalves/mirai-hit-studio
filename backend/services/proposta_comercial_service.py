@@ -8,7 +8,12 @@ from crud import crud_producao, crud_proposta
 from models.enums.proposta import PropostaStatus as Status
 from pydantic import EmailStr, TypeAdapter, ValidationError
 from pypdf import PdfReader
-from services import audit_service, financial_service, producao_liberacao_service
+from services import (
+    audit_service,
+    financial_service,
+    producao_etapa_service,
+    producao_liberacao_service,
+)
 from services import proposta_documento_service as documentos
 from services import proposta_service as service
 from services import proposta_snapshot_service as snapshots
@@ -160,10 +165,11 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
     # Proposals sent before 5.05 get their snapshot at acceptance, without blocking it.
     snapshots.congelar(db, model, origem="aceite", estrito=False)
     if not pipeline_v2:
-        crud_producao.criar_sem_commit(
+        producao = crud_producao.criar_sem_commit(
             db,
             _dados_producao(service._resposta(model)),
         )
+        producao_etapa_service.instanciar(db, producao, model)
     try:
         financial_service.criar_para_proposta(
             db,

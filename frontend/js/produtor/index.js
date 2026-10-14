@@ -1,6 +1,7 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
 import { messagesPanel } from "../modules/production_messages.js";
+import { stagesPanel } from "../modules/production_stages.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -20,6 +21,28 @@ function navigate(path) {
     setAlert();
     history.pushState({}, "", path);
     renderRoute();
+}
+
+// Roadmap 5.06: contract stages replace the legacy checklist when the contract has them.
+// Loaded after the detail, so a failure keeps the legacy view instead of blocking it.
+async function loadStages(production) {
+    let data = null;
+    try {
+        data = await api.listarEtapas(production.id);
+    } catch {
+        return;
+    }
+    if (route().view !== "detail" || route().id !== production.id || !data?.etapas?.length) return;
+    const panel = document.getElementById("production-stages-panel");
+    if (!panel) return;
+    panel.replaceChildren(stagesPanel({
+        role: "produtor",
+        data,
+        onChange: async (stage, destino) => {
+            await api.atualizarEtapa(production.id, stage.id, { status: destino, status_atual: stage.status });
+            await loadStages(production);
+        },
+    }));
 }
 
 // Roadmap 5.03: the thread loads after the detail so its failure never blocks the production.
@@ -61,6 +84,7 @@ async function openDetail(id) {
         });
         showView("detail");
         loadMessages(production, files);
+        loadStages(production);
     } catch (error) {
         setAlert(error.message, true);
         navigate("/produtor/producoes");
@@ -102,6 +126,7 @@ async function updateStatus(id, status, button) {
                 onDownload: downloadFile,
             });
             loadMessages(updated, files);
+            loadStages(updated);
             setAlert("Andamento atualizado.");
         } else {
             button.disabled = false;

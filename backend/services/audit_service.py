@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 ALLOWED_METADATA = {
     "old_status",
+    "stage_order",
     "new_status",
     "old_role",
     "new_role",

@@ -138,3 +138,11 @@ export async function enviarMensagem(producaoId, payload) {
         "Não foi possível enviar a mensagem.",
     );
 }
+
+// Roadmap 5.06: contract stages (read-only for the client, no values).
+export async function listarEtapas(producaoId) {
+    return responseData(
+        await authFetch(`/portal/cliente/producoes/${producaoId}/etapas`),
+        "Não foi possível carregar as etapas.",
+    );
+}

@@ -1,0 +1,22 @@
+/* Roadmap 3.0, 5.06: contract stages of a production (client, producer and admin). */
+.production-stages { display: grid; gap: var(--space-3); min-width: 0; }
+.production-stages__error { margin: 0; color: var(--color-danger); }
+.production-stages__empty, .production-stages__feedback, .production-stages__percent { margin: 0; color: var(--color-text-secondary); }
+.production-stages__feedback:empty { display: none; }
+.production-stages__progress { height: 8px; overflow: hidden; border-radius: 999px; background: var(--color-surface-elevated, rgba(255, 255, 255, 0.08)); }
+.production-stages__bar { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); }
+.production-stages__list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.production-stages__group { margin-top: var(--space-2); color: var(--color-text-secondary); font-size: 0.85rem; font-weight: 600; overflow-wrap: anywhere; }
+.production-stage { display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-3); border: var(--border-subtle); border-left: 3px solid var(--color-text-secondary); border-radius: var(--radius-sm); }
+.production-stage--em_andamento { border-left-color: var(--color-accent); }
+.production-stage--em_revisao { border-left-color: var(--color-warning); }
+.production-stage--concluida { border-left-color: var(--color-success, #2fbf71); }
+.production-stage__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); margin: 0; overflow-wrap: anywhere; }
+.production-stage__status, .production-stage__tag { padding: 0 var(--space-2); border: 1px solid currentColor; border-radius: 999px; font-size: 0.75rem; color: var(--color-text-secondary); }
+.production-stage__status--em_andamento { color: var(--color-accent); }
+.production-stage__status--em_revisao { color: var(--color-warning); }
+.production-stage__status--concluida { color: var(--color-success, #2fbf71); }
+.production-stage__meta { margin: 0; color: var(--color-text-secondary); font-size: 0.85rem; overflow-wrap: anywhere; }
+.production-stage__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.production-stage__actions button { min-height: 36px; padding: 0 var(--space-3); font-size: 0.85rem; }
+.production-stage__deadline input { min-height: 36px; max-width: 100%; padding: 0 var(--space-2); border: var(--border-subtle); border-radius: var(--radius-sm); color: var(--color-text-primary); background: var(--color-background); font: inherit; }
