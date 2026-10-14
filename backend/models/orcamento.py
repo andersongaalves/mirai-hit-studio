@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean, false
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -57,6 +57,8 @@ class OrcamentoModel(Base):
         nullable=True,
         index=True,
     )
+
+    is_test = Column(Boolean, default=False, server_default=false(), nullable=False, index=True)
 
     proposta = relationship(
         "PropostaModel",
