@@ -2,6 +2,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from models.producao import ProducaoModel
+from models.producao_etapa import ProducaoEtapaModel
 from models.orcamento import OrcamentoModel
 from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
@@ -94,10 +95,19 @@ def buscar(db: Session, producao_id: int):
     return _resposta(producao, produtor, email, proposta)
 
 
+def acesso_produtor(produtor_id: int):
+    """Roadmap 5.07: a producer reaches a production as its coordinator (produtor_id)
+    or as the responsible for at least one of its contract stages."""
+    etapas = select(ProducaoEtapaModel.producao_id).where(
+        ProducaoEtapaModel.responsavel_usuario_id == produtor_id
+    )
+    return or_(ProducaoModel.produtor_id == produtor_id, ProducaoModel.id.in_(etapas))
+
+
 def listar_por_produtor(db: Session, produtor_id: int):
     return (
         db.query(ProducaoModel)
-        .filter(ProducaoModel.produtor_id == produtor_id)
+        .filter(acesso_produtor(produtor_id))
         .order_by(ProducaoModel.id.desc())
         .all()
     )
@@ -108,7 +118,7 @@ def buscar_por_produtor(db: Session, producao_id: int, produtor_id: int):
         db.query(ProducaoModel)
         .filter(
             ProducaoModel.id == producao_id,
-            ProducaoModel.produtor_id == produtor_id,
+            acesso_produtor(produtor_id),
         )
         .first()
     )

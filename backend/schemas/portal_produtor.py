@@ -15,3 +15,5 @@ class ProducaoProdutorResponse(BaseModel):
     prazo_entrega: datetime | None
     created_at: datetime
     updated_at: datetime
+    # Roadmap 5.07: false when the producer only owns stages of this production.
+    coordenador: bool = True

@@ -19,7 +19,15 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import OrcamentoModel, ProducaoEtapaModel, ProducaoModel, PropostaModel
+from crud import crud_producao
+from models import (
+    OrcamentoModel,
+    ProducaoEtapaAtribuicaoModel,
+    ProducaoEtapaModel,
+    ProducaoModel,
+    PropostaModel,
+    UsuarioModel,
+)
 from services import audit_service
 
 TRANSICOES = {
@@ -58,6 +66,10 @@ class EtapaConflito(EtapaError):
     pass
 
 
+class EtapaProibida(EtapaError):
+    pass
+
+
 def _agora():
     return datetime.now(timezone.utc)
 
@@ -69,7 +81,7 @@ def producao_para(db: Session, papel: str, producao_id: int, usuario) -> Produca
             OrcamentoModel.cliente_id == usuario.cliente_id
         )
     elif papel == "produtor":
-        query = query.filter(ProducaoModel.produtor_id == usuario.id)
+        query = query.filter(crud_producao.acesso_produtor(usuario.id))  # 5.07: coordinator or stage owner.
     elif papel != "admin":
         raise EtapaNaoEncontrada("Producao nao encontrada.")
     producao = query.first()
@@ -130,6 +142,15 @@ def instanciar(db: Session, producao: ProducaoModel, proposta: PropostaModel, *,
             db.add(modelo)
             criadas.append(modelo)
     if criadas:
+        db.flush()
+        # 5.07: the history starts with the initial assignment of every stage.
+        db.add_all([
+            ProducaoEtapaAtribuicaoModel(
+                etapa_id=modelo.id, producao_id=producao.id, anterior_usuario_id=None,
+                novo_usuario_id=modelo.responsavel_usuario_id, motivo="Atribuicao inicial",
+            )
+            for modelo in criadas
+        ])
         db.flush()
     return criadas
 
@@ -197,10 +218,13 @@ def _bloqueio(etapas, etapa, destino):
     return None
 
 
-def _acoes(etapas, etapa, papel):
+def _acoes(etapas, etapa, papel, usuario=None):
     if papel == "admin":
         possiveis = TRANSICOES[etapa.status]
     elif papel == "produtor":
+        # 5.07: only the stage's responsible acts on it; coordinating gives no extra power.
+        if usuario is None or etapa.responsavel_usuario_id != usuario.id:
+            return []
         possiveis = TRANSICOES_PRODUTOR[etapa.status]
     else:
         return []
@@ -219,7 +243,15 @@ def _progresso(etapas) -> int:
     return int((Decimal(concluidas) * 100 / len(etapas)).to_integral_value(rounding=ROUND_HALF_UP))
 
 
-def _serializar(etapas, etapa, papel):
+def _rotulo_responsavel(etapa, usuario):
+    if etapa.responsavel_usuario_id is None:
+        return "Sem responsavel"
+    if usuario is not None and etapa.responsavel_usuario_id == usuario.id:
+        return "Voce"
+    return "Outro produtor"
+
+
+def _serializar(etapas, etapa, papel, usuario=None, nomes=None):
     dados = {
         "id": etapa.id,
         "ordem": etapa.ordem,
@@ -239,7 +271,12 @@ def _serializar(etapas, etapa, papel):
             unidade=etapa.unidade,
             revisoes_incluidas=etapa.revisoes_incluidas,
             prazo_dias=etapa.prazo_dias,
-            acoes=_acoes(etapas, etapa, papel),
+            acoes=_acoes(etapas, etapa, papel, usuario),
+        )
+    if papel == "produtor":
+        dados.update(
+            minha=usuario is not None and etapa.responsavel_usuario_id == usuario.id,
+            responsavel_rotulo=_rotulo_responsavel(etapa, usuario),
         )
     if papel == "admin":
         # Contract economics stay with the admin (producer payouts arrive in 5.13).
@@ -248,16 +285,29 @@ def _serializar(etapas, etapa, papel):
             peso_percentual=etapa.peso_percentual,
             valor=etapa.valor,
             responsavel_usuario_id=etapa.responsavel_usuario_id,
+            responsavel_nome=(nomes or {}).get(etapa.responsavel_usuario_id),
+            executor_usuario_id=etapa.executor_usuario_id,
+            executor_nome=(nomes or {}).get(etapa.executor_usuario_id),
         )
     return dados
 
 
+def _nomes(db: Session, ids) -> dict:
+    ids = {id_ for id_ in ids if id_ is not None}
+    if not ids:
+        return {}
+    return dict(db.execute(select(UsuarioModel.id, UsuarioModel.username).where(UsuarioModel.id.in_(ids))).all())
+
+
 def listar(db: Session, producao: ProducaoModel, *, papel: str, usuario=None):
     etapas = _etapas(db, producao.id)
+    nomes = {}
+    if papel == "admin":
+        nomes = _nomes(db, [id_ for etapa in etapas for id_ in (etapa.responsavel_usuario_id, etapa.executor_usuario_id)])
     resposta = {
         "producao_id": producao.id,
         "progresso_percentual": _progresso(etapas),
-        "etapas": [_serializar(etapas, etapa, papel) for etapa in etapas],
+        "etapas": [_serializar(etapas, etapa, papel, usuario, nomes) for etapa in etapas],
     }
     if papel == "admin":
         resposta["pode_gerar"] = not etapas and bool(
@@ -276,6 +326,8 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
             raise EtapaNaoEncontrada("Etapa nao encontrada.")
         if alterar_prazo and papel != "admin":
             raise EtapaNaoEncontrada("Etapa nao encontrada.")
+        if papel == "produtor" and etapa.responsavel_usuario_id != usuario.id:
+            raise EtapaProibida("Esta etapa esta atribuida a outro produtor.")
         if status is not None:
             if status_atual is not None and status_atual != etapa.status:
                 raise EtapaConflito("A etapa foi atualizada por outra pessoa. Recarregue antes de continuar.")
@@ -294,6 +346,8 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
                 if status == "em_andamento" and etapa.iniciada_em is None:
                     etapa.iniciada_em = agora
                 etapa.concluida_em = agora if status == "concluida" else None
+                # 5.07: the executor is whoever was responsible at conclusion; reopening clears it.
+                etapa.executor_usuario_id = etapa.responsavel_usuario_id if status == "concluida" else None
                 audit_service.record(
                     db, actor=usuario, action="production.stage_status_changed", entity_type="production",
                     entity_id=producao.id,
@@ -313,3 +367,74 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
     except Exception:
         db.rollback()
         raise
+
+
+def _produtor_ativo(db: Session, usuario_id: int):
+    usuario = db.get(UsuarioModel, usuario_id)
+    if usuario is None or not usuario.ativo or usuario.role != "produtor":
+        raise EtapaInvalida("Escolha um produtor ativo.")
+    return usuario
+
+
+def atribuir(db: Session, producao: ProducaoModel, etapa_id: int, *, novo_usuario_id, responsavel_atual,
+             motivo: str = "", usuario=None, request_id=None):
+    """Admin (re)assigns the responsible of one stage, keeping an append-only history.
+
+    Concluded stages keep who executed them and cannot be reassigned until reopened.
+    """
+    try:
+        etapas = _etapas(db, producao.id, bloquear=True)
+        etapa = next((item for item in etapas if item.id == etapa_id), None)
+        if etapa is None:
+            raise EtapaNaoEncontrada("Etapa nao encontrada.")
+        if etapa.responsavel_usuario_id != responsavel_atual:
+            raise EtapaConflito("O responsavel desta etapa mudou. Recarregue antes de continuar.")
+        if etapa.status == "concluida":
+            raise EtapaConflito("Etapa concluida preserva quem executou; reabra-a antes de reatribuir.")
+        if novo_usuario_id is not None:
+            _produtor_ativo(db, novo_usuario_id)
+        if novo_usuario_id != etapa.responsavel_usuario_id:
+            anterior = etapa.responsavel_usuario_id
+            etapa.responsavel_usuario_id = novo_usuario_id
+            db.add(ProducaoEtapaAtribuicaoModel(
+                etapa_id=etapa.id, producao_id=producao.id, anterior_usuario_id=anterior,
+                novo_usuario_id=novo_usuario_id, atribuido_por_usuario_id=getattr(usuario, "id", None),
+                motivo=motivo,
+            ))
+            audit_service.record(
+                db, actor=usuario, action="production.stage_assigned", entity_type="production",
+                entity_id=producao.id,
+                metadata={"stage_order": etapa.ordem, "old_assigned_user_id": anterior,
+                          "new_assigned_user_id": novo_usuario_id},
+                request_id=request_id,
+            )
+            db.flush()
+        resposta = listar(db, producao, papel="admin", usuario=usuario)
+        db.commit()
+        return resposta
+    except Exception:
+        db.rollback()
+        raise
+
+
+def historico(db: Session, producao: ProducaoModel, etapa_id: int):
+    etapa = db.get(ProducaoEtapaModel, etapa_id)
+    if etapa is None or etapa.producao_id != producao.id:
+        raise EtapaNaoEncontrada("Etapa nao encontrada.")
+    linhas = list(db.scalars(
+        select(ProducaoEtapaAtribuicaoModel)
+        .where(ProducaoEtapaAtribuicaoModel.etapa_id == etapa_id)
+        .order_by(ProducaoEtapaAtribuicaoModel.id)
+    ))
+    nomes = _nomes(db, [id_ for linha in linhas for id_ in
+                        (linha.anterior_usuario_id, linha.novo_usuario_id, linha.atribuido_por_usuario_id)])
+    return [{
+        "id": linha.id,
+        "anterior_usuario_id": linha.anterior_usuario_id,
+        "anterior_nome": nomes.get(linha.anterior_usuario_id),
+        "novo_usuario_id": linha.novo_usuario_id,
+        "novo_nome": nomes.get(linha.novo_usuario_id),
+        "atribuido_por_nome": nomes.get(linha.atribuido_por_usuario_id),
+        "motivo": linha.motivo,
+        "created_at": linha.created_at,
+    } for linha in linhas]

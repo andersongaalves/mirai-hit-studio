@@ -18,6 +18,7 @@ ALLOWED_METADATA = {
     "old_mode",
     "new_mode",
     "new_assigned_user_id",
+    "old_assigned_user_id",
     "channel",
     "old_amount",
     "new_amount",

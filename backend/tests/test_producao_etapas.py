@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from core.security import create_access_token
 from database import get_db
-from models import ClienteModel, ProducaoEtapaModel
+from models import ClienteModel, ProducaoEtapaAtribuicaoModel, ProducaoEtapaModel
 from routers.producao_etapas import router as stages_router
 from services import producao_etapa_service as stages
 
@@ -39,6 +39,10 @@ def make_api():
         db.commit()
     app = FastAPI()
     app.include_router(stages_router)
+    from routers.portal_produtor import router as producer_router
+    from routers.producao_mensagens import router as messages_router
+    app.include_router(producer_router)
+    app.include_router(messages_router)
     def session():
         with Session(engine) as db:
             yield db
@@ -85,12 +89,12 @@ with Session(engine) as db:
 
     def test_transitions_permissions_dependencies_and_progress(self):
         self.run_case('''
-client = make_api()  # Users first: the production is reassigned to producer 2 below.
+client = make_api()  # Users first: producer 2 is the budget's producer.
 with Session(engine) as db:
     seed_service(db)
-    production, _ = approved_production(db)
-    production.produtor_id = 2
+    db.get(OrcamentoModel, 1).produtor_id = 2  # Stages start assigned to producer-a (5.07).
     db.commit()
+    production, _ = approved_production(db)
     production_id = production.id
 base_admin = f'/producoes/{production_id}/etapas-contratuais'
 base_producer = f'/portal/produtor/producoes/{production_id}/etapas'
@@ -164,6 +168,8 @@ with Session(engine) as db:
     production, _ = approved_production(db)
     free, _ = approved_production(db, 2, items=[{'descricao': 'Avulso', 'quantidade': 1, 'valor_unitario': '90.00'}])
     assert stages._etapas(db, free.id) == []
+    # Simulates a production from before 5.06: no stages and no assignment history.
+    db.query(ProducaoEtapaAtribuicaoModel).filter(ProducaoEtapaAtribuicaoModel.producao_id == production.id).delete()
     db.query(ProducaoEtapaModel).filter(ProducaoEtapaModel.producao_id == production.id).delete()
     db.commit()
     production_id, free_id = production.id, free.id
@@ -179,6 +185,94 @@ assert client.post(f'/producoes/{production_id}/etapas-contratuais/gerar', heade
 assert client.post(f'/producoes/{free_id}/etapas-contratuais/gerar', headers=bearer('admin')).status_code == 422
 assert client.post('/producoes/9999/etapas-contratuais/gerar', headers=bearer('admin')).status_code == 404
 assert client.post(f'/producoes/{production_id}/etapas-contratuais/gerar', headers=bearer('producer-a')).status_code == 403
+''')
+
+
+    def test_stage_owners_assignment_history_and_isolation(self):
+        self.run_case('''
+os.environ.setdefault('RATE_LIMIT_DB', os.path.join(tempfile.mkdtemp(), 'limits.sqlite3'))
+client = make_api()
+with Session(engine) as db:
+    seed_service(db)
+    db.get(OrcamentoModel, 1).produtor_id = 2  # producer-a coordinates the production.
+    db.commit()
+    production, _ = approved_production(db)
+    production_id = production.id
+    assert production.produtor_id == 2
+    initial = db.query(ProducaoEtapaAtribuicaoModel).order_by(ProducaoEtapaAtribuicaoModel.id).all()
+    assert [(row.novo_usuario_id, row.motivo) for row in initial] == [(2, 'Atribuicao inicial')] * 4
+admin_base = f'/producoes/{production_id}/etapas-contratuais'
+producer_base = f'/portal/produtor/producoes/{production_id}/etapas'
+ids = [stage['id'] for stage in client.get(admin_base, headers=bearer('admin')).json()['etapas']]
+
+def assign(stage, user_id, current, reason=''):
+    return client.patch(f'{admin_base}/{stage}/responsavel', headers=bearer('admin'),
+                        json={'responsavel_usuario_id': user_id, 'responsavel_atual': current, 'motivo': reason})
+
+# Before any assignment producer-b sees nothing of this production.
+assert client.get(f'/portal/produtor/producoes/{production_id}', headers=bearer('producer-b')).status_code == 404
+assert client.get(producer_base, headers=bearer('producer-b')).status_code == 404
+assert [item['id'] for item in client.get('/portal/produtor/producoes', headers=bearer('producer-b')).json()] == []
+
+assert assign(ids[2], 3, 3).status_code == 409  # Stale current responsible.
+assert assign(ids[2], 4, 2).status_code == 422  # A client is not a producer.
+assert assign(ids[2], 6, 2).status_code == 422  # Neither is an admin.
+moved = assign(ids[2], 3, 2, 'Mixagem com especialista')
+assert moved.status_code == 200, moved.text
+assert moved.json()['etapas'][2]['responsavel_nome'] == 'producer-b'
+
+# producer-b now reaches the production as a stage owner, not as coordinator.
+listed = client.get('/portal/produtor/producoes', headers=bearer('producer-b')).json()
+assert [(item['id'], item['coordenador']) for item in listed] == [(production_id, False)]
+assert client.get(f'/portal/produtor/producoes/{production_id}', headers=bearer('producer-a')).json()['coordenador'] is True
+assert client.get(f'/portal/produtor/producoes/{production_id}/arquivos', headers=bearer('producer-b')).status_code == 200
+assert client.get(f'/portal/produtor/producoes/{production_id}/mensagens', headers=bearer('producer-b')).status_code == 200
+status_change = client.patch(f'/portal/produtor/producoes/{production_id}/status', headers=bearer('producer-b'),
+                             json={'status': 'em_producao'})
+assert status_change.status_code == 403
+
+view_b = client.get(producer_base, headers=bearer('producer-b')).json()['etapas']
+assert [(stage['minha'], stage['responsavel_rotulo']) for stage in view_b] == [
+    (False, 'Outro produtor'), (False, 'Outro produtor'), (True, 'Voce'), (False, 'Outro produtor')]
+assert all(stage['acoes'] == [] for stage in view_b)  # Mixing still waits for Rough Mix.
+assert all('responsavel_usuario_id' not in stage and 'responsavel_nome' not in stage for stage in view_b)
+view_a = client.get(producer_base, headers=bearer('producer-a')).json()['etapas']
+assert [stage['minha'] for stage in view_a] == [True, True, False, True]
+
+def patch(user, stage, **body):
+    return client.patch(f'{producer_base}/{stage}', headers=bearer(user), json=body)
+
+assert patch('producer-a', ids[1], status='em_andamento', status_atual='pendente').status_code == 200
+assert patch('producer-a', ids[1], status='em_revisao', status_atual='em_andamento').status_code == 200
+done = client.patch(f'{admin_base}/{ids[1]}', headers=bearer('admin'), json={'status': 'concluida', 'status_atual': 'em_revisao'})
+assert done.status_code == 200 and done.json()['etapas'][1]['executor_nome'] == 'producer-a'
+# The coordinator gets no power over another owner's stage.
+assert patch('producer-a', ids[2], status='em_andamento', status_atual='pendente').status_code == 403
+assert client.get(producer_base, headers=bearer('producer-a')).json()['etapas'][2]['acoes'] == []
+assert patch('producer-b', ids[2], status='em_andamento', status_atual='pendente').status_code == 200
+
+# Concluded stages keep who executed them.
+blocked = assign(ids[1], 3, 2)
+assert blocked.status_code == 409 and 'executou' in blocked.json()['detail']
+# Reassigning an in-progress stage keeps its status; producer-b loses access with no stage left.
+back = assign(ids[2], 2, 3, 'Retorno ao coordenador')
+assert back.status_code == 200 and back.json()['etapas'][2]['status'] == 'em_andamento'
+assert client.get(f'/portal/produtor/producoes/{production_id}', headers=bearer('producer-b')).status_code == 404
+assert client.get(f'/portal/produtor/producoes/{production_id}/arquivos', headers=bearer('producer-b')).status_code == 404
+assert assign(ids[3], None, 2).json()['etapas'][3]['responsavel_usuario_id'] is None
+
+history = client.get(f'{admin_base}/{ids[2]}/historico', headers=bearer('admin'))
+assert history.status_code == 200, history.text
+assert [(row['anterior_nome'], row['novo_nome'], row['atribuido_por_nome'], row['motivo']) for row in history.json()] == [
+    (None, 'producer-a', None, 'Atribuicao inicial'),
+    ('producer-a', 'producer-b', 'admin', 'Mixagem com especialista'),
+    ('producer-b', 'producer-a', 'admin', 'Retorno ao coordenador'),
+]
+assert client.get(f'{admin_base}/{ids[2]}/historico', headers=bearer('producer-a')).status_code == 403
+assert client.get(f'{admin_base}/9999/historico', headers=bearer('admin')).status_code == 404
+with Session(engine) as db:
+    actions = [event.action for event in db.query(AuditLogModel)]
+    assert actions.count('production.stage_assigned') == 3
 ''')
 
 

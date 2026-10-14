@@ -160,6 +160,8 @@ function bindActions() {
 }
 
 // Roadmap 5.06: contract stages load independently, like the message thread.
+let producersCache = null;
+
 async function carregarEtapas(id, revision) {
     const slot = byId("prod_etapas_contratuais");
     if (!slot) return;
@@ -169,6 +171,10 @@ async function carregarEtapas(id, revision) {
         data = await API.buscarEtapasContratuais(id);
     } catch {
         error = "Não foi possível carregar as etapas do contrato agora.";
+    }
+    // 5.07: active producers for the responsible selector; a failure keeps the panel usable.
+    if (producersCache === null && data?.etapas?.length) {
+        producersCache = await API.buscarProdutoresAtivos().catch(() => null);
     }
     if (revision !== loadRevision || productionId !== id) return;
     const reload = () => carregarEtapas(id, revision);
@@ -187,6 +193,17 @@ async function carregarEtapas(id, revision) {
             Notify.success("Prazo da etapa salvo.");
             await reload();
         },
+        producers: Array.isArray(producersCache) ? producersCache : [],
+        onAssign: async (stage, userId, motivo) => {
+            await API.atribuirEtapaContratual(id, stage.id, {
+                responsavel_usuario_id: userId,
+                responsavel_atual: stage.responsavel_usuario_id ?? null,
+                motivo,
+            });
+            Notify.success("Responsável atualizado.");
+            await reload();
+        },
+        onHistory: stage => API.historicoEtapaContratual(id, stage.id),
         onGenerate: async () => {
             try {
                 await API.gerarEtapasContratuais(id);

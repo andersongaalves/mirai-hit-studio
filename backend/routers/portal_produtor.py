@@ -21,6 +21,12 @@ router = APIRouter(prefix="/portal/produtor", tags=["Portal do Produtor"])
 Db = Annotated[Session, Depends(get_db)]
 CurrentProducer = Annotated[UsuarioModel, Depends(require_producer)]
 
+def _com_papel(producao, user):
+    data = ProducaoProdutorResponse.model_validate(producao).model_dump()
+    data["coordenador"] = producao.produtor_id == user.id
+    return data
+
+
 PRODUCER_STATUS_TRANSITIONS = {
     "aguardando_inicio": {"em_producao"},
     "em_producao": {"revisao"},
@@ -33,7 +39,7 @@ def listar_minhas_producoes(
     db: Db,
     user: CurrentProducer,
 ):
-    return crud_producao.listar_por_produtor(db, user.id)
+    return [_com_papel(producao, user) for producao in crud_producao.listar_por_produtor(db, user.id)]
 
 
 @router.get("/producoes/{producao_id}", response_model=ProducaoProdutorResponse)
@@ -45,7 +51,7 @@ def obter_minha_producao(
     producao = crud_producao.buscar_por_produtor(db, producao_id, user.id)
     if not producao:
         raise HTTPException(status_code=404, detail="Producao nao encontrada.")
-    return producao
+    return _com_papel(producao, user)
 
 
 @router.patch(
@@ -62,10 +68,13 @@ def atualizar_andamento(
     producao = crud_producao.buscar_por_produtor(db, producao_id, user.id)
     if not producao:
         raise HTTPException(status_code=404, detail="Producao nao encontrada.")
+    if producao.produtor_id != user.id:
+        # 5.07: stage owners work on their stages; the overall progress belongs to the coordinator.
+        raise HTTPException(status_code=403, detail="Somente o produtor coordenador altera o andamento geral.")
 
     status_anterior = producao.status
     if dados.status == status_anterior:
-        return producao
+        return _com_papel(producao, user)
 
     permitidos = PRODUCER_STATUS_TRANSITIONS.get(status_anterior, set())
     if dados.status not in permitidos:
@@ -86,7 +95,7 @@ def atualizar_andamento(
     )
     db.commit()
     db.refresh(producao)
-    return producao
+    return _com_papel(producao, user)
 
 
 def _file_error(exc):

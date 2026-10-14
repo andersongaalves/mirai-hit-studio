@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 StatusEtapa = Literal["pendente", "em_andamento", "em_revisao", "concluida"]
 
@@ -31,6 +31,12 @@ class EtapaProducaoResponse(BaseModel):
     peso_percentual: Decimal | None = None
     valor: Decimal | None = None
     responsavel_usuario_id: int | None = None
+    responsavel_nome: str | None = None
+    executor_usuario_id: int | None = None
+    executor_nome: str | None = None
+    # Producer-only view of responsibility (5.07): never other producers' identities.
+    minha: bool | None = None
+    responsavel_rotulo: str | None = None
 
 
 class EtapasProducaoResponse(BaseModel):
@@ -53,3 +59,24 @@ class EtapaAdminUpdate(BaseModel):
     status: StatusEtapa | None = None
     status_atual: StatusEtapa | None = None
     prazo: datetime | None = None
+
+
+class EtapaResponsavelUpdate(BaseModel):
+    """Roadmap 5.07: (re)assign the stage responsible; null leaves it unassigned."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    responsavel_usuario_id: int | None = Field(default=None, gt=0)
+    responsavel_atual: int | None = Field(default=None, gt=0)
+    motivo: str = Field(default="", max_length=300)
+
+
+class EtapaAtribuicaoResponse(BaseModel):
+    id: int
+    anterior_usuario_id: int | None
+    anterior_nome: str | None
+    novo_usuario_id: int | None
+    novo_nome: str | None
+    atribuido_por_nome: str | None
+    motivo: str
+    created_at: datetime | None

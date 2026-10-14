@@ -185,3 +185,28 @@ entao as migrations foram aplicadas e verificadas antes de disparar o release.
 | Storage Provider Rollout Evidence | run `38595988568` (sucesso) |
 | Protected Production Release | run `38596390562`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
 | Autorizacao | `CTRL-20261014-R3-506` |
+
+## 5.07 - Varios produtores por producao
+
+- Cada etapa do contrato tem um responsavel principal (um por etapa nesta versao). O Admin
+  atribui, troca ou deixa sem responsavel em "Etapas do contrato", com motivo opcional.
+- Historico append-only `producao_etapa_atribuicoes` (migration `a9c1e3f5b702`): anterior,
+  novo, quem atribuiu, motivo e data. Etapas ja criadas recebem o registro "Atribuicao
+  inicial" na migration; etapas novas, na criacao.
+- Quem executou: ao concluir, a etapa grava o responsavel do momento
+  (`executor_usuario_id`); reabrir limpa. Etapa concluida nao pode ser reatribuida (409) ate
+  ser reaberta, preservando autoria e base para os repasses (5.13).
+- Acesso do produtor: ve a producao se for o coordenador (`producoes.produtor_id`) ou
+  responsavel por pelo menos uma etapa. Vale para lista, detalhe, arquivos visiveis ao
+  produtor, upload e mensagens. Ao perder a ultima etapa, perde o acesso.
+- Coordenador nao concentra poderes: so o responsavel move a propria etapa; o coordenador
+  move apenas o andamento geral da producao (o produtor so de etapas recebe 403 e nao ve
+  esse botao).
+- Isolamento: o produtor ve "Voce" ou "Outro produtor", nunca o nome ou id de outros
+  produtores; nomes, executor e historico ficam no Admin. O cliente nao ve responsaveis.
+- Concorrencia otimista na troca (`responsavel_atual`, 409) e AuditLog
+  `production.stage_assigned` (`old_assigned_user_id`, `new_assigned_user_id`).
+- Fora do escopo: repasse por etapa (5.13) e colaboracao simultanea na mesma etapa.
+
+**Publicacao:** aplicar `a9c1e3f5b702` antes do release (coluna nula + tabela nova; insere
+o historico inicial das etapas existentes).
