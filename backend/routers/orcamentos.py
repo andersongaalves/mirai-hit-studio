@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -74,11 +74,12 @@ def criar_orcamento(
     response_model=list[OrcamentoResponse],
 )
 def listar_orcamentos(
+    ambiente: Literal["real", "teste", "todos"] = "real",
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
 
-    return crud_orcamento.listar(db)
+    return crud_orcamento.listar(db, ambiente=ambiente)
 
 @router.delete("/{orcamento_id}")
 def deletar_orcamento(
