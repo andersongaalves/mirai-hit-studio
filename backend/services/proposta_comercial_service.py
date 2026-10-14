@@ -11,6 +11,7 @@ from pypdf import PdfReader
 from services import audit_service, financial_service, producao_liberacao_service
 from services import proposta_documento_service as documentos
 from services import proposta_service as service
+from services import proposta_snapshot_service as snapshots
 from services.documento_storage import DocumentoIndisponivel
 from services.email_service import EmailService
 from services.pdf_service import moeda
@@ -94,6 +95,8 @@ def enviar(db, proposta_id, actor=None, request_id=None):
             TypeAdapter(EmailStr).validate_python(response.cliente_snapshot.cliente.email)
         except ValidationError:
             raise service.PropostaInvalida("Email do snapshot invalido.") from None
+        # 5.05: freeze negotiated values and stage weights before anything leaves the system.
+        snapshots.congelar(db, model, origem="envio", estrito=True)
         data = _pdf_atual(db, model)
         try:
             result = EmailService.enviar_proposta(response, data, moeda(service.calcular_totais(response.itens).total))
@@ -154,6 +157,8 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
         raise service.PropostaConflito(
             "Ja existe producao para este orcamento; requer conciliacao."
         )
+    # Proposals sent before 5.05 get their snapshot at acceptance, without blocking it.
+    snapshots.congelar(db, model, origem="aceite", estrito=False)
     if not pipeline_v2:
         crud_producao.criar_sem_commit(
             db,

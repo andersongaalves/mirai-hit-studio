@@ -1,0 +1,161 @@
+"""Roadmap 3.0, 5.05: catalog origin and economic snapshot of proposals.
+
+The catalog (services, base price, stage weights) is only a template. When a proposal is
+sent, the negotiated line values and the stage weights in force are frozen into
+`propostas.snapshot_economico`; later catalog edits never rewrite it. Values are
+distributed in cents with a deterministic largest-remainder rule so the stages of a line
+always add up exactly to that line's contracted value.
+"""
+from datetime import datetime, timezone
+from decimal import ROUND_HALF_UP, Decimal
+
+from models.servico import ServicoModel
+from schemas.proposta import PropostaItem, SnapshotEconomico
+from services import proposta_service as service
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
+
+CENT = Decimal("0.01")
+FULL_WEIGHT = 10000  # 100.00% expressed in hundredths of a percent.
+
+
+def _cents(value: Decimal) -> int:
+    return int((value.quantize(CENT, rounding=ROUND_HALF_UP) * 100).to_integral_value())
+
+
+def _money(cents: int) -> Decimal:
+    return (Decimal(cents) / 100).quantize(CENT)
+
+
+def _weight(value) -> int:
+    return int((Decimal(str(value)).quantize(CENT) * 100).to_integral_value())
+
+
+def distribuir_centavos(total_centavos: int, pesos: list[int]) -> list[int]:
+    """Split `total_centavos` by weights (hundredths of a percent, summing to 10000).
+
+    Each share gets the floor of its exact value; the leftover cents go one by one to
+    the largest fractional remainders, ties broken by position. Zero weights always get
+    zero and the result always sums to the total.
+    """
+    if total_centavos < 0 or any(peso < 0 for peso in pesos) or sum(pesos) != FULL_WEIGHT:
+        raise ValueError("invalid_distribution")
+    exatos = [total_centavos * peso for peso in pesos]
+    partes = [valor // FULL_WEIGHT for valor in exatos]
+    sobra = total_centavos - sum(partes)
+    ordem = sorted(range(len(pesos)), key=lambda index: (-(exatos[index] % FULL_WEIGHT), index))
+    for index in ordem[:sobra]:
+        partes[index] += 1
+    return partes
+
+
+def carregar_servicos(db: Session, ids) -> dict[int, ServicoModel]:
+    ids = sorted({identifier for identifier in ids if identifier is not None})
+    if not ids:
+        return {}
+    query = select(ServicoModel).where(ServicoModel.id.in_(ids)).options(selectinload(ServicoModel.etapas))
+    return {servico.id: servico for servico in db.scalars(query)}
+
+
+def validar_servicos(db: Session, itens: list[PropostaItem]) -> None:
+    """Draft rule: every catalog reference must point to an existing service."""
+    ids = {item.servico_id for item in itens if item.servico_id is not None}
+    if ids - set(carregar_servicos(db, ids)):
+        raise service.PropostaInvalida("Servico do catalogo nao encontrado.")
+
+
+def _linha(item: PropostaItem):
+    bruto = (item.quantidade * item.valor_unitario).quantize(CENT, rounding=ROUND_HALF_UP)
+    desconto = min(bruto, item.desconto.quantize(CENT, rounding=ROUND_HALF_UP))
+    return bruto, desconto, bruto - desconto
+
+
+def _etapas(servico: ServicoModel, valor_contratado: Decimal):
+    etapas = sorted(servico.etapas, key=lambda etapa: etapa.ordem)
+    if not etapas:
+        return []
+    pesos = [_weight(etapa.peso_percentual) for etapa in etapas]
+    valores = distribuir_centavos(_cents(valor_contratado), pesos)
+    return [{
+        "ordem": index,
+        "nome": etapa.nome,
+        "peso_percentual": str(Decimal(str(etapa.peso_percentual)).quantize(CENT)),
+        "valor": str(_money(valor)),
+        "prazo_dias": etapa.prazo_dias,
+        "unidade": etapa.unidade or "",
+        "revisoes_incluidas": etapa.revisoes_incluidas,
+        "depende_da_anterior": bool(etapa.depende_da_anterior),
+        "administrativa": bool(etapa.administrativa),
+    } for index, (etapa, valor) in enumerate(zip(etapas, valores), start=1)]
+
+
+def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
+    """Builds the snapshot dict (JSON-ready) for the proposal's current items.
+
+    estrito=True (send): a referenced service that vanished or has invalid weights stops
+    the operation. estrito=False (late acceptance of a pre-5.05 proposal): the line is
+    kept with `catalogo_disponivel=false` and no stages, so acceptance is never blocked.
+    """
+    itens = [PropostaItem.model_validate(item) for item in model.itens_json]
+    servicos = carregar_servicos(db, [item.servico_id for item in itens])
+    linhas = []
+    for indice, item in enumerate(itens, start=1):
+        bruto, desconto, valor = _linha(item)
+        servico = servicos.get(item.servico_id) if item.servico_id is not None else None
+        etapas = []
+        if servico is not None:
+            try:
+                etapas = _etapas(servico, valor)
+            except ValueError:
+                if estrito:
+                    raise service.PropostaConflito(
+                        f"As etapas do servico '{servico.nome}' nao somam 100%; revise o catalogo."
+                    ) from None
+                servico = None
+        elif item.servico_id is not None and estrito:
+            raise service.PropostaConflito(
+                f"O servico do item {indice} foi removido do catalogo; revise os itens antes de enviar."
+            )
+        linhas.append({
+            "indice": indice,
+            "descricao": item.descricao,
+            "servico_id": item.servico_id,
+            "servico_nome": servico.nome if servico is not None else None,
+            "preco_catalogo": (
+                str(Decimal(str(servico.valor_base)).quantize(CENT, rounding=ROUND_HALF_UP))
+                if servico is not None else None
+            ),
+            "catalogo_disponivel": servico is not None,
+            "quantidade": str(item.quantidade),
+            "valor_unitario": str(item.valor_unitario),
+            "bruto": str(bruto),
+            "desconto": str(desconto),
+            "valor_contratado": str(valor),
+            "etapas": etapas,
+        })
+    totais = service.calcular_totais(itens)
+    if sum(Decimal(linha["valor_contratado"]) for linha in linhas) != totais.total:
+        raise service.PropostaConflito("Snapshot economico inconsistente; nenhuma alteracao confirmada.")
+    snapshot = {
+        "versao_snapshot": 1,
+        "proposta_versao": model.versao,
+        "moeda": "BRL",
+        "origem": origem,
+        "congelado_em": datetime.now(timezone.utc).isoformat(),
+        "subtotal": str(totais.subtotal),
+        "desconto": str(totais.desconto),
+        "total": str(totais.total),
+        "itens": linhas,
+    }
+    return SnapshotEconomico.model_validate(snapshot).model_dump(mode="json")
+
+
+def congelar(db: Session, model, *, origem: str, estrito: bool) -> bool:
+    """Freezes the snapshot once. Returns False when it already existed (never rewritten)."""
+    if model.snapshot_economico:
+        return False
+    snapshot = construir(db, model, origem=origem, estrito=estrito)
+    model.snapshot_economico = snapshot
+    model.snapshot_congelado_em = datetime.fromisoformat(snapshot["congelado_em"])
+    db.flush()
+    return True

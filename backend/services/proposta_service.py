@@ -108,7 +108,7 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
             "versao": 1, "status": PropostaStatus.RASCUNHO.value,
             "produtor_id": orcamento.produtor_id, "cliente_snapshot": snapshot.model_dump(mode="json"),
             "objeto": orcamento.servico, "descricao": orcamento.detalhes or "",
-            "itens_json": [item.model_dump(mode="json")], "pagamentos_json": pagamentos,
+            "itens_json": [item.model_dump(mode="json", exclude_none=True)], "pagamentos_json": pagamentos,
             "politica_pagamento": PoliticaPagamento.ENTRADA_50_50.value,
             "condicoes": CONDICOES_PADRAO, "totais_json": calcular_totais([item]).model_dump(mode="json"),
         })
@@ -142,6 +142,11 @@ def atualizar(db: Session, proposta_id: int, dados: PropostaUpdate):
         payload = dados.model_dump(mode="json", exclude_unset=True)
         alteracoes = {COLUNAS_JSON.get(campo, campo): valor for campo, valor in payload.items()}
         itens = [PropostaItem.model_validate(item) for item in alteracoes.get("itens_json", proposta.itens_json)]
+        if "itens_json" in alteracoes:
+            # 5.05: catalog references must exist while the proposal is a draft.
+            from services import proposta_snapshot_service
+
+            proposta_snapshot_service.validar_servicos(db, itens)
         alteracoes["totais_json"] = calcular_totais(itens).model_dump(mode="json")
         alteracoes = {campo: valor for campo, valor in alteracoes.items() if getattr(proposta, campo) != valor}
         if alteracoes:

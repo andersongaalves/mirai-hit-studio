@@ -39,7 +39,8 @@ function normalizarItem(item = {}) {
         descricao: item.descricao ?? "",
         quantidade: toNumber(item.quantidade || 0),
         valor_unitario: toNumber(item.valor_unitario || 0),
-        desconto: toNumber(item.desconto || 0)
+        desconto: toNumber(item.desconto || 0),
+        servico_id: Number.isInteger(item.servico_id) ? item.servico_id : null
     };
 }
 
@@ -126,6 +127,30 @@ export function adicionarItem() {
 
     marcarAlterado();
     sincronizarTotais();
+}
+
+// Roadmap 3.0, 5.05: a catalog line starts at the base price; the admin negotiates it.
+export function adicionarItemCatalogo(servico) {
+    if (!podeEditar() || !Number.isInteger(servico?.id)) return;
+
+    propostaState.proposta.itens.push(
+        normalizarItem({
+            descricao: servico.nome,
+            quantidade: 1,
+            valor_unitario: servico.valor_base,
+            servico_id: servico.id
+        })
+    );
+
+    marcarAlterado();
+    sincronizarTotais();
+}
+
+export function desvincularItem(index) {
+    if (!podeEditar() || !propostaState.proposta?.itens[index]) return;
+
+    propostaState.proposta.itens[index].servico_id = null;
+    marcarAlterado();
 }
 
 export function removerItem(index) {

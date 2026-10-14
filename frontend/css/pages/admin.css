@@ -949,6 +949,23 @@
     align-items: end;
 }
 
+/* Roadmap 3.0, 5.05: catalog origin and frozen economic snapshot in the proposal editor. */
+.proposta-catalogo { display: grid; gap: var(--space-2); margin-bottom: var(--space-4); }
+.proposta-catalogo__controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-width: 0; }
+.proposta-catalogo__controls select { flex: 1 1 240px; min-width: 0; max-width: 100%; }
+.proposta-catalogo__aviso:empty { display: none; }
+.proposta-catalogo__aviso { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.proposta-item-origem { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.proposta-item-origem__tag { padding: 2px var(--space-2); border: 1px solid var(--color-warning); border-radius: var(--radius-md); color: var(--color-text-primary); }
+.proposta-snapshot { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding: var(--space-4); border: var(--border-subtle); border-radius: var(--radius-md); }
+.proposta-snapshot h4 { margin: 0; }
+.proposta-snapshot p { margin: 0; }
+.proposta-snapshot__meta, .proposta-snapshot__sem-etapas { color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.proposta-snapshot__item { display: grid; gap: var(--space-2); min-width: 0; }
+.proposta-snapshot__etapas { width: 100%; border-collapse: collapse; font-size: var(--font-size-small); }
+.proposta-snapshot__etapas th, .proposta-snapshot__etapas td { padding: var(--space-1) var(--space-2); border-bottom: var(--border-subtle); text-align: left; }
+.proposta-snapshot__etapas td:nth-child(n+2), .proposta-snapshot__etapas th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+
 .proposta-document-frame {
     width: 100%;
     height: 70vh;

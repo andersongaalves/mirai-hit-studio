@@ -103,3 +103,29 @@ indices e 22 constraints; dados existentes inalterados (7 servicos, 19 projetos,
 
 Licao aplicada do incidente da publicacao anterior: o release protegido nao migra o banco,
 entao as migrations foram aplicadas e verificadas antes de disparar o release.
+## 5.05 - Catalogo nas propostas
+
+- Cada item da proposta pode apontar para um servico do catalogo (`servico_id`, opcional).
+  No Admin, "Servico do catalogo" adiciona a linha com o preco-base; o valor unitario
+  continua editavel (preco negociado) e a linha mostra a origem e a marca "Preco negociado".
+  Itens avulsos continuam permitidos.
+- Snapshot economico (`propostas.snapshot_economico` + `snapshot_congelado_em`, migration
+  `e5a7c9d1f246`): no envio da proposta, o sistema congela por item o servico, o preco-base
+  da epoca, quantidade, valor unitario negociado, desconto, valor contratado e as etapas do
+  catalogo com peso e valor. Depois de gravado, nunca e reescrito.
+- Distribuicao em centavos: cada etapa recebe o piso do valor exato e os centavos que sobram
+  vao para os maiores restos (empate pela ordem). A soma das etapas e sempre exatamente o
+  valor contratado da linha; etapas administrativas de 0% recebem 0. Exemplo do roadmap:
+  contrato de R$ 800 com 20/50/30 -> R$ 160 / R$ 400 / R$ 240.
+- O desconto da linha e distribuido pelos pesos (o valor distribuido ja e o liquido).
+- Bloqueios no envio: servico removido do catalogo ou etapas que nao somam 100% (409, nada
+  e enviado). Em rascunho, `servico_id` inexistente e recusado (422).
+- Propostas enviadas antes da 5.05 recebem o snapshot no aceite, de forma tolerante (linha
+  sem etapas se o servico nao existir mais), para nunca bloquear o aceite. Propostas ja
+  aceitas antes da 5.05 ficam sem snapshot: o catalogo atual nao reescreve contratos antigos.
+- Admin: o separador Itens mostra "Valores congelados" (somente leitura) com etapas, pesos e
+  valores. O portal do cliente nao muda nesta fase.
+- Fora do escopo: criar etapas na producao a partir do snapshot (5.06) e repasses (5.13).
+
+**Publicacao:** aplicar `e5a7c9d1f246` antes do release (duas colunas novas e nulas em
+`propostas`, sem backfill).

@@ -26,6 +26,14 @@ const root = path.resolve(__dirname, '..');
             const url = new URL(req.url());
             if (url.origin === 'http://localhost:8000') {
                 calls.push({ method: req.method(), path: url.pathname, body: req.postDataJSON() });
+                // 5.05: the Itens tab loads the service catalog; this suite does not exercise it.
+                if (url.pathname === '/servicos' && req.method() === 'GET') return route.fulfill({ json: [] });
+                // Etapa 01 classification panel (drift fixed in 5.05: the mock predated it).
+                const classification = url.pathname.match(/^\/propostas\/(\d+)\/classificacao$/);
+                if (classification && req.method() === 'GET') {
+                    return route.fulfill({ json: { id: Number(classification[1]), orcamento_id: 42, is_test: false,
+                        protegida: false, historico_financeiro: false, reversao_permitida: true } });
+                }
                 if (/^\/propostas\/\d+\/preview$/.test(url.pathname)) {
                     return route.fulfill({ contentType: 'text/html', body: '<!doctype html><p>Preview backend</p>' });
                 }
@@ -105,7 +113,8 @@ const root = path.resolve(__dirname, '..');
         assert.equal((await state()).carregando, true);
         await page.evaluate(() => window.opening);
         delayLoad = 0;
-        assert.deepEqual(calls.map(call => `${call.method} ${call.path}`), ['GET /propostas/orcamento/42', 'POST /orcamentos/42/proposta']);
+        assert.deepEqual(calls.filter(call => !call.path.endsWith('/classificacao'))
+            .map(call => `${call.method} ${call.path}`), ['GET /propostas/orcamento/42', 'POST /orcamentos/42/proposta']);
         assert.equal((await state()).dirty, false);
         assert.equal(await page.locator('#btn-save-proposta').isDisabled(), true);
         assert.match(await page.locator('#proposta-content').textContent(), /Cliente Teste/);
