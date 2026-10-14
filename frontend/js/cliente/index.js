@@ -74,7 +74,7 @@ async function openDetail(id) {
             api.listarArquivos(id),
             api.obterFinanceiro(id).then(
                 value => ({ ok: true, value }),
-                () => ({ ok: false, value: finances.get(id) ?? null }),
+                () => ({ ok: false, value: finances.get(id) ?? { indisponivel: true } }),
             ),
         ]);
         const finance = financeResult.value;

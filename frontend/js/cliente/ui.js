@@ -223,6 +223,10 @@ function filesPanel(production, files, handlers) {
 function financePanel(finance) {
     const panel = element("section", "producer-files");
     panel.append(element("h2", "", "Pagamento"));
+    if (finance?.indisponivel) {
+        panel.append(element("p", "producer-help", "As informações de pagamento estão indisponíveis no momento."));
+        return panel;
+    }
     if (!finance?.cobranca) {
         panel.append(element("p", "producer-help", "Nenhuma cobrança está vinculada a este projeto."));
         return panel;
