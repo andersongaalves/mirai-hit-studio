@@ -5,7 +5,7 @@ from crud import crud_producao, crud_proposta
 from models.enums.financeiro import CobrancaStatus
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from models.financeiro import CobrancaModel
-from services import audit_service, financial_service, proposta_service
+from services import audit_service, financial_service, producao_etapa_service, proposta_service
 from services.pdf_service import moeda
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -130,6 +130,8 @@ def avaliar_cobranca_bloqueada(
         db,
         dados_producao(proposta_service._resposta(proposta)),
     )
+    # 5.06: contract stages come from the snapshot frozen when the proposal was sent.
+    producao_etapa_service.instanciar(db, producao, proposta)
     audit_service.record(
         db,
         actor=actor,
