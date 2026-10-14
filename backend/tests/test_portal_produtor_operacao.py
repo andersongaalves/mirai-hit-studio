@@ -229,6 +229,51 @@ async def check():
 asyncio.run(check())
 ''')
 
+    def test_version_notes_are_sanitized_immutable_and_scoped(self):
+        self.run_case(r'''
+async def check():
+    storage = MemoryStorage()
+    with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+            first = await client.post(
+                '/portal/produtor/producoes/1/arquivos', headers=bearer('producer-a'),
+                data={'tipo':'previa', 'observacao':'  Rough mix\r\ncom voz guia\x00  '},
+                files={'arquivo':('rough.mp3', b'ID3-rough', 'audio/mpeg')},
+            )
+            assert first.status_code == 201, first.text
+            assert first.json()['observacao'] == 'Rough mix\ncom voz guia'
+            second = await client.post(
+                '/portal/produtor/producoes/1/arquivos', headers=bearer('producer-a'),
+                data={'tipo':'previa', 'substitui_arquivo_id':str(first.json()['id']), 'observacao':'   '},
+                files={'arquivo':('rough-v2.mp3', b'ID3-rough-v2', 'audio/mpeg')},
+            )
+            assert second.status_code == 201, second.text
+            assert second.json()['observacao'] is None
+            too_long = await client.post(
+                '/portal/produtor/producoes/1/arquivos', headers=bearer('producer-a'),
+                data={'tipo':'previa', 'observacao':'x' * 1001},
+                files={'arquivo':('long.mp3', b'ID3-long', 'audio/mpeg')},
+            )
+            assert too_long.status_code == 422
+            assert len(storage.objects) == 2
+            admin_note = await client.post(
+                '/producoes/1/arquivos', headers=bearer('admin'),
+                data={'tipo':'entrega', 'visivel_produtor':'true', 'observacao':'<b>Master final</b>'},
+                files={'arquivo':('final.wav', b'RIFF-final', 'audio/wav')},
+            )
+            assert admin_note.status_code == 201, admin_note.text
+            listed = await client.get('/portal/produtor/producoes/1/arquivos', headers=bearer('producer-a'))
+            notes = {item['nome_exibicao']: item['observacao'] for item in listed.json()}
+            assert notes == {
+                'rough.mp3': 'Rough mix\ncom voz guia', 'rough-v2.mp3': None,
+                'final.wav': '<b>Master final</b>',
+            }, notes
+            with Session(engine) as db:
+                stored = db.query(ProducaoArquivoModel).filter_by(nome_exibicao='rough.mp3').one()
+                assert stored.observacao == 'Rough mix\ncom voz guia'
+asyncio.run(check())
+''')
+
     def test_storage_failure_and_database_compensation(self):
         self.run_case(r'''
 class FailingStorage(MemoryStorage):

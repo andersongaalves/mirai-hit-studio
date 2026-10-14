@@ -1,5 +1,11 @@
 import { deadlineState, filterAndSort, formatDate, nextAction, parseEtapas, statusInfo, summarize } from "./utils.js";
 
+let currentUserId = null;
+
+export function setCurrentUserId(id) {
+    currentUserId = typeof id === "number" ? id : null;
+}
+
 const element = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -96,6 +102,10 @@ function fileItem(file, onDownload) {
         element("strong", "", file.nome_exibicao),
         element("span", "", `${file.tipo} · versão ${file.versao} · ${Math.ceil(file.tamanho_bytes / 1024)} KB`),
     );
+    if (file.observacao) {
+        const author = file.remetente_usuario_id === currentUserId ? "Sua observação" : "Observação";
+        info.append(element("p", "file-note", `${author}: ${file.observacao}`));
+    }
     if (file.tipo === "previa") {
         info.append(element(
             "span",
@@ -149,12 +159,17 @@ function filesPanel(production, files, handlers) {
     };
     type.addEventListener("change", updateReplacementOptions);
     updateReplacementOptions();
+    const note = element("textarea", "producer-upload__note");
+    note.rows = 2;
+    note.maxLength = 1000;
+    note.placeholder = "Observação para esta versão (opcional)";
+    note.setAttribute("aria-label", "Observação para esta versão");
     const submit = element("button", "btn-cta", "Enviar arquivo");
     submit.type = "submit";
-    form.append(type, input, replaces, submit);
+    form.append(type, input, replaces, note, submit);
     form.addEventListener("submit", event => {
         event.preventDefault();
-        if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit);
+        if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value);
     });
     panel.append(form);
     return panel;

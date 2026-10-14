@@ -115,6 +115,10 @@ function fileItem(file, handlers) {
         element("strong", "", file.nome_exibicao),
         element("span", "", `Versão ${file.versao} · ${Math.ceil(file.tamanho_bytes / 1024)} KB · ${formatDate(file.created_at, true)}`),
     );
+    if (file.observacao) {
+        const author = file.enviado_por_mim ? "Sua observação" : "Observação da equipe";
+        info.append(element("p", "file-note", `${author}: ${file.observacao}`));
+    }
     const actions = element("div", "client-file__actions");
     const player = element("div");
     if (file.tipo === "previa" && /^(audio|video)\//.test(file.mime_type)) {
@@ -188,6 +192,11 @@ function filesPanel(production, files, handlers) {
         };
         type.addEventListener("change", updateReplacementOptions);
         updateReplacementOptions();
+        const note = element("textarea", "producer-upload__note");
+        note.rows = 2;
+        note.maxLength = 1000;
+        note.placeholder = "Observação para esta versão (opcional)";
+        note.setAttribute("aria-label", "Observação para esta versão");
         const submit = element("button", "btn-cta", "Enviar arquivo");
         submit.type = "submit";
         const feedback = element("div", "producer-upload__feedback hidden");
@@ -209,11 +218,11 @@ function filesPanel(production, files, handlers) {
             const { kind, message, retry } = handlers.uploadFeedback;
             setFeedback(kind, message, retry);
         }
-        form.append(type, filePicker, replaces, submit, feedback);
+        form.append(type, filePicker, replaces, note, submit, feedback);
         form.addEventListener("submit", event => {
             event.preventDefault();
             if (form.dataset.busy === "true" || !input.files[0]) return;
-            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback);
+            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback, note.value);
         });
         panel.append(form);
     }

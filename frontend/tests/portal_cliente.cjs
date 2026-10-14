@@ -12,6 +12,7 @@ let failFileList = false;
 let uploadFailure = null;
 let slowUpload = false;
 let failFinance = false;
+let lastUploadBody = '';
 let proposals = [{
     id: 11,
     numero: 'PROP-CLIENT-011',
@@ -49,7 +50,7 @@ let files = [{
     id: 7, producao_id: 1, tipo: 'previa', nome_exibicao: '<script>preview</script>.mp3',
     mime_type: 'audio/mpeg', tamanho_bytes: 2048, sha256: 'a'.repeat(64),
     grupo_versao: 'preview-group', versao: 1, substitui_arquivo_id: null,
-    enviado_por_mim: false, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+    enviado_por_mim: false, observacao: 'Mix v1 <b>com voz guia</b>', created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
 }, {
     id: 8, producao_id: 1, tipo: 'material', nome_exibicao: 'voz.wav', mime_type: 'audio/wav',
     tamanho_bytes: 1024, sha256: 'b'.repeat(64), grupo_versao: 'material-group', versao: 1,
@@ -148,6 +149,7 @@ async function staticResponse(route) {
         }
         if (fileList && request.method() === 'POST') {
             uploads++;
+            lastUploadBody = request.postData() || '';
             if (slowUpload) await new Promise(resolve => setTimeout(resolve, 200));
             if (uploadFailure === 'network') return route.abort();
             if (uploadFailure) return route.fulfill({ status: uploadFailure, json: { detail: 'Falha controlada.' } });
@@ -282,6 +284,10 @@ async function staticResponse(route) {
             assert.ok(bounds.controls.every(item => item.left >= bounds.left - 1 && item.right <= bounds.right + 1), JSON.stringify({ width, bounds }));
             assert.equal(await page.locator('.producer-upload__filename').getAttribute('title'), longName);
         }
+        // Roadmap 5.02: version notes are shown as text and sent with the upload.
+        assert.match(await page.locator('.producer-file').first().textContent(), /Observação da equipe: Mix v1 <b>com voz guia<\/b>/);
+        assert.equal(await page.locator('.file-note b').count(), 0);
+        await page.getByLabel('Observação para esta versão').fill('Voz regravada no take 3');
         await page.getByLabel('Versão substituída').selectOption('8');
         slowUpload = true;
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
@@ -291,6 +297,7 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Nova versão enviada com sucesso'));
         slowUpload = false;
         assert.equal(uploads, 1);
+        assert.match(lastUploadBody, /name="observacao"[\s\S]*Voz regravada no take 3/);
         assert.match(await page.locator('.producer-file-list').last().textContent(), /nome-longo/);
         assert.match(await page.locator('.producer-file-list').last().textContent(), /Versão 2/);
         assert.equal(await page.locator('#client-alert').textContent(), '');

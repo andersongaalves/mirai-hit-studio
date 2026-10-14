@@ -39,11 +39,12 @@ export async function listarArquivos(producaoId) {
     );
 }
 
-export async function enviarArquivo(producaoId, arquivo, tipo, substituiId = null) {
+export async function enviarArquivo(producaoId, arquivo, tipo, substituiId = null, observacao = "") {
     const form = new FormData();
     form.append("arquivo", arquivo);
     form.append("tipo", tipo);
     if (substituiId) form.append("substitui_arquivo_id", String(substituiId));
+    if (observacao.trim()) form.append("observacao", observacao.trim());
     return responseData(
         await authFetch(`/portal/produtor/producoes/${producaoId}/arquivos`, {
             method: "POST",

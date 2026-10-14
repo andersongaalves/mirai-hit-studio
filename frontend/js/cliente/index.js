@@ -242,15 +242,15 @@ async function refreshFiles(production, setFeedback) {
     }
 }
 
-async function uploadFile(production, file, type, replacesId, form, setFeedback) {
+async function uploadFile(production, file, type, replacesId, form, setFeedback, note = "") {
     if (form.dataset.busy === "true") return;
     form.dataset.busy = "true";
-    form.querySelectorAll("input, select, button").forEach(control => { control.disabled = true; });
+    form.querySelectorAll("input, select, textarea, button").forEach(control => { control.disabled = true; });
     const submit = form.querySelector('button[type="submit"]');
     submit.textContent = "Enviando arquivo...";
     setFeedback("loading", "Enviando arquivo...");
     try {
-        await api.enviarArquivo(production.id, file, type, replacesId);
+        await api.enviarArquivo(production.id, file, type, replacesId, note);
         if (route().view !== "detail" || route().id !== production.id) return;
         uploadFeedback = {
             kind: "success",
@@ -263,7 +263,7 @@ async function uploadFile(production, file, type, replacesId, form, setFeedback)
         setFeedback("error", uploadFeedback.message);
     } finally {
         form.dataset.busy = "false";
-        form.querySelectorAll("input, select, button").forEach(control => { control.disabled = false; });
+        form.querySelectorAll("input, select, textarea, button").forEach(control => { control.disabled = false; });
         submit.textContent = "Enviar arquivo";
     }
 }

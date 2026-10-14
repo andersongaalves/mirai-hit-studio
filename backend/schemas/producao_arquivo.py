@@ -28,6 +28,7 @@ class ProducaoArquivoResponse(BaseModel):
     substitui_arquivo_id: int | None
     visivel_produtor: bool
     visivel_cliente: bool
+    observacao: str | None = None
     created_at: datetime
     updated_at: datetime
 

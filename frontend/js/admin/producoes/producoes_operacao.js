@@ -35,7 +35,7 @@ function saveBlob({ blob, filename }) {
     link.href = url;
     link.download = filename;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 function renderFiles() {
@@ -49,6 +49,7 @@ function renderFiles() {
             node("strong", "", file.nome_exibicao),
             node("span", "", `${file.tipo} · versão ${file.versao} · ${Math.ceil(file.tamanho_bytes / 1024)} KB`),
         );
+        if (file.observacao) info.append(node("p", "file-note", `Observação: ${file.observacao}`));
         const actions = node("div", "producao-arquivo-row__actions");
         const download = node("button", "btn-small", "Baixar");
         download.type = "button";
@@ -76,7 +77,10 @@ function renderFiles() {
 
     const replacement = byId("prod_arquivo_substitui");
     replacement.replaceChildren(new Option("Nova versão independente", ""));
-    files.forEach(file => replacement.append(new Option(`${file.nome_exibicao} (v${file.versao})`, String(file.id))));
+    // Only the newest version of each group can receive a new version.
+    const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
+    files.filter(file => !replaced.has(file.id))
+        .forEach(file => replacement.append(new Option(`${file.nome_exibicao} (v${file.versao})`, String(file.id))));
     const receipt = byId("prod_repasse_comprovante");
     receipt.replaceChildren(new Option("Sem comprovante", ""));
     files.filter(file => file.tipo === "comprovante").forEach(file => receipt.append(new Option(file.nome_exibicao, String(file.id))));
@@ -118,7 +122,13 @@ function bindActions() {
         form.append("visivel_cliente", String(byId("prod_arquivo_cliente").checked));
         const replacement = byId("prod_arquivo_substitui").value;
         if (replacement) form.append("substitui_arquivo_id", replacement);
-        run(byId("prod_arquivo_enviar"), () => API.enviarArquivo(productionId, form), "Arquivo enviado.");
+        const note = byId("prod_arquivo_observacao")?.value.trim();
+        if (note) form.append("observacao", note);
+        run(byId("prod_arquivo_enviar"), async () => {
+            await API.enviarArquivo(productionId, form);
+            // A note belongs to one version; never carry it over to the next upload.
+            if (byId("prod_arquivo_observacao")) byId("prod_arquivo_observacao").value = "";
+        }, "Arquivo enviado.");
     };
     byId("prod_repasse_salvar").onclick = () => {
         const amount = byId("prod_repasse_valor").value;

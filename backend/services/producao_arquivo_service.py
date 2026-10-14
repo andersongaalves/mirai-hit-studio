@@ -55,6 +55,26 @@ def _validate_upload(data, mime_type, file_type):
         raise ProducaoArquivoError("Tamanho de arquivo nao permitido.")
 
 
+MAX_NOTE_LENGTH = 1000
+
+
+def _normalize_note(note):
+    """Keep notes as plain single-paragraph-safe text; empty input means no note."""
+    if note is None:
+        return None
+    if not isinstance(note, str):
+        raise ProducaoArquivoError("Observacao invalida.")
+    cleaned = "".join(
+        character for character in note
+        if character in "\n\t" or (ord(character) >= 32 and ord(character) != 127)
+    ).strip()
+    if not cleaned:
+        return None
+    if len(cleaned) > MAX_NOTE_LENGTH:
+        raise ProducaoArquivoError(f"A observacao deve ter ate {MAX_NOTE_LENGTH} caracteres.")
+    return cleaned
+
+
 def _version(db, production_id, file_type, replaces_id, replacement_actor_id=None):
     if replaces_id is None:
         return str(uuid4()), 1, None
@@ -94,8 +114,10 @@ def upload(
     replacement_actor_id: int | None = None,
     storage=None,
     request_id=None,
+    note: str | None = None,
 ):
     _validate_upload(data, mime_type, file_type)
+    note = _normalize_note(note)
     if file_type == "comprovante" and visible_to_client:
         raise ProducaoArquivoError("Comprovantes de repasse nao podem ser visiveis ao cliente.")
     group_id, version, previous = _version(
@@ -125,6 +147,7 @@ def upload(
         substitui_arquivo_id=previous.id if previous else None,
         visivel_produtor=visible_to_producer,
         visivel_cliente=visible_to_client,
+        observacao=note,
     )
     try:
         db.add(model)
