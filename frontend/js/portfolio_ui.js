@@ -11,7 +11,7 @@ const CASE_TYPE_LABELS = {
     client_case: "Case de cliente",
     demo: "Demo",
     concept_project: "Concept Project",
-    study: "Study",
+    study: "Estudo",
 };
 
 export function isPublicProject(project) {
@@ -186,7 +186,7 @@ export function renderizarFiltros(projects, filters, onChange, segmentLabels = {
         ...segments.map(value => ({ value, label: segmentLabels[value] || value.replaceAll("_", " ") })),
     ], filters.segment, onChange));
     container.append(createSelectFilter("Classificação", "case_type", [
-        { value: "", label: "Todos · Demo · Concept Project · Study" },
+        { value: "", label: "Todos · Demo · Concept Project · Estudo" },
         ...Object.entries(CASE_TYPE_LABELS).map(([value, label]) => ({ value, label })),
     ], filters.case_type, onChange));
 }

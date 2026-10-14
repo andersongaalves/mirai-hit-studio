@@ -39,7 +39,7 @@ async function staticResponse(route) {
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === "event" && item[1] === "view_vertical"));
         assert.match(await page.locator("h1").textContent(), /design sonoro para mídia e games/i);
         assert.equal(await page.locator(".media-capabilities article").count(), 7);
-        assert.match(await page.locator("main").textContent(), /Demo, Concept Project e Study/);
+        assert.match(await page.locator("main").textContent(), /Demo, Concept Project e Estudo/);
         assert.equal(await page.getByText(/grandes estúdios|clientes como|trabalhamos com/i).count(), 0);
         const event = await page.evaluate(() => window.dataLayer.find(item => item[0] === "event" && item[1] === "view_vertical"));
         assert.deepEqual(event[2], { vertical: "media_games" });
