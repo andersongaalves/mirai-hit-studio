@@ -3,6 +3,13 @@
 - Data: 14/10/2026, consulta somente leitura ao PostgreSQL de producao (Supabase,
   PostgreSQL 17.6), autorizada pelo responsavel.
 - Revisao Alembic em producao: `c5f2a7d9e184`.
+- **Aplicada em producao em 14/10/2026 ~07:48 (BRT)** junto com a 5.02: Alembic
+  `c5f2a7d9e184` -> `a7d3e5f9c210` -> `d8a7b1c9e240`. Resultado conferido: orcamentos
+  234, 237, 239, 240 -> teste; 238 (Yonda) real; clientes 90-93 e contas 45-47 -> teste;
+  5 pagamentos, soma R$ 126,50, inalterados.
+- Incidente: o release publicou o backend ~3 min antes das migrations (o release
+  protegido nao migra o banco). Nenhuma requisicao de usuario atingiu rotas afetadas
+  nesse intervalo, segundo os logs do Render.
 - Decisao do responsavel: **por enquanto, marcar como teste basta**. A remocao fisica
   (DB-08) fica fora de escopo. A classificacao e feita pela migration `d8a7b1c9e240` do
   PR #26.
