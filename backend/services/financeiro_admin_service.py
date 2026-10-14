@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from core.config import settings
 from models.cliente import ClienteModel
+from models.orcamento import OrcamentoModel
 from models.enums.financeiro import CobrancaStatus, PagamentoStatus
 from models.financeiro import CobrancaModel, PagamentoModel
 from models.proposta import PropostaModel
@@ -65,18 +66,32 @@ def _reconciliation_status(cobranca: CobrancaModel) -> str | None:
     return None
 
 
-def resumo(db: Session):
+def _filtro_ambiente(ambiente: str):
+    test_budget = (OrcamentoModel.is_test.is_(True) |
+                   OrcamentoModel.cliente.has(ClienteModel.is_test.is_(True)))
+    test_charge = CobrancaModel.proposta.has(PropostaModel.orcamento.has(test_budget))
+    if ambiente == 'real':
+        return ~test_charge
+    if ambiente == 'teste':
+        return test_charge
+    return None
+
+
+def resumo(db: Session, *, ambiente: str = 'real'):
     paid = _paid_subquery()
+    ambiente_filter = _filtro_ambiente(ambiente)
     saldo = CobrancaModel.valor_total - func.coalesce(paid.c.valor_pago, 0)
     valor_a_receber = db.scalar(
         select(func.coalesce(func.sum(saldo), 0))
         .select_from(CobrancaModel)
         .outerjoin(paid, paid.c.cobranca_id == CobrancaModel.id)
         .where(CobrancaModel.status != CobrancaStatus.CANCELADA.value)
+        .where(ambiente_filter if ambiente_filter is not None else True)
     )
     valor_recebido = db.scalar(
         select(func.coalesce(func.sum(PagamentoModel.valor), 0)).where(
-            PagamentoModel.status == PagamentoStatus.APROVADO.value
+            PagamentoModel.status == PagamentoStatus.APROVADO.value,
+            PagamentoModel.cobranca.has(ambiente_filter) if ambiente_filter is not None else True,
         )
     )
     return {
@@ -84,15 +99,17 @@ def resumo(db: Session):
         "valor_recebido": _money(valor_recebido),
         "cobrancas_parciais": db.scalar(
             select(func.count()).select_from(CobrancaModel).where(
-                CobrancaModel.status == CobrancaStatus.PARCIALMENTE_PAGA.value
+                CobrancaModel.status == CobrancaStatus.PARCIALMENTE_PAGA.value,
+                ambiente_filter if ambiente_filter is not None else True,
             )
         ) or 0,
         "pagamentos_em_atencao": db.scalar(
             select(func.count()).select_from(PagamentoModel).where(
-                PagamentoModel.reconciliation_status.isnot(None)
+                PagamentoModel.reconciliation_status.isnot(None),
+                PagamentoModel.cobranca.has(ambiente_filter) if ambiente_filter is not None else True,
             )
         ) or 0,
-        "total_cobrancas": db.scalar(select(func.count()).select_from(CobrancaModel)) or 0,
+        "total_cobrancas": db.scalar(select(func.count()).select_from(CobrancaModel).where(ambiente_filter if ambiente_filter is not None else True)) or 0,
     }
 
 
@@ -161,6 +178,7 @@ def listar(
     *,
     page: int,
     page_size: int,
+    ambiente: str = 'real',
     search: str | None = None,
     status: str | None = None,
     reconciliation_status: str | None = None,
@@ -168,7 +186,7 @@ def listar(
     date_to: datetime | None = None,
 ):
     query = _filters(
-        _base_query(),
+        _base_query().where(_filtro_ambiente(ambiente) if _filtro_ambiente(ambiente) is not None else True),
         search=search,
         status=status,
         reconciliation_status=reconciliation_status,
