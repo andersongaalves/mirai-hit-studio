@@ -10,6 +10,8 @@ let failList = false;
 let failPayouts = false;
 let lastUploadBody = '';
 let portalSettings = null;
+const threadPosts = [];
+let threadFails = true;
 let uploads = 0;
 let productions = [
     {
@@ -96,6 +98,15 @@ async function staticResponse(route) {
         const user = { id: 2, username: 'producer-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true };
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'synthetic-producer-token', user } });
         if (url.pathname === '/auth/me') return route.fulfill({ json: user });
+        const thread = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)\/mensagens$/);
+        if (thread && request.method() === 'GET') {
+            if (threadFails) return route.fulfill({ status: 503, json: { detail: 'indisponível' } });
+            return route.fulfill({ json: threadPosts.map((body, index) => ({ id: index + 1, producao_id: 1, autor_papel: 'produtor', enviado_por_mim: true, audiencia: body.audiencia, texto: body.texto, responde_a_id: null, arquivo: null, created_at: new Date().toISOString() })) });
+        }
+        if (thread && request.method() === 'POST') {
+            threadPosts.push(request.postDataJSON());
+            return route.fulfill({ status: 201, json: {} });
+        }
         if (url.pathname === '/portal/produtor/configuracao') {
             return route.fulfill(portalSettings ? { json: { portal: 'produtor', versao: 2, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
         }
@@ -181,6 +192,17 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Não compartilhada com o cliente/);
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Sua observação: Primeira ideia <i>sem master<\/i>/);
         assert.equal(await page.locator('.file-note i').count(), 0);
+        // Roadmap 5.03: a thread failure never blocks the production; producers can post internal notes.
+        await page.waitForFunction(() => document.querySelector('.production-messages__error')?.textContent.includes('mensagens'));
+        threadFails = false;
+        await page.getByLabel('Quem pode ver').selectOption('equipe');
+        await page.getByLabel('Anexar referência a um arquivo').selectOption('9');
+        await page.getByLabel('Escreva uma mensagem').fill('Nota interna para a equipe');
+        await page.getByRole('button', { name: 'Enviar mensagem' }).click();
+        await page.waitForFunction(() => document.querySelector('.production-message--team'));
+        assert.deepEqual(threadPosts[0], { texto: 'Nota interna para a equipe', audiencia: 'equipe', responde_a_id: null, arquivo_id: 9 });
+        assert.match(await page.locator('.production-message--team').textContent(), /Interna/);
+
         await page.getByLabel('Observação para esta versão').fill('Mix com graves reduzidos');
         await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'preview.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('preview') });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();

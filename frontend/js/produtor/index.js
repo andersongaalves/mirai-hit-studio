@@ -1,5 +1,6 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
+import { messagesPanel } from "../modules/production_messages.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -21,6 +22,30 @@ function navigate(path) {
     renderRoute();
 }
 
+// Roadmap 5.03: the thread loads after the detail so its failure never blocks the production.
+async function loadMessages(production, files) {
+    const slot = document.getElementById("production-messages-slot");
+    if (!slot) return;
+    let messages = [];
+    let error = "";
+    try {
+        messages = await api.listarMensagens(production.id);
+    } catch {
+        error = "Não foi possível carregar as mensagens agora.";
+    }
+    if (route().view !== "detail" || route().id !== production.id) return;
+    slot.replaceChildren(messagesPanel({
+        role: "produtor",
+        messages,
+        files,
+        error,
+        onSend: async payload => {
+            await api.enviarMensagem(production.id, payload);
+            await loadMessages(production, files);
+        },
+    }));
+}
+
 async function openDetail(id) {
     setAlert();
     try {
@@ -35,6 +60,7 @@ async function openDetail(id) {
             onDownload: downloadFile,
         });
         showView("detail");
+        loadMessages(production, files);
     } catch (error) {
         setAlert(error.message, true);
         navigate("/produtor/producoes");
@@ -75,6 +101,7 @@ async function updateStatus(id, status, button) {
                 onUpload: uploadFile,
                 onDownload: downloadFile,
             });
+            loadMessages(updated, files);
             setAlert("Andamento atualizado.");
         } else {
             button.disabled = false;

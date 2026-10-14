@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["b4e6f8a1c302"], heads
+                  assert heads == ["c9d2e4f6a813"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -182,7 +182,8 @@ jobs:
                     test_ambiente_testes.py \
                     test_mercado_pago_webhooks.py \
                     test_http_cors_contract.py \
-                    test_portal_config.py; do
+                    test_portal_config.py \
+                    test_producao_mensagens.py; do
                       python -m unittest discover -s tests -p "$pattern" -v
                   done
 
@@ -331,7 +332,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic b4e6f8a1c302: passed"
+                    echo "- PostgreSQL 17 and Alembic c9d2e4f6a813: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

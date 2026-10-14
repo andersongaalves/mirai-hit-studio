@@ -240,7 +240,9 @@ export function renderDetail(production, files, handlers) {
         actions.append(button);
         detail.append(actions);
     }
-    detail.append(filesPanel(production, files, handlers));
+    const messagesSlot = element("div");
+    messagesSlot.id = "production-messages-slot";
+    detail.append(filesPanel(production, files, handlers), messagesSlot);
     root.append(detail);
 }
 

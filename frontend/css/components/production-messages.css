@@ -1,0 +1,21 @@
+/* Roadmap 3.0, 5.03: production message thread (client, producer and admin). */
+.production-messages { display: grid; gap: var(--space-3); min-width: 0; margin-top: var(--space-5); }
+.production-messages__list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; max-height: 420px; overflow-y: auto; }
+.production-messages__empty, .production-messages__error, .production-messages__feedback { margin: 0; color: var(--color-text-secondary); }
+.production-messages__error { color: var(--color-danger); }
+.production-message { display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-3); border: var(--border-subtle); border-radius: var(--radius-sm); background: var(--color-surface); }
+.production-message--mine { border-color: rgba(0, 213, 237, 0.45); }
+.production-message--team { border-style: dashed; }
+.production-message__meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); margin: 0; font-size: 0.85rem; color: var(--color-text-secondary); }
+.production-message__meta strong { color: var(--color-text-primary); }
+.production-message__badge { padding: 0 var(--space-2); border: 1px solid currentColor; border-radius: 999px; font-size: 0.75rem; }
+.production-message__quote { margin: 0; padding-left: var(--space-2); border-left: 2px solid var(--color-accent); color: var(--color-text-secondary); font-size: 0.85rem; overflow-wrap: anywhere; }
+.production-message__text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.production-message__file { margin: 0; font-size: 0.85rem; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.production-message__reply { justify-self: start; min-height: 32px; padding: 0 var(--space-3); font-size: 0.8rem; }
+.production-messages__form { display: grid; gap: var(--space-2); min-width: 0; }
+.production-messages__input, .production-messages__controls select { min-width: 0; min-height: 44px; padding: var(--space-2); border: var(--border-subtle); border-radius: var(--radius-sm); color: var(--color-text-primary); background: var(--color-background); font: inherit; }
+.production-messages__input { resize: vertical; }
+.production-messages__controls { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.production-messages__controls select { flex: 1 1 180px; }
+.production-messages__replying { margin: 0; color: var(--color-text-secondary); overflow-wrap: anywhere; }

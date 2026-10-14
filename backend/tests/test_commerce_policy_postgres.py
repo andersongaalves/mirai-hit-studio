@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 DATABASE_URL = os.getenv("MIRAI_PORTALS_E2E_DATABASE_URL", "")
 ACK = os.getenv("MIRAI_PORTALS_E2E_ALLOW", "")
 PREVIOUS_REVISION = "b3e6f9a2c741"
-HEAD_REVISION = "b4e6f8a1c302"
+HEAD_REVISION = "c9d2e4f6a813"
 IDS = (935001, 935002)
 
 

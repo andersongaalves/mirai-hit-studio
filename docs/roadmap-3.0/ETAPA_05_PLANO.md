@@ -48,3 +48,21 @@ protegido.
 
 **Publicacao:** aplicar a migration `b4e6f8a1c302` no banco **antes** do release protegido
 (o release nao migra o banco).
+
+## 5.03 - Mensagens por producao
+
+- Tabela `producao_mensagens` (migration `c9d2e4f6a813`): mensagens imutaveis por
+  producao, com papel do autor, audiencia, resposta opcional e vinculo opcional a arquivo.
+- Audiencia: `todos` (cliente, produtor e equipe) ou `equipe` (nota interna, so produtor
+  e admin). O cliente sempre escreve para `todos` e nunca ve notas internas (regra no
+  servidor e constraint no banco).
+- Respostas e arquivos so podem apontar para itens da mesma producao que o autor ja ve.
+  Uma mensagem para `todos` nao pode citar arquivo oculto ao cliente; se um arquivo for
+  ocultado depois, o vinculo some da visao do cliente.
+- Ownership igual aos arquivos: cliente pelo orcamento, produtor pela producao atribuida,
+  admin em todas. Limite de 20 mensagens por minuto por autor (429).
+- UI: painel de mensagens nos detalhes do Portal do Cliente, do Portal do Produtor e no
+  modal de producao do Admin; carregado depois do detalhe, sem bloquear a tela.
+- Notificacoes por e-mail ficam para a integracao INT-10 (S11).
+
+**Publicacao:** aplicar `b4e6f8a1c302` e `c9d2e4f6a813` no banco antes do release.
