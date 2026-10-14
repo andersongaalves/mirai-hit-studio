@@ -64,7 +64,8 @@ class ProducaoEtapaModel(Base):
     prazo = Column(DateTime(timezone=True), nullable=True)
     responsavel_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
     # 5.07: who was responsible when the stage was concluded; kept across reassignments.
-    executor_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    # Historical record without a foreign key, so it is never lost (like servico_id).
+    executor_usuario_id = Column(Integer, nullable=True)
     iniciada_em = Column(DateTime(timezone=True), nullable=True)
     concluida_em = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
