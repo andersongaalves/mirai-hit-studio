@@ -28,6 +28,7 @@ const root = path.resolve(__dirname, '..');
                 calls.push({ method: req.method(), path: url.pathname, body: req.postDataJSON() });
                 // 5.05: the Itens tab loads the service catalog; this suite does not exercise it.
                 if (url.pathname === '/servicos' && req.method() === 'GET') return route.fulfill({ json: [] });
+                if (url.pathname === '/combos' && req.method() === 'GET') return route.fulfill({ json: [] });
                 // Etapa 01 classification panel (drift fixed in 5.05: the mock predated it).
                 const classification = url.pathname.match(/^\/propostas\/(\d+)\/classificacao$/);
                 if (classification && req.method() === 'GET') {

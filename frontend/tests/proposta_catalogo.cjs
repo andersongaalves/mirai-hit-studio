@@ -1,4 +1,4 @@
-// Roadmap 3.0, 5.05: catalog services in the proposal editor and the frozen snapshot view.
+// Roadmap 3.0, 5.05/5.08: catalog services and combos in the proposal editor and the frozen snapshot view.
 // Browser-only integration. Every request is fulfilled locally; no backend is contacted.
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
@@ -12,6 +12,29 @@ const SERVICES = [
     { id: 2, nome: '<b>Master</b>', subtitulo: '', valor_base: 300, categoria: 'Master', aplica_desconto: false,
       parametros: '', estrutura_servico: '{}' },
 ];
+
+// 5.08: one active combo and one inactive combo (never offered for new lines).
+const COMBOS = [
+    { id: 5, nome: 'Combo <i>Mix</i>+Master', descricao: '', preco_base: '1200.00', ativo: true, soma_servicos: '1300.50',
+      servicos: [{ servico_id: 1, nome: 'Plano Start', valor_base: '1000.00', etapas: 4 }, { servico_id: 2, nome: '<b>Master</b>', valor_base: '300.50', etapas: 1 }] },
+    { id: 6, nome: 'Combo antigo', descricao: '', preco_base: '900.00', ativo: false, soma_servicos: '1000.00', servicos: [] },
+];
+
+const COMBO_SNAPSHOT_ITEM = {
+    indice: 3, descricao: 'Combo Mix+Master', servico_id: null, servico_nome: null, preco_catalogo: '1200.00',
+    catalogo_disponivel: true, quantidade: '1', valor_unitario: '1000.00', bruto: '1000.00', desconto: '0.00',
+    valor_contratado: '1000.00', combo_id: 5, combo_nome: 'Combo Mix+Master',
+    componentes: [
+        { indice: 1, servico_id: 1, servico_nome: 'Plano Start', preco_catalogo: '1000.00', valor_alocado: '769.05' },
+        { indice: 2, servico_id: 2, servico_nome: 'Master', preco_catalogo: '300.50', valor_alocado: '230.95' },
+    ],
+    etapas: [
+        { ordem: 1, nome: 'Mixagem', peso_percentual: '100.00', valor: '769.05', prazo_dias: 3, unidade: 'faixa',
+          revisoes_incluidas: null, depende_da_anterior: false, administrativa: false, servico_id: 1, servico_nome: 'Plano Start', componente_indice: 1 },
+        { ordem: 2, nome: 'Master final', peso_percentual: '100.00', valor: '230.95', prazo_dias: 2, unidade: 'faixa',
+          revisoes_incluidas: null, depende_da_anterior: false, administrativa: false, servico_id: 2, servico_nome: 'Master', componente_indice: 2 },
+    ],
+};
 
 const SNAPSHOT = {
     versao_snapshot: 1, proposta_versao: 3, moeda: 'BRL', origem: 'envio',
@@ -55,6 +78,10 @@ const SNAPSHOT = {
             const req = route.request();
             const url = new URL(req.url());
             if (url.origin === 'http://localhost:8000') {
+                if (url.pathname === '/combos' && req.method() === 'GET') {
+                    if (failCatalog) return route.fulfill({ status: 503, json: { detail: 'indisponivel' } });
+                    return route.fulfill({ json: COMBOS });
+                }
                 if (url.pathname === '/servicos' && req.method() === 'GET') {
                     catalogRequests += 1;
                     if (failCatalog) return route.fulfill({ status: 503, json: { detail: 'indisponivel' } });
@@ -114,14 +141,18 @@ const SNAPSHOT = {
         await boot();
         await open();
         await tab('Itens');
-        await page.waitForFunction(() => document.querySelectorAll('#proposta-catalogo-servico option').length === 3);
+        // Placeholder + 2 services + 1 active combo (the inactive one is never offered).
+        await page.waitForFunction(() => document.querySelectorAll('#proposta-catalogo-servico option').length === 4);
+        assert.deepEqual(await select.locator('optgroup').evaluateAll(groups => groups.map(group => group.label)), ['Serviços', 'Combos']);
+        assert.deepEqual(await select.locator('optgroup[label="Combos"] option').allTextContents(), ['Combo <i>Mix</i>+Master — R$\u00a01.200,00']);
+        assert.equal(await page.locator('#proposta-catalogo-servico i').count(), 0);
         assert.equal(await select.isDisabled(), false);
         assert.equal(await page.locator('#btn-add-proposta-catalogo').isDisabled(), true);
         // Service names are text, never markup.
         assert.match(await select.locator('option').nth(2).textContent(), /<b>Master<\/b>/);
         assert.equal(await page.locator('#proposta-catalogo-servico b').count(), 0);
 
-        await select.selectOption('1');
+        await select.selectOption('s:1');
         await page.locator('#btn-add-proposta-catalogo').click();
         assert.equal(await rows.count(), 2);
         const catalogRow = rows.nth(1);
@@ -146,6 +177,25 @@ const SNAPSHOT = {
         assert.equal(Object.hasOwn(first.itens[0], 'servico_id'), false);
         assert.deepEqual(first.itens[1], { descricao: 'Plano Start', quantidade: 1, valor_unitario: '800', desconto: 0, servico_id: 1 });
 
+        // 5.08: a combo line starts at the reference price and carries combo_id (never servico_id).
+        await tab('Itens');
+        await page.waitForFunction(() => document.querySelectorAll('#proposta-catalogo-servico option').length === 4);
+        await select.selectOption('c:5');
+        await page.locator('#btn-add-proposta-catalogo').click();
+        const comboRow = rows.nth(2);
+        assert.equal(await comboRow.locator('[data-campo="valor_unitario"]').inputValue(), '1200');
+        assert.match(await comboRow.locator('[data-origem]').textContent(), /Combo: Combo <i>Mix<\/i>\+Master · preço de referência R\$\s1\.200,00 · Plano Start \+ <b>Master<\/b>/);
+        assert.equal(await comboRow.locator('i, b').count(), 0);
+        await comboRow.locator('[data-campo="valor_unitario"]').fill('1000');
+        assert.equal(await comboRow.locator('.proposta-item-origem__tag').textContent(), 'Preço negociado');
+        await save();
+        assert.deepEqual(patches.at(-1).itens[2], { descricao: 'Combo <i>Mix</i>+Master', quantidade: 1, valor_unitario: '1000', desconto: 0, combo_id: 5 });
+        await tab('Itens');
+        await page.waitForFunction(() => document.querySelectorAll('.proposta-item-row [data-desvincular]').length === 2);
+        await rows.nth(2).getByRole('button', { name: 'Desvincular' }).click();
+        await save();
+        assert.equal(Object.hasOwn(patches.at(-1).itens[2], 'combo_id'), false);
+
         // Unlinking keeps the line as a free item.
         await tab('Itens');
         await page.waitForFunction(() => document.querySelectorAll('.proposta-item-row [data-desvincular]').length === 1);
@@ -157,7 +207,7 @@ const SNAPSHOT = {
 
         // Sent proposal: frozen snapshot is shown read-only and the catalog picker is locked.
         proposal.status = 'enviada';
-        proposal.snapshot_economico = SNAPSHOT;
+        proposal.snapshot_economico = { ...SNAPSHOT, total: '1850.00', itens: [...SNAPSHOT.itens, COMBO_SNAPSHOT_ITEM] };
         proposal.itens = [{ descricao: 'Plano Start', quantidade: '1', valor_unitario: '1000.00', desconto: '200.00', servico_id: 1 },
             { descricao: 'Taxa avulsa', quantidade: '1', valor_unitario: '50.00', desconto: '0.00', servico_id: null }];
         await page.evaluate(() => window.fecharEditorProposta());
@@ -173,6 +223,10 @@ const SNAPSHOT = {
         assert.match(text, /Briefing \(administrativa\)/);
         assert.match(text, /Item avulso, sem etapas de catálogo/);
         assert.match(text, /não mudam estes valores/);
+        // 5.08: combo shows each service share and its stages.
+        assert.match(text, /Combo Mix\+Master.*contratado R\$\s1\.000,00.*Combo: Combo Mix\+Master · preço de referência R\$\s1\.200,00/s);
+        assert.match(text, /Plano Start — R\$\s769,05.*catálogo R\$\s1\.000,00.*Mixagem\s*100,00%\s*R\$\s769,05/s);
+        assert.match(text, /Master — R\$\s230,95.*Master final\s*100,00%\s*R\$\s230,95/s);
         await page.waitForFunction(() => !document.querySelector('#proposta-catalogo-servico option')?.textContent.includes('Carregando'));
         assert.equal(await select.isDisabled(), true);
         assert.equal(await page.locator('[data-desvincular]').isDisabled(), true);
@@ -197,7 +251,7 @@ const SNAPSHOT = {
         assert.equal(await page.locator('#proposta-snapshot').count(), 0);
 
         console.log('unmocked:', [...new Set(unexpected)].join(', ') || 'none');
-        assert.ok(unexpected.every(call => !call.includes('/propostas') && !call.includes('/servicos')), unexpected.join(', '));
+        assert.ok(unexpected.every(call => !call.includes('/propostas') && !call.includes('/servicos') && !call.includes('/combos')), unexpected.join(', '));
         assert.deepEqual(errors, []);
         console.log('PASS: catalog picker, base price, negotiated flag, payload origin, unlink, single catalog load, frozen snapshot view, narrow layout and catalog failure.');
     } finally { await browser.close(); }

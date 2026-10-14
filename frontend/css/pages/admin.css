@@ -1781,3 +1781,5 @@
 .combo-form__servicos { display: grid; gap: var(--space-2); min-width: 0; margin: 0; padding: var(--space-3); border: var(--border-subtle); border-radius: var(--radius-sm); }
 .combo-form__servico, .combo-form__check { display: flex; align-items: baseline; gap: var(--space-2); overflow-wrap: anywhere; }
 .combo-form__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.proposta-snapshot__componente { display: grid; gap: var(--space-1); min-width: 0; padding-left: var(--space-3); border-left: 2px solid var(--color-accent); }
+.proposta-snapshot__componente p { margin: 0; overflow-wrap: anywhere; }
