@@ -112,7 +112,11 @@ publico de cada visitante, entao o limite nao agrupa todos os usuarios.
 - Arquivo: `frontend/js/config.js` (`deploy-preview-19--miraihitstudio.netlify.app` ->
   `PROD_API`).
 - Impacto: cadastros e pagamentos de teste entram no banco real, exatamente o tipo de
-  registro que a Etapa 01 precisa classificar. O PR #20 (rascunho) trata isso.
+  registro que a Etapa 01 precisa classificar.
+- Correcao (PR #33): somente `miraihitstudio.com.br`, `www` e `mirai-hit-studio.pages.dev`
+  usam a API de producao; localhost usa a API local; qualquer outro host recebe um endereco
+  `.invalid` que nunca resolve. O PR #20 foi fechado. Teste: cenario de preview em
+  `frontend/tests/checkout.cjs`.
 
 ### AUD-S05-001 - Visibilidade de previas
 - `portal_produtor.enviar_arquivo` grava `visible_to_client=False`; o cliente so ve a
