@@ -23,6 +23,14 @@ class PropostaItem(Contract):
     valor_unitario: Money  # Negotiated price; may differ from the catalog base price.
     desconto: Money = Decimal("0")  # Absolute discount per line, as in the editor.
     servico_id: PositiveId | None = None  # Roadmap 3.0, 5.05: optional catalog origin.
+    combo_id: PositiveId | None = None  # Roadmap 3.0, 5.08: or a catalog combo (never both).
+
+    @field_validator("combo_id")
+    @classmethod
+    def service_or_combo(cls, value, info):
+        if value is not None and info.data.get("servico_id") is not None:
+            raise ValueError("servico_ou_combo")
+        return value
 
 
 class PropostaPagamento(Contract):
@@ -62,6 +70,19 @@ class SnapshotEtapa(Contract):
     revisoes_incluidas: int | None
     depende_da_anterior: bool
     administrativa: bool
+    # 5.08: stage origin inside a combo (absent for single-service items).
+    servico_id: int | None = None
+    servico_nome: str | None = None
+    componente_indice: int | None = None
+
+
+class SnapshotComponente(Contract):
+    """5.08: share of a combo allocated to one component service."""
+    indice: int = Field(ge=1)
+    servico_id: int
+    servico_nome: str
+    preco_catalogo: Decimal
+    valor_alocado: Decimal
 
 
 class SnapshotItem(Contract):
@@ -77,6 +98,9 @@ class SnapshotItem(Contract):
     desconto: Decimal
     valor_contratado: Decimal
     etapas: list[SnapshotEtapa]
+    combo_id: int | None = None
+    combo_nome: str | None = None
+    componentes: list[SnapshotComponente] = []
 
 
 class SnapshotEconomico(Contract):

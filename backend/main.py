@@ -25,6 +25,7 @@ from routers.portal_produtor import router as portal_produtor_router
 from routers.producao import router as producao_router
 from routers.producao_mensagens import router as producao_mensagens_router
 from routers.producao_etapas import router as producao_etapas_router
+from routers.combos import router as combos_router
 from routers.projetos import router as projetos_router
 from routers.propostas import router as propostas_router
 from routers.servicos import router as servicos_router
@@ -91,6 +92,7 @@ app.include_router(portal_operacao_admin_router)
 app.include_router(portal_config_router)
 app.include_router(producao_mensagens_router)
 app.include_router(producao_etapas_router)
+app.include_router(combos_router)
 
 
 @app.get("/")

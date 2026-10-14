@@ -18,3 +18,4 @@ from .portal_config import PortalConfiguracaoModel
 from .producao_mensagem import ProducaoMensagemModel
 from .servico_etapa import ServicoEtapaModel
 from .producao_etapa import ProducaoEtapaAtribuicaoModel, ProducaoEtapaModel
+from .combo import ComboItemModel, ComboModel
