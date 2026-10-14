@@ -27,9 +27,9 @@ As fases 5.04 a 5.13 seguem os portoes de dependencia do roadmap
 
 ### Ordem das migrations
 
-Cadeia final: `c5f2a7d9e184` -> `a7d3e5f9c210` (5.02, observacoes) -> `d8a7b1c9e240`
-(Etapa 01, classificacao de testes). As duas sao aplicadas juntas no proximo release
-protegido.
+Cadeia: `c5f2a7d9e184` -> `a7d3e5f9c210` (5.02, observacoes) -> `d8a7b1c9e240`
+(Etapa 01, classificacao de testes) -> `b4e6f8a1c302` (5.01) -> `c9d2e4f6a813` (5.03) ->
+`d3f5a7b9c124` (5.04). Todas aplicadas em producao em 14/10/2026 (ver registro abaixo).
 
 ## 5.01 - Configuracoes basicas dos portais
 
@@ -82,3 +82,24 @@ protegido.
 - Admin: secao "Etapas e pesos" no editor de servicos, com total em tempo real.
 
 **Publicacao:** aplicar `b4e6f8a1c302`, `c9d2e4f6a813` e `d3f5a7b9c124` antes do release.
+
+## Registro de publicacao (14/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| Fases publicadas | 5.01, 5.03, 5.04 e a correcao AUD-S12-004 (PR #33) |
+| PRs na `main` | #33, #32, #34, #35, #36 (nessa ordem) |
+| Commit publicado | `4cbc10b207936765447f6f233c7dee969252c3b0` |
+| Migrations | `b4e6f8a1c302`, `c9d2e4f6a813`, `d3f5a7b9c124`, aplicadas em uma transacao pelo SQL Editor do Supabase antes do release (~08:45 BRT) |
+| Storage Integration Gate | run `38557322609` (sucesso) |
+| Storage Provider Rollout Evidence | run `38560110202` (sucesso) |
+| Protected Production Release | run `38561548878`, modo `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261014-R3-501-504` |
+
+Verificacao pos-migration: `alembic_version = d3f5a7b9c124`; tres tabelas novas vazias, 3
+indices e 22 constraints; dados existentes inalterados (7 servicos, 19 projetos, 4 producoes,
+7 arquivos, 8 usuarios, 5 orcamentos, 5 pagamentos). O frontend oficial ja serve o novo
+`config.js` (previews fora dos dominios oficiais nao chamam a API de producao).
+
+Licao aplicada do incidente da publicacao anterior: o release protegido nao migra o banco,
+entao as migrations foram aplicadas e verificadas antes de disparar o release.
