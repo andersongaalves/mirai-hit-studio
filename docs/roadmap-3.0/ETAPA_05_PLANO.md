@@ -173,3 +173,15 @@ entao as migrations foram aplicadas e verificadas antes de disparar o release.
   contrato tem etapas.
 
 **Publicacao:** aplicar `f7b9d1e3a568` antes do release (tabela nova, sem alterar dados).
+
+### Publicacao da 5.06 (14/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #39 (teste instavel + registro da 5.05) e #40 (5.06) |
+| Commit publicado | `d5082e338e9e489b728c03d4babb7cad194a838b` |
+| Migration | `f7b9d1e3a568`, aplicada pelo responsavel no SQL Editor do Supabase antes do release; conferida (tabela vazia, 11 constraints, indice; dados existentes inalterados) |
+| CI da `main` | Storage Integration Gate `38595088397`, Portals E2E e Client access migration verdes |
+| Storage Provider Rollout Evidence | run `38595988568` (sucesso) |
+| Protected Production Release | run `38596390562`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261014-R3-506` |
