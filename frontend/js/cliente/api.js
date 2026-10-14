@@ -114,3 +114,10 @@ export async function baixarArquivo(id) {
     const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
     return { blob, filename: encoded ? decodeURIComponent(encoded) : "arquivo" };
 }
+
+export async function obterConfiguracao() {
+    return responseData(
+        await authFetch("/portal/cliente/configuracao"),
+        "Não foi possível carregar as preferências do portal.",
+    );
+}

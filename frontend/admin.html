@@ -388,6 +388,31 @@
                         <div class="integrado-admin__config-tabs" role="tablist" aria-label="Configurações">
                             <button type="button" role="tab" id="admin-config-segments-tab" aria-controls="admin-config-segments" aria-selected="true">Segmentos</button>
                             <button type="button" role="tab" id="admin-config-pricing-tab" aria-controls="admin-config-pricing" aria-selected="false">Preços e descontos</button>
+                            <button type="button" role="tab" id="admin-config-portals-tab" aria-controls="admin-config-portals" aria-selected="false">Portais</button>
+                        </div>
+                        <div id="admin-config-portals" role="tabpanel" aria-labelledby="admin-config-portals-tab" hidden>
+                            <section class="portal-settings" aria-labelledby="portal-settings-title">
+                                <div class="portal-settings__header">
+                                    <div>
+                                        <h2 id="portal-settings-title">Configurações dos portais</h2>
+                                        <p>Textos, aviso, indicadores e filtros iniciais do Portal do Cliente e do Portal do Produtor. Cada publicação gera uma nova versão; autenticação, permissões e valores financeiros não são configuráveis aqui.</p>
+                                    </div>
+                                    <label>Portal
+                                        <select id="portal-settings-portal">
+                                            <option value="cliente">Portal do Cliente</option>
+                                            <option value="produtor">Portal do Produtor</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <p id="portal-settings-version" class="admin-help" aria-live="polite"></p>
+                                <form id="portal-settings-form" class="portal-settings__form" novalidate></form>
+                                <div class="portal-settings__actions">
+                                    <button id="portal-settings-defaults" type="button" class="btn-outline">Usar valores padrão</button>
+                                    <button id="portal-settings-publish" type="button" class="btn-cta">Publicar nova versão</button>
+                                </div>
+                                <h3>Histórico de versões</h3>
+                                <ul id="portal-settings-versions" class="portal-settings__versions"></ul>
+                            </section>
                         </div>
                         <div id="admin-config-segments" role="tabpanel" aria-labelledby="admin-config-segments-tab">
                         <section class="portfolio-segment-settings" aria-labelledby="portfolio-segments-title">
@@ -1591,5 +1616,6 @@
 
         <script type="module" src="js/admin/index.js"></script>
         <script type="module" src="js/integrado_admin.js"></script>
+        <script type="module" src="js/admin/portais/portal_settings.js"></script>
     </body>
 </html>

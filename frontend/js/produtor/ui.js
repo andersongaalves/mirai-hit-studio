@@ -54,6 +54,28 @@ const currency = value => new Intl.NumberFormat("pt-BR", {
     currency: "BRL",
 }).format(Number(value || 0));
 
+// Roadmap 5.01: presentation settings published by the admin; backend stays authoritative.
+const DEFAULT_INDICATORS = ["ativas", "revisao", "vencidos", "a_receber", "pago"];
+let portalSettings = null;
+
+export function applySettings(settings) {
+    portalSettings = settings || null;
+    const notice = document.getElementById("producer-notice");
+    const aviso = settings?.aviso;
+    const showNotice = Boolean(aviso?.ativo && aviso.texto);
+    notice.textContent = showNotice ? aviso.texto : "";
+    notice.dataset.level = showNotice ? aviso.nivel : "";
+    notice.classList.toggle("hidden", !showNotice);
+    if (settings?.textos) {
+        const lead = document.getElementById("producer-dashboard-lead");
+        lead.textContent = settings.textos.descricao_dashboard;
+        lead.classList.toggle("hidden", !settings.textos.descricao_dashboard);
+        const help = document.getElementById("producer-finance-help");
+        help.textContent = settings.textos.ajuda_financeiro;
+        help.classList.toggle("hidden", !settings.textos.ajuda_financeiro);
+    }
+}
+
 export function renderDashboard(productions, payouts = []) {
     const metrics = document.getElementById("producer-metrics");
     metrics.replaceChildren();
@@ -62,13 +84,17 @@ export function renderDashboard(productions, payouts = []) {
         .reduce((total, item) => total + Number(item.valor_combinado), 0);
     const paid = payouts.filter(item => item.status === "pago")
         .reduce((total, item) => total + Number(item.valor_combinado), 0);
-    [
-        ["Produções ativas", summary.active, ""],
-        ["Em revisão", summary.review, ""],
-        ["Prazos vencidos", summary.overdue, summary.overdue ? "producer-metric--attention" : ""],
-        ["A receber", currency(receivable), ""],
-        ["Total pago", currency(paid), ""],
-    ].forEach(([label, value, variant]) => {
+    const available = {
+        ativas: ["Produções ativas", summary.active, ""],
+        revisao: ["Em revisão", summary.review, ""],
+        vencidos: ["Prazos vencidos", summary.overdue, summary.overdue ? "producer-metric--attention" : ""],
+        a_receber: ["A receber", currency(receivable), ""],
+        pago: ["Total pago", currency(paid), ""],
+    };
+    (portalSettings?.indicadores || DEFAULT_INDICATORS)
+        .filter(key => available[key])
+        .map(key => available[key])
+        .forEach(([label, value, variant]) => {
         const metric = element("dl", `producer-metric ${variant}`.trim());
         metric.append(element("dt", "", label), element("dd", "", String(value)));
         metrics.append(metric);

@@ -30,6 +30,10 @@ ALLOWED_METADATA = {
     "new_is_test",
     "old_client_is_test",
     "financial_history_confirmed",
+    "portal",
+    "old_version",
+    "new_version",
+    "restored_from_version",
 }
 
 

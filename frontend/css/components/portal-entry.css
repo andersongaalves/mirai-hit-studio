@@ -114,6 +114,26 @@
     background: rgba(0, 213, 237, 0.08);
 }
 
+/* Roadmap 5.01: admin-published notice; text only, never HTML. */
+.producer-notice {
+    margin-bottom: var(--space-4);
+    border: 1px solid rgba(0, 213, 237, 0.45);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    color: var(--color-text-primary);
+    background: rgba(0, 213, 237, 0.08);
+    font: 400 13px/20px var(--font-texto);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.producer-notice[data-level="atencao"] {
+    border-color: rgba(250, 204, 21, 0.55);
+    border-left-color: #facc15;
+    background: rgba(250, 204, 21, 0.08);
+}
+
 .producer-message--error {
     border-color: var(--color-danger);
     color: var(--color-danger);

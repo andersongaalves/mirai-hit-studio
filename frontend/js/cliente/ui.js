@@ -61,16 +61,40 @@ export function showView(name) {
     });
 }
 
+// Roadmap 5.01: presentation settings published by the admin; backend stays authoritative.
+const DEFAULT_INDICATORS = ["andamento", "concluidos", "avaliacao", "pagamentos"];
+let portalSettings = null;
+
+export function applySettings(settings) {
+    portalSettings = settings || null;
+    const notice = document.getElementById("client-notice");
+    const aviso = settings?.aviso;
+    const showNotice = Boolean(aviso?.ativo && aviso.texto);
+    notice.textContent = showNotice ? aviso.texto : "";
+    notice.dataset.level = showNotice ? aviso.nivel : "";
+    notice.classList.toggle("hidden", !showNotice);
+    if (settings?.textos) {
+        document.getElementById("dashboard-title").textContent = settings.textos.titulo_dashboard;
+        const lead = document.getElementById("client-dashboard-lead");
+        lead.textContent = settings.textos.descricao_dashboard;
+        lead.classList.toggle("hidden", !settings.textos.descricao_dashboard);
+    }
+}
+
 export function renderDashboard(productions, finances) {
     const metrics = document.getElementById("client-metrics");
     metrics.replaceChildren();
     const summary = summarize(productions, finances);
-    [
-        ["Projetos em andamento", summary.active],
-        ["Projetos concluídos", summary.completed],
-        ["Em avaliação", summary.review],
-        ["Pagamentos pendentes", summary.pendingPayment],
-    ].forEach(([label, value]) => {
+    const available = {
+        andamento: ["Projetos em andamento", summary.active],
+        concluidos: ["Projetos concluídos", summary.completed],
+        avaliacao: ["Em avaliação", summary.review],
+        pagamentos: ["Pagamentos pendentes", summary.pendingPayment],
+    };
+    (portalSettings?.indicadores || DEFAULT_INDICATORS)
+        .filter(key => available[key])
+        .map(key => available[key])
+        .forEach(([label, value]) => {
         const metric = element("dl", "producer-metric");
         metric.append(element("dt", "", label), element("dd", "", String(value)));
         metrics.append(metric);
@@ -148,6 +172,9 @@ function fileGroup(title, files, handlers) {
 function filesPanel(production, files, handlers) {
     const panel = element("section", "producer-files");
     panel.append(element("h2", "", "Arquivos e entregas"));
+    if (portalSettings?.textos?.ajuda_arquivos) {
+        panel.append(element("p", "producer-help", portalSettings.textos.ajuda_arquivos));
+    }
     panel.append(
         fileGroup("Prévias", files.filter(file => file.tipo === "previa"), handlers),
         fileGroup("Entregas finais", files.filter(file => file.tipo === "entrega"), handlers),

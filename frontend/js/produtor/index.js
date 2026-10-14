@@ -1,10 +1,11 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
-import { renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
+import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
 let payouts = [];
 const filters = { status: "todos", order: "prazo" };
+let filtersInitialized = false;
 
 function route() {
     const match = location.pathname.match(/^\/produtor\/producoes\/(\d+)\/?$/);
@@ -150,12 +151,22 @@ async function enterPortal() {
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));
     try {
         // Payouts are secondary: a failure there must not block production work.
-        const [loadedProductions, payoutResult] = await Promise.all([
+        const [loadedProductions, payoutResult, loadedSettings] = await Promise.all([
             api.listarProducoes(),
             api.listarRepasses().then(value => ({ ok: true, value }), () => ({ ok: false, value: [] })),
+            // Settings are secondary: built-in defaults apply when they cannot be loaded.
+            api.obterConfiguracao().then(data => data?.config || null).catch(() => null),
         ]);
         productions = loadedProductions;
         payouts = payoutResult.value;
+        applySettings(loadedSettings);
+        if (loadedSettings?.filtros && !filtersInitialized) {
+            filters.status = loadedSettings.filtros.status_padrao;
+            filters.order = loadedSettings.filtros.ordenacao_padrao;
+            document.getElementById("producer-status-filter").value = filters.status;
+            document.getElementById("producer-order").value = filters.order;
+        }
+        filtersInitialized = true;
         renderRoute();
         if (!payoutResult.ok) {
             setAlert("Não foi possível carregar os repasses agora. As produções continuam disponíveis.", true);
@@ -193,6 +204,8 @@ window.addEventListener("popstate", renderRoute);
 document.addEventListener("admin:logout", () => {
     productions = [];
     payouts = [];
+    filtersInitialized = false;
+    applySettings(null);
     setAlert();
 });
 

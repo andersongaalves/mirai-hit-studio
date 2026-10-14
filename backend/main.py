@@ -19,6 +19,7 @@ from routers.financeiro import router as financeiro_router
 from routers.newsletter import router as newsletter_router
 from routers.orcamentos import router as orcamentos_router
 from routers.portal_cliente import router as portal_cliente_router
+from routers.portal_config import router as portal_config_router
 from routers.portal_operacao_admin import router as portal_operacao_admin_router
 from routers.portal_produtor import router as portal_produtor_router
 from routers.producao import router as producao_router
@@ -85,6 +86,7 @@ app.include_router(ai_inbox_router)
 app.include_router(portal_produtor_router)
 app.include_router(portal_cliente_router)
 app.include_router(portal_operacao_admin_router)
+app.include_router(portal_config_router)
 
 
 @app.get("/")
