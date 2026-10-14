@@ -1,7 +1,7 @@
 """Proposal contracts; financial authority remains in backend domain services."""
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
@@ -20,8 +20,9 @@ class Contract(BaseModel):
 class PropostaItem(Contract):
     descricao: str = Field(max_length=10000)
     quantidade: Quantity
-    valor_unitario: Money
+    valor_unitario: Money  # Negotiated price; may differ from the catalog base price.
     desconto: Money = Decimal("0")  # Absolute discount per line, as in the editor.
+    servico_id: PositiveId | None = None  # Roadmap 3.0, 5.05: optional catalog origin.
 
 
 class PropostaPagamento(Contract):
@@ -49,6 +50,46 @@ class PropostaTotais(Contract):
     subtotal: Money
     desconto: Money
     total: Money
+
+
+class SnapshotEtapa(Contract):
+    ordem: int = Field(ge=1)
+    nome: str
+    peso_percentual: Decimal
+    valor: Decimal
+    prazo_dias: int | None
+    unidade: str
+    revisoes_incluidas: int | None
+    depende_da_anterior: bool
+    administrativa: bool
+
+
+class SnapshotItem(Contract):
+    indice: int = Field(ge=1)
+    descricao: str
+    servico_id: int | None
+    servico_nome: str | None
+    preco_catalogo: Decimal | None
+    catalogo_disponivel: bool
+    quantidade: Decimal
+    valor_unitario: Decimal
+    bruto: Decimal
+    desconto: Decimal
+    valor_contratado: Decimal
+    etapas: list[SnapshotEtapa]
+
+
+class SnapshotEconomico(Contract):
+    """Economic contract frozen once; later catalog edits never rewrite it (5.05)."""
+    versao_snapshot: Literal[1]
+    proposta_versao: int = Field(ge=1)
+    moeda: Literal["BRL"]
+    origem: Literal["envio", "aceite"]
+    congelado_em: datetime
+    subtotal: Decimal
+    desconto: Decimal
+    total: Decimal
+    itens: list[SnapshotItem]
 
 
 class ClienteSnapshot(Contract):
@@ -134,6 +175,7 @@ class PropostaResponse(Contract):
     politica_pagamento: PoliticaPagamento
     condicoes: str
     totais: PropostaTotais | None
+    snapshot_economico: SnapshotEconomico | None = None
     pdf_path: str | None = Field(max_length=500)
     gerada_em: datetime | None
     enviada_em: datetime | None
@@ -144,7 +186,10 @@ class PropostaResponse(Contract):
     @classmethod
     def from_orm_model(cls, proposta):
         mapping = {"itens": "itens_json", "pagamentos": "pagamentos_json", "totais": "totais_json"}
-        data = {name: getattr(proposta, mapping.get(name, name)) for name in cls.model_fields}
+        data = {name: getattr(proposta, mapping.get(name, name)) for name in cls.model_fields
+                if name != "snapshot_economico"}
+        # Optional 5.05 field: lightweight doubles without the column still serialize.
+        data["snapshot_economico"] = getattr(proposta, "snapshot_economico", None)
         if data["totais"] == {}:
             data["totais"] = None  # Not calculated yet, not an authoritative zero.
         return cls.model_validate(data)

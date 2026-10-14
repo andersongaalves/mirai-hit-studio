@@ -2,7 +2,7 @@
 const campos = ["produtor_id", "objeto", "descricao", "itens", "pagamentos", "politica_pagamento", "condicoes"];
 const responseFields = ["id", "orcamento_id", "numero", "versao", "status",
     "cliente_snapshot", "totais", "pdf_path", "gerada_em", "enviada_em",
-    "aprovada_em", "created_at", "updated_at", ...campos];
+    "aprovada_em", "created_at", "updated_at", "snapshot_economico", ...campos];
 
 export function buildPropostaPayload(proposta) {
     const payload = {};
@@ -11,7 +11,9 @@ export function buildPropostaPayload(proposta) {
     }
     if (payload.itens) payload.itens = payload.itens.map(item => ({
         descricao: item.descricao, quantidade: item.quantidade,
-        valor_unitario: item.valor_unitario, desconto: item.desconto ?? 0
+        valor_unitario: item.valor_unitario, desconto: item.desconto ?? 0,
+        // 5.05: catalog origin travels only when the line is linked to a service.
+        ...(Number.isInteger(item.servico_id) ? { servico_id: item.servico_id } : {})
     }));
     if (payload.pagamentos) payload.pagamentos = payload.pagamentos.map(item => ({
         tipo: item.tipo, titulo: item.titulo, url: item.url, habilitado: item.habilitado

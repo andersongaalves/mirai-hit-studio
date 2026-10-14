@@ -9,6 +9,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -105,6 +106,18 @@ class PropostaModel(Base):
         JSON,
         default=dict,
         nullable=False,
+    )
+
+    # Roadmap 3.0, 5.05: catalog origin, negotiated price and stage values frozen when the
+    # proposal is sent (or accepted, for proposals sent before 5.05). Never rewritten.
+    snapshot_economico = Column(
+        JSON().with_variant(JSONB(), "postgresql"),
+        nullable=True,
+    )
+
+    snapshot_congelado_em = Column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     pdf_path = Column(
