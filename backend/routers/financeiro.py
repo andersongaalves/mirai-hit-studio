@@ -28,14 +28,18 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/resumo", response_model=FinanceiroResumo)
-def obter_resumo(db: Session = Depends(get_db)):
-    return financeiro_admin_service.resumo(db)
+def obter_resumo(
+    ambiente: Literal['real', 'teste', 'todos'] = 'real',
+    db: Session = Depends(get_db),
+):
+    return financeiro_admin_service.resumo(db, ambiente=ambiente)
 
 
 @router.get("/cobrancas", response_model=FinanceiroCobrancaPage)
 def listar_cobrancas(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+    ambiente: Literal['real', 'teste', 'todos'] = 'real',
     search: Annotated[str | None, Query(max_length=120)] = None,
     status: CobrancaStatus | None = None,
     reconciliation_status: Literal["required", "conflict", "clear"] | None = None,
@@ -49,6 +53,7 @@ def listar_cobrancas(
         db,
         page=page,
         page_size=page_size,
+        ambiente=ambiente,
         search=search,
         status=status.value if status else None,
         reconciliation_status=reconciliation_status,

@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    false,
     true,
 )
 from sqlalchemy.orm import relationship
@@ -41,6 +42,7 @@ class UsuarioModel(Base):
     is_admin = Column(Boolean, default=True)
 
     ativo = Column(Boolean, default=True, server_default=true(), nullable=False)
+    is_test = Column(Boolean, default=False, server_default=false(), nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

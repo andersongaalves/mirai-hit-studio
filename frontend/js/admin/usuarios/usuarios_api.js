@@ -21,6 +21,12 @@ export async function buscarUsuario(id) {
     return responseData(await authFetch(`/usuarios/${id}`), "Nao foi possivel carregar o usuario.");
 }
 
+export async function classificarUsuario(id, payload) {
+    return responseData(await authFetch(`/usuarios/${id}/classificacao`, {
+        method: "PATCH", body: JSON.stringify(payload),
+    }), "Não foi possível classificar a conta.");
+}
+
 
 export async function criarUsuario(payload) {
     return responseData(await authFetch("/usuarios", {

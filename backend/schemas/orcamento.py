@@ -69,6 +69,7 @@ class OrcamentoObservacoesUpdate(BaseModel):
 
 
 class OrcamentoResponse(OrcamentoBase):
+    is_test: bool = False
     id: int
     cliente_id: int | None
 

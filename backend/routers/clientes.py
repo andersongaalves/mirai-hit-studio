@@ -1,3 +1,4 @@
+from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -24,10 +25,11 @@ def _erro(error):
 def listar_clientes(
     busca: str = Query(default="", max_length=150),
     ativo: bool | None = None,
+    ambiente: Literal["real", "teste", "todos"] = "real",
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
-    return cliente_service.listar(db, busca.strip(), ativo)
+    return cliente_service.listar(db, busca.strip(), ativo, ambiente=ambiente)
 
 
 @router.get("/{cliente_id}", response_model=ClienteDetail)

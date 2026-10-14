@@ -54,3 +54,5 @@ mostrara somente a cadeia de Yonda.
    pago.
 4. Aplicar a migration exige backup recente com restore testado (DB-05) e o fluxo de
    release protegido; nao foi executada nesta etapa.
+5. A migration agora vem depois da 5.02: `c5f2a7d9e184` -> `a7d3e5f9c210` ->
+   `d8a7b1c9e240`. Um `alembic upgrade head` aplica as duas, nessa ordem.

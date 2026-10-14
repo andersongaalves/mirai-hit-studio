@@ -74,6 +74,7 @@ class ClienteUpdate(BaseModel):
 
 
 class ClienteResponse(ClienteBase):
+    is_test: bool = False
     id: int
     created_at: datetime
     updated_at: datetime

@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from schemas.validation import http_url
 
@@ -72,6 +72,20 @@ class PropostaSnapshot(Contract):
 
 class PropostaCreate(Contract):
     """Empty body: the future action obtains the budget from URL/context."""
+
+
+class PropostaClassificacaoUpdate(Contract):
+    is_test: StrictBool
+    confirmar_historico_financeiro: StrictBool = False
+
+
+class PropostaClassificacaoResponse(Contract):
+    id: int
+    orcamento_id: int
+    is_test: bool
+    protegida: bool
+    historico_financeiro: bool
+    reversao_permitida: bool
 
 
 class PropostaUpdate(Contract):

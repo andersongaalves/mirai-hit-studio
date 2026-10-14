@@ -35,10 +35,15 @@ def criar(db: Session, orcamento):
     return novo
 
 
-def listar(db: Session):
-
+def listar(db: Session, ambiente: str = "real"):
+    query = db.query(OrcamentoModel)
+    marcado = OrcamentoModel.is_test.is_(True)
+    if ambiente == "real":
+        query = query.filter(~marcado)
+    elif ambiente == "teste":
+        query = query.filter(marcado)
     return (
-        db.query(OrcamentoModel)
+        query
         .order_by(
             OrcamentoModel.id.desc()
         )

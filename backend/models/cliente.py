@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, false
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -14,6 +14,7 @@ class ClienteModel(Base):
     telefone = Column(String(30), nullable=True, index=True)
     observacoes = Column(Text, default="", nullable=False)
     ativo = Column(Boolean, default=True, nullable=False)
+    is_test = Column(Boolean, default=False, server_default=false(), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True),

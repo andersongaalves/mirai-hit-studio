@@ -29,6 +29,7 @@ export function renderSummary(summary) {
 function statusCell(item) {
     const cell = document.createElement("td");
     cell.appendChild(badge(statusLabel(item.status), statusVariant(item.status)));
+    if (item.is_test) cell.appendChild(badge("TESTE", "info"));
     if (item.reconciliation_status) {
         cell.appendChild(badge(reconciliationLabel(item.reconciliation_status), "danger"));
     }
@@ -86,6 +87,7 @@ function cards(items, onOpen) {
             element("span", formatDate(item.created_at)),
         );
         if (item.reconciliation_status) meta.appendChild(badge(reconciliationLabel(item.reconciliation_status), "danger"));
+        if (item.is_test) meta.appendChild(badge("TESTE", "info"));
         const actions = element("div", "", "admin-entity-card__actions");
         const open = button("Detalhes", "btn-small", () => onOpen(item.id));
         open.dataset.financeiroChargeId = String(item.id);

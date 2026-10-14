@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_admin
 from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from schemas.proposta import PropostaClassificacaoUpdate
 from schemas.usuario import (
     UsuarioCreate,
     UsuarioPasswordUpdate,
     UsuarioResponse,
     UsuarioUpdate,
 )
-from services import usuario_service
+from services import classificacao_service, proposta_service, usuario_service
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/usuarios", tags=["Usuários"])
 
@@ -82,6 +82,19 @@ def atualizar_usuario(
         )
     except Exception as error:
         _erro(error)
+
+
+@router.patch("/{usuario_id}/classificacao", response_model=UsuarioResponse)
+def classificar_conta(usuario_id: int, dados: PropostaClassificacaoUpdate, request: Request,
+                     db: Session = Depends(get_db), user=Depends(require_admin)):
+    try:
+        return classificacao_service.classificar_conta(
+            db, usuario_id, dados, user, getattr(request.state, "request_id", None),
+        )
+    except proposta_service.PropostaNaoEncontrada as error:
+        raise HTTPException(status_code=404, detail=str(error)) from None
+    except proposta_service.PropostaConflito as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
 
 
 @router.patch("/{usuario_id}/senha", response_model=UsuarioResponse)

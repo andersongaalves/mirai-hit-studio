@@ -5,6 +5,8 @@ import * as ProducoesModal from "./producoes_modal.js";
 import { producoesState } from "./producoes_state.js";
 import * as ProducoesUI from "./producoes_ui.js";
 import { filtrarOrdenarProducoes } from "./producoes_utils.js";
+import { adicionarFiltroAmbiente } from "../classificacao.js";
+document.addEventListener("classificacao:atualizada", carregarProducoes);
 
 document.addEventListener("proposta:comercial-atualizada", (event) => {
     if (event.detail?.proposta?.status === "aceita") carregarProducoes();
@@ -115,12 +117,16 @@ export function refresh() {
 }
 
 export async function carregarProducoes() {
+    adicionarFiltroAmbiente("producoes-search", "producoes-ambiente", producoesState.ambiente || "real", value => {
+        producoesState.ambiente = value;
+        carregarProducoes();
+    });
     producoesState.loading = true;
     producoesState.error = "";
     refresh();
 
     try {
-        const producoes = await ProducoesAPI.buscarProducoes();
+        const producoes = await ProducoesAPI.buscarProducoes(producoesState.ambiente || "real");
         producoesState.lista = Array.isArray(producoes) ? producoes : [];
     } catch (error) {
         console.error(error);

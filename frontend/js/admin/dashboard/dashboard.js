@@ -4,6 +4,7 @@ import { renderDashboard, renderDashboardError, renderDashboardLoading } from ".
 
 
 let request = null;
+document.addEventListener("classificacao:atualizada", () => { carregarDashboard().catch(() => {}); });
 
 export async function carregarDashboard() {
     if (request) return request;

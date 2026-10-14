@@ -14,9 +14,9 @@ async function responseData(response, fallback) {
 }
 
 
-export async function listarClientes() {
+export async function listarClientes(ambiente = "real") {
     return responseData(
-        await authFetch("/clientes"),
+        await authFetch(`/clientes?ambiente=${encodeURIComponent(ambiente)}`),
         "Não foi possível carregar os clientes.",
     );
 }

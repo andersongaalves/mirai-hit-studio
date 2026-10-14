@@ -1,3 +1,4 @@
+from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from sqlalchemy.exc import IntegrityError
@@ -62,9 +63,12 @@ def criar_producao(
 
 
 @router.get("", response_model=list[ProducaoResponse])
-def listar_producoes(db: Session = Depends(get_db), user=Depends(require_admin)):
-
-    return crud_producao.listar(db)
+def listar_producoes(
+    ambiente: Literal["real", "teste", "todos"] = "real",
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
+    return crud_producao.listar(db, ambiente=ambiente)
 
 
 @router.get("/{producao_id}", response_model=ProducaoResponse)

@@ -21,9 +21,9 @@ async function handleResponse(response, fallback) {
     return data;
 }
 
-export async function buscarProducoes() {
+export async function buscarProducoes(ambiente = "real") {
     return handleResponse(
-        await authFetch("/producoes"),
+        await authFetch(`/producoes?ambiente=${encodeURIComponent(ambiente)}`),
         "Erro ao buscar produções.",
     );
 }

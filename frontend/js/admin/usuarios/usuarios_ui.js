@@ -1,5 +1,16 @@
 import { renderAdminState } from "../ui.js";
 import { actionButton, roleBadge, statusBadge, textElement } from "./usuarios_dom.js";
+import { classificarConta } from "./usuarios.js";
+
+function classificationButton(user) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn-small";
+    button.textContent = user.is_test ? "TESTE · Tornar real" : "Classificar como teste";
+    button.disabled = user.role === "admin" || user.is_admin;
+    button.onclick = () => classificarConta(user, button);
+    return button;
+}
 
 
 function tableView(usuarios, onOpen) {
@@ -24,6 +35,7 @@ function tableView(usuarios, onOpen) {
         role.appendChild(roleBadge(usuario));
         status.appendChild(statusBadge(usuario));
         action.appendChild(actionButton(usuario, onOpen));
+        action.appendChild(classificationButton(usuario));
         row.append(textElement("td", usuario.username), role, status, action);
         body.appendChild(row);
     });
@@ -43,6 +55,8 @@ function cardView(usuarios, onOpen) {
         header.append(textElement("strong", usuario.username), statusBadge(usuario));
         meta.appendChild(roleBadge(usuario));
         actions.appendChild(actionButton(usuario, onOpen));
+        actions.appendChild(classificationButton(usuario));
+        if (usuario.is_test) meta.append(textElement("span", "TESTE", "badge badge-info"));
         card.append(header, meta, actions);
         container.appendChild(card);
     });

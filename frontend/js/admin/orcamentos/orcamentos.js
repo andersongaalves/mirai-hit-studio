@@ -8,6 +8,7 @@ import * as Propostas from "../propostas/propostas.js";
 
 import { orcamentosState } from "./orcamentos_state.js";
 import { filtrarOrcamentos } from "./orcamentos_filters.js";
+import { adicionarFiltroAmbiente } from "../classificacao.js";
 
 const STATUS_MESSAGES = {
     em_analise: "Orçamento colocado em análise.",
@@ -17,6 +18,7 @@ const STATUS_MESSAGES = {
 };
 
 document.addEventListener("proposta:comercial-atualizada", carregarOrcamentos);
+document.addEventListener("classificacao:atualizada", carregarOrcamentos);
 
 function getUiHandlers() {
     return {
@@ -72,9 +74,13 @@ export function refresh() {
 }
 
 export async function carregarOrcamentos() {
+    adicionarFiltroAmbiente("orcamentos-search", "orcamentos-ambiente", orcamentosState.ambiente || "real", value => {
+        orcamentosState.ambiente = value;
+        carregarOrcamentos();
+    });
     try {
         const [orcamentos, produtores] = await Promise.all([
-            OrcamentosAPI.buscarOrcamentos(),
+            OrcamentosAPI.buscarOrcamentos(orcamentosState.ambiente || "real"),
             OrcamentosAPI.buscarProdutores(),
         ]);
 

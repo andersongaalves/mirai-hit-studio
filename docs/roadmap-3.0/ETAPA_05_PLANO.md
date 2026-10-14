@@ -25,8 +25,8 @@ As fases 5.04 a 5.13 seguem os portoes de dependencia do roadmap
 - UI: campo opcional nos formularios de upload do cliente, do produtor e do Admin;
   exibicao como texto puro (sem HTML).
 
-### Ordem de merge
+### Ordem das migrations
 
-Se o PR #26 (classificacao de testes, migration `d8a7b1c9e240`) entrar antes, trocar
-`down_revision` de `a7d3e5f9c210` para `d8a7b1c9e240` e atualizar os testes que fixam o
-head do Alembic.
+Cadeia final: `c5f2a7d9e184` -> `a7d3e5f9c210` (5.02, observacoes) -> `d8a7b1c9e240`
+(Etapa 01, classificacao de testes). As duas sao aplicadas juntas no proximo release
+protegido.

@@ -17,6 +17,7 @@ class FinanceiroResumo(FinanceiroAdminContract):
 
 
 class FinanceiroCobrancaItem(FinanceiroAdminContract):
+    is_test: bool = False
     id: int
     proposta_id: int
     proposta_numero: str
