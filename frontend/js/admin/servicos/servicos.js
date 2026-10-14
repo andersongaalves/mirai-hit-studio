@@ -7,6 +7,7 @@ import * as ServicosForm from "./servicos_form.js";
 import * as ServicosParametros from "./servicos_parametros.js";
 
 import { servicosState } from "./servicos_state.js";
+import { carregarCombos } from "./combos.js";
 
 function getUiHandlers() {
     return {
@@ -46,6 +47,8 @@ export async function carregarServicos() {
         servicosState.lista = Array.isArray(servicos) ? servicos.filter(item => item && Number.isInteger(item.id)) : [];
 
         renderizarServicos();
+        // 5.08: combos are composed from the services just loaded.
+        carregarCombos(servicosState.lista);
     } catch (error) {
         console.error(error);
 

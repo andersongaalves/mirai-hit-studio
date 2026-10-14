@@ -63,7 +63,9 @@ def listar(db: Session):
 
 
 def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
-    existentes = {servico.id for servico in db.scalars(select(ServicoModel).where(ServicoModel.id.in_(dados.servicos)))}
+    # No autoflush: a new combo must not be inserted before its required fields are set.
+    with db.no_autoflush:
+        existentes = {servico.id for servico in db.scalars(select(ServicoModel).where(ServicoModel.id.in_(dados.servicos)))}
     if existentes != set(dados.servicos):
         raise ComboInvalido("Um dos servicos do combo nao existe no catalogo.")
     combo.nome = dados.nome
@@ -78,9 +80,9 @@ def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
 
 def criar(db: Session, dados: ComboWrite, *, actor=None, request_id=None):
     try:
-        combo = ComboModel()
-        db.add(combo)
+        combo = ComboModel(nome=dados.nome, descricao=dados.descricao, preco_base=dados.preco_base, ativo=dados.ativo)
         _aplicar(db, combo, dados)
+        db.add(combo)
         db.flush()
         audit_service.record(db, actor=actor, action="combo.created", entity_type="combo", entity_id=combo.id,
                              metadata={}, request_id=request_id)
