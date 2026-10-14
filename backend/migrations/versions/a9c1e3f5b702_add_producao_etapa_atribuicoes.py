@@ -54,4 +54,6 @@ def upgrade():
 def downgrade():
     op.drop_index("ix_producao_etapa_atribuicoes_etapa_id", table_name="producao_etapa_atribuicoes")
     op.drop_table("producao_etapa_atribuicoes")
-    op.drop_column("producao_etapas", "executor_usuario_id")
+    # Batch mode rebuilds the table on SQLite, which cannot drop a column with a foreign key.
+    with op.batch_alter_table("producao_etapas") as batch:
+        batch.drop_column("executor_usuario_id")

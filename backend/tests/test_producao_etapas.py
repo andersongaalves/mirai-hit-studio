@@ -168,6 +168,8 @@ with Session(engine) as db:
     production, _ = approved_production(db)
     free, _ = approved_production(db, 2, items=[{'descricao': 'Avulso', 'quantidade': 1, 'valor_unitario': '90.00'}])
     assert stages._etapas(db, free.id) == []
+    # Simulates a production from before 5.06: no stages and no assignment history.
+    db.query(ProducaoEtapaAtribuicaoModel).filter(ProducaoEtapaAtribuicaoModel.producao_id == production.id).delete()
     db.query(ProducaoEtapaModel).filter(ProducaoEtapaModel.producao_id == production.id).delete()
     db.commit()
     production_id, free_id = production.id, free.id
