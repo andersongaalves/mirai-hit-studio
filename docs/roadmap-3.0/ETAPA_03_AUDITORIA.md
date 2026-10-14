@@ -29,7 +29,7 @@ Status: **Corrigido** = tratado na branch `fix/roadmap-3-0-etapas-02-04`;
 | AUD-S08-003 | S08 | P3 | Status salvo e reportado como erro se a lista de arquivos falhar | Corrigido |
 | AUD-S07-004 | S07/S08 | P3 | `URL.revokeObjectURL` sincrono pode cancelar downloads | Corrigido |
 | AUD-S12-003 | S12 | P2 | CI cobre 4 de 40 suites de frontend; 3 suites quebraram sem alerta | Parcial |
-| AUD-S12-004 | S12/S06 | P2 | Preview Netlify 19 aponta para a API de producao | Aberto (PR #20) |
+| AUD-S12-004 | S12/S06 | P2 | Previews (Netlify/Cloudflare) usavam a API de producao | Corrigido (so dominios oficiais usam a API) |
 | AUD-S05-001 | S07/S05 | P2 | Previas do produtor nascem invisiveis ao cliente | Corrigido (decisao: visiveis) |
 | AUD-S01-001 | S01 | P3 | `portfolio.html` perdeu o rotulo de estudo e os links para as verticais (SEO H2) | Corrigido (rotulo "Estudo") |
 | AUD-S02-001 | S02 | P3 | Login revela existencia de usuario por tempo de resposta | Aberto |
