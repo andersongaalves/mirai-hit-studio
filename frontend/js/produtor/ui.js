@@ -128,11 +128,20 @@ function filesPanel(production, files, handlers) {
     const noReplacement = element("option", "", "Nova versão independente");
     noReplacement.value = "";
     replaces.append(noReplacement);
-    files.filter(file => ["previa", "entrega"].includes(file.tipo)).forEach(file => {
-        const option = element("option", "", `Substituir ${file.nome_exibicao} (v${file.versao})`);
-        option.value = String(file.id);
-        replaces.append(option);
-    });
+    // Offer only the newest version of the selected type; the backend rejects others.
+    const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
+    const updateReplacementOptions = () => {
+        replaces.replaceChildren(noReplacement);
+        files
+            .filter(file => file.tipo === type.value && !replaced.has(file.id))
+            .forEach(file => {
+                const option = element("option", "", `Substituir ${file.nome_exibicao} (v${file.versao})`);
+                option.value = String(file.id);
+                replaces.append(option);
+            });
+    };
+    type.addEventListener("change", updateReplacementOptions);
+    updateReplacementOptions();
     const submit = element("button", "btn-cta", "Enviar arquivo");
     submit.type = "submit";
     form.append(type, input, replaces, submit);

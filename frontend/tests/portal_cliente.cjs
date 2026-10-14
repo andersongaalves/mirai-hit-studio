@@ -11,6 +11,7 @@ let uploads = 0;
 let failFileList = false;
 let uploadFailure = null;
 let slowUpload = false;
+let failFinance = false;
 let proposals = [{
     id: 11,
     numero: 'PROP-CLIENT-011',
@@ -136,7 +137,10 @@ async function staticResponse(route) {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
         const financial = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/financeiro$/);
-        if (financial) return route.fulfill({ json: finances.get(Number(financial[1])) });
+        if (financial) {
+            if (failFinance) return route.fulfill({ status: 503, json: { detail: 'Financeiro indisponível.' } });
+            return route.fulfill({ json: finances.get(Number(financial[1])) });
+        }
         const fileList = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/arquivos$/);
         if (fileList && request.method() === 'GET') {
             if (failFileList) return route.fulfill({ status: 503, json: { detail: 'Lista indisponível.' } });
@@ -308,6 +312,25 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Atualizar lista' }).click();
         await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado com sucesso'));
         assert.equal(uploads, 4);
+        // AUD-S07-003: superseded versions are no longer offered for replacement.
+        const replacementOptions = await page.getByLabel('Versão substituída').locator('option')
+            .evaluateAll(options => options.map(option => option.value));
+        assert.equal(replacementOptions.includes('8'), false, JSON.stringify(replacementOptions));
+        assert.equal(replacementOptions.includes('10'), true, JSON.stringify(replacementOptions));
+
+        // AUD-S07-001: a finance failure keeps the project and its files available.
+        await page.setViewportSize({ width: 1024, height: 800 });
+        failFinance = true;
+        await page.getByRole('link', { name: 'Meus projetos' }).click();
+        await page.waitForURL('**/cliente/projetos');
+        await page.locator('#client-list .producer-card').filter({ hasText: '<img src=x' })
+            .getByRole('button', { name: 'Abrir projeto' }).click();
+        await page.waitForURL('**/cliente/projetos/1');
+        await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('informações de pagamento'));
+        assert.equal(await page.getByRole('heading', { name: '<img src=x onerror=alert(1)>' }).count(), 1);
+        assert.ok(await page.locator('.producer-file').count() > 0);
+        assert.match(await page.locator('.client-finance-grid').textContent(), /R\$\s*1\.000,00/);
+        failFinance = false;
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });

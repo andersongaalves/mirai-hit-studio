@@ -102,6 +102,12 @@ export function renderList(productions, finances, filters, onOpen) {
     items.forEach(item => list.append(productionCard(item, finances.get(item.id), onOpen)));
 }
 
+// Only the newest version of a group can be replaced; older ones return 409.
+function currentVersions(files) {
+    const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
+    return files.filter(file => !replaced.has(file.id));
+}
+
 function fileItem(file, handlers) {
     const item = element("li", "producer-file");
     const info = element("div");
@@ -174,7 +180,7 @@ function filesPanel(production, files, handlers) {
             const independent = element("option", "", "Novo arquivo");
             independent.value = "";
             replaces.append(independent);
-            files.filter(file => file.enviado_por_mim && file.tipo === type.value).forEach(file => {
+            currentVersions(files).filter(file => file.enviado_por_mim && file.tipo === type.value).forEach(file => {
                 const option = element("option", "", `Nova versão de ${file.nome_exibicao} (v${file.versao})`);
                 option.value = String(file.id);
                 replaces.append(option);

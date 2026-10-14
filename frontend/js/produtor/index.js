@@ -27,6 +27,7 @@ async function openDetail(id) {
             api.obterProducao(id),
             api.listarArquivos(id),
         ]);
+        productions = productions.map(item => item.id === production.id ? { ...item, ...production } : item);
         renderDetail(production, files, {
             onStatus: updateStatus,
             onUpload: uploadFile,
@@ -65,13 +66,19 @@ async function updateStatus(id, status, button) {
     try {
         const updated = await api.atualizarStatus(id, status);
         productions = productions.map(item => item.id === updated.id ? updated : item);
-        const files = await api.listarArquivos(id);
-        renderDetail(updated, files, {
-            onStatus: updateStatus,
-            onUpload: uploadFile,
-            onDownload: downloadFile,
-        });
-        setAlert("Andamento atualizado.");
+        // The status is already saved; a file-list failure must not report it as an error.
+        const files = await api.listarArquivos(id).catch(() => null);
+        if (files) {
+            renderDetail(updated, files, {
+                onStatus: updateStatus,
+                onUpload: uploadFile,
+                onDownload: downloadFile,
+            });
+            setAlert("Andamento atualizado.");
+        } else {
+            button.disabled = false;
+            setAlert("Andamento atualizado, mas a lista de arquivos não pôde ser recarregada.", true);
+        }
     } catch (error) {
         setAlert(error.message, true);
         button.disabled = false;
@@ -84,7 +91,8 @@ function saveBlob({ blob, filename }) {
     link.href = url;
     link.download = filename;
     link.click();
-    URL.revokeObjectURL(url);
+    // Revoking synchronously can cancel the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 async function downloadFile(id, button) {
@@ -140,11 +148,17 @@ async function enterPortal() {
     document.getElementById("producer-loading").classList.remove("hidden");
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));
     try {
-        [productions, payouts] = await Promise.all([
+        // Payouts are secondary: a failure there must not block production work.
+        const [loadedProductions, payoutResult] = await Promise.all([
             api.listarProducoes(),
-            api.listarRepasses(),
+            api.listarRepasses().then(value => ({ ok: true, value }), () => ({ ok: false, value: [] })),
         ]);
+        productions = loadedProductions;
+        payouts = payoutResult.value;
         renderRoute();
+        if (!payoutResult.ok) {
+            setAlert("Não foi possível carregar os repasses agora. As produções continuam disponíveis.", true);
+        }
     } catch (error) {
         setAlert(error.message, true);
     } finally {

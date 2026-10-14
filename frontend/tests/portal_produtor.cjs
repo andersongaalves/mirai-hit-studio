@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 const now = Date.now();
 let loginRole = 'produtor';
 let failList = false;
+let failPayouts = false;
 let uploads = 0;
 let productions = [
     {
@@ -90,6 +91,7 @@ async function staticResponse(route) {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
         if (url.pathname === '/portal/produtor/repasses' && request.method() === 'GET') {
+            if (failPayouts) return route.fulfill({ status: 503, json: { detail: 'Repasses indisponíveis.' } });
             return route.fulfill({ json: payouts });
         }
         if (/^\/portal\/produtor\/repasses\/\d+\/comprovante$/.test(url.pathname)) {
@@ -167,6 +169,13 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('nova versão'));
         assert.equal(uploads, 1);
+        // AUD-S08-001: replacement options follow the selected type.
+        const replacementValues = () => page.getByLabel('Versão substituída').locator('option')
+            .evaluateAll(options => options.map(option => option.value));
+        assert.deepEqual(await replacementValues(), ['', '10']);
+        await page.getByLabel('Tipo de arquivo').selectOption('entrega');
+        assert.deepEqual(await replacementValues(), ['']);
+        await page.getByLabel('Tipo de arquivo').selectOption('previa');
         await page.getByRole('button', { name: 'Confirmar início' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         assert.equal(productions[0].status, 'em_producao');
@@ -225,7 +234,17 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.getElementById('login-error').textContent.includes('exclusiva'));
         assert.equal(await page.locator('#admin-area').isVisible(), false);
 
+        // AUD-S08-002: a payout failure must not block the production workspace.
         loginRole = 'produtor';
+        failPayouts = true;
+        await page.locator('#username').fill('producer-a');
+        await page.locator('#password').fill('synthetic-password');
+        await page.getByRole('button', { name: 'Entrar' }).click();
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('repasses'));
+        assert.equal(await page.locator('.producer-metric').count(), 5);
+        failPayouts = false;
+        await page.getByRole('button', { name: 'Sair' }).click();
+
         failList = true;
         await page.locator('#username').fill('producer-a');
         await page.locator('#password').fill('synthetic-password');
