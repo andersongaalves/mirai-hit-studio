@@ -8,7 +8,7 @@ const pages = [
     { file: "artists.html", title: "Produção musical, mixagem e masterização para artistas | Mirai Hit Studio", h1: "Produção musical para artistas", terms: ["instrumental", "mixagem", "masterização"] },
     { file: "creators.html", title: "Identidade sonora e música para criadores | Mirai Hit Studio", h1: "Música e identidade sonora para criadores", terms: ["trilhas", "intros", "stingers"] },
     { file: "media-games.html", title: "Trilha sonora e sound design para games | Mirai Hit Studio", h1: "Trilha sonora e design sonoro para mídia e games", terms: ["trilha sonora", "sound design", "games"] },
-    { file: "portfolio.html", title: "Portfólio de produção musical e áudio | Mirai Hit Studio", h1: "Portfólio de produção musical e áudio", terms: ["Demo", "Concept Project", "Study"] },
+    { file: "portfolio.html", title: "Portfólio de produção musical e áudio | Mirai Hit Studio", h1: "Portfólio de produção musical e áudio", terms: ["Demo", "Concept Project", "Estudo"] },
 ];
 
 const pageHtml = new Map(pages.map((page) => [page.file, fs.readFileSync(path.join(frontend, page.file), "utf8")]));

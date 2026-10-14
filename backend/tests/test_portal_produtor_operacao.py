@@ -175,7 +175,8 @@ async def check():
             )
             assert preview.status_code == 201, preview.text
             first = preview.json()
-            assert first['versao'] == 1 and first['visivel_cliente'] is False
+            assert first['versao'] == 1 and first['visivel_cliente'] is True
+            assert first['visivel_produtor'] is True
 
             invalid_type = await client.post(
                 '/portal/produtor/producoes/1/arquivos',
@@ -201,6 +202,8 @@ async def check():
             assert replacement.status_code == 201, replacement.text
             second = replacement.json()
             assert second['versao'] == 2
+            assert second['visivel_cliente'] is True
+            assert second['visivel_produtor'] is True
             assert second['grupo_versao'] == first['grupo_versao']
             assert second['substitui_arquivo_id'] == first['id']
             assert len(storage.objects) == 3
@@ -246,13 +249,13 @@ async def check():
     storage = MemoryStorage()
     with Session(engine) as db:
         production = db.get(ProducaoModel, 1)
-        actor = db.get(UsuarioModel, 1)
+        actor = db.get(UsuarioModel, 2)
         try:
             with patch.object(producao_arquivo_service.audit_service, 'record', side_effect=RuntimeError('synthetic db failure')):
                 producao_arquivo_service.upload(
-                    db, production=production, actor=actor, file_type='material',
-                    filename='guide.pdf', mime_type='application/pdf', data=b'%PDF-data',
-                    visible_to_producer=True, visible_to_client=False, storage=storage)
+                    db, production=production, actor=actor, file_type='previa',
+                    filename='preview.mp3', mime_type='audio/mpeg', data=b'ID3-data',
+                    visible_to_producer=True, visible_to_client=True, storage=storage)
         except RuntimeError:
             pass
         else:

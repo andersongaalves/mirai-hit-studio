@@ -6,6 +6,8 @@
 }
 .portfolio-page .public-container, .quote-page .public-container { margin-inline: auto; }
 .portfolio-page .portfolio-hero__layout { display: block; }
+.portfolio-page .portfolio-hero a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.portfolio-page .portfolio-hero a:hover { color: var(--color-accent, #00D4FF); }
 .portfolio-page .portfolio-hero h1 {
     max-width: none;
     margin: 12px 0 10px;

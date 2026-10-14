@@ -18,7 +18,7 @@ Status: **Corrigido** = tratado na branch `fix/roadmap-3-0-etapas-02-04`;
 
 | ID | Setor | Sev. | Achado | Status |
 | --- | --- | --- | --- | --- |
-| AUD-S12-001 | S12/S02 | P1* | Rate limit por `request.client.host` pode agrupar todos os usuarios atras do proxy do Render | Aberto (verificar `FORWARDED_ALLOW_IPS`) |
+| AUD-S12-001 | S12/S02 | P3 | Rate limit por IP: IP real confirmado nos logs; resta testar `X-Forwarded-For` forjado | Rebaixado (P1 -> P3) |
 | AUD-S06-001 | S06 | P2 | Assinatura do webhook Mercado Pago so aceita `data.id` no caso original; a documentacao atual exige minusculas | Corrigido |
 | AUD-S12-002 | S12/S07/S08 | P2 | CORS nao expoe `Content-Disposition`; downloads cross-origin saem como "arquivo" | Corrigido |
 | AUD-S07-001 | S07 | P2 | Falha do financeiro impede abrir o projeto (Promise.all) | Corrigido |
@@ -30,14 +30,15 @@ Status: **Corrigido** = tratado na branch `fix/roadmap-3-0-etapas-02-04`;
 | AUD-S07-004 | S07/S08 | P3 | `URL.revokeObjectURL` sincrono pode cancelar downloads | Corrigido |
 | AUD-S12-003 | S12 | P2 | CI cobre 4 de 40 suites de frontend; 3 suites quebraram sem alerta | Parcial |
 | AUD-S12-004 | S12/S06 | P2 | Preview Netlify 19 aponta para a API de producao | Aberto (PR #20) |
-| AUD-S05-001 | S07/S05 | P2 | Previas do produtor nascem invisiveis ao cliente | Aberto (branch sem PR) |
-| AUD-S01-001 | S01 | P3 | `portfolio.html` perdeu o termo "Study" exigido pelo SEO H2 | Aberto (decisao de conteudo) |
+| AUD-S05-001 | S07/S05 | P2 | Previas do produtor nascem invisiveis ao cliente | Corrigido (decisao: visiveis) |
+| AUD-S01-001 | S01 | P3 | `portfolio.html` perdeu o rotulo de estudo e os links para as verticais (SEO H2) | Corrigido (rotulo "Estudo") |
 | AUD-S02-001 | S02 | P3 | Login revela existencia de usuario por tempo de resposta | Aberto |
 | AUD-S08-004 | S08 | P3 | Produtor pode versionar previa/entrega oculta para ele | Aberto |
 | AUD-S09-001 | S09 | P3 | `PUT /config` retorna 500 se a linha `id=1` nao existir | Aberto |
 | AUD-S12-005 | S12 | P3 | README descreve a v1 (SQLite, `front/`) | Aberto |
 
-\* P1 condicionado a confirmacao no Render.
+AUD-S12-001 foi rebaixado apos leitura dos logs do Render (14/10): o Uvicorn registra o IP
+publico de cada visitante, entao o limite nao agrupa todos os usuarios.
 
 ## Fichas
 

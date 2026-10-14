@@ -96,6 +96,13 @@ function fileItem(file, onDownload) {
         element("strong", "", file.nome_exibicao),
         element("span", "", `${file.tipo} · versão ${file.versao} · ${Math.ceil(file.tamanho_bytes / 1024)} KB`),
     );
+    if (file.tipo === "previa") {
+        info.append(element(
+            "span",
+            file.visivel_cliente ? "producer-file__shared" : "",
+            file.visivel_cliente ? "Compartilhada com o cliente" : "Não compartilhada com o cliente",
+        ));
+    }
     const button = element("button", "btn-outline", "Baixar");
     button.type = "button";
     button.addEventListener("click", () => onDownload(file.id, button));

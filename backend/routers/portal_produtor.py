@@ -145,7 +145,7 @@ async def enviar_arquivo(
             mime_type=arquivo.content_type or "application/octet-stream",
             data=data,
             visible_to_producer=True,
-            visible_to_client=False,
+            visible_to_client=tipo == "previa",
             replaces_id=substitui_arquivo_id,
             request_id=getattr(request.state, "request_id", None),
         )

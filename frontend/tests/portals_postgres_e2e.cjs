@@ -241,7 +241,8 @@ function expectStatus(result, status, label) {
             buffer: Buffer.from('ID3-browser-preview'),
         });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Arquivo enviado'));
+        // Producer previews are shared with the client on upload (decisao de 14/10).
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Prévia enviada ao cliente'));
         await page.getByLabel('Tipo de arquivo').selectOption('entrega');
         await page.getByLabel('Arquivo para enviar').setInputFiles({
             name: 'entrega-browser.wav',
@@ -261,6 +262,8 @@ function expectStatus(result, status, label) {
         const preview = producerFiles.find(item => item.nome_exibicao === 'preview-browser.mp3');
         const delivery = producerFiles.find(item => item.nome_exibicao === 'entrega-browser.wav');
         assert.ok(preview && delivery);
+        assert.equal(preview.visivel_cliente, true);
+        assert.equal(delivery.visivel_cliente, false);
         assert.ok(producerFiles.some(item => item.nome_exibicao === 'material-cliente.wav'));
 
         await resetSession(page);
@@ -292,7 +295,8 @@ function expectStatus(result, status, label) {
         const downloadPromise = page.waitForEvent('download');
         await deliveryItem.getByRole('button', { name: 'Baixar' }).click();
         const download = await downloadPromise;
-        assert.match(download.suggestedFilename(), /^(entrega-browser|arquivo)\.wav$/);
+        // The API exposes Content-Disposition cross-origin (AUD-S12-002).
+        assert.equal(download.suggestedFilename(), 'entrega-browser.wav');
 
         for (const width of [320, 375, 390, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 850 });

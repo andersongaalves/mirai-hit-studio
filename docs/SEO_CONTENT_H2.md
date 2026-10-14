@@ -22,7 +22,7 @@ Cada pagina mantem titulo, descricao e H1 proprios. A Home explica a abrangencia
 
 - Usar termos apenas onde descrevem um servico, material ou necessidade real.
 - Nao usar preco, prazo, volume de clientes, resultado, credito ou tecnologia nao comprovados.
-- Manter `Demo`, `Concept Project` e `Study` visivelmente distintos de `Client Case`.
+- Manter `Demo`, `Concept Project` e `Estudo` (valor `study`) visivelmente distintos de `Client Case`.
 - Evitar criar paginas de cauda longa antes de haver oferta, conteudo verificavel e sinal no Search Console.
 - Preservar CTAs proporcionais: orcamento para escopos definidos e conversa para projetos sob medida.
 
