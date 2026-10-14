@@ -8,7 +8,12 @@ from crud import crud_producao, crud_proposta
 from models.enums.proposta import PropostaStatus as Status
 from pydantic import EmailStr, TypeAdapter, ValidationError
 from pypdf import PdfReader
-from services import audit_service, financial_service, producao_etapa_service, producao_liberacao_service
+from services import (
+    audit_service,
+    financial_service,
+    producao_etapa_service,
+    producao_liberacao_service,
+)
 from services import proposta_documento_service as documentos
 from services import proposta_service as service
 from services import proposta_snapshot_service as snapshots

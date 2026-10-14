@@ -5,7 +5,12 @@ from crud import crud_producao, crud_proposta
 from models.enums.financeiro import CobrancaStatus
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from models.financeiro import CobrancaModel
-from services import audit_service, financial_service, producao_etapa_service, proposta_service
+from services import (
+    audit_service,
+    financial_service,
+    producao_etapa_service,
+    proposta_service,
+)
 from services.pdf_service import moeda
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
