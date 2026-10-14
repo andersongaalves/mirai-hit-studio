@@ -1706,3 +1706,21 @@
     .financeiro-modal-actions button,
     .financeiro-payment > button { width: 100%; }
 }
+
+/* Roadmap 5.01: portal settings editor */
+.portal-settings { display: grid; min-width: 0; gap: var(--space-4); padding: var(--space-4) 0; }
+.portal-settings__header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4); }
+.portal-settings__header p { max-width: 720px; color: var(--color-text-secondary); }
+.portal-settings__header label, .portal-settings__field { display: grid; gap: var(--space-2); min-width: 0; }
+.portal-settings__form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.portal-settings__group { display: grid; gap: var(--space-3); min-width: 0; margin: 0; padding: var(--space-4); border: var(--border-subtle); border-radius: var(--radius-md); }
+.portal-settings__group legend { padding: 0 var(--space-2); font-weight: 600; }
+.portal-settings :where(input[type="text"], textarea, select) { min-width: 0; min-height: 44px; padding: var(--space-2); border: var(--border-subtle); border-radius: var(--radius-sm); color: var(--color-text-primary); background: var(--color-background); font: inherit; }
+.portal-settings textarea { resize: vertical; }
+.portal-settings__checks { display: grid; gap: var(--space-2); }
+.portal-settings__check { display: flex; align-items: center; gap: var(--space-2); min-height: 32px; }
+.portal-settings__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.portal-settings__versions { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.portal-settings__versions li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border: var(--border-subtle); border-radius: var(--radius-sm); }
+@media (max-width: 767px) { .portal-settings__form { grid-template-columns: 1fr; } }
+.portal-settings__header h2, .portal-settings h3 { margin: 0 0 var(--space-2); text-align: left; }

@@ -1,6 +1,7 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
 import {
+    applySettings,
     renderDashboard,
     renderDetail,
     renderList,
@@ -18,6 +19,7 @@ let finances = new Map();
 const objectUrls = new Set();
 const filters = { status: "todos", order: "recente" };
 let uploadFeedback = null;
+let filtersInitialized = false;
 
 function route() {
     const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
@@ -293,16 +295,27 @@ async function enterPortal() {
     document.getElementById("client-loading").classList.remove("hidden");
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));
     try {
-        const [loadedProductions, loadedProposals] = await Promise.all([
+        const [loadedProductions, loadedProposals, loadedSettings] = await Promise.all([
             api.listarProducoes(),
             api.listarPropostas().then(items => ({ enabled: true, items })).catch(error => {
                 if (error.status === 404) return { enabled: false, items: [] };
                 throw error;
             }),
+            // Settings are secondary: built-in defaults apply when they cannot be loaded.
+            api.obterConfiguracao().then(data => data?.config || null).catch(() => null),
         ]);
         productions = loadedProductions;
-        proposals = loadedProposals.items;
-        proposalsEnabled = loadedProposals.enabled;
+        applySettings(loadedSettings);
+        if (loadedSettings?.filtros && !filtersInitialized) {
+            filters.status = loadedSettings.filtros.situacao_padrao;
+            filters.order = loadedSettings.filtros.ordenacao_padrao;
+            document.getElementById("client-status-filter").value = filters.status;
+            document.getElementById("client-order").value = filters.order;
+        }
+        filtersInitialized = true;
+        const proposalsAllowed = loadedSettings?.areas?.propostas !== false;
+        proposals = proposalsAllowed ? loadedProposals.items : [];
+        proposalsEnabled = loadedProposals.enabled && proposalsAllowed;
         document.getElementById("client-proposals-link").classList.toggle("hidden", !proposalsEnabled);
         finances = await loadFinances(productions);
         if (!proposalsEnabled && route().view.startsWith("proposal")) {
@@ -348,6 +361,8 @@ document.addEventListener("admin:logout", () => {
     proposals = [];
     proposalsEnabled = false;
     finances = new Map();
+    filtersInitialized = false;
+    applySettings(null);
     setAlert();
 });
 

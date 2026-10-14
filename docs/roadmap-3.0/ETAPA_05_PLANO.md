@@ -30,3 +30,21 @@ As fases 5.04 a 5.13 seguem os portoes de dependencia do roadmap
 Cadeia final: `c5f2a7d9e184` -> `a7d3e5f9c210` (5.02, observacoes) -> `d8a7b1c9e240`
 (Etapa 01, classificacao de testes). As duas sao aplicadas juntas no proximo release
 protegido.
+
+## 5.01 - Configuracoes basicas dos portais
+
+- Tabela `portal_configuracoes` (migration `b4e6f8a1c302`): versoes append-only por portal
+  (`cliente`, `produtor`), com autor, origem de restauracao e data. A versao em uso e a
+  mais recente; restaurar cria uma nova versao com o conteudo antigo.
+- Parametros tipados e validados (`schemas/portal_config.py`, `extra=forbid`): aviso
+  (ativo, nivel, texto ate 280), textos do dashboard e de ajuda, indicadores (subconjunto
+  ordenado e sem repeticao), filtros iniciais e, no cliente, a area de propostas.
+- Publicar exige `base_versao` igual a versao em uso (409 em edicao concorrente);
+  conteudo identico nao gera versao. Toda publicacao/restauracao gera AuditLog.
+- Fora do escopo por regra do roadmap: autenticacao, permissoes, auditoria e valores
+  financeiros. Esconder uma area so afeta a interface; o backend continua autoritativo.
+- Portais carregam a configuracao como chamada secundaria: se falhar, usam os padroes.
+- Admin: Configuracoes > Portais (editor, valores padrao, historico e restauracao).
+
+**Publicacao:** aplicar a migration `b4e6f8a1c302` no banco **antes** do release protegido
+(o release nao migra o banco).

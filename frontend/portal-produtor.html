@@ -57,6 +57,7 @@
                 </aside>
 
                 <div class="producer-workspace">
+                    <div id="producer-notice" class="producer-notice hidden" role="status"></div>
                     <div id="producer-alert" class="producer-message hidden" role="status"></div>
 
                     <section id="producer-loading" class="producer-state" aria-live="polite">
@@ -69,7 +70,7 @@
                             <div>
                                 <p class="producer-eyebrow">Visão operacional</p>
                                 <h1 id="dashboard-title">Olá, <span id="producer-greeting"></span>.</h1>
-                                <p class="producer-lead">O que precisa da sua atenção hoje.</p>
+                                <p id="producer-dashboard-lead" class="producer-lead">O que precisa da sua atenção hoje.</p>
                             </div>
                             <a class="btn-cta" href="/produtor/producoes" data-route="producoes">Ver produções</a>
                         </div>
@@ -126,7 +127,7 @@
                                 <p class="producer-lead">Acompanhe valores combinados, liberações e comprovantes.</p>
                             </div>
                         </div>
-                        <p class="producer-help">Valores e pagamentos registrados pela administração.</p>
+                        <p id="producer-finance-help" class="producer-help">Valores e pagamentos registrados pela administração.</p>
                         <div id="producer-payouts" class="producer-list"></div>
                     </section>
                 </div>

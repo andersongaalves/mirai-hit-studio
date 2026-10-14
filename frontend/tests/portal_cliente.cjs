@@ -13,6 +13,7 @@ let uploadFailure = null;
 let slowUpload = false;
 let failFinance = false;
 let lastUploadBody = '';
+let portalSettings = null;
 let proposals = [{
     id: 11,
     numero: 'PROP-CLIENT-011',
@@ -133,6 +134,9 @@ async function staticResponse(route) {
         if (proposalDetail) {
             const proposal = proposals.find(item => item.id === Number(proposalDetail[1]));
             return route.fulfill(proposal ? { json: proposal } : { status: 404, json: { detail: 'Proposta nao encontrada.' } });
+        }
+        if (url.pathname === '/portal/cliente/configuracao') {
+            return route.fulfill(portalSettings ? { json: { portal: 'cliente', versao: 4, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
         }
         if (url.pathname === '/portal/cliente/producoes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
@@ -381,6 +385,38 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Entrar' }).click();
         await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Falha controlada'));
         assert.equal(await page.locator('#client-loading').isVisible(), false);
+
+        // Roadmap 5.01: published settings drive notice, texts, indicators, filters and areas.
+        await page.getByRole('button', { name: 'Sair' }).click();
+        failList = false;
+        productions = [{ id: 1, titulo: 'Faixa A', servico: 'Mixagem', status: 'revisao', etapas: '[]', prazo_entrega: null, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() }];
+        portalSettings = {
+            aviso: { ativo: true, nivel: 'atencao', texto: 'Recesso <b>de fim de ano</b>' },
+            textos: { titulo_dashboard: 'Seu estúdio', descricao_dashboard: '', ajuda_arquivos: 'Envie stems em WAV.' },
+            indicadores: ['pagamentos', 'andamento'],
+            filtros: { situacao_padrao: 'ativos', ordenacao_padrao: 'prazo' },
+            areas: { propostas: false },
+        };
+        await page.locator('#username').fill('client-a');
+        await page.locator('#password').fill('synthetic-password');
+        await page.getByRole('button', { name: 'Entrar' }).click();
+        await page.waitForFunction(() => document.getElementById('client-loading').classList.contains('hidden'));
+        await page.getByRole('link', { name: 'Dashboard' }).click();
+        await page.waitForSelector('#client-metrics .producer-metric');
+        assert.equal(await page.locator('#client-notice').textContent(), 'Recesso <b>de fim de ano</b>');
+        assert.equal(await page.locator('#client-notice b').count(), 0);
+        assert.equal(await page.locator('#client-notice').getAttribute('data-level'), 'atencao');
+        assert.equal(await page.locator('#dashboard-title').textContent(), 'Seu estúdio');
+        assert.equal(await page.locator('#client-dashboard-lead').isVisible(), false);
+        assert.deepEqual(await page.locator('#client-metrics dt').allTextContents(), ['Pagamentos pendentes', 'Projetos em andamento']);
+        assert.equal(await page.locator('#client-proposals-link').isVisible(), false);
+        assert.equal(await page.locator('#client-proposal-summary').isVisible(), false);
+        assert.equal(await page.locator('#client-status-filter').inputValue(), 'ativos');
+        assert.equal(await page.locator('#client-order').inputValue(), 'prazo');
+        await page.getByRole('link', { name: 'Meus projetos' }).click();
+        await page.locator('#client-list .producer-card').getByRole('button', { name: 'Abrir projeto' }).click();
+        await page.waitForURL('**/cliente/projetos/1');
+        assert.match(await page.locator('.producer-files').first().textContent(), /Envie stems em WAV\./);
 
         assert.deepEqual(errors, []);
         console.log('PASS: client login, dashboard, projects, files, preview, finance, safe text, errors and responsive structure.');

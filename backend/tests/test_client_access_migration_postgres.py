@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 DATABASE_URL = os.getenv("MIRAI_PORTALS_E2E_DATABASE_URL", "")
 ACK = os.getenv("MIRAI_PORTALS_E2E_ALLOW", "")
 PREVIOUS_REVISION = "5b7c9d1e4f62"
-HEAD_REVISION = "d8a7b1c9e240"
+HEAD_REVISION = "b4e6f8a1c302"
 
 
 @unittest.skipUnless(

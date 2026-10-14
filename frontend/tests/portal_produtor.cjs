@@ -9,6 +9,7 @@ let loginRole = 'produtor';
 let failList = false;
 let failPayouts = false;
 let lastUploadBody = '';
+let portalSettings = null;
 let uploads = 0;
 let productions = [
     {
@@ -95,6 +96,9 @@ async function staticResponse(route) {
         const user = { id: 2, username: 'producer-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true };
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'synthetic-producer-token', user } });
         if (url.pathname === '/auth/me') return route.fulfill({ json: user });
+        if (url.pathname === '/portal/produtor/configuracao') {
+            return route.fulfill(portalSettings ? { json: { portal: 'produtor', versao: 2, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
+        }
         if (url.pathname === '/portal/produtor/producoes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
@@ -266,6 +270,28 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Entrar' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Falha controlada'));
         assert.equal(await page.locator('#producer-loading').isVisible(), false);
+
+        // Roadmap 5.01: published settings drive notice, texts, indicators and filters.
+        await page.getByRole('button', { name: 'Sair' }).click();
+        failList = false;
+        portalSettings = {
+            aviso: { ativo: true, nivel: 'info', texto: 'Novo fluxo de entregas a partir de segunda.' },
+            textos: { descricao_dashboard: 'Foco nos prazos da semana.', ajuda_financeiro: 'Repasses às sextas.' },
+            indicadores: ['vencidos', 'ativas'],
+            filtros: { status_padrao: 'revisao', ordenacao_padrao: 'recente' },
+        };
+        await page.locator('#username').fill('producer-a');
+        await page.locator('#password').fill('synthetic-password');
+        await page.getByRole('button', { name: 'Entrar' }).click();
+        await page.waitForFunction(() => document.getElementById('producer-loading').classList.contains('hidden'));
+        await page.getByRole('link', { name: 'Dashboard' }).click();
+        await page.waitForSelector('#producer-metrics .producer-metric');
+        assert.equal(await page.locator('#producer-notice').textContent(), 'Novo fluxo de entregas a partir de segunda.');
+        assert.equal(await page.locator('#producer-dashboard-lead').textContent(), 'Foco nos prazos da semana.');
+        assert.deepEqual(await page.locator('#producer-metrics dt').allTextContents(), ['Prazos vencidos', 'Produções ativas']);
+        assert.equal(await page.locator('#producer-status-filter').inputValue(), 'revisao');
+        assert.equal(await page.locator('#producer-order').inputValue(), 'recente');
+        assert.equal(await page.locator('#producer-finance-help').textContent(), 'Repasses às sextas.');
 
         assert.deepEqual(errors, []);
         console.log('PASS: producer login/logout, dashboard, list, detail, progress, safe text, errors and responsive structure.');

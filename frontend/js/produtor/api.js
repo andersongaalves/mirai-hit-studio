@@ -80,3 +80,10 @@ export function baixarArquivo(id) {
 export function baixarComprovante(id) {
     return baixar(`/portal/produtor/repasses/${id}/comprovante`, "Não foi possível baixar o comprovante.");
 }
+
+export async function obterConfiguracao() {
+    return responseData(
+        await authFetch("/portal/produtor/configuracao"),
+        "Não foi possível carregar as preferências do portal.",
+    );
+}
