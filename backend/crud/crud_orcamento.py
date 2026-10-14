@@ -1,5 +1,7 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from models.cliente import ClienteModel
 
 from models.orcamento import OrcamentoModel
 from core.enums import OrcamentoStatus
@@ -35,10 +37,16 @@ def criar(db: Session, orcamento):
     return novo
 
 
-def listar(db: Session):
-
+def listar(db: Session, ambiente: str = "real"):
+    query = db.query(OrcamentoModel)
+    marcado = or_(OrcamentoModel.is_test.is_(True),
+                   OrcamentoModel.cliente.has(ClienteModel.is_test.is_(True)))
+    if ambiente == "real":
+        query = query.filter(~marcado)
+    elif ambiente == "teste":
+        query = query.filter(marcado)
     return (
-        db.query(OrcamentoModel)
+        query
         .order_by(
             OrcamentoModel.id.desc()
         )
