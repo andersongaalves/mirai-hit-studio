@@ -73,6 +73,7 @@ function criarTabela(viewModels, handlers) {
         );
         responsavel.textContent = viewModel.responsavel;
         status.appendChild(createBadgeElement(viewModel.status, viewModel.statusVariant));
+        if (viewModel.item.is_test) status.appendChild(createBadgeElement("TESTE", "info"));
         progresso.appendChild(createProgressElement(viewModel.progress, viewModel.progresso));
         prazo.appendChild(createBadgeElement(
             viewModel.prazoLabel,
@@ -114,6 +115,7 @@ function criarCard(viewModel, handlers) {
     card.dataset.status = viewModel.item.status || "";
     card.dataset.prazo = viewModel.prazo.tipo;
     card.setAttribute("aria-label", `${viewModel.cliente}. ${viewModel.status}`);
+    if (viewModel.item.is_test) card.appendChild(createBadgeElement("TESTE", "info"));
     return card;
 }
 

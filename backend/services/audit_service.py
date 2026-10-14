@@ -25,6 +25,11 @@ ALLOWED_METADATA = {
     "client_id",
     "proposal_id",
     "result",
+    "orcamento_id",
+    "old_is_test",
+    "new_is_test",
+    "old_client_is_test",
+    "financial_history_confirmed",
 }
 
 

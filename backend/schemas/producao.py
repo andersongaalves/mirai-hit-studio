@@ -93,6 +93,7 @@ class ProducaoObservacoesUpdate(BaseModel):
 
 
 class ProducaoResponse(BaseModel):
+    is_test: bool = False
     model_config = ConfigDict(from_attributes=True)
 
     id: int

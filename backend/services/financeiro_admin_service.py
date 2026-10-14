@@ -67,8 +67,7 @@ def _reconciliation_status(cobranca: CobrancaModel) -> str | None:
 
 
 def _filtro_ambiente(ambiente: str):
-    test_budget = (OrcamentoModel.is_test.is_(True) |
-                   OrcamentoModel.cliente.has(ClienteModel.is_test.is_(True)))
+    test_budget = OrcamentoModel.is_test.is_(True)
     test_charge = CobrancaModel.proposta.has(PropostaModel.orcamento.has(test_budget))
     if ambiente == 'real':
         return ~test_charge
@@ -161,6 +160,7 @@ def _item(cobranca: CobrancaModel):
         "id": cobranca.id,
         "proposta_id": cobranca.proposta_id,
         "proposta_numero": cobranca.proposta.numero,
+        "is_test": cobranca.proposta.orcamento.is_test,
         "cliente_nome": _cliente_nome(cobranca),
         "valor_total": total,
         "valor_pago": paid,

@@ -106,6 +106,8 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
         raise UsuarioConflito("Nao e permitido alterar o proprio nome de usuario.")
 
     proximo_role = payload.get("role", usuario.role)
+    if usuario.is_test and (proximo_role == "admin" or payload.get("username", usuario.username).strip().lower() == "yonda"):
+        raise UsuarioConflito("Conta de teste exige reversao validada antes de assumir identidade protegida.")
     proximo_ativo = payload.get("ativo", usuario.ativo)
     if "role" in payload and proximo_role != "cliente":
         payload["cliente_id"] = None

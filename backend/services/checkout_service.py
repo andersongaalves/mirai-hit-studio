@@ -263,6 +263,13 @@ def _get_or_create_attempt(
     else:
         locked = carregar(db, cobranca.referencia_externa, lock=True)
     db.expire(locked, ["pagamentos", "status", "valor_total"])
+    try:
+        from services.classificacao_service import permitir_nova_order
+
+        permitir_nova_order(db, locked)
+    except financial_service.FinanceiroConflito as error:
+        db.rollback()
+        raise CheckoutConflito(str(error)) from None
     pending = db.scalar(
         select(PagamentoModel)
         .where(

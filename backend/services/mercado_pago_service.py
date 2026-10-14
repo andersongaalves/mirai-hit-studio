@@ -172,6 +172,9 @@ def criar_tentativa(
         raise financial_service.FinanceiroInvalido("Cobranca nao encontrada.")
     if cobranca.status == CobrancaStatus.CANCELADA.value:
         raise financial_service.FinanceiroConflito("Cobranca cancelada nao aceita pagamentos.")
+    from services.classificacao_service import permitir_nova_order
+
+    permitir_nova_order(db, cobranca)
     amount = financial_service.valor_para_pagamento(cobranca, tipo)
     key = str(uuid4())
     payment = financial_service.registrar_pagamento(
@@ -414,7 +417,9 @@ def reconcile_order(
 
 
 def _tentativa(db: Session, payment_id: int, metodo: str) -> PagamentoModel:
-    payment = db.get(PagamentoModel, payment_id)
+    payment = db.scalar(select(PagamentoModel).where(
+        PagamentoModel.id == payment_id,
+    ).with_for_update().execution_options(populate_existing=True))
     if payment is None:
         raise financial_service.FinanceiroInvalido("Pagamento nao encontrado.")
     if payment.provider != PROVIDER or payment.metodo != metodo:
@@ -423,6 +428,10 @@ def _tentativa(db: Session, payment_id: int, metodo: str) -> PagamentoModel:
         raise financial_service.FinanceiroConflito("Tentativa sem identidade financeira.")
     if payment.provider_order_id:
         raise financial_service.FinanceiroConflito("Tentativa ja registrada no provider.")
+    charge = financial_service.bloquear_cobranca(db, payment.cobranca_id)
+    from services.classificacao_service import permitir_nova_order
+
+    permitir_nova_order(db, charge)
     return payment
 
 

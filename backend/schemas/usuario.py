@@ -114,6 +114,7 @@ class UsuarioResponse(BaseModel):
     role: str
     is_admin: bool
     ativo: bool
+    is_test: bool = False
     cliente_id: int | None
     created_at: datetime
     updated_at: datetime

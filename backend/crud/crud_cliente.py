@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from models.cliente import ClienteModel
 from models.orcamento import OrcamentoModel
+from services.classificacao_service import cliente_oficial
 
 
 def buscar_por_id(db: Session, cliente_id: int, *, com_orcamentos: bool = False):
@@ -30,18 +31,21 @@ def buscar_por_telefone(db: Session, telefone: str | None):
 
 def listar(db: Session, busca: str = "", ativo: bool | None = None, ambiente: str = "real"):
     ultima = func.max(func.coalesce(OrcamentoModel.updated_at, OrcamentoModel.data_solicitacao))
+    join_filter = OrcamentoModel.cliente_id == ClienteModel.id
+    if ambiente in {"real", "teste"}:
+        join_filter &= OrcamentoModel.is_test.is_(ambiente == "teste")
     query = (
         db.query(
             ClienteModel,
             func.count(OrcamentoModel.id).label("total_orcamentos"),
             ultima.label("ultima_interacao"),
         )
-        .outerjoin(OrcamentoModel, OrcamentoModel.cliente_id == ClienteModel.id)
+        .outerjoin(OrcamentoModel, join_filter)
     )
     if ambiente == "real":
-        query = query.filter(ClienteModel.is_test.is_(False))
+        query = query.filter(cliente_oficial())
     elif ambiente == "teste":
-        query = query.filter(ClienteModel.is_test.is_(True))
+        query = query.filter(or_(ClienteModel.is_test.is_(True), ClienteModel.orcamentos.any(OrcamentoModel.is_test.is_(True))))
     if busca:
         termo = f"%{busca.lower()}%"
         telefone = re.sub(r"\D", "", busca)
@@ -61,6 +65,7 @@ def listar(db: Session, busca: str = "", ativo: bool | None = None, ambiente: st
             ClienteModel.telefone,
             ClienteModel.observacoes,
             ClienteModel.ativo,
+            ClienteModel.is_test,
             ClienteModel.created_at,
             ClienteModel.updated_at,
         )

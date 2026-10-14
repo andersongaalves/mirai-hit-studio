@@ -18,8 +18,8 @@ async function handleResponse(response, message) {
     return text ? JSON.parse(text) : null;
 }
 
-export async function buscarOrcamentos() {
-    const response = await authFetch("/orcamentos");
+export async function buscarOrcamentos(ambiente = "real") {
+    const response = await authFetch(`/orcamentos?ambiente=${encodeURIComponent(ambiente)}`);
 
     return handleResponse(response, "Erro ao buscar orçamentos.");
 }

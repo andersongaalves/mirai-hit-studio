@@ -1,4 +1,4 @@
-const ROLE_LABELS = { admin: "Administrador", produtor: "Produtor" };
+const ROLE_LABELS = { admin: "Administrador", produtor: "Produtor", cliente: "Cliente" };
 
 
 export function roleLabel(role) {

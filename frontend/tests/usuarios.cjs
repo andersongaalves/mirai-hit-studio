@@ -71,6 +71,12 @@ async function staticResponse(route) {
             return route.fulfill({ json: users.find(user => user.id === Number(reset[1])) });
         }
         const match = url.pathname.match(/^\/usuarios\/(\d+)$/);
+        const classification = url.pathname.match(/^\/usuarios\/(\d+)\/classificacao$/);
+        if (classification) {
+            const user = users.find(item => item.id === Number(classification[1]));
+            user.is_test = request.postDataJSON().is_test;
+            return route.fulfill({json:user});
+        }
         if (match) {
             const user = users.find(item => item.id === Number(match[1]));
             if (!user) return route.fulfill({ status: 404, json: { detail: 'Usuario nao encontrado.' } });
@@ -115,12 +121,27 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.getElementById('modal-usuario').classList.contains('hidden'));
         assert.equal(users.length, 4);
 
-        const edit = page.locator('.usuarios-table tbody tr').filter({ hasText: 'novo' }).getByRole('button');
+        const edit = page.locator('.usuarios-table tbody tr').filter({ hasText: 'novo' }).getByRole('button', {name:'Abrir usuario novo',exact:true});
         await edit.click();
         await page.locator('#usuario-ativo').uncheck();
         await page.locator('#usuario-save').click();
         await page.waitForFunction(() => document.getElementById('modal-usuario').classList.contains('hidden'));
         assert.equal(users[3].ativo, false);
+        const row = page.locator('.usuarios-table tbody tr').filter({hasText:'novo'});
+        const before = calls.filter(c => c.endsWith('/classificacao')).length;
+        await row.getByRole('button',{name:'Classificar como teste',exact:true}).click();
+        await page.getByRole('button',{name:'Cancelar',exact:true}).click();
+        assert.equal(calls.filter(c => c.endsWith('/classificacao')).length,before);
+        await row.getByRole('button',{name:'Classificar como teste',exact:true}).click();
+        await page.getByText('Confirmo a classificação e a preservação dos registros.',{exact:false}).check();
+        await page.getByRole('button',{name:'Confirmar classificação'}).click();
+        await page.waitForFunction(() => document.getElementById('usuarios-list')?.textContent.includes('TESTE'));
+        assert.equal(users[3].is_test,true);
+        await row.getByRole('button',{name:'TESTE · Tornar real',exact:true}).click();
+        await page.getByText('Confirmo a classificação e a preservação dos registros.',{exact:false}).check();
+        await page.getByRole('button',{name:'Confirmar classificação'}).click();
+        await page.waitForFunction(() => !document.getElementById('usuarios-list')?.textContent.includes('TESTE'));
+        assert.equal(users[3].is_test,false);
 
         await page.getByRole('button', { name: 'Abrir usuario inativo', exact: true }).click();
         await page.locator('#usuario-new-password').fill('another-password');

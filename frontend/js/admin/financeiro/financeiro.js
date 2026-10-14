@@ -4,6 +4,8 @@ import * as API from "./financeiro_api.js";
 import { closeFinanceiroModal, renderFinanceiroModal } from "./financeiro_modal.js";
 import { financeiroState } from "./financeiro_state.js";
 import { renderList, renderSummary } from "./financeiro_ui.js";
+import { adicionarFiltroAmbiente } from "../classificacao.js";
+document.addEventListener("classificacao:atualizada", carregarFinanceiro);
 
 
 function filtersFromForm() {
@@ -27,12 +29,17 @@ function refresh() {
 
 export async function carregarFinanceiro() {
     if (!Auth.isAdmin()) return;
+    adicionarFiltroAmbiente("financeiro-search", "financeiro-ambiente", financeiroState.ambiente || "real", value => {
+        financeiroState.ambiente = value;
+        financeiroState.page = 1;
+        carregarFinanceiro();
+    });
     financeiroState.loading = true;
     financeiroState.error = "";
     refresh();
     try {
         const [summary, page] = await Promise.all([
-            API.carregarResumo(),
+            API.carregarResumo(financeiroState.ambiente || "real"),
             API.listarCobrancas(financeiroState),
         ]);
         financeiroState.summary = summary;

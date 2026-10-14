@@ -4,8 +4,10 @@ import { closeClienteModal, openClienteModal } from "./clientes_modal.js";
 import { clientesState } from "./clientes_state.js";
 import * as UI from "./clientes_ui.js";
 import { filtrarClientes } from "./clientes_utils.js";
+import { adicionarFiltroAmbiente } from "../classificacao.js";
 
 document.addEventListener("proposta:comercial-atualizada", carregarClientes);
+document.addEventListener("classificacao:atualizada", carregarClientes);
 
 
 function filtered() {
@@ -56,11 +58,15 @@ function registerFilters() {
 
 
 export async function carregarClientes() {
+    adicionarFiltroAmbiente("clientes-search", "clientes-ambiente", clientesState.ambiente || "real", value => {
+        clientesState.ambiente = value;
+        carregarClientes();
+    });
     clientesState.loading = true;
     clientesState.error = "";
     refreshClientes();
     try {
-        const data = await API.listarClientes();
+        const data = await API.listarClientes(clientesState.ambiente || "real");
         clientesState.lista = Array.isArray(data) ? data : [];
     } catch (error) {
         console.error(error);

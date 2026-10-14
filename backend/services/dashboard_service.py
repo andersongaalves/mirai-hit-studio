@@ -16,6 +16,7 @@ from schemas.dashboard import (
     DashboardPipeline,
     DashboardResponse,
 )
+from services.classificacao_service import cliente_oficial
 
 
 ORCAMENTOS_ABERTOS = (
@@ -28,8 +29,7 @@ ATIVIDADE_LIMITE = 8
 
 
 def _orcamento_oficial():
-    return (OrcamentoModel.is_test.is_(False) &
-            ~OrcamentoModel.cliente.has(ClienteModel.is_test.is_(True)))
+    return OrcamentoModel.is_test.is_(False)
 
 
 def _proposta_oficial():
@@ -51,7 +51,7 @@ def _contar(db: Session, model, *filtros) -> int:
 
 def _atividade_recente(db: Session) -> list[DashboardActivity]:
     atividades = []
-    for cliente in db.query(ClienteModel).filter(ClienteModel.is_test.is_(False)).order_by(ClienteModel.created_at.desc()).limit(ATIVIDADE_LIMITE):
+    for cliente in db.query(ClienteModel).filter(cliente_oficial()).order_by(ClienteModel.created_at.desc()).limit(ATIVIDADE_LIMITE):
         if cliente.created_at:
             atividades.append(DashboardActivity(
                 tipo="cliente_criado", titulo="Cliente cadastrado", data=cliente.created_at,
@@ -84,7 +84,7 @@ def _atividade_recente(db: Session) -> list[DashboardActivity]:
 
 def carregar(db: Session, agora: datetime | None = None) -> DashboardResponse:
     agora = agora or datetime.now(timezone.utc)
-    clientes_ativos = _contar(db, ClienteModel, ClienteModel.ativo.is_(True), ClienteModel.is_test.is_(False))
+    clientes_ativos = _contar(db, ClienteModel, ClienteModel.ativo.is_(True), cliente_oficial())
     orcamentos_abertos = _contar(db, OrcamentoModel, _orcamento_oficial(), OrcamentoModel.status.in_(ORCAMENTOS_ABERTOS))
     propostas_enviadas = _contar(db, PropostaModel, _proposta_oficial(), PropostaModel.status == PropostaStatus.ENVIADA.value)
     propostas_aprovadas = _contar(db, PropostaModel, _proposta_oficial(), PropostaModel.status == PropostaStatus.ACEITA.value)

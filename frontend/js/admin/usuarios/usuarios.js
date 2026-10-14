@@ -5,6 +5,21 @@ import { closeUsuarioModal, openUsuarioModal } from "./usuarios_modal.js";
 import { usuariosState } from "./usuarios_state.js";
 import * as UI from "./usuarios_ui.js";
 import { filtrarUsuarios } from "./usuarios_utils.js";
+import { confirmarClassificacao } from "../classificacao.js";
+
+export async function classificarConta(user, button) {
+    button.disabled = true;
+    try {
+        const payload = await confirmarClassificacao({ isTest: !user.is_test, account: true });
+        if (!payload) return;
+        await API.classificarUsuario(user.id, payload);
+        await carregarUsuarios();
+        document.dispatchEvent(new CustomEvent("classificacao:atualizada"));
+        Notify.success("Classificação da conta atualizada.");
+    } catch (error) {
+        Notify.error(error.message);
+    } finally { button.disabled = false; }
+}
 
 
 function filtered() {

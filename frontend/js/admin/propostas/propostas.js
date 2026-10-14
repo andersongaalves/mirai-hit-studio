@@ -1,5 +1,6 @@
 import * as Notify from "../../utils/notifications.js";
 import { $ } from "../../utils/dom.js";
+import { confirmarClassificacao } from "../classificacao.js";
 
 import * as PropostaModal from "./proposta_modal.js";
 import * as PropostaTabs from "./proposta_tabs.js";
@@ -24,6 +25,60 @@ let contexto = 0;
 let orcamentoCarregando = null;
 let acessoCliente = null;
 let acessoProcessando = false;
+let classificacao = null;
+
+function renderizarClassificacao() {
+    let section = $("proposta-classificacao");
+    if (!section) {
+        section = document.createElement("section");
+        section.id = "proposta-classificacao";
+        section.setAttribute("aria-live", "polite");
+        $("proposta-tabs")?.before(section);
+    }
+    section.replaceChildren();
+    if (typeof classificacao?.is_test !== "boolean") return;
+    const badge = document.createElement("span");
+    badge.className = "badge badge-info";
+    badge.textContent = classificacao.is_test ? "TESTE" : "REAL";
+    const label = document.createElement("label");
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.id = "proposta-is-test";
+    check.checked = classificacao.is_test;
+    check.disabled = classificacao.protegida || propostaState.dirty || propostaState.processando
+        || (classificacao.is_test && !classificacao.reversao_permitida);
+    label.append(check, document.createTextNode(" Classificar como teste"));
+    check.onchange = async () => {
+        const desired = check.checked;
+        check.checked = classificacao.is_test;
+        const id = propostaState.proposta?.id;
+        const atual = contexto;
+        check.disabled = true;
+        const payload = await confirmarClassificacao({ isTest: desired, financialHistory: classificacao.historico_financeiro });
+        if (atual !== contexto) return;
+        if (!payload) { renderizarClassificacao(); return; }
+        propostaState.processando = true;
+        atualizarStatusLocal();
+        try {
+            const response = await PropostaAPI.classificarProposta(id, payload);
+            if (atual !== contexto) return;
+            if (response.id !== id || typeof response.is_test !== "boolean") throw new Error("Classificação inválida.");
+            classificacao = response;
+            document.dispatchEvent(new CustomEvent("classificacao:atualizada"));
+            Notify.success(response.is_test ? "Proposta classificada como teste." : "Proposta classificada como real.");
+        } catch (error) {
+            if (atual === contexto) Notify.error(error.message);
+        } finally {
+            if (atual === contexto) { propostaState.processando = false; atualizarStatusLocal(); }
+        }
+    };
+    section.append(badge, label);
+    if (classificacao.protegida || (classificacao.is_test && !classificacao.reversao_permitida)) {
+        const notice = document.createElement("p");
+        notice.textContent = classificacao.protegida ? "Cadeia protegida." : "Reversão depende de conciliação financeira.";
+        section.append(notice);
+    }
+}
 
 const acessoLabels = Object.freeze({
     sem_acesso: "Sem acesso",
@@ -194,6 +249,7 @@ function renderizarAbaAtiva() {
 }
 
 function atualizarStatusLocal() {
+    renderizarClassificacao();
     const status = $("proposta-status");
     const { proposta, carregando, salvando, gerando, processando, dirty } = propostaState;
     const ocupado = carregando || salvando || gerando || processando;
@@ -257,6 +313,7 @@ export async function abrirEditorProposta(orcamento) {
     const atual = ++contexto;
     PropostaPreview.limparPreview();
     resetPropostaState();
+    classificacao = null;
     propostaState.carregando = true;
     orcamentoCarregando = orcamento.id;
     if ($("proposta-content")) $("proposta-content").textContent = "Carregando proposta...";
@@ -282,6 +339,8 @@ export async function abrirEditorProposta(orcamento) {
         });
         renderizarAbaAtiva();
         await carregarAcessoCliente();
+        const data = await PropostaAPI.buscarClassificacao(proposta.id);
+        if (atual === contexto) { classificacao = data; renderizarClassificacao(); }
     } catch (error) {
         if (atual !== contexto) return;
         if ($("proposta-content")) $("proposta-content").textContent = error.message;
@@ -361,6 +420,7 @@ export function fecharEditorProposta() {
 }
 
 function encerrarEditor() {
+    classificacao = null;
     contexto++;
     PropostaPreview.limparPreview();
     orcamentoCarregando = null;

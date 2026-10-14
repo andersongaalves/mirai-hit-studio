@@ -12,8 +12,8 @@ async function responseData(response, fallback) {
 }
 
 
-export function carregarResumo() {
-    return authFetch("/financeiro/resumo")
+export function carregarResumo(ambiente = "real") {
+    return authFetch(`/financeiro/resumo?ambiente=${encodeURIComponent(ambiente)}`)
         .then(response => responseData(response, "Não foi possível carregar o resumo financeiro."));
 }
 
@@ -21,6 +21,7 @@ export function carregarResumo() {
 export function listarCobrancas(state) {
     const query = new URLSearchParams({ page: String(state.page), page_size: String(state.pageSize) });
     const values = {
+        ambiente: state.ambiente || "real",
         search: state.filters.search,
         status: state.filters.status,
         reconciliation_status: state.filters.reconciliationStatus,

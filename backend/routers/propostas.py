@@ -1,18 +1,24 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
-from fastapi.responses import HTMLResponse, Response
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_admin
 from database import get_db
-from schemas.proposta import PropostaCreate, PropostaResponse, PropostaUpdate
-from services import proposta_service as service
-from services import proposta_documento_service as documentos
-from services.documento_storage import DocumentoIndisponivel
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
+from fastapi.responses import HTMLResponse, Response
+from schemas.proposta import (
+    PropostaClassificacaoResponse,
+    PropostaClassificacaoUpdate,
+    PropostaCreate,
+    PropostaResponse,
+    PropostaUpdate,
+)
+from services import classificacao_service
 from services import proposta_comercial_service as comercial
+from services import proposta_documento_service as documentos
+from services import proposta_service as service
+from services.documento_storage import DocumentoIndisponivel
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Propostas"], dependencies=[Depends(require_admin)])
 logger = logging.getLogger(__name__)
@@ -49,6 +55,18 @@ def buscar_por_orcamento(orcamento_id: IdPath, db: Db):
 @router.get("/propostas/{proposta_id}", response_model=PropostaResponse)
 def buscar(proposta_id: IdPath, db: Db):
     return _responder(service.buscar, db, proposta_id)
+
+
+@router.get("/propostas/{proposta_id}/classificacao", response_model=PropostaClassificacaoResponse)
+def consultar_classificacao(proposta_id: IdPath, db: Db):
+    return _responder(classificacao_service.consultar, db, proposta_id)
+
+
+@router.patch("/propostas/{proposta_id}/classificacao", response_model=PropostaClassificacaoResponse)
+def classificar(proposta_id: IdPath, dados: PropostaClassificacaoUpdate, request: Request,
+                db: Db, user=Depends(require_admin)):
+    return _responder(classificacao_service.alterar, db, proposta_id, dados, user,
+                      getattr(request.state, "request_id", None))
 
 
 @router.patch("/propostas/{proposta_id}", response_model=PropostaResponse)

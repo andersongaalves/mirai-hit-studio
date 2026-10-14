@@ -86,6 +86,7 @@ function createOrcamentoCard(item, produtores, handlers) {
     );
 
     actions.append(...createActions(item, handlers));
+    if (item.is_test) info.append(createTextElement("span", "TESTE", "badge badge-info"));
 
     return card;
 }
@@ -129,6 +130,9 @@ function createActions(item, handlers) {
     btnVer.onclick = () => handlers.onVisualizar(item.id);
 
     actions.push(btnVer);
+    const classify = createButtonElement({ text: item.is_test ? "Revisar classificação" : "Classificar como teste", className: "btn-small" });
+    classify.onclick = () => handlers.onGerarProposta(item.id);
+    actions.push(classify);
 
     switch (item.status) {
         case "novo": {

@@ -5,7 +5,6 @@ from models.producao import ProducaoModel
 from models.orcamento import OrcamentoModel
 from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
-from models.cliente import ClienteModel
 
 
 def _resposta(producao, produtor_nome=None, cliente_email=None, proposta=None):
@@ -20,6 +19,7 @@ def _resposta(producao, produtor_nome=None, cliente_email=None, proposta=None):
         "orcamento_id": producao.orcamento_id,
         "proposta_id": proposta.id if proposta else None,
         "proposta_numero": proposta.numero if proposta else None,
+        "is_test": bool(proposta and proposta.orcamento.is_test),
         "cliente_email": cliente_email,
         "observacoes": producao.observacoes or "",
         "etapas": producao.etapas or "[]",
@@ -72,8 +72,7 @@ def criar(db: Session, dados: dict):
 
 def listar(db: Session, ambiente: str = "real"):
     query = _consulta_detalhes(db)
-    marked = or_(OrcamentoModel.is_test.is_(True),
-                 OrcamentoModel.cliente.has(ClienteModel.is_test.is_(True)))
+    marked = OrcamentoModel.is_test.is_(True)
     marked_ids = select(OrcamentoModel.id).where(marked)
     if ambiente == "real":
         query = query.filter(or_(ProducaoModel.orcamento_id.is_(None),

@@ -15,6 +15,7 @@ const root = path.resolve(__dirname, '..');
         const clientAccess = { proposta_id: proposal.id, cliente_id: 4, cliente_nome: 'Cliente Teste', email: 'teste@example.com', proposta_status: 'aceita', estado: 'sem_acesso', usuario_id: null, last_sent_at: null, expires_at: null, send_count: 0 };
         const productions = [], calls = [], errors = [];
         let failure = null;
+        const classification = { id: proposal.id, orcamento_id: budget.id, is_test: false, protegida: false, historico_financeiro: true, reversao_permitida: false };
         page.on('pageerror', error => errors.push(error.message));
         page.on('console', message => {
             if (message.type() === 'error' && !message.text().startsWith('Failed to load resource:')) errors.push(message.text());
@@ -31,7 +32,24 @@ const root = path.resolve(__dirname, '..');
                         json: { ok: true }, headers: { 'access-control-allow-origin': '*' },
                     });
                 }
-                if (url.pathname === '/orcamentos') return route.fulfill({ json: [budget] });
+                if (url.pathname === '/orcamentos') {
+                    const mode = url.searchParams.get('ambiente') || 'real';
+                    return route.fulfill({ json: mode === 'todos' || Boolean(budget.is_test) === (mode === 'teste') ? [budget] : [] });
+                }
+                if (url.pathname === '/dashboard') return route.fulfill({ json: {
+                    metrics: {clientes_ativos:0,orcamentos_abertos:0,propostas_aguardando_decisao:0,producoes_ativas:0,producoes_atrasadas:0},
+                    pipeline: {orcamentos_abertos:0,propostas_enviadas:0,propostas_aprovadas:0,producoes_ativas:0},
+                    attention: {producoes_atrasadas:0,propostas_aguardando_decisao:0},recent_activity:[] } });
+                if (url.pathname.endsWith('/classificacao')) {
+                    if (request.method() === 'PATCH') {
+                        if (failure === 'classificacao') return route.fulfill({ status: 409, json: {detail:'Falha sintetica de classificacao'} });
+                        const payload = request.postDataJSON();
+                        assert.equal(payload.confirmar_historico_financeiro, classification.historico_financeiro);
+                        classification.is_test = payload.is_test;
+                        budget.is_test = payload.is_test;
+                    }
+                    return route.fulfill({ json: classification });
+                }
                 if (url.pathname === '/usuarios') return route.fulfill({ json: [] });
                 if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
                 if (url.pathname === '/producoes') return route.fulfill({ json: productions });
@@ -170,6 +188,38 @@ const root = path.resolve(__dirname, '..');
         assert.equal(calls.filter(call => call === 'GET /producoes').length, 1);
         assert.equal(calls.filter(call => call === 'GET /clientes').length, 2);
         assert.ok(!calls.some(call => /\/status$|enviar-proposta/.test(call)));
+        await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);
+        await page.waitForSelector('#proposta-is-test');
+        const testCheckbox = page.locator('#proposta-is-test');
+        const patches = () => calls.filter(call => call === `PATCH /propostas/${proposal.id}/classificacao`).length;
+        await testCheckbox.click();
+        assert.equal(await testCheckbox.isChecked(), false);
+        assert.equal(patches(), 0);
+        await page.getByRole('button', {name:'Cancelar',exact:true}).click();
+        assert.equal(patches(), 0);
+        failure = 'classificacao';
+        await testCheckbox.click();
+        assert.equal(await page.getByRole('button',{name:'Confirmar classificação'}).isDisabled(), true);
+        await page.getByText('Confirmo a classificação e a preservação dos registros.', {exact:false}).check();
+        await page.getByRole('button',{name:'Confirmar classificação'}).click();
+        await page.waitForFunction(async () => !(await import('/js/admin/propostas/proposta_state.js')).propostaState.processando);
+        assert.equal(await testCheckbox.isChecked(), false);
+        failure = null;
+        await testCheckbox.click();
+        assert.match(await page.locator('[aria-labelledby="classificacao-title"]').textContent(), /histórico financeiro/);
+        await page.getByText('Confirmo a classificação e a preservação dos registros.', {exact:false}).check();
+        await page.getByRole('button',{name:'Confirmar classificação'}).click();
+        await page.waitForFunction(() => document.getElementById('proposta-is-test')?.checked === true);
+        assert.equal(patches(), 2);
+        assert.equal(await testCheckbox.isDisabled(), true);
+        await page.evaluate(() => window.fecharEditorProposta());
+        await page.evaluate(() => localStorage.removeItem('mirai.auth.admin.access_token'));
+        await page.reload();
+        await page.waitForFunction(() => typeof window.fecharEditorProposta === 'function');
+        await page.evaluate(() => localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only'));
+        await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);
+        await page.waitForFunction(() => document.getElementById('proposta-is-test')?.checked === true);
+        assert.match(await page.locator('#proposta-classificacao').textContent(), /TESTE/);
         assert.deepEqual(errors, []);
         console.log('PASS: send/approve guards, dirty, confirmations, failures, double-submit, state, CRM reload and production availability.');
     } finally { await browser.close(); }

@@ -38,6 +38,11 @@ export const gerarDocumento = id => request(`/propostas/${id}/gerar-documento`, 
 export const enviarProposta = id => request(`/propostas/${id}/enviar`, { method: "POST" });
 export const aprovarProposta = id => request(`/propostas/${id}/aprovar`, { method: "POST" });
 
+export const buscarClassificacao = async id => (await responseFor(`/propostas/${id}/classificacao`)).json();
+export const classificarProposta = async (id, payload) => (await responseFor(`/propostas/${id}/classificacao`, {
+    method: "PATCH", body: JSON.stringify(payload),
+})).json();
+
 async function accessRequest(path, options = {}) {
     const response = await responseFor(path, options);
     const data = await response.json().catch(() => null);
