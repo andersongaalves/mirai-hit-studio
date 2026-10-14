@@ -85,13 +85,13 @@ with Session(engine) as db:
 
     def test_transitions_permissions_dependencies_and_progress(self):
         self.run_case('''
+client = make_api()  # Users first: the production is reassigned to producer 2 below.
 with Session(engine) as db:
     seed_service(db)
     production, _ = approved_production(db)
     production.produtor_id = 2
     db.commit()
     production_id = production.id
-client = make_api()
 base_admin = f'/producoes/{production_id}/etapas-contratuais'
 base_producer = f'/portal/produtor/producoes/{production_id}/etapas'
 base_client = f'/portal/cliente/producoes/{production_id}/etapas'
