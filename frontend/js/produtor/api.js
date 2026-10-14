@@ -87,3 +87,20 @@ export async function obterConfiguracao() {
         "Não foi possível carregar as preferências do portal.",
     );
 }
+
+export async function listarMensagens(producaoId) {
+    return responseData(
+        await authFetch(`/portal/produtor/producoes/${producaoId}/mensagens`),
+        "Não foi possível carregar as mensagens.",
+    );
+}
+
+export async function enviarMensagem(producaoId, payload) {
+    return responseData(
+        await authFetch(`/portal/produtor/producoes/${producaoId}/mensagens`, {
+            method: "POST",
+            body: JSON.stringify(payload),
+        }),
+        "Não foi possível enviar a mensagem.",
+    );
+}

@@ -1,5 +1,6 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
+import { messagesPanel } from "../modules/production_messages.js";
 import {
     applySettings,
     renderDashboard,
@@ -53,6 +54,30 @@ function releaseObjectUrls() {
     objectUrls.clear();
 }
 
+// Roadmap 5.03: the thread loads after the detail so its failure never blocks the project.
+async function loadMessages(production, files) {
+    const slot = document.getElementById("production-messages-slot");
+    if (!slot) return;
+    let messages = [];
+    let error = "";
+    try {
+        messages = await api.listarMensagens(production.id);
+    } catch {
+        error = "Não foi possível carregar as mensagens agora.";
+    }
+    if (route().view !== "detail" || route().id !== production.id) return;
+    slot.replaceChildren(messagesPanel({
+        role: "cliente",
+        messages,
+        files,
+        error,
+        onSend: async payload => {
+            await api.enviarMensagem(production.id, payload);
+            await loadMessages(production, files);
+        },
+    }));
+}
+
 function rememberProduction(production) {
     if (!production || typeof production.id !== "number") return;
     const index = productions.findIndex(item => item.id === production.id);
@@ -90,6 +115,7 @@ async function openDetail(id) {
             uploadFeedback,
         });
         showView("detail");
+        loadMessages(production, files);
         if (!financeResult.ok) {
             setAlert("Não foi possível atualizar as informações de pagamento agora. Os demais dados estão disponíveis.", true);
         }
@@ -233,6 +259,7 @@ async function refreshFiles(production, setFeedback) {
             onPreview: playPreview,
             uploadFeedback,
         });
+        loadMessages(production, files);
     } catch (error) {
         uploadFeedback = {
             kind: "error",

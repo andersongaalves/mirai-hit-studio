@@ -9,6 +9,7 @@
         <link rel="stylesheet" href="css/pages/admin.css" />
         <link rel="stylesheet" href="css/integrado.css?v=20261012-style-architecture" />
         <link rel="stylesheet" href="css/pages/integrado-admin.css" />
+        <link rel="stylesheet" href="css/components/production-messages.css" />
         <link
             rel="icon"
             type="image/png"
@@ -1548,6 +1549,11 @@
                                 <label class="producao-check"><input id="prod_arquivo_cliente" type="checkbox" /> Visível ao cliente</label>
                                 <button id="prod_arquivo_enviar" class="btn-small" type="submit">Enviar arquivo</button>
                             </form>
+                        </section>
+
+                        <section class="producao-detail-block">
+                            <h3>Mensagens da produção</h3>
+                            <div id="prod_mensagens" aria-live="polite"></div>
                         </section>
 
                         <section class="producao-detail-block">

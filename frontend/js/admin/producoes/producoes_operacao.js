@@ -1,5 +1,6 @@
 import * as Notify from "../../utils/notifications.js";
 import * as API from "./producoes_api.js";
+import { messagesPanel } from "../../modules/production_messages.js";
 
 let productionId = null;
 let files = [];
@@ -157,6 +158,31 @@ function bindActions() {
     );
 }
 
+// Roadmap 5.03: thread loads independently so a failure never blocks files or payouts.
+async function carregarMensagens(id, revision) {
+    const slot = byId("prod_mensagens");
+    if (!slot) return;
+    let messages = [];
+    let error = "";
+    try {
+        messages = await API.buscarMensagens(id);
+    } catch {
+        error = "Não foi possível carregar as mensagens agora.";
+    }
+    if (revision !== loadRevision || productionId !== id) return;
+    slot.replaceChildren(messagesPanel({
+        role: "admin",
+        heading: false,
+        messages,
+        files,
+        error,
+        onSend: async payload => {
+            await API.enviarMensagem(id, payload);
+            await carregarMensagens(id, revision);
+        },
+    }));
+}
+
 export async function carregarOperacao(id) {
     const revision = ++loadRevision;
     productionId = id;
@@ -170,6 +196,7 @@ export async function carregarOperacao(id) {
         renderFiles();
         renderPayout();
         bindActions();
+        carregarMensagens(id, revision);
     } catch (error) {
         byId("prod_arquivos").textContent = "Não foi possível carregar arquivos e repasse.";
         byId("prod_repasse_resumo").textContent = "";
@@ -183,4 +210,5 @@ export function limparOperacao() {
     files = [];
     payout = null;
     byId("prod_arquivo_form")?.reset();
+    byId("prod_mensagens")?.replaceChildren();
 }

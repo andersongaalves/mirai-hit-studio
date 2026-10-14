@@ -136,3 +136,14 @@ export async function corrigirRepasse(id, payload) {
         body: JSON.stringify(payload),
     }), "Erro ao corrigir repasse.");
 }
+
+export async function buscarMensagens(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/mensagens`), "Erro ao buscar mensagens.");
+}
+
+export async function enviarMensagem(id, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/mensagens`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    }), "Erro ao enviar mensagem.");
+}

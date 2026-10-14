@@ -326,7 +326,9 @@ export function renderDetail(production, files, finance, handlers) {
         progress.append(list);
     }
     grid.append(overview, progress);
-    detail.append(title, meta, grid, filesPanel(production, files, handlers), financePanel(finance));
+    const messagesSlot = element("div");
+    messagesSlot.id = "production-messages-slot";
+    detail.append(title, meta, grid, filesPanel(production, files, handlers), messagesSlot, financePanel(finance));
     root.append(detail);
 }
 

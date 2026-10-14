@@ -14,6 +14,8 @@ let slowUpload = false;
 let failFinance = false;
 let lastUploadBody = '';
 let portalSettings = null;
+const messages = [{ id: 1, producao_id: 1, autor_papel: 'produtor', enviado_por_mim: false, audiencia: 'todos', texto: 'Prévia nova <img src=x onerror=alert(3)>', responde_a_id: null, arquivo: { id: 7, nome_exibicao: 'mix.mp3', tipo: 'previa', versao: 1 }, created_at: new Date(now).toISOString() }];
+const messagePosts = [];
 let proposals = [{
     id: 11,
     numero: 'PROP-CLIENT-011',
@@ -134,6 +136,15 @@ async function staticResponse(route) {
         if (proposalDetail) {
             const proposal = proposals.find(item => item.id === Number(proposalDetail[1]));
             return route.fulfill(proposal ? { json: proposal } : { status: 404, json: { detail: 'Proposta nao encontrada.' } });
+        }
+        const thread = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/mensagens$/);
+        if (thread && request.method() === 'GET') return route.fulfill({ json: messages.filter(item => item.producao_id === Number(thread[1])) });
+        if (thread && request.method() === 'POST') {
+            const body = request.postDataJSON();
+            messagePosts.push(body);
+            const created = { id: messages.length + 1, producao_id: Number(thread[1]), autor_papel: 'cliente', enviado_por_mim: true, audiencia: 'todos', texto: body.texto, responde_a_id: body.responde_a_id, arquivo: null, created_at: new Date().toISOString() };
+            messages.push(created);
+            return route.fulfill({ status: 201, json: created });
         }
         if (url.pathname === '/portal/cliente/configuracao') {
             return route.fulfill(portalSettings ? { json: { portal: 'cliente', versao: 4, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
@@ -268,6 +279,18 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').first().textContent(), /<script>preview<\/script>/);
         assert.match(await page.locator('.client-finance-grid').textContent(), /R\$\s*1\.000,00/);
         assert.equal(await page.getByRole('link', { name: 'Ir para pagamento' }).count(), 1);
+
+        // Roadmap 5.03: thread renders as text, replies and sends without audience choice.
+        await page.waitForSelector('.production-message');
+        assert.equal(await page.locator('.production-messages img').count(), 0);
+        assert.match(await page.locator('.production-message').first().textContent(), /Produção.*Prévia nova <img src=x onerror=alert\(3\)>.*Arquivo: mix\.mp3 \(v1\)/s);
+        assert.equal(await page.getByLabel('Quem pode ver').count(), 0);
+        await page.locator('.production-message').first().getByRole('button', { name: 'Responder' }).click();
+        await page.getByLabel('Escreva uma mensagem').fill('Ficou ótimo, pode seguir.');
+        await page.getByRole('button', { name: 'Enviar mensagem' }).click();
+        await page.waitForFunction(() => document.querySelectorAll('.production-message').length === 2);
+        assert.deepEqual(messagePosts[0], { texto: 'Ficou ótimo, pode seguir.', audiencia: 'todos', responde_a_id: 1, arquivo_id: null });
+        assert.match(await page.locator('.production-message').nth(1).textContent(), /Você.*Em resposta a: Prévia nova/s);
 
         await page.getByRole('button', { name: 'Reproduzir' }).click();
         await page.waitForSelector('audio.client-player', { state: 'attached' });
