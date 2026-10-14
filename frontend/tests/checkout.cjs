@@ -113,6 +113,8 @@ async function staticResponse(route) {
         await context.route('**/*', async route => {
             const url = new URL(route.request().url());
             if (url.origin === 'http://localhost:4173' || url.origin === 'https://deploy-preview-19--miraihitstudio.netlify.app') return staticResponse(route);
+            // Non-production hosts point to a reserved .invalid API that never resolves.
+            if (url.hostname.endsWith('.invalid')) return route.abort('namenotresolved');
             if (url.origin === 'https://sdk.mercadopago.com') {
                 if (sdkFailure) return route.abort();
                 return route.fulfill({ contentType: 'text/javascript', body: `
@@ -629,24 +631,11 @@ async function staticResponse(route) {
         previewPage.on('pageerror', error => pageErrors.push(error.message));
         await previewPage.addInitScript(() => localStorage.setItem('mirai.auth.cliente.access_token', 'client-token'));
         await previewPage.goto('https://deploy-preview-19--miraihitstudio.netlify.app/checkout?proposta=70');
-        await previewPage.waitForSelector('#checkout-content:not(.hidden)');
-        await previewPage.locator('#method-card').click();
-        await previewPage.getByRole('button', { name: 'Pagar cartão' }).waitFor();
-        assert.equal(await previewPage.evaluate(() => window.__publicKey), 'TEST-public-key');
-        assert.equal(await previewPage.evaluate(() => window.__brickSettings.initialization.amount), 200);
-        await previewPage.getByLabel('Entrada').check();
-        await previewPage.waitForFunction(() => window.__brickSettings.initialization.amount === 100);
-        await previewPage.evaluate(async () => window.__brickSettings.callbacks.onSubmit({
-            token: 'synthetic-token', payment_method_id: 'visa', installments: 1,
-            payer: { email: 'buyer@example.invalid' },
-        }, { paymentTypeId: 'credit_card' }));
-        await previewPage.waitForFunction(() => document.querySelector('#checkout-terminal').textContent.includes('Saldo restante'));
-        assert.equal(await previewPage.locator('#payment-result').isHidden(), true);
-        assert.equal(await previewPage.locator('#checkout-terminal a').getAttribute('href'), '/cliente');
-        assert.match(await previewPage.locator('#checkout-terminal').textContent(), /R\$\s*100,00/);
-        assert.ok(previewApiRequests.includes('https://mirai-hit-studio.onrender.com/portal/cliente/propostas/70/checkout'));
-        assert.ok(previewApiRequests.includes('https://mirai-hit-studio.onrender.com/checkout/config'));
-        assert.equal(previewApiRequests.some(url => url.includes('mirai-hit-studio.onrender.comcheckout')), false);
+        // AUD-S12-004: previews never reach the production API; they fail closed.
+        await previewPage.waitForSelector('#checkout-error:not(.hidden)');
+        assert.deepEqual(previewApiRequests, []);
+        assert.equal(await previewPage.locator('#checkout-content:not(.hidden)').count(), 0);
+        assert.equal(await previewPage.evaluate(() => typeof window.__brickSettings), 'undefined');
         await previewPage.close();
 
         assert.deepEqual(pageErrors, []);
