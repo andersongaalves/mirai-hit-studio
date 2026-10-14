@@ -15,15 +15,21 @@ depends_on = None
 
 def upgrade():
     # Additive only: one nullable column and an append-only history table.
-    op.add_column(
-        "producao_etapas",
-        sa.Column(
-            "executor_usuario_id",
-            sa.Integer(),
-            sa.ForeignKey("usuarios.id", ondelete="SET NULL"),
-            nullable=True,
-        ),
-    )
+    # Batch mode: SQLite cannot add a column with a foreign key through ALTER TABLE;
+    # PostgreSQL still receives a plain ALTER TABLE ... ADD COLUMN.
+    with op.batch_alter_table("producao_etapas") as batch:
+        batch.add_column(
+            sa.Column(
+                "executor_usuario_id",
+                sa.Integer(),
+                sa.ForeignKey(
+                    "usuarios.id",
+                    ondelete="SET NULL",
+                    name="fk_producao_etapas_executor_usuario_id",
+                ),
+                nullable=True,
+            )
+        )
     op.create_table(
         "producao_etapa_atribuicoes",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -56,4 +62,5 @@ def downgrade():
     op.drop_table("producao_etapa_atribuicoes")
     # Batch mode rebuilds the table on SQLite, which cannot drop a column with a foreign key.
     with op.batch_alter_table("producao_etapas") as batch:
+        batch.drop_constraint("fk_producao_etapas_executor_usuario_id", type_="foreignkey")
         batch.drop_column("executor_usuario_id")
