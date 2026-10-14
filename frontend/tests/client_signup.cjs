@@ -59,6 +59,8 @@ const root = path.resolve(__dirname, '..');
         assert.equal('role' in requests[0].body, false);
         assert.equal('cliente_id' in requests[0].body, false);
         await page.getByRole('button', { name: 'Reenviar confirmação' }).click();
+        // Wait for the resend round-trip instead of racing the network handler.
+        await page.getByRole('button', { name: 'Confirmação solicitada' }).waitFor();
         assert.deepEqual(requests[1], {
             path: '/auth/client-signup/resend',
             body: { email: 'cliente@example.invalid' },

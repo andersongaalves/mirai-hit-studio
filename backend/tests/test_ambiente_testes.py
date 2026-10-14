@@ -78,7 +78,7 @@ from alembic import command
 from sqlalchemy import MetaData, select
 from scripts.bootstrap_database import migration_config
 config = migration_config()
-command.downgrade(config, 'c5f2a7d9e184')
+command.downgrade(config, 'a7d3e5f9c210')
 legacy = MetaData()
 legacy.reflect(bind=engine)
 with engine.begin() as conn:
@@ -97,7 +97,7 @@ with engine.connect() as conn:
     assert conn.exec_driver_sql('SELECT id,is_test FROM orcamentos ORDER BY id').all() == [(234,False),(238,False),(240,True),(998,False)]
     assert conn.exec_driver_sql('SELECT id,is_test FROM clientes ORDER BY id').all() == [(90,False),(93,False),(94,False)]
     assert conn.execute(select(legacy.tables['pagamentos'])).all() == financial_before
-command.downgrade(config,'c5f2a7d9e184')
+command.downgrade(config,'a7d3e5f9c210')
 assert 'is_test' not in {c['name'] for c in inspect(engine).get_columns('usuarios')}
 with engine.connect() as conn:
     assert conn.execute(select(legacy.tables['pagamentos'])).all() == financial_before

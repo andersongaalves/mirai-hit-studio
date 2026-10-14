@@ -1,14 +1,14 @@
 """Classify historical test chains without deleting financial or audit evidence.
 
 Revision ID: d8a7b1c9e240
-Revises: c5f2a7d9e184
+Revises: a7d3e5f9c210
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "d8a7b1c9e240"
-down_revision = "c5f2a7d9e184"
+down_revision = "a7d3e5f9c210"
 branch_labels = None
 depends_on = None
 

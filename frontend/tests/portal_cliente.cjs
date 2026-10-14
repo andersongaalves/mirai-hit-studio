@@ -11,6 +11,8 @@ let uploads = 0;
 let failFileList = false;
 let uploadFailure = null;
 let slowUpload = false;
+let failFinance = false;
+let lastUploadBody = '';
 let proposals = [{
     id: 11,
     numero: 'PROP-CLIENT-011',
@@ -48,7 +50,7 @@ let files = [{
     id: 7, producao_id: 1, tipo: 'previa', nome_exibicao: '<script>preview</script>.mp3',
     mime_type: 'audio/mpeg', tamanho_bytes: 2048, sha256: 'a'.repeat(64),
     grupo_versao: 'preview-group', versao: 1, substitui_arquivo_id: null,
-    enviado_por_mim: false, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+    enviado_por_mim: false, observacao: 'Mix v1 <b>com voz guia</b>', created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
 }, {
     id: 8, producao_id: 1, tipo: 'material', nome_exibicao: 'voz.wav', mime_type: 'audio/wav',
     tamanho_bytes: 1024, sha256: 'b'.repeat(64), grupo_versao: 'material-group', versao: 1,
@@ -136,7 +138,10 @@ async function staticResponse(route) {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
         const financial = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/financeiro$/);
-        if (financial) return route.fulfill({ json: finances.get(Number(financial[1])) });
+        if (financial) {
+            if (failFinance) return route.fulfill({ status: 503, json: { detail: 'Financeiro indisponível.' } });
+            return route.fulfill({ json: finances.get(Number(financial[1])) });
+        }
         const fileList = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/arquivos$/);
         if (fileList && request.method() === 'GET') {
             if (failFileList) return route.fulfill({ status: 503, json: { detail: 'Lista indisponível.' } });
@@ -144,6 +149,7 @@ async function staticResponse(route) {
         }
         if (fileList && request.method() === 'POST') {
             uploads++;
+            lastUploadBody = request.postData() || '';
             if (slowUpload) await new Promise(resolve => setTimeout(resolve, 200));
             if (uploadFailure === 'network') return route.abort();
             if (uploadFailure) return route.fulfill({ status: uploadFailure, json: { detail: 'Falha controlada.' } });
@@ -278,6 +284,10 @@ async function staticResponse(route) {
             assert.ok(bounds.controls.every(item => item.left >= bounds.left - 1 && item.right <= bounds.right + 1), JSON.stringify({ width, bounds }));
             assert.equal(await page.locator('.producer-upload__filename').getAttribute('title'), longName);
         }
+        // Roadmap 5.02: version notes are shown as text and sent with the upload.
+        assert.match(await page.locator('.producer-file').first().textContent(), /Observação da equipe: Mix v1 <b>com voz guia<\/b>/);
+        assert.equal(await page.locator('.file-note b').count(), 0);
+        await page.getByLabel('Observação para esta versão').fill('Voz regravada no take 3');
         await page.getByLabel('Versão substituída').selectOption('8');
         slowUpload = true;
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
@@ -287,6 +297,7 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Nova versão enviada com sucesso'));
         slowUpload = false;
         assert.equal(uploads, 1);
+        assert.match(lastUploadBody, /name="observacao"[\s\S]*Voz regravada no take 3/);
         assert.match(await page.locator('.producer-file-list').last().textContent(), /nome-longo/);
         assert.match(await page.locator('.producer-file-list').last().textContent(), /Versão 2/);
         assert.equal(await page.locator('#client-alert').textContent(), '');
@@ -308,6 +319,25 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Atualizar lista' }).click();
         await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado com sucesso'));
         assert.equal(uploads, 4);
+        // AUD-S07-003: superseded versions are no longer offered for replacement.
+        const replacementOptions = await page.getByLabel('Versão substituída').locator('option')
+            .evaluateAll(options => options.map(option => option.value));
+        assert.equal(replacementOptions.includes('8'), false, JSON.stringify(replacementOptions));
+        assert.equal(replacementOptions.includes('10'), true, JSON.stringify(replacementOptions));
+
+        // AUD-S07-001: a finance failure keeps the project and its files available.
+        await page.setViewportSize({ width: 1024, height: 800 });
+        failFinance = true;
+        await page.getByRole('link', { name: 'Meus projetos' }).click();
+        await page.waitForURL('**/cliente/projetos');
+        await page.locator('#client-list .producer-card').filter({ hasText: '<img src=x' })
+            .getByRole('button', { name: 'Abrir projeto' }).click();
+        await page.waitForURL('**/cliente/projetos/1');
+        await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('informações de pagamento'));
+        assert.equal(await page.getByRole('heading', { name: '<img src=x onerror=alert(1)>' }).count(), 1);
+        assert.ok(await page.locator('.producer-file').count() > 0);
+        assert.match(await page.locator('.client-finance-grid').textContent(), /R\$\s*1\.000,00/);
+        failFinance = false;
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });

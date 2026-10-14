@@ -62,6 +62,7 @@ class ProducaoArquivoClienteResponse(BaseModel):
     versao: int
     substitui_arquivo_id: int | None
     enviado_por_mim: bool
+    observacao: str | None = None
     created_at: datetime
     updated_at: datetime
 

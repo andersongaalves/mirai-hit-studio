@@ -1,5 +1,11 @@
 import { deadlineState, filterAndSort, formatDate, nextAction, parseEtapas, statusInfo, summarize } from "./utils.js";
 
+let currentUserId = null;
+
+export function setCurrentUserId(id) {
+    currentUserId = typeof id === "number" ? id : null;
+}
+
 const element = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -96,6 +102,17 @@ function fileItem(file, onDownload) {
         element("strong", "", file.nome_exibicao),
         element("span", "", `${file.tipo} · versão ${file.versao} · ${Math.ceil(file.tamanho_bytes / 1024)} KB`),
     );
+    if (file.observacao) {
+        const author = file.remetente_usuario_id === currentUserId ? "Sua observação" : "Observação";
+        info.append(element("p", "file-note", `${author}: ${file.observacao}`));
+    }
+    if (file.tipo === "previa") {
+        info.append(element(
+            "span",
+            file.visivel_cliente ? "producer-file__shared" : "",
+            file.visivel_cliente ? "Compartilhada com o cliente" : "Não compartilhada com o cliente",
+        ));
+    }
     const button = element("button", "btn-outline", "Baixar");
     button.type = "button";
     button.addEventListener("click", () => onDownload(file.id, button));
@@ -128,17 +145,31 @@ function filesPanel(production, files, handlers) {
     const noReplacement = element("option", "", "Nova versão independente");
     noReplacement.value = "";
     replaces.append(noReplacement);
-    files.filter(file => ["previa", "entrega"].includes(file.tipo)).forEach(file => {
-        const option = element("option", "", `Substituir ${file.nome_exibicao} (v${file.versao})`);
-        option.value = String(file.id);
-        replaces.append(option);
-    });
+    // Offer only the newest version of the selected type; the backend rejects others.
+    const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
+    const updateReplacementOptions = () => {
+        replaces.replaceChildren(noReplacement);
+        files
+            .filter(file => file.tipo === type.value && !replaced.has(file.id))
+            .forEach(file => {
+                const option = element("option", "", `Substituir ${file.nome_exibicao} (v${file.versao})`);
+                option.value = String(file.id);
+                replaces.append(option);
+            });
+    };
+    type.addEventListener("change", updateReplacementOptions);
+    updateReplacementOptions();
+    const note = element("textarea", "producer-upload__note");
+    note.rows = 2;
+    note.maxLength = 1000;
+    note.placeholder = "Observação para esta versão (opcional)";
+    note.setAttribute("aria-label", "Observação para esta versão");
     const submit = element("button", "btn-cta", "Enviar arquivo");
     submit.type = "submit";
-    form.append(type, input, replaces, submit);
+    form.append(type, input, replaces, note, submit);
     form.addEventListener("submit", event => {
         event.preventDefault();
-        if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit);
+        if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value);
     });
     panel.append(form);
     return panel;

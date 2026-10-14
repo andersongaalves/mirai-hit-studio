@@ -44,7 +44,7 @@ Prioridade premium e de crescimento.
 
 **Ofertas:** soundtrack, loops, stingers, menu music, ambient, sound design e trilha audiovisual.
 
-Essa vertical depende de portfolio especifico. A Mirai nao deve alegar experiencia ou clientes inexistentes; materiais iniciais devem ser identificados como Demo, Concept Project ou Study.
+Essa vertical depende de portfolio especifico. A Mirai nao deve alegar experiencia ou clientes inexistentes; materiais iniciais devem ser identificados como Demo, Concept Project ou Estudo (valor tecnico `study`).
 
 ## 3. Verticais, segmentos e especialidades
 

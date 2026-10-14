@@ -44,7 +44,8 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
-    expose_headers=["X-Request-ID"],
+    # Portals run on another origin and need the server-provided download filename.
+    expose_headers=["X-Request-ID", "Content-Disposition"],
 )
 
 

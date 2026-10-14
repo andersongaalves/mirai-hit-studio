@@ -49,7 +49,7 @@ preexistente continua recebendo webhooks e conciliacao normalmente.
 
 ## Migration e validacao
 
-Migration existente `d8a7b1c9e240`, sobre `c5f2a7d9e184`: flags em clientes,
+Migration existente `d8a7b1c9e240`, sobre `a7d3e5f9c210` (fase 5.02): flags em clientes,
 orcamentos e usuarios. Backfill comercial exige os pares de IDs e vinculos
 inventariados; bloqueia identidade Yonda e descendentes protegidos. Clientes
 com qualquer orcamento real nao sao marcados automaticamente. Produtores

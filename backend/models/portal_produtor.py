@@ -86,6 +86,8 @@ class ProducaoArquivoModel(Base):
     )
     visivel_produtor = Column(Boolean, default=False, server_default=false(), nullable=False)
     visivel_cliente = Column(Boolean, default=False, server_default=false(), nullable=False)
+    # Roadmap 5.02: note written by the uploader for this exact version; never edited.
+    observacao = Column(String(1000), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),

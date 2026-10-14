@@ -179,7 +179,9 @@ jobs:
                     test_portal_cliente_operacao.py \
                     test_producao.py \
                     test_authenticated_checkout.py \
-                    test_ambiente_testes.py; do
+                    test_ambiente_testes.py \
+                    test_mercado_pago_webhooks.py \
+                    test_http_cors_contract.py; do
                       python -m unittest discover -s tests -p "$pattern" -v
                   done
 
@@ -202,6 +204,7 @@ jobs:
                   node frontend/tests/checkout.cjs
                   node frontend/tests/proposta_comercial.cjs
                   node frontend/tests/usuarios.cjs
+                  node frontend/tests/client_signup.cjs
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend

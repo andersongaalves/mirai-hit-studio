@@ -1472,6 +1472,8 @@
 .producao-operacao-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: var(--space-3); }
 .producao-operacao-form label { display: grid; gap: var(--space-2); }
 .producao-operacao-form .producao-check { display: flex; align-items: center; min-height: 44px; }
+.producao-operacao-form textarea { min-height: 44px; resize: vertical; font: inherit; }
+.producao-arquivo-row .file-note { margin: var(--space-1) 0 0; color: var(--color-text-secondary); white-space: pre-line; overflow-wrap: anywhere; }
 .producao-repasse-resumo { margin-bottom: var(--space-4); }
 
 @media (max-width: 720px) {

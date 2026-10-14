@@ -7,6 +7,8 @@ const root = path.resolve(__dirname, '..');
 const now = Date.now();
 let loginRole = 'produtor';
 let failList = false;
+let failPayouts = false;
+let lastUploadBody = '';
 let uploads = 0;
 let productions = [
     {
@@ -37,6 +39,13 @@ let files = [{
     nome_exibicao: '<img src=x>.pdf', mime_type: 'application/pdf', tamanho_bytes: 1024,
     sha256: 'a'.repeat(64), grupo_versao: 'synthetic-group', versao: 1,
     substitui_arquivo_id: null, visivel_produtor: true, visivel_cliente: false,
+    created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+}, {
+    id: 8, producao_id: 1, remetente_usuario_id: 2, tipo: 'previa',
+    nome_exibicao: 'historical.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 1024,
+    sha256: 'b'.repeat(64), grupo_versao: 'historical-group', versao: 1,
+    substitui_arquivo_id: null, visivel_produtor: true, visivel_cliente: false,
+    observacao: 'Primeira ideia <i>sem master</i>',
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
 }];
 let payouts = [{
@@ -90,6 +99,7 @@ async function staticResponse(route) {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
         if (url.pathname === '/portal/produtor/repasses' && request.method() === 'GET') {
+            if (failPayouts) return route.fulfill({ status: 503, json: { detail: 'Repasses indisponíveis.' } });
             return route.fulfill({ json: payouts });
         }
         if (/^\/portal\/produtor\/repasses\/\d+\/comprovante$/.test(url.pathname)) {
@@ -104,7 +114,8 @@ async function staticResponse(route) {
         }
         if (fileList && request.method() === 'POST') {
             uploads++;
-            files.push({ ...files[0], id: 10, tipo: 'previa', nome_exibicao: 'preview.mp3', versao: 1 });
+            lastUploadBody = request.postData() || '';
+            files.push({ ...files[0], id: 10, tipo: 'previa', nome_exibicao: 'preview.mp3', versao: 1, visivel_cliente: true });
             return route.fulfill({ status: 201, json: files.at(-1) });
         }
         const detail = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)$/);
@@ -163,10 +174,23 @@ async function staticResponse(route) {
         assert.equal(await page.getByRole('heading', { name: '<img src=x onerror=alert(1)>' }).count(), 1);
         assert.equal(await page.locator('.producer-file img, .producer-file script').count(), 0);
         assert.match(await page.locator('.producer-file').first().textContent(), /<img src=x>/);
+        assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Não compartilhada com o cliente/);
+        assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Sua observação: Primeira ideia <i>sem master<\/i>/);
+        assert.equal(await page.locator('.file-note i').count(), 0);
+        await page.getByLabel('Observação para esta versão').fill('Mix com graves reduzidos');
         await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'preview.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('preview') });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('nova versão'));
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Prévia enviada ao cliente com sucesso!'));
         assert.equal(uploads, 1);
+        assert.match(lastUploadBody, /name="observacao"[\s\S]*Mix com graves reduzidos/);
+        assert.match(await page.locator('.producer-file').filter({ hasText: 'preview.mp3' }).textContent(), /Compartilhada com o cliente/);
+        // AUD-S08-001: replacement options follow the selected type.
+        const replacementValues = () => page.getByLabel('Versão substituída').locator('option')
+            .evaluateAll(options => options.map(option => option.value));
+        assert.deepEqual(await replacementValues(), ['', '8', '10']);
+        await page.getByLabel('Tipo de arquivo').selectOption('entrega');
+        assert.deepEqual(await replacementValues(), ['']);
+        await page.getByLabel('Tipo de arquivo').selectOption('previa');
         await page.getByRole('button', { name: 'Confirmar início' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         assert.equal(productions[0].status, 'em_producao');
@@ -225,7 +249,17 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.getElementById('login-error').textContent.includes('exclusiva'));
         assert.equal(await page.locator('#admin-area').isVisible(), false);
 
+        // AUD-S08-002: a payout failure must not block the production workspace.
         loginRole = 'produtor';
+        failPayouts = true;
+        await page.locator('#username').fill('producer-a');
+        await page.locator('#password').fill('synthetic-password');
+        await page.getByRole('button', { name: 'Entrar' }).click();
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('repasses'));
+        assert.equal(await page.locator('.producer-metric').count(), 5);
+        failPayouts = false;
+        await page.getByRole('button', { name: 'Sair' }).click();
+
         failList = true;
         await page.locator('#username').fill('producer-a');
         await page.locator('#password').fill('synthetic-password');

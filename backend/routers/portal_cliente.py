@@ -73,6 +73,7 @@ def _client_file(model, user_id):
         "versao": model.versao,
         "substitui_arquivo_id": model.substitui_arquivo_id,
         "enviado_por_mim": model.remetente_usuario_id == user_id,
+        "observacao": model.observacao,
         "created_at": model.created_at,
         "updated_at": model.updated_at,
     }
@@ -372,6 +373,7 @@ async def enviar_material(
     arquivo: Annotated[UploadFile, File()],
     tipo: Annotated[str, Form()],
     substitui_arquivo_id: Annotated[int | None, Form()] = None,
+    observacao: Annotated[str | None, Form(max_length=1000)] = None,
 ):
     try:
         production = portal_cliente_service.buscar_producao(db, producao_id, user.cliente_id)
@@ -395,6 +397,7 @@ async def enviar_material(
             visible_to_producer=True,
             visible_to_client=True,
             replaces_id=substitui_arquivo_id,
+            note=observacao,
             replacement_actor_id=user.id,
             request_id=getattr(request.state, "request_id", None),
         )

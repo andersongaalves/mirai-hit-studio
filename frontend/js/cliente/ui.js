@@ -102,6 +102,12 @@ export function renderList(productions, finances, filters, onOpen) {
     items.forEach(item => list.append(productionCard(item, finances.get(item.id), onOpen)));
 }
 
+// Only the newest version of a group can be replaced; older ones return 409.
+function currentVersions(files) {
+    const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
+    return files.filter(file => !replaced.has(file.id));
+}
+
 function fileItem(file, handlers) {
     const item = element("li", "producer-file");
     const info = element("div");
@@ -109,6 +115,10 @@ function fileItem(file, handlers) {
         element("strong", "", file.nome_exibicao),
         element("span", "", `Versão ${file.versao} · ${Math.ceil(file.tamanho_bytes / 1024)} KB · ${formatDate(file.created_at, true)}`),
     );
+    if (file.observacao) {
+        const author = file.enviado_por_mim ? "Sua observação" : "Observação da equipe";
+        info.append(element("p", "file-note", `${author}: ${file.observacao}`));
+    }
     const actions = element("div", "client-file__actions");
     const player = element("div");
     if (file.tipo === "previa" && /^(audio|video)\//.test(file.mime_type)) {
@@ -174,7 +184,7 @@ function filesPanel(production, files, handlers) {
             const independent = element("option", "", "Novo arquivo");
             independent.value = "";
             replaces.append(independent);
-            files.filter(file => file.enviado_por_mim && file.tipo === type.value).forEach(file => {
+            currentVersions(files).filter(file => file.enviado_por_mim && file.tipo === type.value).forEach(file => {
                 const option = element("option", "", `Nova versão de ${file.nome_exibicao} (v${file.versao})`);
                 option.value = String(file.id);
                 replaces.append(option);
@@ -182,6 +192,11 @@ function filesPanel(production, files, handlers) {
         };
         type.addEventListener("change", updateReplacementOptions);
         updateReplacementOptions();
+        const note = element("textarea", "producer-upload__note");
+        note.rows = 2;
+        note.maxLength = 1000;
+        note.placeholder = "Observação para esta versão (opcional)";
+        note.setAttribute("aria-label", "Observação para esta versão");
         const submit = element("button", "btn-cta", "Enviar arquivo");
         submit.type = "submit";
         const feedback = element("div", "producer-upload__feedback hidden");
@@ -203,11 +218,11 @@ function filesPanel(production, files, handlers) {
             const { kind, message, retry } = handlers.uploadFeedback;
             setFeedback(kind, message, retry);
         }
-        form.append(type, filePicker, replaces, submit, feedback);
+        form.append(type, filePicker, replaces, note, submit, feedback);
         form.addEventListener("submit", event => {
             event.preventDefault();
             if (form.dataset.busy === "true" || !input.files[0]) return;
-            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback);
+            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback, note.value);
         });
         panel.append(form);
     }
@@ -217,6 +232,10 @@ function filesPanel(production, files, handlers) {
 function financePanel(finance) {
     const panel = element("section", "producer-files");
     panel.append(element("h2", "", "Pagamento"));
+    if (finance?.indisponivel) {
+        panel.append(element("p", "producer-help", "As informações de pagamento estão indisponíveis no momento."));
+        return panel;
+    }
     if (!finance?.cobranca) {
         panel.append(element("p", "producer-help", "Nenhuma cobrança está vinculada a este projeto."));
         return panel;

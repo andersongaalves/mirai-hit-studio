@@ -162,6 +162,84 @@ async def check():
 asyncio.run(check())
 ''')
 
+    def test_producer_preview_auto_visible_versions_and_admin_revocation(self):
+        self.run_case(r'''
+async def check():
+    storage = MemoryStorage()
+    with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+            historical = await client.post(
+                '/producoes/1/arquivos', headers=bearer('admin'),
+                data={'tipo': 'previa', 'visivel_produtor': 'true', 'visivel_cliente': 'false'},
+                files={'arquivo': ('historical.mp3', b'ID3-historical', 'audio/mpeg')},
+            )
+            assert historical.status_code == 201 and historical.json()['visivel_cliente'] is False
+            first = await client.post(
+                '/portal/produtor/producoes/1/arquivos', headers=bearer('producer-a'),
+                data={'tipo': 'previa'},
+                files={'arquivo': ('preview-v1.mp3', b'ID3-preview-v1', 'audio/mpeg')},
+            )
+            assert first.status_code == 201, first.text
+            assert first.json()['visivel_cliente'] is True and first.json()['visivel_produtor'] is True
+
+            delivery = await client.post(
+                '/portal/produtor/producoes/1/arquivos', headers=bearer('producer-a'),
+                data={'tipo': 'entrega'},
+                files={'arquivo': ('delivery.mp3', b'ID3-delivery', 'audio/mpeg')},
+            )
+            assert delivery.status_code == 201 and delivery.json()['visivel_cliente'] is False
+            client_files = await client.get('/portal/cliente/producoes/1/arquivos', headers=bearer('client-a'))
+            assert {item['id'] for item in client_files.json()} == {first.json()['id']}
+            playable = await client.get(
+                f"/portal/cliente/arquivos/{first.json()['id']}/conteudo", headers=bearer('client-a'),
+            )
+            assert playable.status_code == 200 and playable.content == b'ID3-preview-v1'
+            assert playable.headers['cache-control'] == 'private, no-store'
+            for file_id in (historical.json()['id'], delivery.json()['id']):
+                hidden = await client.get(f'/portal/cliente/arquivos/{file_id}/conteudo', headers=bearer('client-a'))
+                assert hidden.status_code == 404
+            assert (await client.get(
+                f"/portal/cliente/arquivos/{first.json()['id']}/conteudo", headers=bearer('client-b'),
+            )).status_code == 404
+
+            second = await client.post(
+                '/portal/produtor/producoes/1/arquivos', headers=bearer('producer-a'),
+                data={'tipo': 'previa', 'substitui_arquivo_id': str(first.json()['id'])},
+                files={'arquivo': ('preview-v2.mp3', b'ID3-preview-v2', 'audio/mpeg')},
+            )
+            assert second.status_code == 201 and second.json()['versao'] == 2
+            assert second.json()['grupo_versao'] == first.json()['grupo_versao']
+            assert second.json()['visivel_cliente'] is True
+            assert (await client.get(
+                f"/portal/cliente/arquivos/{second.json()['id']}/conteudo", headers=bearer('client-a'),
+            )).content == b'ID3-preview-v2'
+            assert (await client.get(
+                f"/portal/produtor/arquivos/{second.json()['id']}/conteudo", headers=bearer('producer-a'),
+            )).status_code == 200
+            assert (await client.get(
+                f"/producoes/1/arquivos/{second.json()['id']}/conteudo", headers=bearer('admin'),
+            )).status_code == 200
+
+            revoked = await client.patch(
+                f"/producoes/1/arquivos/{second.json()['id']}/visibilidade",
+                headers=bearer('admin'),
+                json={'visivel_produtor': True, 'visivel_cliente': False},
+            )
+            assert revoked.status_code == 200 and revoked.json()['visivel_cliente'] is False
+            client_files = await client.get('/portal/cliente/producoes/1/arquivos', headers=bearer('client-a'))
+            assert {item['id'] for item in client_files.json()} == {first.json()['id']}
+            assert (await client.get(
+                f"/portal/cliente/arquivos/{second.json()['id']}/conteudo", headers=bearer('client-a'),
+            )).status_code == 404
+            assert (await client.get(
+                f"/portal/produtor/arquivos/{second.json()['id']}/conteudo", headers=bearer('producer-a'),
+            )).status_code == 200
+            with Session(engine) as db:
+                assert db.query(AuditLogModel).filter_by(action='production.file_visibility_changed').count() == 1
+                assert db.get(ProducaoArquivoModel, historical.json()['id']).visivel_cliente is False
+asyncio.run(check())
+''')
+
 
 if __name__ == "__main__":
     unittest.main()

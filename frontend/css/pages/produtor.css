@@ -20,6 +20,8 @@
 .producer-payout .btn-outline { width: fit-content; }
 .producer-payout__value { font-family: var(--font-valores); font-size: var(--font-size-h3); }
 
+.producer-file .producer-file__shared { color: var(--color-accent); }
+
 @media (max-width: 767px) {
     .producer-payout { grid-template-columns: 1fr; }
     .producer-payout p { grid-column: auto; }

@@ -63,7 +63,9 @@ async function staticResponse(route) {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("http://localhost:4173/");
         await page.waitForSelector(".site-nav[data-initialized='true']");
-        await page.waitForSelector("#home-portfolio-track .public-empty");
+        // The static markup already ships a loading placeholder with the same class.
+        await page.waitForFunction(() => document.getElementById("home-portfolio-track")
+            ?.textContent.includes("Ainda não há trabalhos publicados."));
         assert.equal((await page.locator("h1").textContent()).replace(/\s+/g, " ").trim(), "Criando o som do futuro.");
         assert.equal(await page.locator(".vertical-card").count(), 3);
         assert.equal(await page.locator(".process-list > li").count(), 6);

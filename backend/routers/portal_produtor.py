@@ -127,6 +127,7 @@ async def enviar_arquivo(
     arquivo: Annotated[UploadFile, File()],
     tipo: Annotated[str, Form()],
     substitui_arquivo_id: Annotated[int | None, Form()] = None,
+    observacao: Annotated[str | None, Form(max_length=1000)] = None,
 ):
     production = crud_producao.buscar_por_produtor(db, producao_id, user.id)
     if not production:
@@ -145,8 +146,9 @@ async def enviar_arquivo(
             mime_type=arquivo.content_type or "application/octet-stream",
             data=data,
             visible_to_producer=True,
-            visible_to_client=False,
+            visible_to_client=tipo == "previa",
             replaces_id=substitui_arquivo_id,
+            note=observacao,
             request_id=getattr(request.state, "request_id", None),
         )
     except producao_arquivo_service.ProducaoArquivoError as exc:
