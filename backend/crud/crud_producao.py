@@ -1,9 +1,11 @@
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from models.producao import ProducaoModel
 from models.orcamento import OrcamentoModel
 from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
+from models.cliente import ClienteModel
 
 
 def _resposta(producao, produtor_nome=None, cliente_email=None, proposta=None):
@@ -68,8 +70,17 @@ def criar(db: Session, dados: dict):
     return producao
 
 
-def listar(db: Session):
-    rows = _consulta_detalhes(db).order_by(ProducaoModel.id.desc()).all()
+def listar(db: Session, ambiente: str = "real"):
+    query = _consulta_detalhes(db)
+    marked = or_(OrcamentoModel.is_test.is_(True),
+                 OrcamentoModel.cliente.has(ClienteModel.is_test.is_(True)))
+    marked_ids = select(OrcamentoModel.id).where(marked)
+    if ambiente == "real":
+        query = query.filter(or_(ProducaoModel.orcamento_id.is_(None),
+                                 ~ProducaoModel.orcamento_id.in_(marked_ids)))
+    elif ambiente == "teste":
+        query = query.filter(ProducaoModel.orcamento_id.in_(marked_ids))
+    rows = query.order_by(ProducaoModel.id.desc()).all()
     return [
         _resposta(producao, produtor, email, proposta)
         for producao, produtor, email, proposta in rows
