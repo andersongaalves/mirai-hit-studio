@@ -19,6 +19,7 @@ export function confirmarClassificacao({ isTest, financialHistory = false, accou
             ? "Esta proposta possui histórico financeiro. A classificação como teste altera apenas sua participação nos indicadores comerciais. Os pagamentos e documentos financeiros permanecerão preservados."
             : "";
         const label = document.createElement("label");
+        label.className = "admin-checkbox";
         const ack = document.createElement("input");
         ack.type = "checkbox";
         label.append(ack, document.createTextNode(" Confirmo a classificação e a preservação dos registros."));
@@ -54,7 +55,10 @@ export function adicionarFiltroAmbiente(anchorId, id, value, onChange) {
     let select = document.getElementById(id);
     if (!select) {
         const label = document.createElement("label");
-        label.textContent = "Operações ";
+        label.className = "admin-filter-field";
+        const caption = document.createElement("span");
+        caption.textContent = "Operações";
+        label.append(caption);
         select = document.createElement("select");
         select.id = id;
         select.setAttribute("aria-label", "Ambiente das operações");
@@ -65,7 +69,8 @@ export function adicionarFiltroAmbiente(anchorId, id, value, onChange) {
             select.append(option);
         }
         label.append(select);
-        anchor.parentElement.append(label);
+        const container = anchor.closest(".admin-filter-bar") || anchor.parentElement;
+        container.append(label);
     }
     select.value = value;
     select.onchange = () => onChange(select.value);

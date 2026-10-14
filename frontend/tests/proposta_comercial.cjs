@@ -220,6 +220,26 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);
         await page.waitForFunction(() => document.getElementById('proposta-is-test')?.checked === true);
         assert.match(await page.locator('#proposta-classificacao').textContent(), /TESTE/);
+        assert.equal(await page.locator('label label').count(), 0);
+        await page.evaluate(async () => (await import('/js/admin/orcamentos/orcamentos.js')).carregarOrcamentos());
+        await page.locator('#orcamentos-ambiente').evaluate(select => {
+            select.value = 'teste'; select.dispatchEvent(new Event('change'));
+        });
+        await page.waitForFunction(() => document.getElementById('orcamentos-list')?.textContent.includes('TESTE'));
+        await page.evaluate(async () => (await import('/js/admin/orcamentos/orcamentos.js')).carregarOrcamentos());
+        assert.equal(await page.locator('#orcamentos-ambiente').inputValue(), 'teste');
+        assert.equal(await page.locator('label label').count(), 0);
+        await page.evaluate(() => window.fecharEditorProposta());
+        classification.is_test = false;
+        budget.is_test = false;
+        await page.setViewportSize({width:390,height:844});
+        await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({id}),budget.id);
+        await page.waitForSelector('#proposta-is-test');
+        await page.locator('#proposta-is-test').click();
+        const bounds = await page.locator('[aria-labelledby="classificacao-title"] .modal-content').boundingBox();
+        assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 390, JSON.stringify(bounds));
+        await page.screenshot({path:path.join(require('node:os').tmpdir(),'mirai-pr26-classificacao-mobile.png')});
+        await page.getByRole('button',{name:'Cancelar',exact:true}).click();
         assert.deepEqual(errors, []);
         console.log('PASS: send/approve guards, dirty, confirmations, failures, double-submit, state, CRM reload and production availability.');
     } finally { await browser.close(); }

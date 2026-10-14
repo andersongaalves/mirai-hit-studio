@@ -32,6 +32,7 @@ function renderizarClassificacao() {
     if (!section) {
         section = document.createElement("section");
         section.id = "proposta-classificacao";
+        section.className = "proposta-client-access";
         section.setAttribute("aria-live", "polite");
         $("proposta-tabs")?.before(section);
     }
@@ -41,6 +42,7 @@ function renderizarClassificacao() {
     badge.className = "badge badge-info";
     badge.textContent = classificacao.is_test ? "TESTE" : "REAL";
     const label = document.createElement("label");
+    label.className = "admin-checkbox";
     const check = document.createElement("input");
     check.type = "checkbox";
     check.id = "proposta-is-test";
