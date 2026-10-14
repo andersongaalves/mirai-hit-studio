@@ -1724,3 +1724,18 @@
 .portal-settings__versions li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border: var(--border-subtle); border-radius: var(--radius-sm); }
 @media (max-width: 767px) { .portal-settings__form { grid-template-columns: 1fr; } }
 .portal-settings__header h2, .portal-settings h3 { margin: 0 0 var(--space-2); text-align: left; }
+
+/* Roadmap 5.04: service stages editor */
+.servico-etapas { display: grid; gap: var(--space-3); margin: var(--space-5) 0; padding: var(--space-4); border: var(--border-subtle); border-radius: var(--radius-md); }
+.servico-etapas__header h4 { margin: 0 0 var(--space-2); }
+.servico-etapas__list { display: grid; gap: var(--space-2); }
+.servico-etapa { display: grid; grid-template-columns: 28px minmax(0, 1fr) 84px 84px; align-items: center; gap: var(--space-2); min-width: 0; padding-bottom: var(--space-2); border-bottom: var(--border-subtle); }
+.servico-etapa__extras { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+.servico-etapa__extras input[type="text"] { flex: 1 1 140px; }
+.servico-etapa__extras input[type="number"] { flex: 0 1 100px; }
+.servico-etapa input[type="text"], .servico-etapa input[type="number"] { min-width: 0; min-height: 40px; padding: var(--space-2); border: var(--border-subtle); border-radius: var(--radius-sm); color: var(--color-text-primary); background: var(--color-background); font: inherit; }
+.servico-etapa__check { display: flex; align-items: center; gap: var(--space-1); white-space: nowrap; font-size: 0.85rem; }
+.servico-etapa__actions { display: flex; gap: var(--space-1); }
+.servico-etapas__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+#servico-etapas-total[data-state="error"] { color: var(--color-danger); }
+#servico-etapas-total[data-state="ok"] { color: var(--color-success, #10b981); }

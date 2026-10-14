@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -6,6 +7,8 @@ import models
 from schemas.servico import (ServicoCreate, ServicoResponse)
 
 from core.dependencies import require_admin
+from schemas.servico_etapa import ServicoEtapaOut, ServicoEtapasUpdate
+from services import audit_service
 
 router = APIRouter(prefix="/servicos", tags=["Serviços"])
 
@@ -76,3 +79,58 @@ def deletar_servico(
     db.commit()
 
     return {"status": "ok"}
+
+
+# ===========================
+# ETAPAS (Roadmap 3.0, 5.04)
+# ===========================
+
+
+def _servico_or_404(db: Session, servico_id: int):
+    servico = db.get(models.ServicoModel, servico_id)
+    if servico is None:
+        raise HTTPException(status_code=404, detail="Servico nao encontrado.")
+    return servico
+
+
+@router.get("/{servico_id}/etapas", response_model=list[ServicoEtapaOut])
+def listar_etapas(servico_id: int, db: Session = Depends(get_db), user=Depends(require_admin)):
+    return _servico_or_404(db, servico_id).etapas
+
+
+@router.put("/{servico_id}/etapas", response_model=list[ServicoEtapaOut])
+def substituir_etapas(
+    servico_id: int,
+    request: Request,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
+    """Replace the whole stage list atomically; weights must total exactly 100%."""
+    try:
+        data = ServicoEtapasUpdate.model_validate(payload)
+    except ValidationError as exc:
+        first = exc.errors()[0]
+        message = str(first.get("msg", "Etapas invalidas.")).removeprefix("Value error, ")
+        field = ".".join(str(part) for part in first.get("loc", ()))
+        detail = message if first.get("type") == "value_error" else f"Campo invalido: {field}"
+        raise HTTPException(status_code=422, detail=detail) from None
+
+    servico = _servico_or_404(db, servico_id)
+    old_count = len(servico.etapas)
+    servico.etapas.clear()
+    db.flush()
+    for ordem, etapa in enumerate(data.etapas, start=1):
+        servico.etapas.append(models.ServicoEtapaModel(ordem=ordem, **etapa.model_dump()))
+    audit_service.record(
+        db,
+        actor=user,
+        action="service.stages_updated",
+        entity_type="service",
+        entity_id=servico.id,
+        metadata={"old_stage_count": old_count, "new_stage_count": len(data.etapas)},
+        request_id=getattr(request.state, "request_id", None),
+    )
+    db.commit()
+    db.refresh(servico)
+    return servico.etapas

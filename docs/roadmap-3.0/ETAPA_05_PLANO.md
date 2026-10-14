@@ -66,3 +66,19 @@ protegido.
 - Notificacoes por e-mail ficam para a integracao INT-10 (S11).
 
 **Publicacao:** aplicar `b4e6f8a1c302` e `c9d2e4f6a813` no banco antes do release.
+
+## 5.04 - Servicos e etapas avancadas
+
+- Tabela `servico_etapas` (migration `d3f5a7b9c124`): ordem, nome, descricao, peso
+  percentual (`NUMERIC(5,2)`), prazo em dias, unidade, revisoes incluidas, dependencia da
+  etapa anterior e marca de etapa administrativa.
+- Regras (servidor e banco): soma dos pesos exatamente 100,00% quando houver etapas; peso
+  0% so para etapas administrativas; a primeira etapa nao depende de outra; nomes unicos
+  por servico; ate 20 etapas.
+- `GET/PUT /servicos/{id}/etapas` (Admin): substitui a lista inteira de forma atomica e
+  registra AuditLog. Excluir o servico remove as etapas do catalogo.
+- O catalogo e um modelo: propostas e producoes existentes nao mudam. O congelamento de
+  preco e percentuais no contrato e a fase 5.05; a criacao de etapas na producao, a 5.06.
+- Admin: secao "Etapas e pesos" no editor de servicos, com total em tempo real.
+
+**Publicacao:** aplicar `b4e6f8a1c302`, `c9d2e4f6a813` e `d3f5a7b9c124` antes do release.
