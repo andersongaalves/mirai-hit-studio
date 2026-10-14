@@ -128,14 +128,14 @@ def atualizar(db: Session, cliente_id: int, dados: ClienteUpdate):
         raise
 
 
-def listar(db: Session, busca: str = "", ativo: bool | None = None):
+def listar(db: Session, busca: str = "", ativo: bool | None = None, ambiente: str = "real"):
     return [
         ClienteSummary.model_validate({
             **ClienteResponse.model_validate(cliente).model_dump(),
             "total_orcamentos": total,
             "ultima_interacao": ultima,
         })
-        for cliente, total, ultima in crud_cliente.listar(db, busca, ativo)
+        for cliente, total, ultima in crud_cliente.listar(db, busca, ativo, ambiente=ambiente)
     ]
 
 
