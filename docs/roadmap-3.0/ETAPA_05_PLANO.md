@@ -103,6 +103,7 @@ indices e 22 constraints; dados existentes inalterados (7 servicos, 19 projetos,
 
 Licao aplicada do incidente da publicacao anterior: o release protegido nao migra o banco,
 entao as migrations foram aplicadas e verificadas antes de disparar o release.
+
 ## 5.05 - Catalogo nas propostas
 
 - Cada item da proposta pode apontar para um servico do catalogo (`servico_id`, opcional).
