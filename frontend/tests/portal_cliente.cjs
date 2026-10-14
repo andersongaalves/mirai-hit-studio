@@ -137,6 +137,18 @@ async function staticResponse(route) {
             const proposal = proposals.find(item => item.id === Number(proposalDetail[1]));
             return route.fulfill(proposal ? { json: proposal } : { status: 404, json: { detail: 'Proposta nao encontrada.' } });
         }
+        // Roadmap 5.06: production 1 has contract stages; the client view has no values or actions.
+        const clientStages = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/etapas$/);
+        if (clientStages && request.method() === 'GET') {
+            if (Number(clientStages[1]) !== 1) return route.fulfill({ status: 404, json: { detail: 'Not found' } });
+            return route.fulfill({ json: { producao_id: 1, progresso_percentual: 50, etapas: [
+                { id: 41, ordem: 1, item_indice: 1, item_descricao: 'Mixagem', ordem_no_item: 1, nome: 'Rough Mix', status: 'concluida',
+                  prazo: null, iniciada_em: null, concluida_em: new Date().toISOString(), depende_da_anterior: false, administrativa: false },
+                { id: 42, ordem: 2, item_indice: 1, item_descricao: 'Mixagem', ordem_no_item: 2, nome: 'Mix <i>final</i>', status: 'em_andamento',
+                  prazo: new Date(Date.now() + 5 * 86400000).toISOString(), iniciada_em: null, concluida_em: null,
+                  depende_da_anterior: true, administrativa: false },
+            ] } });
+        }
         const thread = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)\/mensagens$/);
         if (thread && request.method() === 'GET') return route.fulfill({ json: messages.filter(item => item.producao_id === Number(thread[1])) });
         if (thread && request.method() === 'POST') {
@@ -279,6 +291,16 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').first().textContent(), /<script>preview<\/script>/);
         assert.match(await page.locator('.client-finance-grid').textContent(), /R\$\s*1\.000,00/);
         assert.equal(await page.getByRole('link', { name: 'Ir para pagamento' }).count(), 1);
+
+        // Roadmap 5.06: contract stages replace the legacy list, read-only and without values.
+        await page.waitForSelector('#production-stages-panel .production-stages');
+        const clientStagePanel = page.locator('#production-stages-panel');
+        assert.match(await clientStagePanel.textContent(), /50% concluído/);
+        assert.match(await clientStagePanel.textContent(), /Mix <i>final<\/i>.*Em andamento.*Prazo:/s);
+        assert.match(await clientStagePanel.locator('.production-stage').first().textContent(), /Concluída/);
+        assert.equal(await clientStagePanel.locator('button, i').count(), 0);
+        assert.doesNotMatch(await clientStagePanel.textContent(), /R\$|revisões/);
+        assert.equal(await clientStagePanel.getByRole('progressbar').getAttribute('aria-valuenow'), '50');
 
         // Roadmap 5.03: thread renders as text, replies and sends without audience choice.
         await page.waitForSelector('.production-message');

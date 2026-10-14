@@ -104,3 +104,21 @@ export async function enviarMensagem(producaoId, payload) {
         "Não foi possível enviar a mensagem.",
     );
 }
+
+// Roadmap 5.06: contract stages; the server decides the allowed transitions.
+export async function listarEtapas(producaoId) {
+    return responseData(
+        await authFetch(`/portal/produtor/producoes/${producaoId}/etapas`),
+        "Não foi possível carregar as etapas.",
+    );
+}
+
+export async function atualizarEtapa(producaoId, etapaId, payload) {
+    return responseData(
+        await authFetch(`/portal/produtor/producoes/${producaoId}/etapas/${etapaId}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+        }),
+        "Não foi possível atualizar a etapa.",
+    );
+}

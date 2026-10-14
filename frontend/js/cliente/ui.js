@@ -317,6 +317,7 @@ export function renderDetail(production, files, finance, handlers) {
         element("p", "", nextAction(production, finance)),
     );
     const progress = element("section", "producer-detail__panel");
+    progress.id = "production-stages-panel";
     progress.append(element("h2", "", "Etapas"));
     const stages = parseEtapas(production.etapas);
     if (!stages.length) progress.append(element("p", "", "As etapas ainda não foram definidas."));

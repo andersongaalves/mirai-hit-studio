@@ -12,6 +12,25 @@ let lastUploadBody = '';
 let portalSettings = null;
 const threadPosts = [];
 let threadFails = true;
+// Roadmap 5.06: contract stages of production 1 (server-decided actions, no values).
+const PRODUCER_ACTIONS = { pendente: ['em_andamento'], em_andamento: ['em_revisao'], em_revisao: ['em_andamento'], concluida: [] };
+const stagePatches = [];
+let stageConflict = true;
+const stageData = {
+    producao_id: 1,
+    progresso_percentual: 20,
+    etapas: [
+        { id: 31, ordem: 1, item_indice: 1, item_descricao: 'Plano Start', ordem_no_item: 1, nome: 'Briefing', status: 'pendente',
+          prazo: null, iniciada_em: null, concluida_em: null, depende_da_anterior: false, administrativa: true, unidade: '',
+          revisoes_incluidas: null, prazo_dias: null, acoes: ['em_andamento'] },
+        { id: 32, ordem: 2, item_indice: 1, item_descricao: 'Plano Start', ordem_no_item: 2, nome: 'Rough <b>Mix</b>', status: 'em_andamento',
+          prazo: new Date(now + 3 * 86400000).toISOString(), iniciada_em: new Date(now).toISOString(), concluida_em: null,
+          depende_da_anterior: false, administrativa: false, unidade: 'faixa', revisoes_incluidas: 2, prazo_dias: 3, acoes: ['em_revisao'] },
+        { id: 33, ordem: 3, item_indice: 1, item_descricao: 'Plano Start', ordem_no_item: 3, nome: 'Mixagem', status: 'pendente',
+          prazo: null, iniciada_em: null, concluida_em: null, depende_da_anterior: true, administrativa: false, unidade: 'faixa',
+          revisoes_incluidas: null, prazo_dias: null, acoes: [] },
+    ],
+};
 let uploads = 0;
 let productions = [
     {
@@ -98,6 +117,22 @@ async function staticResponse(route) {
         const user = { id: 2, username: 'producer-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true };
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'synthetic-producer-token', user } });
         if (url.pathname === '/auth/me') return route.fulfill({ json: user });
+        const stageList = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)\/etapas$/);
+        if (stageList && request.method() === 'GET') {
+            return route.fulfill(Number(stageList[1]) === 1 ? { json: stageData } : { status: 404, json: { detail: 'Not found' } });
+        }
+        const stageUpdate = url.pathname.match(/^\/portal\/produtor\/producoes\/1\/etapas\/(\d+)$/);
+        if (stageUpdate && request.method() === 'PATCH') {
+            const body = request.postDataJSON();
+            stagePatches.push({ id: Number(stageUpdate[1]), ...body });
+            if (stageConflict) {
+                stageConflict = false;
+                return route.fulfill({ status: 409, json: { detail: 'A etapa foi atualizada por outra pessoa. Recarregue antes de continuar.' } });
+            }
+            const stage = stageData.etapas.find(item => item.id === Number(stageUpdate[1]));
+            Object.assign(stage, { status: body.status, acoes: PRODUCER_ACTIONS[body.status] });
+            return route.fulfill({ json: stageData });
+        }
         const thread = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)\/mensagens$/);
         if (thread && request.method() === 'GET') {
             if (threadFails) return route.fulfill({ status: 503, json: { detail: 'indisponível' } });
@@ -192,6 +227,26 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Não compartilhada com o cliente/);
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Sua observação: Primeira ideia <i>sem master<\/i>/);
         assert.equal(await page.locator('.file-note i').count(), 0);
+        // Roadmap 5.06: contract stages replace the legacy checklist; producers send to review, never conclude.
+        await page.waitForSelector('#production-stages-panel .production-stages');
+        const stagesPanel = page.locator('#production-stages-panel');
+        assert.equal(await stagesPanel.locator('.producer-progress').count(), 0);
+        assert.equal(await stagesPanel.locator('b').count(), 0);
+        assert.match(await stagesPanel.textContent(), /Rough <b>Mix<\/b>/);
+        assert.match(await stagesPanel.textContent(), /20% concluído/);
+        assert.doesNotMatch(await stagesPanel.textContent(), /R\$/);
+        assert.equal(await stagesPanel.getByRole('button', { name: 'Aprovar e concluir' }).count(), 0);
+        assert.match(await stagesPanel.locator('.production-stage').nth(2).textContent(), /Depende da etapa anterior/);
+        assert.equal(await stagesPanel.locator('.production-stage').nth(2).locator('button').count(), 0);
+        const review = stagesPanel.locator('.production-stage').nth(1).getByRole('button', { name: 'Enviar para revisão' });
+        await review.click();
+        await page.waitForFunction(() => document.querySelector('.production-stages__feedback')?.textContent.includes('Recarregue'));
+        assert.equal(await review.isDisabled(), false);
+        await review.click();
+        await page.waitForFunction(() => document.querySelectorAll('#production-stages-panel .production-stage')[1]?.textContent.includes('Em revisão'));
+        assert.deepEqual(stagePatches.at(-1), { id: 32, status: 'em_revisao', status_atual: 'em_andamento' });
+        assert.equal(await stagesPanel.locator('.production-stage').nth(1).getByRole('button', { name: 'Retomar' }).count(), 1);
+
         // Roadmap 5.03: a thread failure never blocks the production; producers can post internal notes.
         await page.waitForFunction(() => document.querySelector('.production-messages__error')?.textContent.includes('mensagens'));
         threadFails = false;

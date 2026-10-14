@@ -1,6 +1,7 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
 import { messagesPanel } from "../modules/production_messages.js";
+import { stagesPanel } from "../modules/production_stages.js";
 import {
     applySettings,
     renderDashboard,
@@ -52,6 +53,24 @@ async function openProposalDetail(id) {
 function releaseObjectUrls() {
     objectUrls.forEach(url => URL.revokeObjectURL(url));
     objectUrls.clear();
+}
+
+// Roadmap 5.06: contract stages replace the legacy checklist when the contract has them.
+// Loaded after the detail, so a failure keeps the legacy view instead of blocking it.
+async function loadStages(production) {
+    let data = null;
+    try {
+        data = await api.listarEtapas(production.id);
+    } catch {
+        return;
+    }
+    if (route().view !== "detail" || route().id !== production.id || !data?.etapas?.length) return;
+    const panel = document.getElementById("production-stages-panel");
+    if (!panel) return;
+    panel.replaceChildren(stagesPanel({
+        role: "cliente",
+        data,
+    }));
 }
 
 // Roadmap 5.03: the thread loads after the detail so its failure never blocks the project.
@@ -116,6 +135,7 @@ async function openDetail(id) {
         });
         showView("detail");
         loadMessages(production, files);
+        loadStages(production);
         if (!financeResult.ok) {
             setAlert("Não foi possível atualizar as informações de pagamento agora. Os demais dados estão disponíveis.", true);
         }
@@ -260,6 +280,7 @@ async function refreshFiles(production, setFeedback) {
             uploadFeedback,
         });
         loadMessages(production, files);
+        loadStages(production);
     } catch (error) {
         uploadFeedback = {
             kind: "error",

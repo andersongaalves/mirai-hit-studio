@@ -147,3 +147,21 @@ export async function enviarMensagem(id, payload) {
         body: JSON.stringify(payload),
     }), "Erro ao enviar mensagem.");
 }
+
+// Roadmap 5.06: contract stages with values, deadlines and approval.
+export async function buscarEtapasContratuais(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/etapas-contratuais`), "Erro ao buscar etapas do contrato.");
+}
+
+export async function atualizarEtapaContratual(id, etapaId, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/etapas-contratuais/${etapaId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    }), "Erro ao atualizar etapa.");
+}
+
+export async function gerarEtapasContratuais(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/etapas-contratuais/gerar`, {
+        method: "POST",
+    }), "Erro ao gerar etapas.");
+}
