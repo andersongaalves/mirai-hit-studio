@@ -28,7 +28,7 @@ def buscar_por_telefone(db: Session, telefone: str | None):
     return db.query(ClienteModel).filter(ClienteModel.telefone == telefone).first()
 
 
-def listar(db: Session, busca: str = "", ativo: bool | None = None):
+def listar(db: Session, busca: str = "", ativo: bool | None = None, ambiente: str = "real"):
     ultima = func.max(func.coalesce(OrcamentoModel.updated_at, OrcamentoModel.data_solicitacao))
     query = (
         db.query(
@@ -38,6 +38,10 @@ def listar(db: Session, busca: str = "", ativo: bool | None = None):
         )
         .outerjoin(OrcamentoModel, OrcamentoModel.cliente_id == ClienteModel.id)
     )
+    if ambiente == "real":
+        query = query.filter(ClienteModel.is_test.is_(False))
+    elif ambiente == "teste":
+        query = query.filter(ClienteModel.is_test.is_(True))
     if busca:
         termo = f"%{busca.lower()}%"
         telefone = re.sub(r"\D", "", busca)
