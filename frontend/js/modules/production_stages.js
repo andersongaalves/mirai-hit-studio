@@ -42,9 +42,14 @@ function money(value) {
 /**
  * options: { role, data: {progresso_percentual, etapas, pode_gerar}, error, heading,
  *            onChange(stage, destino) -> Promise, onDeadline(stage, isoOrNull) -> Promise,
- *            onGenerate() -> Promise }
+ *            onGenerate() -> Promise,
+ *            producers: [{id, username}], onAssign(stage, userIdOrNull, motivo) -> Promise,
+ *            onHistory(stage) -> Promise<rows> }   (5.07, admin only)
  */
-export function stagesPanel({ role, data, error = "", heading = true, onChange, onDeadline, onGenerate }) {
+export function stagesPanel({
+    role, data, error = "", heading = true, onChange, onDeadline, onGenerate,
+    producers = [], onAssign, onHistory,
+}) {
     const stages = data?.etapas ?? [];
     const panel = element("section", "production-stages");
     panel.setAttribute("aria-label", "Etapas do contrato");
@@ -105,12 +110,17 @@ export function stagesPanel({ role, data, error = "", heading = true, onChange, 
         meta.push(stage.prazo ? `Prazo: ${formatDate(stage.prazo)}` : "Sem prazo definido");
         if (stage.concluida_em) meta.push(`Concluída em ${formatDate(stage.concluida_em)}`);
         if (stage.depende_da_anterior) meta.push("Depende da etapa anterior");
+        // 5.07: producers see only "Você"/"Outro produtor"; the admin sees names and the executor.
+        if (role === "produtor" && stage.responsavel_rotulo) meta.push(`Responsável: ${stage.responsavel_rotulo === "Voce" ? "Você" : stage.responsavel_rotulo === "Sem responsavel" ? "sem responsável" : "outro produtor"}`);
+        if (role === "admin") meta.push(`Responsável: ${stage.responsavel_nome || "sem responsável"}`);
+        if (role === "admin" && stage.executor_nome) meta.push(`Executada por ${stage.executor_nome}`);
         if (role !== "cliente" && Number.isInteger(stage.revisoes_incluidas)) meta.push(`${stage.revisoes_incluidas} revisões incluídas`);
         if (role === "admin" && stage.valor != null) meta.push(`${money(stage.valor)} (${String(stage.peso_percentual).replace(".", ",")}%)`);
         item.append(element("p", "production-stage__meta", meta.join(" · ")));
 
         const actions = Array.isArray(stage.acoes) ? stage.acoes : [];
-        if ((actions.length && onChange) || (role === "admin" && onDeadline)) {
+        if (role === "produtor" && stage.minha) item.classList.add("production-stage--mine");
+        if ((actions.length && onChange) || (role === "admin" && (onDeadline || onAssign))) {
             const controls = element("div", "production-stage__actions");
             actions.forEach(destino => {
                 const button = element("button", destino === "concluida" ? "btn-cta" : "btn-outline", actionLabel(stage.status, destino));
@@ -152,6 +162,83 @@ export function stagesPanel({ role, data, error = "", heading = true, onChange, 
                 });
                 label.append(input);
                 controls.append(label, save);
+            }
+            if (role === "admin" && onAssign) {
+                const assign = element("div", "production-stage__assign");
+                const select = element("select");
+                select.setAttribute("aria-label", `Responsável pela etapa ${stage.nome}`);
+                select.append(new Option("Sem responsável", ""));
+                const known = new Set();
+                producers.forEach(producer => {
+                    known.add(producer.id);
+                    select.append(new Option(producer.username, String(producer.id)));
+                });
+                // A responsible no longer active still shows as the current value.
+                if (stage.responsavel_usuario_id && !known.has(stage.responsavel_usuario_id)) {
+                    select.append(new Option(stage.responsavel_nome || `Usuário #${stage.responsavel_usuario_id}`, String(stage.responsavel_usuario_id)));
+                }
+                select.value = stage.responsavel_usuario_id ? String(stage.responsavel_usuario_id) : "";
+                const reason = element("input");
+                reason.type = "text";
+                reason.maxLength = 300;
+                reason.placeholder = "Motivo (opcional)";
+                reason.setAttribute("aria-label", `Motivo da troca na etapa ${stage.nome}`);
+                const apply = element("button", "btn-outline", "Atribuir");
+                apply.type = "button";
+                const concluded = stage.status === "concluida";
+                select.disabled = concluded;
+                reason.disabled = concluded;
+                apply.disabled = true;
+                if (concluded) apply.title = "Etapa concluída preserva quem executou; reabra para reatribuir.";
+                select.addEventListener("change", () => {
+                    apply.disabled = concluded || select.value === (stage.responsavel_usuario_id ? String(stage.responsavel_usuario_id) : "");
+                });
+                apply.addEventListener("click", async () => {
+                    apply.disabled = true;
+                    try {
+                        await onAssign(stage, select.value ? Number(select.value) : null, reason.value.trim());
+                        feedback.textContent = "";
+                    } catch (assignError) {
+                        feedback.textContent = assignError.message || "Não foi possível atribuir a etapa.";
+                        apply.disabled = false;
+                    }
+                });
+                assign.append(select, reason, apply);
+                if (onHistory) {
+                    const historyButton = element("button", "btn-outline", "Histórico");
+                    historyButton.type = "button";
+                    historyButton.setAttribute("aria-expanded", "false");
+                    const historyList = element("ol", "production-stage__history hidden");
+                    historyButton.addEventListener("click", async () => {
+                        const open = historyButton.getAttribute("aria-expanded") === "true";
+                        if (open) {
+                            historyList.classList.add("hidden");
+                            historyButton.setAttribute("aria-expanded", "false");
+                            return;
+                        }
+                        historyButton.disabled = true;
+                        try {
+                            const rows = await onHistory(stage);
+                            historyList.replaceChildren(...rows.map(row => element("li", "", [
+                                formatDate(row.created_at),
+                                `${row.anterior_nome || "—"} → ${row.novo_nome || "sem responsável"}`,
+                                row.atribuido_por_nome ? `por ${row.atribuido_por_nome}` : "",
+                                row.motivo || "",
+                            ].filter(Boolean).join(" · "))));
+                            if (!rows.length) historyList.append(element("li", "", "Sem registros."));
+                            historyList.classList.remove("hidden");
+                            historyButton.setAttribute("aria-expanded", "true");
+                        } catch (historyError) {
+                            feedback.textContent = historyError.message || "Não foi possível carregar o histórico.";
+                        } finally {
+                            historyButton.disabled = false;
+                        }
+                    });
+                    assign.append(historyButton);
+                    controls.append(assign, historyList);
+                } else {
+                    controls.append(assign);
+                }
             }
             item.append(controls);
         }

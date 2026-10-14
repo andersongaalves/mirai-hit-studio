@@ -232,7 +232,15 @@ export function renderDetail(production, files, handlers) {
     grid.append(overview, progress);
 
     detail.append(title, meta, grid);
-    const action = nextAction(production.status);
+    // Roadmap 5.07: stage owners do not change the overall progress; the coordinator does.
+    const action = production.coordenador === false ? null : nextAction(production.status);
+    if (production.coordenador === false) {
+        detail.append(element(
+            "p",
+            "producer-detail__role",
+            "Você participa desta produção pelas etapas atribuídas a você. O andamento geral fica com o produtor coordenador.",
+        ));
+    }
     if (action) {
         const actions = element("div", "producer-detail__actions");
         const button = element("button", "btn-cta", action.label);

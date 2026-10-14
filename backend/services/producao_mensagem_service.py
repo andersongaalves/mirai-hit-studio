@@ -7,6 +7,7 @@ visibility are always checked on the server.
 
 from sqlalchemy.orm import Session
 
+from crud import crud_producao
 from models import OrcamentoModel, ProducaoArquivoModel, ProducaoMensagemModel, ProducaoModel
 
 MAX_TEXT_LENGTH = 2000
@@ -32,7 +33,7 @@ def production_for(db: Session, role: str, production_id: int, user) -> Producao
             OrcamentoModel.cliente_id == user.cliente_id
         )
     elif role == "produtor":
-        query = query.filter(ProducaoModel.produtor_id == user.id)
+        query = query.filter(crud_producao.acesso_produtor(user.id))  # 5.07: coordinator or stage owner.
     elif role != "admin":
         raise MensagemNotFound("Producao nao encontrada.")
     production = query.first()

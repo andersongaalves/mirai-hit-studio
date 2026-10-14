@@ -63,7 +63,24 @@ class ProducaoEtapaModel(Base):
     status = Column(String(20), nullable=False, default="pendente", server_default="pendente")
     prazo = Column(DateTime(timezone=True), nullable=True)
     responsavel_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    # 5.07: who was responsible when the stage was concluded; kept across reassignments.
+    executor_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
     iniciada_em = Column(DateTime(timezone=True), nullable=True)
     concluida_em = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class ProducaoEtapaAtribuicaoModel(Base):
+    """Append-only history of who is responsible for each contract stage (5.07)."""
+
+    __tablename__ = "producao_etapa_atribuicoes"
+
+    id = Column(Integer, primary_key=True)
+    etapa_id = Column(Integer, ForeignKey("producao_etapas.id", ondelete="RESTRICT"), nullable=False, index=True)
+    producao_id = Column(Integer, ForeignKey("producoes.id", ondelete="RESTRICT"), nullable=False)
+    anterior_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    novo_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    atribuido_por_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    motivo = Column(String(300), nullable=False, default="")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

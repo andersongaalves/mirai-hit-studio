@@ -165,3 +165,19 @@ export async function gerarEtapasContratuais(id) {
         method: "POST",
     }), "Erro ao gerar etapas.");
 }
+
+// Roadmap 5.07: responsible per stage and its history.
+export async function buscarProdutoresAtivos() {
+    return handleResponse(await authFetch("/usuarios/produtores"), "Erro ao buscar produtores.");
+}
+
+export async function atribuirEtapaContratual(id, etapaId, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/etapas-contratuais/${etapaId}/responsavel`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    }), "Erro ao atribuir etapa.");
+}
+
+export async function historicoEtapaContratual(id, etapaId) {
+    return handleResponse(await authFetch(`/producoes/${id}/etapas-contratuais/${etapaId}/historico`), "Erro ao buscar histórico.");
+}

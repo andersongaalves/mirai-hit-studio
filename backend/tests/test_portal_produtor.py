@@ -64,7 +64,8 @@ async def check():
         listed = await client.get('/portal/produtor/producoes', headers=bearer('producer-a'))
         assert listed.status_code == 200, listed.text
         assert [item['id'] for item in listed.json()] == [1]
-        assert set(listed.json()[0]) == {'id', 'titulo', 'cliente', 'servico', 'status', 'etapas', 'prazo_entrega', 'created_at', 'updated_at'}
+        assert set(listed.json()[0]) == {'id', 'titulo', 'cliente', 'servico', 'status', 'etapas', 'prazo_entrega', 'created_at', 'updated_at', 'coordenador'}
+        assert listed.json()[0]['coordenador'] is True
         assert 'observacoes' not in listed.text and 'a@example.test' not in listed.text
 
         own = await client.get('/portal/produtor/producoes/1', headers=bearer('producer-a'))

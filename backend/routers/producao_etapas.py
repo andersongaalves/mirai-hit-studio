@@ -6,7 +6,13 @@ from sqlalchemy.orm import Session
 
 from core.dependencies import require_admin, require_client, require_producer
 from database import get_db
-from schemas.producao_etapa import EtapaAdminUpdate, EtapasProducaoResponse, EtapaStatusUpdate
+from schemas.producao_etapa import (
+    EtapaAdminUpdate,
+    EtapaAtribuicaoResponse,
+    EtapaResponsavelUpdate,
+    EtapasProducaoResponse,
+    EtapaStatusUpdate,
+)
 from services import producao_etapa_service as service
 
 router = APIRouter(tags=["Etapas da producao"])
@@ -19,6 +25,8 @@ def _error(exc):
         return HTTPException(status_code=404, detail=str(exc))
     if isinstance(exc, service.EtapaConflito):
         return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, service.EtapaProibida):
+        return HTTPException(status_code=403, detail=str(exc))
     return HTTPException(status_code=422, detail=str(exc))
 
 
@@ -85,5 +93,30 @@ def admin_update_stage(producao_id: IdPath, etapa_id: IdPath, dados: EtapaAdminU
             status_atual=dados.status_atual, prazo=dados.prazo, alterar_prazo="prazo" in dados.model_fields_set,
             request_id=_request_id(request),
         )
+    except service.EtapaError as exc:
+        raise _error(exc) from None
+
+
+@router.patch("/producoes/{producao_id}/etapas-contratuais/{etapa_id}/responsavel",
+              response_model=EtapasProducaoResponse)
+def admin_assign_stage(producao_id: IdPath, etapa_id: IdPath, dados: EtapaResponsavelUpdate, request: Request,
+                       db: Db, user=Depends(require_admin)):
+    try:
+        producao = service.producao_para(db, "admin", producao_id, user)
+        return service.atribuir(
+            db, producao, etapa_id, novo_usuario_id=dados.responsavel_usuario_id,
+            responsavel_atual=dados.responsavel_atual, motivo=dados.motivo.strip(), usuario=user,
+            request_id=_request_id(request),
+        )
+    except service.EtapaError as exc:
+        raise _error(exc) from None
+
+
+@router.get("/producoes/{producao_id}/etapas-contratuais/{etapa_id}/historico",
+            response_model=list[EtapaAtribuicaoResponse])
+def admin_stage_history(producao_id: IdPath, etapa_id: IdPath, db: Db, user=Depends(require_admin)):
+    try:
+        producao = service.producao_para(db, "admin", producao_id, user)
+        return service.historico(db, producao, etapa_id)
     except service.EtapaError as exc:
         raise _error(exc) from None

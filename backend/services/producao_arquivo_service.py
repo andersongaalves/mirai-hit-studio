@@ -7,6 +7,7 @@ from uuid import uuid4
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from crud import crud_producao
 from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
 from models.producao import ProducaoModel
@@ -199,7 +200,7 @@ def list_for_producer(db, production_id, producer_id):
         db.query(ProducaoModel.id)
         .filter(
             ProducaoModel.id == production_id,
-            ProducaoModel.produtor_id == producer_id,
+            crud_producao.acesso_produtor(producer_id),
         )
         .first()
     )
@@ -230,7 +231,7 @@ def get_for_producer(db, file_id, producer_id):
         .filter(
             ProducaoArquivoModel.id == file_id,
             ProducaoArquivoModel.visivel_produtor.is_(True),
-            ProducaoModel.produtor_id == producer_id,
+            crud_producao.acesso_produtor(producer_id),
         )
         .first()
     )
