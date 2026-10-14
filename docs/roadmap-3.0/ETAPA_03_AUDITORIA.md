@@ -36,6 +36,7 @@ Status: **Corrigido** = tratado na branch `fix/roadmap-3-0-etapas-02-04`;
 | AUD-S08-004 | S08 | P3 | Produtor pode versionar previa/entrega oculta para ele | Aberto |
 | AUD-S09-001 | S09 | P3 | `PUT /config` retorna 500 se a linha `id=1` nao existir | Aberto |
 | AUD-S12-005 | S12 | P3 | README descreve a v1 (SQLite, `front/`) | Aberto |
+| AUD-S09-002 | S09 | P3 | Editor de servicos (builder legado) estoura a largura em telas de 390px | Aberto |
 
 AUD-S12-001 foi rebaixado apos leitura dos logs do Render (14/10): o Uvicorn registra o IP
 publico de cada visitante, entao o limite nao agrupa todos os usuarios.

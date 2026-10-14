@@ -324,6 +324,20 @@
                                         class="admin-list-container"
                                     ></div>
 
+                                    <section id="servico-etapas" class="servico-etapas" aria-labelledby="servico-etapas-title">
+                                        <div class="servico-etapas__header">
+                                            <h4 id="servico-etapas-title">Etapas e pesos</h4>
+                                            <p class="admin-help">Ordem, prazos e participação de cada etapa no preço. A soma dos pesos deve ser 100%; só etapas administrativas podem ter 0%. Alterar o catálogo não muda propostas ou produções já existentes.</p>
+                                        </div>
+                                        <p id="servico-etapas-unsaved" class="admin-help">Salve o serviço antes de definir as etapas.</p>
+                                        <div id="servico-etapas-list" class="servico-etapas__list"></div>
+                                        <div class="servico-etapas__footer">
+                                            <button id="servico-etapas-add" type="button" class="btn-small">Adicionar etapa</button>
+                                            <span id="servico-etapas-total" aria-live="polite"></span>
+                                            <button id="servico-etapas-save" type="button" class="btn-small">Salvar etapas</button>
+                                        </div>
+                                    </section>
+
                                     <div style="display: flex; gap: 10px">
                                         <button
                                             class="btn-cta btn-submit"

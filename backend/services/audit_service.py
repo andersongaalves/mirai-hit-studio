@@ -34,6 +34,8 @@ ALLOWED_METADATA = {
     "old_version",
     "new_version",
     "restored_from_version",
+    "old_stage_count",
+    "new_stage_count",
 }
 
 
