@@ -395,6 +395,22 @@ cotas derivadas e combo Launch) depois do release, conferindo o conteudo de cada
 | Conferencia | `GET /catalogo/combos` em producao lista "Start" e "Launch" com os servicos e os parametros unidos |
 | Autorizacao | `CTRL-20261015-R3-CAT` |
 
+### Publicacao da ordem dos servicos nos combos (15/10/2026)
+
+No editor de combos do Admin, os servicos escolhidos aparecem numa lista ordenada com
+botoes para subir e descer; a ordem e salva no combo e seguida no site, na calculadora e
+nas propostas.
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #51 (registro do ajuste do catalogo) e #52 (ordem dos servicos) |
+| Commit publicado | `ccd9eec5a904ec031a5dd6157d0ce2cfb04f953f` |
+| Migration | nenhuma |
+| CI da `main` | Storage Integration Gate `38785620610` verde |
+| Storage Provider Rollout Evidence | run `38786541882` (sucesso) |
+| Protected Production Release | run `38788216233`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261015-R3-ORD` |
+
 ## Novos itens do roadmap (pedido do responsavel em 15/10/2026)
 
 Itens 5.14 a 5.22, com as sugestoes aceitas pelo responsavel. As fases 5.11 a 5.13
