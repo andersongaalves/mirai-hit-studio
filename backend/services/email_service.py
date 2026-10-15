@@ -157,7 +157,7 @@ class EmailService:
         site = _site_url()
         context.setdefault("site_url", site)
         context.setdefault("portfolio_url", f"{site}/portfolio.html")
-        context.setdefault("acesso_url", f"{site}/acesso.html")
+        context.setdefault("acesso_url", f"{site}/acesso")
 
         template = templates.get_template(template_name)
 
@@ -215,7 +215,7 @@ class EmailService:
             valor=_moeda(orcamento.valor_total),
             data=_data_br(orcamento.data_solicitacao),
             observacoes=orcamento.detalhes,
-            admin_url=f"{_site_url()}/admin.html",
+            admin_url=f"{_site_url()}/admin",
         )
 
         return cls.enviar(

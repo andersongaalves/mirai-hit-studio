@@ -57,7 +57,7 @@ assert 'Portal do Cliente' in html and 'WhatsApp informado' not in html
 assert '<script>x</script>' not in html and '&lt;script&gt;' in html
 assert 'A definir' in no_value['html']
 assert 'Não informado' in admin_mail['html'] and 'None' not in admin_mail['html']
-assert 'https://site.example/admin.html' in admin_mail['html'] and 'R$ 1.234,50' in admin_mail['html']
+assert 'https://site.example/admin' in admin_mail['html'] and 'R$ 1.234,50' in admin_mail['html']
 ''')
 
     def test_proposal_and_portal_access(self):
@@ -77,7 +77,7 @@ for mail in sent:
 # The proposal no longer tells the client to accept by contacting the team: it is the portal.
 assert 'R$ 1.250,00' in pdf_mail['html'] and 'Portal do Cliente' in pdf_mail['html']
 assert '50% para iniciar' in pdf_mail['html'] and 'confirmar o aceite, entre em contato' not in pdf_mail['html']
-assert 'https://site.example/acesso.html' in pdf_mail['html'] and pdf_mail['attachments']
+assert 'https://site.example/acesso"' in pdf_mail['html'] and pdf_mail['attachments']
 assert portal_mail['subject'] == 'Proposta MHS-000123 disponível no Portal do Cliente'
 assert 'aceitar ou recusar' in portal_mail['html']
 hours = int(client_access_service.INVITE_TTL.total_seconds() // 3600)
