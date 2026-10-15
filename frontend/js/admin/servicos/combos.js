@@ -46,7 +46,7 @@ function renderList() {
         card.append(element(
             "p",
             "combo-card__meta",
-            `Preço de referência ${money(combo.preco_base)} · soma dos serviços ${money(combo.soma_servicos)}`,
+            `Preço ${money(combo.preco_base)}${combo.aplica_desconto ? " (com desconto do site)" : ""} · soma dos serviços ${money(combo.soma_servicos)}`,
         ));
         const services = element("ul", "combo-card__servicos");
         combo.servicos.forEach(item => services.append(element(
@@ -91,9 +91,26 @@ function openEditor(combo = null) {
     name.maxLength = 100;
     name.required = true;
     name.value = combo?.nome ?? "";
-    const description = element("input");
-    description.maxLength = 300;
+    // Catalog rework: a combo is sold like a service; what it includes comes from its services.
+    const subtitle = element("input");
+    subtitle.maxLength = 150;
+    subtitle.placeholder = "Ex.: Para quem já tem tudo gravado";
+    subtitle.value = combo?.subtitulo ?? "";
+    const description = element("textarea");
+    description.rows = 3;
+    description.maxLength = 1000;
     description.value = combo?.descricao ?? "";
+    const discount = element("select");
+    [["false", "Não"], ["true", "Sim"]].forEach(([value, text]) => {
+        const option = element("option", "", text);
+        option.value = value;
+        discount.append(option);
+    });
+    discount.value = String(Boolean(combo?.aplica_desconto));
+    const highlights = element("textarea");
+    highlights.rows = 3;
+    highlights.placeholder = "Ex.: Desconto de combo";
+    highlights.value = (combo?.destaques ?? []).join("\n");
     const price = element("input");
     price.type = "number";
     price.min = "0";
@@ -133,7 +150,7 @@ function openEditor(combo = null) {
     updateSum();
 
     const activeLabel = element("label", "combo-form__check");
-    activeLabel.append(active, document.createTextNode(" Ativo (disponível em novas propostas)"));
+    activeLabel.append(active, document.createTextNode(" Ativo (aparece no site e em novas propostas)"));
     const feedback = element("p", "combo-form__feedback");
     feedback.setAttribute("role", "status");
     const actions = element("div", "combo-form__actions");
@@ -146,8 +163,11 @@ function openEditor(combo = null) {
 
     form.append(
         field("Nome", name),
+        field("Subtítulo do botão", subtitle),
         field("Descrição", description),
-        field("Preço de referência (R$)", price),
+        field("Preço (R$)", price),
+        field("Aplicar desconto?", discount),
+        field("Destaques do combo (um por linha, até 20)", highlights),
         sum,
         useSum,
         services,
@@ -160,7 +180,7 @@ function openEditor(combo = null) {
         if (state.busy) return;
         const ordered = state.servicos.filter(servico => selected.has(servico.id)).map(servico => servico.id);
         if (name.value.trim().length < 3) { feedback.textContent = "Informe um nome com pelo menos 3 letras."; return; }
-        if (price.value === "" || Number(price.value) < 0) { feedback.textContent = "Informe o preço de referência."; return; }
+        if (price.value === "" || Number(price.value) < 0) { feedback.textContent = "Informe o preço do combo."; return; }
         if (ordered.length < 2) { feedback.textContent = "Escolha pelo menos dois serviços."; return; }
         state.busy = true;
         save.disabled = true;
@@ -169,7 +189,10 @@ function openEditor(combo = null) {
             const payload = {
                 nome: name.value.trim(),
                 descricao: description.value.trim(),
+                subtitulo: subtitle.value.trim(),
                 preco_base: Number(price.value).toFixed(2),
+                aplica_desconto: discount.value === "true",
+                destaques: highlights.value.split("\n").map(item => item.trim().slice(0, 200)).filter(Boolean).slice(0, 20),
                 ativo: active.checked,
                 servicos: ordered,
             };

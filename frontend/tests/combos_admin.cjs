@@ -101,7 +101,7 @@ function store(id, body) {
 
         // List renders as text with reference price, sum of services and stage counts.
         const card = panel.locator('.combo-card').first();
-        assert.match(await card.textContent(), /Combo <b>antigo<\/b>.*Ativo.*Preço de referência R\$\s1\.200,00 · soma dos serviços R\$\s1\.350,50/s);
+        assert.match(await card.textContent(), /Combo <b>antigo<\/b>.*Ativo.*Preço R\$\s1\.200,00 · soma dos serviços R\$\s1\.350,50/s);
         assert.match(await card.textContent(), /Master <i>pro<\/i> — R\$\s350,50 · 2 etapas/);
         assert.equal(await panel.locator('b, i').count(), 0);
 
@@ -110,18 +110,22 @@ function store(id, body) {
         const form = panel.locator('.combo-form');
         await form.getByLabel('Nome').fill('Trio');
         await form.getByRole('button', { name: 'Salvar combo' }).click();
-        assert.match(await form.locator('.combo-form__feedback').textContent(), /preço de referência/);
+        assert.match(await form.locator('.combo-form__feedback').textContent(), /preço do combo/);
         await form.getByLabel('Vocal — R$').check();
         await form.getByLabel('Plano Start — R$').check();
         assert.match(await form.locator('.combo-form__sum').textContent(), /R\$\s1\.200,00 \(2 serviços\)/);
         await form.getByRole('button', { name: 'Usar soma dos serviços' }).click();
-        assert.equal(await form.getByLabel('Preço de referência (R$)').inputValue(), '1200.00');
+        assert.equal(await form.getByLabel('Preço (R$)').inputValue(), '1200.00');
         await form.getByLabel('Vocal — R$').uncheck();
         await form.getByRole('button', { name: 'Salvar combo' }).click();
         assert.match(await form.locator('.combo-form__feedback').textContent(), /pelo menos dois serviços/);
         assert.equal(writes.length, 0);
         await form.getByLabel('Vocal — R$').check();
         await form.getByLabel('Descrição').fill('Mix e voz');
+        // Catalog rework: sold like a service (subtitle, discount choice and highlights).
+        await form.getByLabel('Subtítulo do botão').fill('Para quem já gravou');
+        await form.getByLabel('Aplicar desconto?').selectOption('true');
+        await form.getByLabel('Destaques do combo (um por linha, até 20)').fill('Desconto de combo\n\n  1 revisão extra ');
         rejectNext = true;
         await form.getByRole('button', { name: 'Salvar combo' }).click();
         await page.waitForFunction(() => document.querySelector('.combo-form__feedback')?.textContent.includes('nao existe'));
@@ -129,18 +133,20 @@ function store(id, body) {
         await page.waitForFunction(() => document.querySelectorAll('#combos-list .combo-card').length === 2);
         assert.equal(await page.locator('#combo-editor').isVisible(), false);
         assert.deepEqual(writes.at(-1), { method: 'POST', id: null, body: {
-            nome: 'Trio', descricao: 'Mix e voz', preco_base: '1200.00', ativo: true, servicos: [1, 3] } });
+            nome: 'Trio', descricao: 'Mix e voz', subtitulo: 'Para quem já gravou', preco_base: '1200.00', aplica_desconto: true,
+            destaques: ['Desconto de combo', '1 revisão extra'], ativo: true, servicos: [1, 3] } });
 
         // Edit: deactivate and change services; the card shows "Inativo".
         await panel.getByRole('button', { name: 'Editar combo Combo <b>antigo</b>' }).click();
         assert.equal(await form.getByLabel('Nome').inputValue(), 'Combo <b>antigo</b>');
         assert.equal(await form.getByLabel('Master <i>pro</i> — R$').isChecked(), true);
-        await form.getByLabel('Ativo (disponível em novas propostas)').uncheck();
+        await form.getByLabel('Ativo (aparece no site e em novas propostas)').uncheck();
         await form.getByLabel('Vocal — R$').check();
         await form.getByRole('button', { name: 'Salvar combo' }).click();
         await page.waitForFunction(() => document.querySelector('.combo-card--inativo'));
         assert.deepEqual(writes.at(-1), { method: 'PUT', id: 9, body: {
-            nome: 'Combo <b>antigo</b>', descricao: 'Primeiro combo', preco_base: '1200.00', ativo: false, servicos: [1, 2, 3] } });
+            nome: 'Combo <b>antigo</b>', descricao: 'Primeiro combo', subtitulo: '', preco_base: '1200.00', aplica_desconto: false,
+            destaques: [], ativo: false, servicos: [1, 2, 3] } });
         assert.match(await panel.locator('.combo-card--inativo').textContent(), /Inativo/);
 
         // Narrow screens: the panel and the form stay inside the viewport.
@@ -152,7 +158,7 @@ function store(id, body) {
         assert.equal(await page.locator('#combo-editor').isVisible(), false);
 
         assert.deepEqual(errors, []);
-        console.log('PASS: combos list as text, create with validation and sum helper, server error feedback, edit/deactivate and narrow layout.');
+        console.log('PASS: combos list as text, create with validation, sum helper, subtitle/discount/highlights, server error feedback, edit/deactivate and narrow layout.');
     } finally {
         await browser.close();
     }

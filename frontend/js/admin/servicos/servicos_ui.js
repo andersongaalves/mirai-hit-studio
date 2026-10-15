@@ -42,7 +42,10 @@ function createServicoCard(servico, handlers) {
         createTextElement("strong", servico.nome + " "),
         createTextElement(
             "span",
-            `${servico.categoria} | ${money(servico.valor_base)}`,
+            // Catalog rework: old "combo" services are kept but no longer shown on the site.
+            servico.categoria === "combo"
+                ? `Combo antigo (fora do site) | ${money(servico.valor_base)}`
+                : money(servico.valor_base),
         ),
     );
 

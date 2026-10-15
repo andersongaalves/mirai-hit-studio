@@ -24,6 +24,7 @@ const FIELDS = [
     ["max_versoes", "Versões por arquivo", 1, 50],
     ["max_tamanho_mb", "MB por arquivo", 1, 50],
     ["max_total_mb", "Espaço total (MB)", 1, 5000],
+    ["max_duracao_min", "Duração máx. por áudio (min)", 1, 60],
 ];
 
 function element(tag, className = "", text = "") {
@@ -57,6 +58,7 @@ export function describeQuota(cota) {
             ? `espaço ${mb(cota.total_usado_bytes)} de ${cota.max_total_mb} MB`
             : `espaço total ${cota.max_total_mb} MB`);
     }
+    if (cota.max_duracao_min != null) parts.push(`até ${cota.max_duracao_min} min por áudio`);
     if (Array.isArray(cota.formatos)) parts.push(`formatos: ${cota.formatos.map(item => FORMAT_LABELS[item] || item).join(", ")}`);
     return parts.length ? parts.join(" · ") : "Sem limite contratual para este tipo.";
 }
