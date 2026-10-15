@@ -22,7 +22,7 @@ class PoliticasTests(unittest.TestCase):
     def test_contract_aggregation_favours_the_client(self):
         self.run_case('''
 strict = {'publicacao_previa': 'aprovacao_admin', 'revisoes_excedentes': 'exigir_admin', 'cliente_ve_etapas': False,
-          'cliente_ve_prazos_etapas': False, 'financeiro_cliente': 'resumido'}
+          'cliente_ve_prazos_etapas': False, 'financeiro_cliente': 'resumido', 'entrega_final': 'apos_quitacao'}
 loose = policies.padroes()
 assert policies.agregar({'itens': [{'indice': 1, 'servico_id': 1, 'politicas': strict}]}) == strict
 mixed = {'itens': [
@@ -80,7 +80,7 @@ with Session(engine) as db:
     production_id = crud_producao.buscar_por_orcamento(db, 1).id
     assert db.get(ProducaoPoliticaModel, production_id).contrato == {
         'publicacao_previa': 'aprovacao_admin', 'revisoes_excedentes': 'exigir_admin', 'cliente_ve_etapas': True,
-        'cliente_ve_prazos_etapas': False, 'financeiro_cliente': 'resumido'}
+        'cliente_ve_prazos_etapas': False, 'financeiro_cliente': 'resumido', 'entrega_final': 'apos_quitacao'}
     assert policies.detalhar(db, 999)['origens'] == {key: 'global' for key in policies.CHAVES}  # No contract.
 
 # Later global and catalog edits never change the contract in force.

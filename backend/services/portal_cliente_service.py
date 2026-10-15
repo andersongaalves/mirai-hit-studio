@@ -6,6 +6,11 @@ from models.orcamento import OrcamentoModel
 from services import checkout_service, financial_service, politica_service
 
 PRODUCOES_FINALIZADAS = ("finalizado", "entregue")
+TIPO_ENTREGA_FINAL = "entrega"
+MENSAGEM_ENTREGA_BLOQUEADA = (
+    "A entrega final está pronta e será liberada após a quitação do saldo. "
+    "Conclua o pagamento no Portal do Cliente para baixar os arquivos."
+)
 
 
 class ProducaoClienteNaoEncontrada(Exception):
@@ -84,3 +89,24 @@ def buscar_financeiro(db: Session, producao_id: int, cliente_id: int):
         except (checkout_service.CheckoutNaoEncontrado, checkout_service.CheckoutIndisponivel):
             resposta["checkout_url"] = None
     return resposta
+
+
+def entrega_bloqueada(db: Session, producao) -> bool:
+    """5.14: final delivery waits for the full payment, computed live from the charge.
+
+    Released when the contract policy (or an admin exception) says "liberada", when there is
+    no charge (legacy productions), when it is paid or cancelled. Previews are never held.
+    """
+    if politica_service.vigentes(db, producao.id)["entrega_final"] == "liberada":
+        return False
+    orcamento = db.get(OrcamentoModel, producao.orcamento_id)
+    proposta = orcamento.proposta if orcamento else None
+    cobranca = proposta.cobranca if proposta else None
+    if cobranca is None:
+        return False
+    try:
+        status = financial_service.status_calculado(cobranca)
+        saldo = financial_service.saldo_pendente(cobranca)
+    except financial_service.FinanceiroConflito:
+        return False  # Paid above the contract: needs reconciliation, never holds the client.
+    return saldo > 0 and status.value not in {"paga", "cancelada"}

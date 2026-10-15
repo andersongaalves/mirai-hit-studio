@@ -40,7 +40,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
     let failList = false;
     let quotas = [{ tipo: 'previa', max_arquivos: 2, max_versoes: null, max_tamanho_mb: null, max_total_mb: null, formatos: null, origem: 'contrato', arquivos_usados: 2, total_usado_bytes: 2048 }];
     const quotaPuts = [];
-    const contract = { publicacao_previa: 'aprovacao_admin', revisoes_excedentes: 'exigir_admin', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo' };
+    const contract = { publicacao_previa: 'aprovacao_admin', revisoes_excedentes: 'exigir_admin', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo', entrega_final: 'apos_quitacao' };
     let policies = { producao_id: 1, vigentes: contract, contrato: contract, excecao: null, motivo: null, atualizado_em: null,
         origens: Object.fromEntries(Object.keys(contract).map(key => [key, 'contrato'])) };
     const policyCalls = [];

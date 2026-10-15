@@ -23,7 +23,7 @@ const DEFAULTS = {
 const store = { cliente: [], produtor: [] };
 const writes = [];
 // 5.10: global policies (versioned).
-const POLICY_DEFAULTS = { publicacao_previa: 'automatica', revisoes_excedentes: 'permitir', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo' };
+const POLICY_DEFAULTS = { publicacao_previa: 'automatica', revisoes_excedentes: 'permitir', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo', entrega_final: 'apos_quitacao' };
 let policyVersions = [];
 const policyWrites = [];
 let policyConflict = false;

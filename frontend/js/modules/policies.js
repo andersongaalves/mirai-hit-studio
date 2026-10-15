@@ -22,6 +22,10 @@ export const POLICIES = Object.freeze([
         ["completo", "Completo (com histórico de pagamentos)"],
         ["resumido", "Resumido (status, saldo e link de pagamento)"],
     ] },
+    { key: "entrega_final", label: "Entrega final ao cliente", options: [
+        ["apos_quitacao", "Só após a quitação do saldo"],
+        ["liberada", "Liberada mesmo com saldo pendente"],
+    ] },
 ]);
 
 export const ORIGIN_LABELS = Object.freeze({

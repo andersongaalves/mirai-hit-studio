@@ -54,7 +54,7 @@ async function staticResponse(route) {
             return route.fulfill({ json: stored });
         }
         if (url.pathname === '/servicos/3/politicas') {
-            const herdadas = { publicacao_previa: 'automatica', revisoes_excedentes: 'permitir', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo' };
+            const herdadas = { publicacao_previa: 'automatica', revisoes_excedentes: 'permitir', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo', entrega_final: 'apos_quitacao' };
             const politicas = request.method() === 'PUT' ? request.postDataJSON() : { financeiro_cliente: 'resumido' };
             if (request.method() === 'PUT') policyPuts.push(politicas);
             return route.fulfill({ json: { servico_id: 3, politicas, herdadas } });

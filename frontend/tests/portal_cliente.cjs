@@ -64,6 +64,12 @@ let files = [{
     tamanho_bytes: 4096, sha256: 'c'.repeat(64), grupo_versao: 'delivery-group', versao: 1,
     substitui_arquivo_id: null, enviado_por_mim: false,
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+}, {
+    // Roadmap 5.14: final delivery held until the balance is paid.
+    id: 20, producao_id: 1, tipo: 'entrega', nome_exibicao: 'master-final.wav', mime_type: 'audio/wav',
+    tamanho_bytes: 4096, sha256: 'd'.repeat(64), grupo_versao: 'held-group', versao: 1,
+    substitui_arquivo_id: null, enviado_por_mim: false, bloqueado_pagamento: true,
+    created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
 }];
 
 const finances = new Map([
@@ -291,6 +297,15 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').first().textContent(), /<script>preview<\/script>/);
         assert.match(await page.locator('.client-finance-grid').textContent(), /R\$\s*1\.000,00/);
         assert.equal(await page.getByRole('link', { name: 'Ir para pagamento' }).count(), 1);
+
+        // Roadmap 5.14: the held delivery shows its state and the payment link, never a download.
+        const heldFile = page.locator('.producer-file').filter({ hasText: 'master-final.wav' });
+        assert.match(await heldFile.textContent(), /aguardando a quitação do saldo/);
+        assert.equal(await heldFile.getByRole('button', { name: 'Baixar' }).count(), 0);
+        assert.equal(await heldFile.getByRole('link', { name: 'Pagar saldo e liberar' }).getAttribute('href'),
+            'https://miraihitstudio.com.br/checkout/11111111-1111-1111-1111-111111111111');
+        assert.match(await page.locator('.client-file-group').filter({ hasText: 'Entregas finais' }).textContent(),
+            /liberados após a quitação do saldo/);
 
         // Roadmap 5.06: contract stages replace the legacy list, read-only and without values.
         await page.waitForSelector('#production-stages-panel .production-stages');

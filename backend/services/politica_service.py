@@ -34,6 +34,7 @@ FAVORAVEL = {
     "cliente_ve_etapas": (True, False),
     "cliente_ve_prazos_etapas": (True, False),
     "financeiro_cliente": ("completo", "resumido"),
+    "entrega_final": ("liberada", "apos_quitacao"),
 }
 MAX_VERSOES_LISTADAS = 20
 
