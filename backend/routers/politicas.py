@@ -67,7 +67,8 @@ def restore_global_policies(dados: PoliticasGlobaisRestaurar, request: Request, 
     return _globais(db)
 
 
-@router.get("/servicos/{servico_id}/politicas", response_model=PoliticasServicoResponse)
+@router.get("/servicos/{servico_id}/politicas", response_model=PoliticasServicoResponse,
+             response_model_exclude_none=True)  # Only the keys the service overrides.
 def service_policies(servico_id: IdPath, db: Db, user=Depends(require_admin)):
     try:
         politicas = service.politicas_servico(db, servico_id)
@@ -76,7 +77,8 @@ def service_policies(servico_id: IdPath, db: Db, user=Depends(require_admin)):
     return {"servico_id": servico_id, "politicas": politicas, "herdadas": service.globais(db)["politicas"]}
 
 
-@router.put("/servicos/{servico_id}/politicas", response_model=PoliticasServicoResponse)
+@router.put("/servicos/{servico_id}/politicas", response_model=PoliticasServicoResponse,
+             response_model_exclude_none=True)  # Only the keys the service overrides.
 def save_service_policies(servico_id: IdPath, dados: PoliticasParciais, request: Request, db: Db,
                           user=Depends(require_admin)):
     try:
