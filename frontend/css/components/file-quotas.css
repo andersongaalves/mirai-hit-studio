@@ -1,0 +1,15 @@
+/* Roadmap 3.0, 5.09: contractual file quotas (service editor, admin modal and portals). */
+.file-quotas { display: grid; gap: var(--space-3); min-width: 0; }
+.file-quota { display: grid; gap: var(--space-2); min-width: 0; margin: 0; padding: var(--space-3); border: var(--border-subtle); border-radius: var(--radius-sm); }
+.file-quota legend { padding: 0 var(--space-1); font-weight: 600; }
+.file-quota__body { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); min-width: 0; }
+.file-quota__body.is-disabled { opacity: 0.55; }
+.file-quota__field { display: grid; gap: var(--space-1); min-width: 0; font-size: 0.85rem; color: var(--color-text-secondary); }
+.file-quota__field input { min-width: 0; max-width: 100%; min-height: 36px; padding: 0 var(--space-2); border: var(--border-subtle); border-radius: var(--radius-sm); color: var(--color-text-primary); background: var(--color-background); font: inherit; }
+.file-quota__formats { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; font-size: 0.85rem; color: var(--color-text-secondary); }
+.file-quota__format { display: inline-flex; align-items: center; gap: var(--space-1); }
+.file-quotas__list { display: grid; gap: var(--space-1); margin: 0; padding-left: var(--space-4); font-size: 0.9rem; overflow-wrap: anywhere; }
+.file-quotas__list .is-exhausted { color: var(--color-warning); }
+.file-quotas__origin { color: var(--color-text-secondary); font-size: 0.8rem; }
+.file-quota-hint { margin: 0; color: var(--color-text-secondary); font-size: 0.85rem; overflow-wrap: anywhere; }
+.file-quota-hint.is-exhausted { color: var(--color-warning); }
