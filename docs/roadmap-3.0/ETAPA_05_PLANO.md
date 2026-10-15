@@ -380,3 +380,17 @@ secoes de texto livre viram limites que o sistema aplica (migration `e8a0c2d4f65
 
 **Publicacao:** rodar `e8a0c2d4f659` antes do release; o SQL de dados (conversao das secoes,
 cotas derivadas e combo Launch) depois do release, conferindo o conteudo de cada servico.
+
+### Publicacao do ajuste do catalogo (15/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #50 (registro da 5.10) e #49 (catalogo) |
+| Commit publicado | `c87ab414257dfb7faa059505c5f1ae1f83ccff3a` |
+| Migration | `e8a0c2d4f659`, aplicada pelo responsavel no SQL Editor do Supabase |
+| Dados | SQL de dados rodado pelo responsavel junto com a migration, antes do release: Mixagem, Letra, Instrumental e Masterizacao no formato novo; cotas de materiais (Mixagem 5 faixas/3 min; Instrumental e Masterizacao 3 min); combo "Launch" recriado (Instrumental + Mixagem + Masterizacao, com desconto). Entre o SQL e o release os cards do site ficaram sem limites/destaques |
+| CI da `main` | Storage Integration Gate `38751905240`, Portals E2E e Client access migration verdes |
+| Storage Provider Rollout Evidence | run `38752852078` (sucesso) |
+| Protected Production Release | run `38753370096`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Conferencia | `GET /catalogo/combos` em producao lista "Start" e "Launch" com os servicos e os parametros unidos |
+| Autorizacao | `CTRL-20261015-R3-CAT` |
