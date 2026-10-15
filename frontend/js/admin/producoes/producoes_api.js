@@ -209,4 +209,3 @@ export async function salvarExcecaoPoliticas(id, politicas, motivo) {
 export async function removerExcecaoPoliticas(id) {
     return handleResponse(await authFetch(`/producoes/${id}/politicas`, { method: "DELETE" }), "Erro ao remover a exceção.");
 }
-
