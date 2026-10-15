@@ -12,6 +12,7 @@ from services import (
     audit_service,
     cota_arquivo_service,
     financial_service,
+    politica_service,
     producao_etapa_service,
     producao_liberacao_service,
 )
@@ -172,6 +173,7 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
         )
         producao_etapa_service.instanciar(db, producao, model)
         cota_arquivo_service.instanciar(db, producao, model)  # 5.09
+        politica_service.instanciar(db, producao, model)  # 5.10
     try:
         financial_service.criar_para_proposta(
             db,

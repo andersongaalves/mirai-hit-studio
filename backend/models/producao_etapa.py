@@ -58,6 +58,8 @@ class ProducaoEtapaModel(Base):
     prazo_dias = Column(Integer, nullable=True)
     unidade = Column(String(30), nullable=False, default="")
     revisoes_incluidas = Column(Integer, nullable=True)
+    # 5.10: review rounds used (each em_revisao -> em_andamento return counts one).
+    revisoes_usadas = Column(Integer, nullable=False, default=0, server_default="0")
     depende_da_anterior = Column(Boolean, nullable=False, default=False)
     administrativa = Column(Boolean, nullable=False, default=False)
     status = Column(String(20), nullable=False, default="pendente", server_default="pendente")

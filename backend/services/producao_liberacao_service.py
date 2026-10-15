@@ -9,6 +9,7 @@ from services import (
     audit_service,
     cota_arquivo_service,
     financial_service,
+    politica_service,
     producao_etapa_service,
     proposta_service,
 )
@@ -139,6 +140,7 @@ def avaliar_cobranca_bloqueada(
     # 5.06: contract stages come from the snapshot frozen when the proposal was sent.
     producao_etapa_service.instanciar(db, producao, proposta)
     cota_arquivo_service.instanciar(db, producao, proposta)  # 5.09
+    politica_service.instanciar(db, producao, proposta)  # 5.10
     audit_service.record(
         db,
         actor=actor,
