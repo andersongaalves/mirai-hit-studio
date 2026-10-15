@@ -291,3 +291,15 @@ testes de downgrade.
 - Fora do escopo: cobranca de espaco extra e limpeza automatica de versoes antigas.
 
 **Publicacao:** aplicar `c4e6a8b0d215` antes do release (duas tabelas novas, aditivo).
+
+### Publicacao da 5.09 (15/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #45 (registro da 5.08) e #46 (5.09) |
+| Commit publicado | `6d9850de542a0d4daea1428d2634f09ff46eb2a5` |
+| Migration | `c4e6a8b0d215`, aplicada pelo responsavel no SQL Editor do Supabase antes do release; conferida (`servico_cotas_arquivo` e `producao_cotas_arquivo` com 7 restricoes e 2 indices) |
+| CI da `main` | Storage Integration Gate `38674897587` (verde na repeticao; a 1a tentativa falhou ao baixar imagem Docker), Portals E2E e Client access migration verdes |
+| Storage Provider Rollout Evidence | run `38675814622` (sucesso) |
+| Protected Production Release | run `38676188660`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261015-R3-509` |
