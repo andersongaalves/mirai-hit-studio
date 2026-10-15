@@ -2,8 +2,10 @@
 {% block content %}
 <h1>Confirme sua conta Mirai Hit Studio</h1>
 <p>Olá, {{ nome }}.</p>
-<p>Recebemos uma solicitação para criar sua conta de Cliente.</p>
-<p><a href="{{ activation_url }}">Confirmar e definir minhas credenciais</a></p>
-<p>Este link é pessoal, expira em 48 horas e deixa de funcionar após o uso.</p>
+<p>Recebemos uma solicitação para criar sua conta no Portal do Cliente.</p>
+<div style="text-align: center; margin: 30px 0">
+    <a class="button" href="{{ activation_url }}">Confirmar e definir minhas credenciais</a>
+</div>
+<p>Este link é pessoal, expira em {{ validade_horas }} horas e deixa de funcionar após o uso.</p>
 <p>Se você não iniciou este cadastro, ignore esta mensagem.</p>
 {% endblock %}

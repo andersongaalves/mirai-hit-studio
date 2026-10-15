@@ -1,6 +1,7 @@
 import base64
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 
 import resend
@@ -19,6 +20,41 @@ templates = Environment(
 )
 
 
+BRASILIA = timezone(timedelta(hours=-3))  # Brazil has no daylight saving time since 2019.
+
+
+def _moeda(valor) -> str:
+    """'R$ 1.234,56', or 'A definir' when there is no value."""
+    if valor is None:
+        return "A definir"
+    texto = format(Decimal(str(valor)), ",.2f").replace(",", "_").replace(".", ",").replace("_", ".")
+    return f"R$ {texto}"
+
+
+def _data_br(valor) -> str:
+    """Request dates are stored in UTC; e-mails show Brasilia time."""
+    if valor is None:
+        return ""
+    if valor.tzinfo is None:
+        valor = valor.replace(tzinfo=timezone.utc)
+    return valor.astimezone(BRASILIA).strftime("%d/%m/%Y %H:%M")
+
+
+def _ttl(nome: str) -> timedelta:
+    """Token lifetimes come from the access service, so the e-mail text never drifts."""
+    from services import client_access_service  # Local import: that module imports this one.
+
+    return getattr(client_access_service, nome)
+
+
+def _horas(duracao: timedelta) -> int:
+    return int(duracao.total_seconds() // 3600)
+
+
+def _site_url() -> str:
+    return (getattr(settings, "PUBLIC_FRONTEND_URL", "") or "https://miraihitstudio.com.br").rstrip("/")
+
+
 class EmailService:
 
     @classmethod
@@ -27,11 +63,12 @@ class EmailService:
             "email_convite_cliente.html",
             nome=cliente.nome,
             activation_url=activation_url,
+            validade_horas=_horas(_ttl("INVITE_TTL")),
         )
         return resend.Emails.send({
             "from": settings.EMAIL_FROM,
             "to": cliente.email,
-            "subject": "Ative seu acesso ao Portal Mirai",
+            "subject": "Ative seu acesso ao Portal do Cliente Mirai",
             "html": html,
         }, {"idempotency_key": idempotency_key})
 
@@ -53,7 +90,7 @@ class EmailService:
         return resend.Emails.send({
             "from": settings.EMAIL_FROM,
             "to": cliente.email,
-            "subject": f"Proposta {proposta_numero} disponivel no Portal Mirai",
+            "subject": f"Proposta {proposta_numero} disponível no Portal do Cliente",
             "html": html,
         }, {"idempotency_key": idempotency_key})
 
@@ -69,6 +106,7 @@ class EmailService:
             "email_confirmacao_cadastro.html",
             nome=cliente.nome,
             activation_url=activation_url,
+            validade_horas=_horas(_ttl("INVITE_TTL")),
         )
         return resend.Emails.send({
             "from": settings.EMAIL_FROM,
@@ -89,7 +127,7 @@ class EmailService:
             "email_recuperacao_senha.html",
             nome=cliente.nome,
             recovery_url=recovery_url,
-            validity_minutes=60,
+            validity_minutes=int(_ttl("RECOVERY_TTL").total_seconds() // 60),
         )
         return resend.Emails.send({
             "from": settings.EMAIL_FROM,
@@ -102,7 +140,8 @@ class EmailService:
     def enviar_proposta(cls, proposta, pdf, valor):
         cliente = proposta.cliente_snapshot.cliente
         html = cls.render("email_proposta.html", nome=cliente.nome, numero=proposta.numero,
-                          resumo=proposta.objeto or proposta.descricao[:300], valor=valor)
+                          resumo=proposta.objeto or proposta.descricao[:300], valor=valor,
+                          politica_pagamento=getattr(proposta, "politica_pagamento", None))
         return resend.Emails.send({
             "from": settings.EMAIL_FROM, "to": cliente.email,
             "subject": f"Proposta comercial {proposta.numero} - Mirai Hit Studio",
@@ -115,6 +154,10 @@ class EmailService:
     def render(template_name: str, **context):
 
         context["ano"] = datetime.now().year
+        site = _site_url()
+        context.setdefault("site_url", site)
+        context.setdefault("portfolio_url", f"{site}/portfolio.html")
+        context.setdefault("acesso_url", f"{site}/acesso.html")
 
         template = templates.get_template(template_name)
 
@@ -148,8 +191,8 @@ class EmailService:
             protocolo=protocolo,
             nome=orcamento.nome_cliente,
             servico=orcamento.servico,
-            valor=f"{orcamento.valor_total:.2f}" if orcamento.valor_total is not None else "A definir",
-            data=orcamento.data_solicitacao.strftime("%d/%m/%Y %H:%M"),
+            valor=_moeda(orcamento.valor_total),
+            data=_data_br(orcamento.data_solicitacao),
             observacoes=orcamento.detalhes,
         )
 
@@ -167,11 +210,12 @@ class EmailService:
             protocolo=protocolo,
             nome=orcamento.nome_cliente,
             email=orcamento.email,
-            telefone=orcamento.whatsapp,
+            telefone=orcamento.whatsapp or "Não informado",
             servico=orcamento.servico,
-            valor=f"{orcamento.valor_total:.2f}" if orcamento.valor_total is not None else "A definir",
-            data=orcamento.data_solicitacao.strftime("%d/%m/%Y %H:%M"),
+            valor=_moeda(orcamento.valor_total),
+            data=_data_br(orcamento.data_solicitacao),
             observacoes=orcamento.detalhes,
+            admin_url=f"{_site_url()}/admin.html",
         )
 
         return cls.enviar(
@@ -203,7 +247,7 @@ class EmailService:
             destino=subscriber.email,
             assunto=campaign.assunto,
             html=html,
-            texto=f"{campaign.body_text}\n\nCancelar inscricao: {unsubscribe_url}",
+            texto=f"{campaign.body_text}\n\nCancelar inscrição: {unsubscribe_url}",
         )
 
     @classmethod
