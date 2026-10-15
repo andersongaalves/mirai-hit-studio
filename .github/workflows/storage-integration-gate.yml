@@ -189,7 +189,8 @@ jobs:
                     test_proposta_comercial.py \
                     test_proposta_snapshot.py \
                     test_producao_etapas.py \
-                    test_combos.py; do
+                    test_combos.py \
+                    test_cotas_arquivo.py; do
                       python -m unittest discover -s tests -p "$pattern" -v
                   done
 
