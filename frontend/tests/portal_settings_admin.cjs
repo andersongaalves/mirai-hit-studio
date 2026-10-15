@@ -22,6 +22,16 @@ const DEFAULTS = {
 };
 const store = { cliente: [], produtor: [] };
 const writes = [];
+// 5.10: global policies (versioned).
+const POLICY_DEFAULTS = { publicacao_previa: 'automatica', revisoes_excedentes: 'permitir', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo' };
+let policyVersions = [];
+const policyWrites = [];
+let policyConflict = false;
+function policyState() {
+    const current = policyVersions.at(-1);
+    return { versao: current?.versao || 0, politicas: current?.politicas || POLICY_DEFAULTS, padroes: POLICY_DEFAULTS,
+        versoes: [...policyVersions].reverse().map(item => ({ versao: item.versao, autor_usuario_id: 1, restaurada_de_versao: item.restaurada ?? null, created_at: '2026-10-15T12:00:00+00:00' })) };
+}
 let forceConflict = false;
 
 async function staticResponse(route) {
@@ -57,6 +67,19 @@ function current(portal) {
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 200, body: '' });
         if (url.pathname === '/auth/login') {
             return route.fulfill({ json: { access_token: 'synthetic-admin', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } } });
+        }
+        if (url.pathname.startsWith('/politicas/globais')) {
+            if (request.method() !== 'GET') {
+                const body = request.postDataJSON();
+                policyWrites.push({ path: url.pathname, body });
+                if (policyConflict) {
+                    policyConflict = false;
+                    return route.fulfill({ status: 409, json: { detail: 'As politicas foram alteradas por outra pessoa. Recarregue antes de publicar.' } });
+                }
+                const restored = url.pathname.endsWith('/restaurar') ? policyVersions.find(item => item.versao === body.versao) : null;
+                policyVersions.push({ versao: policyVersions.length + 1, politicas: restored ? restored.politicas : body.politicas, restaurada: restored?.versao });
+            }
+            return route.fulfill({ json: policyState() });
         }
         const settings = url.pathname.match(/^\/admin\/portais\/(cliente|produtor)\/configuracao(\/versoes(?:\/(\d+)\/restaurar)?)?$/);
         if (settings) {
@@ -158,12 +181,32 @@ function current(portal) {
         assert.equal(await form.locator('[name="areas.propostas"]').count(), 0);
         assert.equal(await form.locator('input[name="indicadores"]:checked').count(), 5);
 
+        // 5.10: global policies; publishing sends the typed values and the base version.
+        await page.waitForSelector('#policy-settings-form select');
+        assert.match(await page.locator('#policy-settings-version').textContent(), /padrões do sistema/);
+        await page.locator('#policy-settings-form').getByLabel('Cliente vê os prazos das etapas').selectOption('false');
+        await page.getByRole('button', { name: 'Publicar políticas' }).click();
+        await page.waitForFunction(() => document.getElementById('policy-settings-version').textContent.includes('v1'));
+        assert.deepEqual(policyWrites.at(-1).body, { politicas: { ...POLICY_DEFAULTS, cliente_ve_prazos_etapas: false }, base_versao: 0 });
+        policyConflict = true;
+        await page.getByRole('button', { name: 'Publicar políticas' }).click();
+        await page.waitForFunction(() => document.body.textContent.includes('As politicas foram alteradas por outra pessoa'));
+        await page.locator('#policy-settings-form').getByLabel('Prévias do produtor').selectOption('aprovacao_admin');
+        await page.getByRole('button', { name: 'Publicar políticas' }).click();
+        await page.waitForFunction(() => document.getElementById('policy-settings-version').textContent.includes('v2'));
+        await page.getByRole('button', { name: 'Restaurar políticas v1' }).click();
+        await page.waitForFunction(() => document.getElementById('policy-settings-version').textContent.includes('v3'));
+        assert.deepEqual(policyWrites.at(-1), { path: '/politicas/globais/restaurar', body: { versao: 1, base_versao: 2 } });
+        assert.equal(await page.locator('#policy-settings-form').getByLabel('Prévias do produtor').inputValue(), 'automatica');
+        await page.getByRole('button', { name: 'Usar padrões do sistema' }).click();
+        assert.equal(await page.locator('#policy-settings-form').getByLabel('Cliente vê os prazos das etapas').inputValue(), 'true');
+
         for (const width of [390, 768, 1280]) {
             await page.setViewportSize({ width, height: 900 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `overflow at ${width}`);
         }
         assert.deepEqual(errors, []);
-        console.log('PASS: portal settings editor publishes typed versions, blocks empty indicators, handles conflicts and restores.');
+        console.log('PASS: portal settings editor publishes typed versions, blocks empty indicators, handles conflicts and restores; global policies (5.10) publish, conflict and restore.');
     } finally {
         await browser.close();
     }

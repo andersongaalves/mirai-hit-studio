@@ -26,7 +26,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
 <input id="producoes-search"><select id="producoes-status-filter"><option value="todos">Todos</option><option value="aguardando_inicio">Aguardando</option><option value="em_producao">Produção</option><option value="revisao">Revisão</option><option value="finalizado">Finalizado</option><option value="entregue">Entregue</option></select><select id="producoes-prazo-filter"><option value="todos">Todos</option><option value="atrasado">Atrasado</option><option value="proximo">Próximo</option><option value="sem_prazo">Sem prazo</option></select><button id="producoes-clear-filters" class="hidden">Limpar filtros</button>
 <p id="producoes-summary"></p>
 <div id="producoes-list"></div>
-<div id="modal-producao" class="hidden" aria-labelledby="prod_titulo"><div class="modal-content producao-modal-content"><div class="producao-modal-header"><div><span id="prod_id"></span><h2 id="prod_titulo"></h2></div><button aria-label="Fechar detalhes">Fechar</button></div><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><div class="producao-add-etapa"><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button></div><div id="prod_cotas"></div><div id="prod_arquivos"></div><form id="prod_arquivo_form"><select id="prod_arquivo_tipo"><option value="material">Material</option></select><input id="prod_arquivo_input" type="file"><select id="prod_arquivo_substitui"></select><input id="prod_arquivo_produtor" type="checkbox"><input id="prod_arquivo_cliente" type="checkbox"><button id="prod_arquivo_enviar">Enviar arquivo</button></form><div id="prod_repasse_resumo"></div><input id="prod_repasse_valor" type="number"><input id="prod_repasse_referencia"><select id="prod_repasse_comprovante"></select><button id="prod_repasse_salvar">Definir repasse</button><button id="prod_repasse_liberar" class="hidden">Liberar repasse</button><button id="prod_repasse_pagar" class="hidden">Registrar pagamento</button><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div></div>
+<div id="modal-producao" class="hidden" aria-labelledby="prod_titulo"><div class="modal-content producao-modal-content"><div class="producao-modal-header"><div><span id="prod_id"></span><h2 id="prod_titulo"></h2></div><button aria-label="Fechar detalhes">Fechar</button></div><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><div class="producao-add-etapa"><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button></div><div id="prod_cotas"></div><div id="prod_politicas"></div><div id="prod_arquivos"></div><form id="prod_arquivo_form"><select id="prod_arquivo_tipo"><option value="material">Material</option></select><input id="prod_arquivo_input" type="file"><select id="prod_arquivo_substitui"></select><input id="prod_arquivo_produtor" type="checkbox"><input id="prod_arquivo_cliente" type="checkbox"><button id="prod_arquivo_enviar">Enviar arquivo</button></form><div id="prod_repasse_resumo"></div><input id="prod_repasse_valor" type="number"><input id="prod_repasse_referencia"><select id="prod_repasse_comprovante"></select><button id="prod_repasse_salvar">Definir repasse</button><button id="prod_repasse_liberar" class="hidden">Liberar repasse</button><button id="prod_repasse_pagar" class="hidden">Registrar pagamento</button><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div></div>
 <script type="module">localStorage.setItem('mirai.auth.admin.access_token','test-token'); const module = await import('/js/admin/producoes/producoes.js'); window.productionModule = module; await module.initProducoes();</script>
 </body></html>`;
 
@@ -40,6 +40,10 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
     let failList = false;
     let quotas = [{ tipo: 'previa', max_arquivos: 2, max_versoes: null, max_tamanho_mb: null, max_total_mb: null, formatos: null, origem: 'contrato', arquivos_usados: 2, total_usado_bytes: 2048 }];
     const quotaPuts = [];
+    const contract = { publicacao_previa: 'aprovacao_admin', revisoes_excedentes: 'exigir_admin', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo' };
+    let policies = { producao_id: 1, vigentes: contract, contrato: contract, excecao: null, motivo: null, atualizado_em: null,
+        origens: Object.fromEntries(Object.keys(contract).map(key => [key, 'contrato'])) };
+    const policyCalls = [];
     let failStatus = false;
     const now = Date.now();
     const productions = [
@@ -66,6 +70,23 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
             return route.fulfill(failList
                 ? { status: 500, json: { detail: 'Falha sintética' } }
                 : { json: productions });
+        }
+        // 5.10: policies in force and the admin exception.
+        if (url.pathname === '/producoes/1/politicas') {
+            const method = route.request().method();
+            if (method === 'PUT') {
+                policyCalls.push(route.request().postDataJSON());
+                const body = route.request().postDataJSON();
+                policies = { ...policies, excecao: body.politicas, motivo: body.motivo,
+                    vigentes: { ...policies.contrato, ...body.politicas },
+                    origens: Object.fromEntries(Object.keys(policies.contrato).map(key => [key, key in body.politicas ? 'excecao' : 'contrato'])) };
+            }
+            if (method === 'DELETE') {
+                policyCalls.push('DELETE');
+                policies = { ...policies, excecao: null, motivo: null, vigentes: policies.contrato,
+                    origens: Object.fromEntries(Object.keys(policies.contrato).map(key => [key, 'contrato'])) };
+            }
+            return route.fulfill({ json: policies });
         }
         // 5.09: contractual quotas and the admin exception.
         if (url.pathname === '/producoes/1/cotas-arquivos') {
@@ -207,6 +228,21 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         await page.locator('#prod_cotas').getByRole('button', { name: 'Salvar exceção' }).click();
         await page.waitForFunction(() => document.getElementById('prod_cotas').textContent.includes('(exceção do Admin)'));
         assert.deepEqual(quotaPuts.at(-1).cotas.map(cota => [cota.tipo, cota.max_arquivos]), [['previa', 4]]);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+
+        await page.waitForFunction(() => document.getElementById('prod_politicas').textContent.includes('Só após aprovação do Admin'));
+        await page.locator('#prod_politicas').getByRole('button', { name: 'Abrir exceção' }).click();
+        await page.locator('#prod_politicas').getByLabel('Revisões além das incluídas').selectOption('permitir');
+        await page.locator('#prod_politicas').getByRole('button', { name: 'Salvar exceção' }).click();
+        assert.equal(policyCalls.length, 0);  // A reason is mandatory.
+        await page.locator('#prod_politicas').getByLabel('Motivo da exceção (obrigatório)').fill('Cliente antigo');
+        await page.locator('#prod_politicas').getByRole('button', { name: 'Salvar exceção' }).click();
+        await page.waitForFunction(() => document.getElementById('prod_politicas').textContent.includes('Motivo da exceção: Cliente antigo'));
+        assert.deepEqual(policyCalls.at(-1), { politicas: { revisoes_excedentes: 'permitir' }, motivo: 'Cliente antigo' });
+        assert.match(await page.locator('#prod_politicas').textContent(), /Revisões além das incluídas: Permitir \(contadas como extra\) \(exceção do Admin\)/);
+        await page.locator('#prod_politicas').getByRole('button', { name: 'Remover exceção' }).click();
+        await page.waitForFunction(() => !document.getElementById('prod_politicas').textContent.includes('exceção do Admin'));
+        assert.equal(policyCalls.at(-1), 'DELETE');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
 
         await page.locator('#prod_observacoes').fill('<img src=x onerror=alert(1)>');
