@@ -12,6 +12,7 @@
         <link rel="stylesheet" href="css/components/production-messages.css" />
         <link rel="stylesheet" href="css/components/production-stages.css" />
         <link rel="stylesheet" href="css/components/file-quotas.css" />
+        <link rel="stylesheet" href="css/components/policies.css" />
         <link
             rel="icon"
             type="image/png"
@@ -364,6 +365,19 @@
                                         </div>
                                     </section>
 
+                                    <!-- Roadmap 3.0, 5.10: contractual portal policies of the service. -->
+                                    <section id="servico-politicas" class="servico-etapas" aria-labelledby="servico-politicas-title">
+                                        <div class="servico-etapas__header">
+                                            <h4 id="servico-politicas-title">Políticas dos portais</h4>
+                                            <p class="admin-help">Escolha só o que este serviço muda; o resto segue o padrão global. Ficam congeladas no contrato quando a proposta é enviada.</p>
+                                        </div>
+                                        <p id="servico-politicas-unsaved" class="admin-help">Salve o serviço antes de definir as políticas.</p>
+                                        <div id="servico-politicas-editor"></div>
+                                        <div class="servico-etapas__footer">
+                                            <button id="servico-politicas-save" type="button" class="btn-small">Salvar políticas</button>
+                                        </div>
+                                    </section>
+
                                     <div style="display: flex; gap: 10px">
                                         <button
                                             class="btn-cta btn-submit"
@@ -453,6 +467,22 @@
                                 </div>
                                 <h3>Histórico de versões</h3>
                                 <ul id="portal-settings-versions" class="portal-settings__versions"></ul>
+                            </section>
+                            <section class="portal-settings" aria-labelledby="policy-settings-title">
+                                <div class="portal-settings__header">
+                                    <div>
+                                        <h2 id="policy-settings-title">Políticas contratuais (padrão global)</h2>
+                                        <p>Valem para novos contratos. Cada serviço pode sobrescrever o que quiser, a proposta congela as políticas quando é enviada e o Admin pode abrir exceções por produção. Mudanças aqui não alteram contratos já enviados.</p>
+                                    </div>
+                                </div>
+                                <p id="policy-settings-version" class="admin-help" aria-live="polite"></p>
+                                <div id="policy-settings-form"></div>
+                                <div class="portal-settings__actions">
+                                    <button id="policy-settings-defaults" type="button" class="btn-outline">Usar valores padrão</button>
+                                    <button id="policy-settings-publish" type="button" class="btn-cta">Publicar políticas</button>
+                                </div>
+                                <h3>Histórico de versões</h3>
+                                <ul id="policy-settings-versions" class="portal-settings__versions"></ul>
                             </section>
                         </div>
                         <div id="admin-config-segments" role="tabpanel" aria-labelledby="admin-config-segments-tab">
@@ -1604,6 +1634,12 @@
                         </section>
 
                         <section class="producao-detail-block">
+                            <h3>Políticas dos portais</h3>
+                            <p class="admin-help">Políticas em vigor e de onde vêm. Uma exceção vale só para esta produção, exige motivo e fica registrada na auditoria.</p>
+                            <div id="prod_politicas" aria-live="polite"></div>
+                        </section>
+
+                        <section class="producao-detail-block">
                             <h3>Mensagens da produção</h3>
                             <div id="prod_mensagens" aria-live="polite"></div>
                         </section>
@@ -1675,5 +1711,6 @@
         <script type="module" src="js/admin/index.js"></script>
         <script type="module" src="js/integrado_admin.js"></script>
         <script type="module" src="js/admin/portais/portal_settings.js"></script>
+        <script type="module" src="js/admin/portais/policy_settings.js"></script>
     </body>
 </html>
