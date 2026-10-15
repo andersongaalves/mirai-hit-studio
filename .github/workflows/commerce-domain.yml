@@ -103,6 +103,14 @@ jobs:
                   set -euo pipefail
                   python -m unittest discover -s tests -p 'test_commerce_policy_postgres.py' -v
 
+            - name: TEMP diagnose
+              working-directory: backend
+              run: |
+                  out=""
+                  for p in test_commerce_domain.py 'test_proposta_*.py' test_financeiro.py test_checkout.py test_commercial_journey_i2.py test_producao.py test_producao_etapas.py test_combos.py test_cotas_arquivo.py test_politicas.py test_portal_produtor.py test_portal_cliente.py; do
+                    r=$(python -m unittest discover -s tests -p "$p" 2>&1) || out="$out%0A=== $p%0A$(echo "$r" | grep -E 'Error|assert|FAIL|Traceback|File \"<string>\"|line [0-9]+' | grep -v '^  File \"/' | tail -25 | sed ':a;N;$!ba;s/\n/%0A/g')"
+                  done
+                  echo "::error::DIAG${out:0:60000}"
             - name: Run focused commerce regressions
               working-directory: backend
               run: |
