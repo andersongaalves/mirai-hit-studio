@@ -191,7 +191,8 @@ jobs:
                     test_producao_etapas.py \
                     test_combos.py \
                     test_cotas_arquivo.py \
-                    test_politicas.py; do
+                    test_politicas.py \
+                    test_catalogo.py; do
                       python -m unittest discover -s tests -p "$pattern" -v
                   done
 
