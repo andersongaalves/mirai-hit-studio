@@ -2,6 +2,7 @@ import * as Notify from "../../utils/notifications.js";
 import * as API from "./producoes_api.js";
 import { messagesPanel } from "../../modules/production_messages.js";
 import { stagesPanel } from "../../modules/production_stages.js";
+import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
 
 let productionId = null;
 let files = [];
@@ -216,6 +217,54 @@ async function carregarEtapas(id, revision) {
     }));
 }
 
+// Roadmap 5.09: quotas load independently; the editor saves an admin exception.
+async function carregarCotas(id, revision) {
+    const slot = byId("prod_cotas");
+    if (!slot) return;
+    let data = null;
+    try {
+        data = await API.buscarCotasArquivos(id);
+    } catch {
+        if (revision === loadRevision && productionId === id) {
+            slot.replaceChildren(node("p", "admin-help", "Não foi possível carregar as cotas agora."));
+        }
+        return;
+    }
+    if (revision !== loadRevision || productionId !== id) return;
+    const edit = node("button", "btn-small", "Editar exceção");
+    edit.type = "button";
+    edit.addEventListener("click", () => {
+        const editor = quotaEditor({ cotas: data.cotas, formatos: data.formatos_disponiveis, idPrefix: `prod-${id}-cota` });
+        const save = node("button", "btn-small", "Salvar exceção");
+        save.type = "button";
+        const cancel = node("button", "btn-small", "Cancelar");
+        cancel.type = "button";
+        cancel.addEventListener("click", () => carregarCotas(id, revision));
+        save.addEventListener("click", async () => {
+            let cotas;
+            try {
+                cotas = editor.read();
+            } catch (error) {
+                Notify.error(error.message);
+                return;
+            }
+            save.disabled = true;
+            try {
+                await API.salvarCotasArquivos(id, cotas);
+                Notify.success("Cotas da produção atualizadas.");
+                await carregarCotas(id, revision);
+            } catch (error) {
+                Notify.error(error.message || "Erro ao salvar cotas.");
+                save.disabled = false;
+            }
+        });
+        const actions = node("div", "producao-operacao-form");
+        actions.append(save, cancel);
+        slot.replaceChildren(editor.element, actions);
+    });
+    slot.replaceChildren(quotaList(data.cotas), edit);
+}
+
 // Roadmap 5.03: thread loads independently so a failure never blocks files or payouts.
 async function carregarMensagens(id, revision) {
     const slot = byId("prod_mensagens");
@@ -255,6 +304,7 @@ export async function carregarOperacao(id) {
         renderPayout();
         bindActions();
         carregarEtapas(id, revision);
+        carregarCotas(id, revision);
         carregarMensagens(id, revision);
     } catch (error) {
         byId("prod_arquivos").textContent = "Não foi possível carregar arquivos e repasse.";
@@ -271,4 +321,5 @@ export function limparOperacao() {
     byId("prod_arquivo_form")?.reset();
     byId("prod_mensagens")?.replaceChildren();
     byId("prod_etapas_contratuais")?.replaceChildren();
+    byId("prod_cotas")?.replaceChildren();
 }

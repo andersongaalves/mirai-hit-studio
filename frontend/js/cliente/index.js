@@ -2,6 +2,7 @@ import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/au
 import * as api from "./api.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
+import { syncUploadHints } from "../modules/file_quotas.js";
 import {
     applySettings,
     renderDashboard,
@@ -73,6 +74,18 @@ async function loadStages(production) {
     }));
 }
 
+// Roadmap 5.09: quota hints load after the detail; the server enforces them anyway.
+async function loadQuotas(production) {
+    let data = null;
+    try {
+        data = await api.listarCotas(production.id);
+    } catch {
+        return;
+    }
+    if (route().view !== "detail" || route().id !== production.id) return;
+    syncUploadHints(document, data?.cotas || []);
+}
+
 // Roadmap 5.03: the thread loads after the detail so its failure never blocks the project.
 async function loadMessages(production, files) {
     const slot = document.getElementById("production-messages-slot");
@@ -136,6 +149,7 @@ async function openDetail(id) {
         showView("detail");
         loadMessages(production, files);
         loadStages(production);
+        loadQuotas(production);
         if (!financeResult.ok) {
             setAlert("Não foi possível atualizar as informações de pagamento agora. Os demais dados estão disponíveis.", true);
         }
@@ -259,6 +273,8 @@ async function playPreview(file, player, button) {
 
 function uploadError(error) {
     if (error.status === 403) return "Você não tem permissão para enviar arquivos a este projeto.";
+    // Contract quota (5.09): the server message says exactly which limit was reached.
+    if ([409, 422].includes(error.status) && /contrat/i.test(error.message || "")) return error.message;
     if (error.status === 409) return "O projeto ou a versão mudou. Atualize a lista antes de tentar novamente.";
     if (error.status === 413) return "O arquivo excede o tamanho permitido.";
     if (error.status === 422 || error.status === 415) return "Arquivo não permitido. Confira o formato e o tamanho.";
@@ -281,6 +297,7 @@ async function refreshFiles(production, setFeedback) {
         });
         loadMessages(production, files);
         loadStages(production);
+        loadQuotas(production);
     } catch (error) {
         uploadFeedback = {
             kind: "error",

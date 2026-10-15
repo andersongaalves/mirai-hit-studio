@@ -181,6 +181,21 @@ def _linha_combo(indice, item, combo, bruto, desconto, valor, *, estrito: bool) 
     }
 
 
+def _congelar_cotas(db: Session, linhas: list[dict]) -> None:
+    """5.09: freeze the file quotas of every contracted catalog service (single or in a combo)."""
+    from services import cota_arquivo_service  # Local import keeps the module graph acyclic.
+
+    servicos = [linha["servico_id"] for linha in linhas if linha.get("servico_id") and linha["catalogo_disponivel"]]
+    servicos += [componente["servico_id"] for linha in linhas for componente in linha.get("componentes") or []]
+    cotas = cota_arquivo_service.carregar_cotas(db, servicos)
+    for linha in linhas:
+        if linha.get("componentes"):
+            for componente in linha["componentes"]:
+                componente["cotas_arquivos"] = cotas.get(componente["servico_id"], [])
+        elif linha.get("servico_id") and linha["catalogo_disponivel"]:
+            linha["cotas_arquivos"] = cotas.get(linha["servico_id"], [])
+
+
 def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
     """Builds the snapshot dict (JSON-ready) for the proposal's current items.
 
@@ -230,6 +245,7 @@ def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
             "valor_contratado": str(valor),
             "etapas": etapas,
         })
+    _congelar_cotas(db, linhas)
     totais = service.calcular_totais(itens)
     if sum(Decimal(linha["valor_contratado"]) for linha in linhas) != totais.total:
         raise service.PropostaConflito("Snapshot economico inconsistente; nenhuma alteracao confirmada.")

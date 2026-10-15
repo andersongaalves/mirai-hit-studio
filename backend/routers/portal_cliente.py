@@ -398,6 +398,7 @@ async def enviar_material(
             visible_to_client=True,
             replaces_id=substitui_arquivo_id,
             note=observacao,
+            enforce_quota=True,  # 5.09: contractual file quotas.
             replacement_actor_id=user.id,
             request_id=getattr(request.state, "request_id", None),
         )

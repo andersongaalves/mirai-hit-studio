@@ -3,6 +3,7 @@ import { $, show, hide } from "../../utils/dom.js";
 import * as Builder from "../builder/builder.js";
 import * as BuilderUI from "../builder/builder_ui.js";
 import { carregarEtapasServico } from "./servicos_etapas.js";
+import { carregarCotasServico } from "./servicos_cotas.js";
 
 const formFields = [
     "srv_id",
@@ -40,6 +41,7 @@ export function abrirFormularioServico(servico = null) {
         setEditorTitle("Criar Serviço");
         limparFormularioServico();
         carregarEtapasServico(null);
+        carregarCotasServico(null);
         return;
     }
 
@@ -55,6 +57,7 @@ export function abrirFormularioServico(servico = null) {
 
     BuilderUI.initBuilder();
     carregarEtapasServico(servico.id);
+    carregarCotasServico(servico.id);
 }
 
 export function fecharFormularioServico() {

@@ -245,7 +245,10 @@ function filesPanel(production, files, handlers) {
             const { kind, message, retry } = handlers.uploadFeedback;
             setFeedback(kind, message, retry);
         }
-        form.append(type, filePicker, replaces, note, submit, feedback);
+        const quotaHint = element("p", "file-quota-hint hidden");
+        quotaHint.dataset.quotaHint = "";
+        quotaHint.setAttribute("aria-live", "polite");
+        form.append(type, filePicker, replaces, quotaHint, note, submit, feedback);
         form.addEventListener("submit", event => {
             event.preventDefault();
             if (form.dataset.busy === "true" || !input.files[0]) return;

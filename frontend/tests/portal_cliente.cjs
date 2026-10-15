@@ -325,7 +325,7 @@ async function staticResponse(route) {
             const bounds = await page.evaluate(() => {
                 const form = document.querySelector('.producer-upload').getBoundingClientRect();
                 const controls = [...document.querySelector('.producer-upload').children]
-                    .filter(element => !element.classList.contains('producer-upload__feedback'))
+                    .filter(element => !element.classList.contains('producer-upload__feedback') && element.getClientRects().length)
                     .map(element => ({ left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right }));
                 return { left: form.left, right: form.right, controls, scrollWidth: document.documentElement.scrollWidth, viewport: innerWidth };
             });

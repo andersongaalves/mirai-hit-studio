@@ -158,6 +158,7 @@ async def enviar_arquivo(
             visible_to_client=tipo == "previa",
             replaces_id=substitui_arquivo_id,
             note=observacao,
+            enforce_quota=True,  # 5.09: contractual file quotas.
             request_id=getattr(request.state, "request_id", None),
         )
     except producao_arquivo_service.ProducaoArquivoError as exc:

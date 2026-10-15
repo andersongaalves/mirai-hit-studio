@@ -19,3 +19,4 @@ from .producao_mensagem import ProducaoMensagemModel
 from .servico_etapa import ServicoEtapaModel
 from .producao_etapa import ProducaoEtapaAtribuicaoModel, ProducaoEtapaModel
 from .combo import ComboItemModel, ComboModel
+from .cota_arquivo import ProducaoCotaArquivoModel, ServicoCotaArquivoModel

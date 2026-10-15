@@ -181,3 +181,15 @@ export async function atribuirEtapaContratual(id, etapaId, payload) {
 export async function historicoEtapaContratual(id, etapaId) {
     return handleResponse(await authFetch(`/producoes/${id}/etapas-contratuais/${etapaId}/historico`), "Erro ao buscar histórico.");
 }
+
+// Roadmap 5.09: contractual file quotas of the production and the admin exception.
+export async function buscarCotasArquivos(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/cotas-arquivos`), "Erro ao buscar cotas de arquivos.");
+}
+
+export async function salvarCotasArquivos(id, cotas) {
+    return handleResponse(await authFetch(`/producoes/${id}/cotas-arquivos`, {
+        method: "PUT",
+        body: JSON.stringify({ cotas }),
+    }), "Erro ao salvar cotas de arquivos.");
+}

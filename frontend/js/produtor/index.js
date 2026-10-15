@@ -2,6 +2,7 @@ import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/au
 import * as api from "./api.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
+import { syncUploadHints } from "../modules/file_quotas.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -45,6 +46,18 @@ async function loadStages(production) {
     }));
 }
 
+// Roadmap 5.09: quota hints load after the detail; the server enforces them anyway.
+async function loadQuotas(production) {
+    let data = null;
+    try {
+        data = await api.listarCotas(production.id);
+    } catch {
+        return;
+    }
+    if (route().view !== "detail" || route().id !== production.id) return;
+    syncUploadHints(document, data?.cotas || []);
+}
+
 // Roadmap 5.03: the thread loads after the detail so its failure never blocks the production.
 async function loadMessages(production, files) {
     const slot = document.getElementById("production-messages-slot");
@@ -85,6 +98,7 @@ async function openDetail(id) {
         showView("detail");
         loadMessages(production, files);
         loadStages(production);
+        loadQuotas(production);
     } catch (error) {
         setAlert(error.message, true);
         navigate("/produtor/producoes");
