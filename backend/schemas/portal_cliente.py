@@ -32,8 +32,8 @@ class PagamentoClienteResponse(BaseModel):
 
 class CobrancaClienteResponse(BaseModel):
     status: str
-    valor_total: Decimal
-    valor_pago: Decimal
+    valor_total: Decimal | None  # 5.10: None in the summary view.
+    valor_pago: Decimal | None
     saldo_pendente: Decimal
     moeda: str
     vencimento: datetime | None
@@ -46,6 +46,7 @@ class FinanceiroClienteResponse(BaseModel):
     proposta_status: str | None
     cobranca: CobrancaClienteResponse | None
     checkout_url: str | None
+    resumido: bool = False  # 5.10: summary view (status, balance, due date and payment link).
 
 
 class ProducaoArquivoClienteResponse(BaseModel):

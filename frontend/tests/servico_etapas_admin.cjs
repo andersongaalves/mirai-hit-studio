@@ -10,6 +10,7 @@ let stored = [{ id: 1, ordem: 1, nome: 'Briefing', descricao: '', peso_percentua
 const puts = [];
 let rejectNext = false;
 const quotaPuts = [];
+const policyPuts = [];
 
 async function staticResponse(route) {
     const url = new URL(route.request().url());
@@ -51,6 +52,12 @@ async function staticResponse(route) {
             }
             stored = body.etapas.map((stage, index) => ({ id: index + 10, ordem: index + 1, ...stage, peso_percentual: Number(stage.peso_percentual).toFixed(2) }));
             return route.fulfill({ json: stored });
+        }
+        if (url.pathname === '/servicos/3/politicas') {
+            const herdadas = { publicacao_previa: 'automatica', revisoes_excedentes: 'permitir', cliente_ve_etapas: true, cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo' };
+            const politicas = request.method() === 'PUT' ? request.postDataJSON() : { financeiro_cliente: 'resumido' };
+            if (request.method() === 'PUT') policyPuts.push(politicas);
+            return route.fulfill({ json: { servico_id: 3, politicas, herdadas } });
         }
         if (url.pathname === '/servicos/3/cotas-arquivos' && request.method() === 'GET') {
             return route.fulfill({ json: [{ tipo: 'previa', max_arquivos: 2, max_versoes: null, max_tamanho_mb: null, max_total_mb: null, formatos: null }] });
@@ -137,15 +144,24 @@ async function staticResponse(route) {
             ['previa', 2, null], ['entrega', null, 50],
         ]);
 
+        // 5.10: service policies override only what is chosen; the rest inherits the global default.
+        await page.waitForSelector('#servico-politicas select');
+        assert.equal(await page.locator('#servico-politicas-unsaved').isVisible(), false);
+        assert.equal(await page.locator('#servico-politicas').getByLabel('Financeiro no portal do cliente').inputValue(), 'resumido');
+        await page.locator('#servico-politicas').getByLabel('Prévias do produtor').selectOption('aprovacao_admin');
+        await page.getByRole('button', { name: 'Salvar políticas' }).click();
+        await page.waitForFunction(() => document.body.textContent.includes('Políticas do serviço salvas.'));
+        assert.deepEqual(policyPuts.at(-1), { publicacao_previa: 'aprovacao_admin', financeiro_cliente: 'resumido' });
+
         // The legacy builder layout already overflows on phones; the stages section itself must not.
         for (const width of [390, 1024, 1400]) {
             await page.setViewportSize({ width, height: 900 });
-            const overflow = await page.evaluate(() => [...document.querySelectorAll('#servico-etapas, #servico-etapas *, #servico-cotas, #servico-cotas *')]
+            const overflow = await page.evaluate(() => [...document.querySelectorAll('#servico-etapas, #servico-etapas *, #servico-cotas, #servico-cotas *, #servico-politicas, #servico-politicas *')]
                 .some(element => element.getBoundingClientRect().right > Math.max(window.innerWidth, document.getElementById('servico-etapas').parentElement.getBoundingClientRect().right) + 1));
             assert.equal(overflow, false, `stages overflow at ${width}`);
         }
         assert.deepEqual(errors, []);
-        console.log('PASS: service stages editor validates 100% total, ordering, dependencies and saves the typed list; file quotas save.');
+        console.log('PASS: service stages editor validates 100% total, ordering, dependencies and saves the typed list; file quotas and policies save.');
     } finally {
         await browser.close();
     }

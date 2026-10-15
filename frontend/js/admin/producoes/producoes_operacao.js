@@ -3,6 +3,7 @@ import * as API from "./producoes_api.js";
 import { messagesPanel } from "../../modules/production_messages.js";
 import { stagesPanel } from "../../modules/production_stages.js";
 import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
+import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
 
 let productionId = null;
 let files = [];
@@ -265,6 +266,90 @@ async function carregarCotas(id, revision) {
     slot.replaceChildren(quotaList(data.cotas), edit);
 }
 
+// Roadmap 5.10: policies in force, with an exception that needs a reason.
+async function carregarPoliticas(id, revision) {
+    const slot = byId("prod_politicas");
+    if (!slot) return;
+    let data = null;
+    try {
+        data = await API.buscarPoliticas(id);
+    } catch {
+        if (revision === loadRevision && productionId === id) {
+            slot.replaceChildren(node("p", "admin-help", "Não foi possível carregar as políticas agora."));
+        }
+        return;
+    }
+    if (revision !== loadRevision || productionId !== id) return;
+    renderPoliticas(slot, id, revision, data);
+}
+
+function renderPoliticas(slot, id, revision, data) {
+    const children = [policySummary(data.vigentes, data.origens)];
+    if (data.excecao) children.push(node("p", "admin-help", `Motivo da exceção: ${data.motivo || "—"}`));
+    else if (!data.contrato) children.push(node("p", "admin-help", "Contrato sem políticas congeladas (anterior à 5.10): vale o padrão global atual."));
+    const actions = node("div", "producao-operacao-form");
+    const edit = node("button", "btn-small", data.excecao ? "Editar exceção" : "Abrir exceção");
+    edit.type = "button";
+    edit.addEventListener("click", () => editarPoliticas(slot, id, revision, data));
+    actions.append(edit);
+    if (data.excecao) {
+        const remove = node("button", "btn-small", "Remover exceção");
+        remove.type = "button";
+        remove.addEventListener("click", async () => {
+            remove.disabled = true;
+            try {
+                renderPoliticas(slot, id, revision, await API.removerExcecaoPoliticas(id));
+                Notify.success("Exceção removida; vale o contrato.");
+            } catch (error) {
+                Notify.error(error.message || "Erro ao remover a exceção.");
+                remove.disabled = false;
+            }
+        });
+        actions.append(remove);
+    }
+    children.push(actions);
+    slot.replaceChildren(...children);
+}
+
+function editarPoliticas(slot, id, revision, data) {
+    const base = Object.fromEntries(POLICIES.map(({ key }) => [key, data.contrato ? data.contrato[key] : data.vigentes[key]]));
+    const form = policyForm({ values: data.excecao || {}, inherited: base, inheritLabel: data.contrato ? "Contrato" : "Padrão", idPrefix: `prod-${id}-politica` });
+    const reasonLabel = node("label", "policy-form__field");
+    const reason = node("textarea");
+    reason.rows = 2;
+    reason.maxLength = 500;
+    reason.required = true;
+    reason.value = data.motivo || "";
+    reasonLabel.append(node("span", "", "Motivo da exceção (obrigatório)"), reason);
+    const save = node("button", "btn-small", "Salvar exceção");
+    save.type = "button";
+    const cancel = node("button", "btn-small", "Cancelar");
+    cancel.type = "button";
+    cancel.addEventListener("click", () => renderPoliticas(slot, id, revision, data));
+    save.addEventListener("click", async () => {
+        const politicas = form.read();
+        if (!Object.keys(politicas).length) {
+            Notify.error("Escolha ao menos uma política diferente do contrato, ou remova a exceção.");
+            return;
+        }
+        if (reason.value.trim().length < 5) {
+            Notify.error("Explique o motivo da exceção.");
+            return;
+        }
+        save.disabled = true;
+        try {
+            renderPoliticas(slot, id, revision, await API.salvarExcecaoPoliticas(id, politicas, reason.value.trim()));
+            Notify.success("Exceção de políticas salva.");
+        } catch (error) {
+            Notify.error(error.message || "Erro ao salvar a exceção.");
+            save.disabled = false;
+        }
+    });
+    const actions = node("div", "producao-operacao-form");
+    actions.append(save, cancel);
+    slot.replaceChildren(form.element, reasonLabel, actions);
+}
+
 // Roadmap 5.03: thread loads independently so a failure never blocks files or payouts.
 async function carregarMensagens(id, revision) {
     const slot = byId("prod_mensagens");
@@ -305,6 +390,7 @@ export async function carregarOperacao(id) {
         bindActions();
         carregarEtapas(id, revision);
         carregarCotas(id, revision);
+        carregarPoliticas(id, revision);
         carregarMensagens(id, revision);
     } catch (error) {
         byId("prod_arquivos").textContent = "Não foi possível carregar arquivos e repasse.";
@@ -322,4 +408,5 @@ export function limparOperacao() {
     byId("prod_mensagens")?.replaceChildren();
     byId("prod_etapas_contratuais")?.replaceChildren();
     byId("prod_cotas")?.replaceChildren();
+    byId("prod_politicas")?.replaceChildren();
 }

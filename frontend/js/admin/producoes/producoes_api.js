@@ -193,3 +193,19 @@ export async function salvarCotasArquivos(id, cotas) {
         body: JSON.stringify({ cotas }),
     }), "Erro ao salvar cotas de arquivos.");
 }
+
+// Roadmap 5.10: portal policies in force for the production and the admin exception.
+export async function buscarPoliticas(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/politicas`), "Erro ao buscar políticas.");
+}
+
+export async function salvarExcecaoPoliticas(id, politicas, motivo) {
+    return handleResponse(await authFetch(`/producoes/${id}/politicas`, {
+        method: "PUT",
+        body: JSON.stringify({ politicas, motivo }),
+    }), "Erro ao salvar a exceção.");
+}
+
+export async function removerExcecaoPoliticas(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/politicas`, { method: "DELETE" }), "Erro ao remover a exceção.");
+}

@@ -196,6 +196,21 @@ def _congelar_cotas(db: Session, linhas: list[dict]) -> None:
             linha["cotas_arquivos"] = cotas.get(linha["servico_id"], [])
 
 
+def _congelar_politicas(db: Session, linhas: list[dict]) -> None:
+    """5.10: freeze the resolved portal policies of every contracted catalog service."""
+    from services import politica_service  # Local import keeps the module graph acyclic.
+
+    servicos = [linha["servico_id"] for linha in linhas if linha.get("servico_id") and linha["catalogo_disponivel"]]
+    servicos += [componente["servico_id"] for linha in linhas for componente in linha.get("componentes") or []]
+    politicas = politica_service.resolver_servicos(db, servicos)
+    for linha in linhas:
+        if linha.get("componentes"):
+            for componente in linha["componentes"]:
+                componente["politicas"] = politicas.get(componente["servico_id"])
+        elif linha.get("servico_id") and linha["catalogo_disponivel"]:
+            linha["politicas"] = politicas.get(linha["servico_id"])
+
+
 def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
     """Builds the snapshot dict (JSON-ready) for the proposal's current items.
 
@@ -246,6 +261,7 @@ def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
             "etapas": etapas,
         })
     _congelar_cotas(db, linhas)
+    _congelar_politicas(db, linhas)
     totais = service.calcular_totais(itens)
     if sum(Decimal(linha["valor_contratado"]) for linha in linhas) != totais.total:
         raise service.PropostaConflito("Snapshot economico inconsistente; nenhuma alteracao confirmada.")

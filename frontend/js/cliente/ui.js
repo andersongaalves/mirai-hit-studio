@@ -275,10 +275,13 @@ function financePanel(finance) {
         .replaceAll("_", " ")
         .replace(/^./, character => character.toUpperCase());
     const grid = element("div", "client-finance-grid");
+    // 5.10: the contract may ask for a summary view (status, balance and due date only).
     [
         ["Situação", readableStatus],
-        ["Valor cobrado", formatMoney(charge.valor_total)],
-        ["Valor pago", formatMoney(charge.valor_pago)],
+        ...(finance.resumido ? [] : [
+            ["Valor cobrado", formatMoney(charge.valor_total)],
+            ["Valor pago", formatMoney(charge.valor_pago)],
+        ]),
         ["Saldo pendente", formatMoney(charge.saldo_pendente)],
         ["Vencimento", formatDate(charge.vencimento)],
     ].forEach(([label, value]) => {

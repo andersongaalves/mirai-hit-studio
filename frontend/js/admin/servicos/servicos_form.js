@@ -4,6 +4,7 @@ import * as Builder from "../builder/builder.js";
 import * as BuilderUI from "../builder/builder_ui.js";
 import { carregarEtapasServico } from "./servicos_etapas.js";
 import { carregarCotasServico } from "./servicos_cotas.js";
+import { carregarPoliticasServico } from "./servicos_politicas.js";
 
 const formFields = [
     "srv_id",
@@ -42,6 +43,7 @@ export function abrirFormularioServico(servico = null) {
         limparFormularioServico();
         carregarEtapasServico(null);
         carregarCotasServico(null);
+        carregarPoliticasServico(null);
         return;
     }
 
@@ -58,6 +60,7 @@ export function abrirFormularioServico(servico = null) {
     BuilderUI.initBuilder();
     carregarEtapasServico(servico.id);
     carregarCotasServico(servico.id);
+    carregarPoliticasServico(servico.id);
 }
 
 export function fecharFormularioServico() {

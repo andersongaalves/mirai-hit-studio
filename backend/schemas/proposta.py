@@ -86,6 +86,15 @@ class SnapshotCota(Contract):
     formatos: list[str] | None = None
 
 
+class SnapshotPoliticas(Contract):
+    """5.10: portal policies of a service frozen with the contract."""
+    publicacao_previa: str
+    revisoes_excedentes: str
+    cliente_ve_etapas: bool
+    cliente_ve_prazos_etapas: bool
+    financeiro_cliente: str
+
+
 class SnapshotComponente(Contract):
     """5.08: share of a combo allocated to one component service."""
     indice: int = Field(ge=1)
@@ -94,6 +103,7 @@ class SnapshotComponente(Contract):
     preco_catalogo: Decimal
     valor_alocado: Decimal
     cotas_arquivos: list[SnapshotCota] | None = None  # 5.09
+    politicas: SnapshotPoliticas | None = None  # 5.10
 
 
 class SnapshotItem(Contract):
@@ -113,6 +123,7 @@ class SnapshotItem(Contract):
     combo_nome: str | None = None
     componentes: list[SnapshotComponente] = []
     cotas_arquivos: list[SnapshotCota] | None = None  # 5.09: absent before 5.09 and on free lines.
+    politicas: SnapshotPoliticas | None = None  # 5.10: absent before 5.10 and on free lines.
 
 
 class SnapshotEconomico(Contract):
