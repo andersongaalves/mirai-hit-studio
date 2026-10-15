@@ -16,7 +16,7 @@ class ComboWrite(BaseModel):
     subtitulo: str = Field(default="", max_length=150)
     preco_base: Money
     aplica_desconto: bool = False
-    destaques: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(default_factory=list, max_length=20)
+    destaques: list[Annotated[str, Field(max_length=200)]] = Field(default_factory=list, max_length=20)
     ativo: bool = True
     servicos: list[Annotated[int, Field(gt=0)]] = Field(min_length=2, max_length=10)
 
@@ -28,7 +28,7 @@ class ComboWrite(BaseModel):
     @field_validator("destaques")
     @classmethod
     def clean_highlights(cls, value):
-        return [item.strip() for item in value if item.strip()]
+        return [item.strip() for item in value if item.strip()]  # Blank lines are dropped.
 
     @field_validator("servicos")
     @classmethod

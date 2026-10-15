@@ -19,8 +19,10 @@ DURACAO = "max_duracao_min IS NULL OR max_duracao_min BETWEEN 1 AND 60"
 def upgrade():
     # Additive only; existing services keep their content (readers convert it on the fly).
     for tabela in ("servico_cotas_arquivo", "producao_cotas_arquivo"):
-        op.add_column(tabela, sa.Column("max_duracao_min", sa.Integer(), nullable=True))
-        op.create_check_constraint(f"ck_{tabela}_duracao", tabela, DURACAO)
+        # Batch mode so SQLite (tests) can add the named check constraint too.
+        with op.batch_alter_table(tabela) as batch:
+            batch.add_column(sa.Column("max_duracao_min", sa.Integer(), nullable=True))
+            batch.create_check_constraint(f"ck_{tabela}_duracao", DURACAO)
     op.add_column("combos", sa.Column("subtitulo", sa.String(length=150), nullable=False, server_default=""))
     op.add_column("combos", sa.Column("aplica_desconto", sa.Boolean(), nullable=False, server_default=sa.false()))
     op.add_column("combos", sa.Column(
