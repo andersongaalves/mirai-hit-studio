@@ -157,11 +157,13 @@ with Session(engine) as db:
             snapshot.cliente.nome = 'Cliente Com Nome Muito Longo ' * 12
             p = p.model_copy(update={'cliente_snapshot': snapshot})
         html = pdf.renderizar_html(p, final=True)
-        assert "Entrada de 50% + saldo de 50%" in html
+        assert "50% antes da libera&ccedil;&atilde;o dos arquivos finais" in html
+        assert "validade de 10 (dez) dias corridos" in html
         data = pdf.gerar_pdf(html)
         reader = PdfReader(BytesIO(data))
         text = ''.join(page.extract_text() for page in reader.pages)
-        assert 'Assinatura:' in text and '2.499.991,00' in text
+        assert 'Portal do Cliente' in text and 'Assinatura:' not in text and '2.499.991,00' in text
+        assert ('Prazo: 10 dias' in text) or long  # Proposal-specific conditions are still printed.
         assert ('parcial_2' in text) == (count == 3)
         assert len(reader.pages) >= (4 if long else 1)
         if os.environ.get('PROPOSTA_TEST_OUTPUT'):
