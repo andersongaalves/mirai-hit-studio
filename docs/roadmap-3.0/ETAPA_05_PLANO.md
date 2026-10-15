@@ -303,3 +303,40 @@ testes de downgrade.
 | Storage Provider Rollout Evidence | run `38675814622` (sucesso) |
 | Protected Production Release | run `38676188660`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
 | Autorizacao | `CTRL-20261015-R3-509` |
+
+## 5.10 - Configuracoes avancadas dos portais (politicas por contrato)
+
+- Politicas tipadas e fechadas (migration `d6f8b0c2e437`), com valores padrao iguais ao
+  comportamento anterior, de modo que nada muda no deploy:
+  - `publicacao_previa`: previa do produtor vai direto ao cliente (`automatica`) ou so
+    depois de o Admin publicar (`aprovacao_admin`). Fecha o AUD-S05-001 como politica.
+  - `revisoes_excedentes`: cada retorno de uma etapa de "em revisao" para "em andamento"
+    conta uma revisao (`producao_etapas.revisoes_usadas`). Esgotadas as incluidas, a
+    revisao segue permitida e marcada como extra (`permitir`) ou so o Admin libera
+    (`exigir_admin`). O AuditLog registra a rodada e se ela e extra.
+  - `cliente_ve_etapas` e `cliente_ve_prazos_etapas`: o cliente ve ou nao as etapas do
+    contrato (sem elas, so o progresso geral) e os prazos de cada etapa.
+  - `financeiro_cliente`: `completo` ou `resumido` (status, saldo, vencimento e link de
+    pagamento; sem valores cobrados/pagos nem historico).
+- Heranca, por chave: excecao da producao > contrato > padrao global > padrao do sistema.
+  - Padrao global: versoes append-only com concorrencia otimista, historico e restauracao
+    (como a 5.01). Admin em Configuracoes > Portais.
+  - Servico: guarda so o que sobrescreve; o resto segue o padrao global. Editor no Admin em
+    Servicos, ao lado das etapas e cotas.
+  - Contrato: as politicas resolvidas de cada servico (inclusive dentro de combos) ficam
+    congeladas no snapshot no envio da proposta. Mudancas globais ou no catalogo depois nao
+    alteram contratos ("o contrato vigente prevalece"). Com varios servicos, vale a opcao
+    mais favoravel ao cliente. Contratos anteriores a 5.10 seguem o padrao global atual.
+  - Excecao: o Admin altera chaves de uma producao no modal da producao, com motivo
+    obrigatorio; pode remover (volta ao contrato). Auditoria em
+    `production.policies_exception_set` / `_removed`; catalogo em
+    `service.policies_updated`; global em `policy.global_published` / `_restored`.
+- O backend aplica as politicas (upload do produtor, transicoes de etapa, endpoints do
+  cliente). Nenhuma politica desliga autenticacao, permissoes ou auditoria.
+- A politica de etapas vale para as etapas do contrato (5.06); o checklist manual antigo
+  continua sob controle do Admin.
+- Fora do escopo: produtor concluir etapas (afeta a elegibilidade de repasses da 5.13) e
+  cobranca automatica de revisoes extras.
+
+**Publicacao:** aplicar `d6f8b0c2e437` antes do release (tres tabelas novas e uma coluna com
+padrao 0, aditivo).
