@@ -263,3 +263,31 @@ testes de downgrade.
 | Storage Provider Rollout Evidence | run `38659118302` (sucesso) |
 | Protected Production Release | run `38660859481`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
 | Autorizacao | `CTRL-20261014-R3-508` |
+
+## 5.09 - Cotas de arquivos por contrato
+
+- Catalogo (migration `c4e6a8b0d215`): cada servico pode limitar, por tipo de arquivo
+  (materiais, referencias, previas, entregas), a quantidade de arquivos, as versoes por
+  arquivo, o tamanho por arquivo, o espaco total e os formatos aceitos. Tipo sem cota =
+  sem limite contratual (valem so os limites gerais, 50 MB por arquivo). Editor no Admin
+  em Servicos, ao lado das etapas.
+- Contrato: as cotas de cada servico (inclusive os servicos de um combo, 5.08) ficam
+  congeladas no snapshot da proposta no envio (5.05). Mudar o catalogo depois nao altera
+  contratos nem producoes ja criadas.
+- Producao: ao ser criada, recebe as cotas somadas do contrato. Por tipo: so ha limite se
+  todos os servicos contratados o definem; arquivos e espaco somam (x quantidade,
+  arredondada para cima; teto de 100 arquivos e 5000 MB); versoes e tamanho usam o maior
+  valor; formatos sao a uniao. Contratos anteriores a 5.09 ficam sem cotas.
+- Envio: o servidor confere formato e tamanho (422) e quantidade, versoes e espaco (409)
+  nos envios do cliente e do produtor, com a producao travada (`SELECT ... FOR UPDATE`)
+  para que dois envios simultaneos nao estourem a cota. O Admin nao e limitado.
+- Excecao: o Admin pode substituir as cotas de uma producao no modal da producao
+  (origem `admin`), com auditoria (`production.file_quotas_updated`); mudancas no catalogo
+  ficam em `service.file_quotas_updated`.
+- Portais: o formulario de envio mostra a cota do tipo escolhido com o uso atual e avisa
+  quando o limite foi atingido (nova versao de arquivo existente continua possivel enquanto
+  houver versoes e espaco). O cliente ve so materiais e referencias; o produtor, previas e
+  entregas.
+- Fora do escopo: cobranca de espaco extra e limpeza automatica de versoes antigas.
+
+**Publicacao:** aplicar `c4e6a8b0d215` antes do release (duas tabelas novas, aditivo).
