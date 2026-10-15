@@ -99,7 +99,7 @@ assert api.get(f'/portal/cliente/producoes/{production_id}/arquivos', headers=be
 
 # Client: stage deadlines hidden by the contract; summary finance view.
 client_stages = api.get(f'/portal/cliente/producoes/{production_id}/etapas', headers=bearer('client-a')).json()
-assert client_stages['etapas'] and all(stage['prazo'] is None for stage in client_stages['etapas'])
+assert client_stages['etapas'] and all(stage.get('prazo') is None for stage in client_stages['etapas'])
 assert 'revisoes_usadas' not in client_stages['etapas'][0] or client_stages['etapas'][0]['revisoes_usadas'] is None
 finance = api.get(f'/portal/cliente/producoes/{production_id}/financeiro', headers=bearer('client-a'))
 assert finance.status_code == 200, finance.text

@@ -126,7 +126,7 @@ def publicar_globais(db: Session, politicas: dict, *, actor, base_versao: int, r
             action="policy.global_restored" if restaurada_de else "policy.global_published",
             entity_type="policy", entity_id=row.id,
             metadata={"old_version": atual["versao"], "new_version": proxima, "restored_from_version": restaurada_de,
-                      "changed": sorted(chave for chave in CHAVES if dados[chave] != atual["politicas"][chave])},
+                      "changed_keys": ",".join(sorted(chave for chave in CHAVES if dados[chave] != atual["politicas"][chave]))},
             request_id=request_id,
         )
         db.commit()
@@ -169,7 +169,7 @@ def salvar_servico(db: Session, servico_id: int, politicas: dict, *, actor, requ
         db.flush()
         audit_service.record(
             db, actor=actor, action="service.policies_updated", entity_type="service", entity_id=servico_id,
-            metadata={"changed": sorted(chave for chave in CHAVES if anterior.get(chave) != dados.get(chave))},
+            metadata={"changed_keys": ",".join(sorted(chave for chave in CHAVES if anterior.get(chave) != dados.get(chave)))},
             request_id=request_id,
         )
         db.commit()
@@ -282,7 +282,10 @@ def definir_excecao(db: Session, producao: ProducaoModel, politicas: dict, motiv
         audit_service.record(
             db, actor=actor, action="production.policies_exception_set", entity_type="production",
             entity_id=producao.id,
-            metadata={"keys": sorted(dados), "changed": sorted(c for c in CHAVES if antes[c] != depois["vigentes"][c])},
+            metadata={
+                "policy_keys": ",".join(sorted(dados)),
+                "changed_keys": ",".join(sorted(c for c in CHAVES if antes[c] != depois["vigentes"][c])),
+            },
             request_id=request_id,
         )
         db.commit()
@@ -304,7 +307,7 @@ def remover_excecao(db: Session, producao: ProducaoModel, *, actor, request_id=N
         db.flush()
         audit_service.record(
             db, actor=actor, action="production.policies_exception_removed", entity_type="production",
-            entity_id=producao.id, metadata={"keys": chaves}, request_id=request_id,
+            entity_id=producao.id, metadata={"policy_keys": ",".join(chaves)}, request_id=request_id,
         )
         db.commit()
         return detalhar(db, producao.id)

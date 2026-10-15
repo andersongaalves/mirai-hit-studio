@@ -38,6 +38,10 @@ ALLOWED_METADATA = {
     "restored_from_version",
     "old_stage_count",
     "new_stage_count",
+    "review_round",
+    "extra_review",
+    "policy_keys",
+    "changed_keys",
 }
 
 
