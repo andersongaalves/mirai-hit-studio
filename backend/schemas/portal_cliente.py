@@ -46,6 +46,7 @@ class FinanceiroClienteResponse(BaseModel):
     proposta_status: str | None
     cobranca: CobrancaClienteResponse | None
     checkout_url: str | None
+    resumido: bool = False  # 5.10: payment history hidden by contract policy.
 
 
 class ProducaoArquivoClienteResponse(BaseModel):

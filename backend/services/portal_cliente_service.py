@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from crud import crud_producao
 from models.orcamento import OrcamentoModel
-from services import checkout_service, financial_service
+from services import checkout_service, financial_service, politica_service
 
 PRODUCOES_FINALIZADAS = ("finalizado", "entregue")
 
@@ -70,6 +70,10 @@ def buscar_financeiro(db: Session, producao_id: int, cliente_id: int):
             for pagamento in cobranca.pagamentos
         ],
     }
+    if politica_service.vigentes(db, producao.id)["financeiro_cliente"] == "resumido":
+        # 5.10: summary view keeps status, totals, balance and the payment link; no history.
+        resposta["cobranca"]["pagamentos"] = []
+        resposta["resumido"] = True
     if saldo > 0 and status.value not in {"paga", "cancelada"}:
         try:
             resposta["checkout_url"] = checkout_service.link_por_proposta(

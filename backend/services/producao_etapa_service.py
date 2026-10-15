@@ -28,7 +28,7 @@ from models import (
     PropostaModel,
     UsuarioModel,
 )
-from services import audit_service
+from services import audit_service, politica_service
 
 TRANSICOES = {
     "pendente": {"em_andamento"},
@@ -222,7 +222,17 @@ def _bloqueio(etapas, etapa, destino):
     return None
 
 
-def _acoes(etapas, etapa, papel, usuario=None):
+def _revisao_bloqueada(etapa, papel, politicas) -> bool:
+    """5.10: with 'exigir_admin', only the admin reopens a stage whose included reviews are used up."""
+    return (
+        papel != "admin"
+        and (politicas or {}).get("revisoes_excedentes") == "exigir_admin"
+        and etapa.revisoes_incluidas is not None
+        and (etapa.revisoes_usadas or 0) >= etapa.revisoes_incluidas
+    )
+
+
+def _acoes(etapas, etapa, papel, usuario=None, politicas=None):
     if papel == "admin":
         possiveis = TRANSICOES[etapa.status]
     elif papel == "produtor":
@@ -233,7 +243,9 @@ def _acoes(etapas, etapa, papel, usuario=None):
     else:
         return []
     return [destino for destino in ("pendente", "em_andamento", "em_revisao", "concluida")
-            if destino in possiveis and _bloqueio(etapas, etapa, destino) is None]
+            if destino in possiveis and _bloqueio(etapas, etapa, destino) is None
+            and not (etapa.status == "em_revisao" and destino == "em_andamento"
+                     and _revisao_bloqueada(etapa, papel, politicas))]
 
 
 def _progresso(etapas) -> int:
@@ -255,7 +267,7 @@ def _rotulo_responsavel(etapa, usuario):
     return "Outro produtor"
 
 
-def _serializar(etapas, etapa, papel, usuario=None, nomes=None):
+def _serializar(etapas, etapa, papel, usuario=None, nomes=None, politicas=None):
     dados = {
         "id": etapa.id,
         "ordem": etapa.ordem,
@@ -274,9 +286,12 @@ def _serializar(etapas, etapa, papel, usuario=None, nomes=None):
         dados.update(
             unidade=etapa.unidade,
             revisoes_incluidas=etapa.revisoes_incluidas,
+            revisoes_usadas=etapa.revisoes_usadas or 0,
             prazo_dias=etapa.prazo_dias,
-            acoes=_acoes(etapas, etapa, papel, usuario),
+            acoes=_acoes(etapas, etapa, papel, usuario, politicas),
         )
+    elif papel == "cliente" and not (politicas or {}).get("cliente_ve_prazos_etapas", True):
+        dados["prazo"] = None  # 5.10: stage deadlines hidden from the client by policy.
     if papel == "produtor":
         dados.update(
             minha=usuario is not None and etapa.responsavel_usuario_id == usuario.id,
@@ -305,14 +320,21 @@ def _nomes(db: Session, ids) -> dict:
 
 def listar(db: Session, producao: ProducaoModel, *, papel: str, usuario=None):
     etapas = _etapas(db, producao.id)
+    politicas = politica_service.vigentes(db, producao.id)  # 5.10
     nomes = {}
     if papel == "admin":
         nomes = _nomes(db, [id_ for etapa in etapas for id_ in (etapa.responsavel_usuario_id, etapa.executor_usuario_id)])
     resposta = {
         "producao_id": producao.id,
         "progresso_percentual": _progresso(etapas),
-        "etapas": [_serializar(etapas, etapa, papel, usuario, nomes) for etapa in etapas],
+        "etapas": [_serializar(etapas, etapa, papel, usuario, nomes, politicas) for etapa in etapas],
     }
+    if papel == "cliente" and not politicas["cliente_ve_etapas"]:
+        # 5.10: the contract hides the stages from the client; only the overall progress remains.
+        resposta["etapas"] = []
+        resposta["etapas_ocultas"] = True
+    if papel in ("admin", "produtor"):
+        resposta["revisoes_excedentes"] = politicas["revisoes_excedentes"]
     if papel == "admin":
         resposta["pode_gerar"] = not etapas and bool(
             (proposta := _proposta_da_producao(db, producao)) is not None and proposta.snapshot_economico
@@ -344,6 +366,11 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
                 motivo = _bloqueio(etapas, etapa, status)
                 if motivo:
                     raise EtapaConflito(motivo)
+                revisao = etapa.status == "em_revisao" and status == "em_andamento"
+                if revisao and _revisao_bloqueada(etapa, papel, politica_service.vigentes(db, producao.id)):
+                    raise EtapaConflito(
+                        "As revisoes incluidas nesta etapa acabaram; o estudio precisa liberar uma revisao extra."
+                    )
                 anterior = etapa.status
                 agora = _agora()
                 etapa.status = status
@@ -352,11 +379,17 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
                 etapa.concluida_em = agora if status == "concluida" else None
                 # 5.07: the executor is whoever was responsible at conclusion; reopening clears it.
                 etapa.executor_usuario_id = etapa.responsavel_usuario_id if status == "concluida" else None
+                metadata = {"old_status": anterior, "new_status": status, "stage_order": etapa.ordem}
+                if revisao:
+                    # 5.10: each return from review is one review round; beyond the included ones it is extra.
+                    etapa.revisoes_usadas = (etapa.revisoes_usadas or 0) + 1
+                    metadata["review_round"] = etapa.revisoes_usadas
+                    metadata["extra_review"] = (
+                        etapa.revisoes_incluidas is not None and etapa.revisoes_usadas > etapa.revisoes_incluidas
+                    )
                 audit_service.record(
                     db, actor=usuario, action="production.stage_status_changed", entity_type="production",
-                    entity_id=producao.id,
-                    metadata={"old_status": anterior, "new_status": status, "stage_order": etapa.ordem},
-                    request_id=request_id,
+                    entity_id=producao.id, metadata=metadata, request_id=request_id,
                 )
         if alterar_prazo and prazo != etapa.prazo:
             etapa.prazo = prazo

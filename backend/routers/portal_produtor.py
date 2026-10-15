@@ -14,7 +14,7 @@ from schemas.portal_produtor import ProducaoProdutorResponse
 from schemas.producao import ProducaoStatusUpdate
 from schemas.producao_arquivo import ProducaoArquivoResponse
 from schemas.repasse_produtor import RepasseProdutorResponse
-from services import audit_service, producao_arquivo_service, repasse_produtor_service
+from services import audit_service, politica_service, producao_arquivo_service, repasse_produtor_service
 from services.producao_arquivo_storage import MAX_FILE_SIZE
 
 router = APIRouter(prefix="/portal/produtor", tags=["Portal do Produtor"])
@@ -155,7 +155,9 @@ async def enviar_arquivo(
             mime_type=arquivo.content_type or "application/octet-stream",
             data=data,
             visible_to_producer=True,
-            visible_to_client=tipo == "previa",
+            # 5.10: previews reach the client at once unless the contract asks for admin approval.
+            visible_to_client=tipo == "previa"
+            and politica_service.vigentes(db, production.id)["publicacao_previa"] == "automatica",
             replaces_id=substitui_arquivo_id,
             note=observacao,
             enforce_quota=True,  # 5.09: contractual file quotas.

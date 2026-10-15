@@ -24,6 +24,7 @@ class EtapaProducaoResponse(BaseModel):
     # Team-only fields (admin and producer).
     unidade: str | None = None
     revisoes_incluidas: int | None = None
+    revisoes_usadas: int | None = None  # 5.10
     prazo_dias: int | None = None
     acoes: list[StatusEtapa] | None = None
     # Admin-only contract economics.
@@ -44,6 +45,8 @@ class EtapasProducaoResponse(BaseModel):
     progresso_percentual: int
     etapas: list[EtapaProducaoResponse]
     pode_gerar: bool | None = None
+    etapas_ocultas: bool | None = None  # 5.10: client view hidden by contract policy.
+    revisoes_excedentes: str | None = None  # 5.10: team view of the review policy.
 
 
 class EtapaStatusUpdate(BaseModel):
