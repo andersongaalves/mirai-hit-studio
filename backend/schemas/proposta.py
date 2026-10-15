@@ -76,6 +76,16 @@ class SnapshotEtapa(Contract):
     componente_indice: int | None = None
 
 
+class SnapshotCota(Contract):
+    """5.09: file quota of one type frozen with the contract."""
+    tipo: str
+    max_arquivos: int | None = None
+    max_versoes: int | None = None
+    max_tamanho_mb: int | None = None
+    max_total_mb: int | None = None
+    formatos: list[str] | None = None
+
+
 class SnapshotComponente(Contract):
     """5.08: share of a combo allocated to one component service."""
     indice: int = Field(ge=1)
@@ -83,6 +93,7 @@ class SnapshotComponente(Contract):
     servico_nome: str
     preco_catalogo: Decimal
     valor_alocado: Decimal
+    cotas_arquivos: list[SnapshotCota] | None = None  # 5.09
 
 
 class SnapshotItem(Contract):
@@ -101,6 +112,7 @@ class SnapshotItem(Contract):
     combo_id: int | None = None
     combo_nome: str | None = None
     componentes: list[SnapshotComponente] = []
+    cotas_arquivos: list[SnapshotCota] | None = None  # 5.09: absent before 5.09 and on free lines.
 
 
 class SnapshotEconomico(Contract):

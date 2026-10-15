@@ -11,7 +11,7 @@ from crud import crud_producao
 from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
 from models.producao import ProducaoModel
-from services import audit_service
+from services import audit_service, cota_arquivo_service
 from services.producao_arquivo_storage import (
     ALLOWED_MIME_TYPES,
     MAX_FILE_SIZE,
@@ -116,11 +116,15 @@ def upload(
     storage=None,
     request_id=None,
     note: str | None = None,
+    enforce_quota: bool = False,
 ):
     _validate_upload(data, mime_type, file_type)
     note = _normalize_note(note)
     if file_type == "comprovante" and visible_to_client:
         raise ProducaoArquivoError("Comprovantes de repasse nao podem ser visiveis ao cliente.")
+    if enforce_quota:
+        # 5.09: lock the production so simultaneous uploads are counted one after the other.
+        cota_arquivo_service.travar_producao(db, production.id)
     group_id, version, previous = _version(
         db,
         production.id,
@@ -128,6 +132,18 @@ def upload(
         replaces_id,
         replacement_actor_id,
     )
+    if enforce_quota:
+        try:
+            cota_arquivo_service.verificar(
+                db, production.id, tipo=file_type, mime_type=mime_type, tamanho=len(data),
+                nova_versao=version if previous is not None else None,
+            )
+        except cota_arquivo_service.CotaFormato as exc:
+            db.rollback()
+            raise ProducaoArquivoError(str(exc)) from None
+        except cota_arquivo_service.CotaExcedida as exc:
+            db.rollback()
+            raise ProducaoArquivoConflict(str(exc)) from None
     storage = storage or new_production_file_storage(file_type)
     try:
         object_key = storage.save(data, mime_type)

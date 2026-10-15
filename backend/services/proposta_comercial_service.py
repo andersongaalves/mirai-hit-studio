@@ -10,6 +10,7 @@ from pydantic import EmailStr, TypeAdapter, ValidationError
 from pypdf import PdfReader
 from services import (
     audit_service,
+    cota_arquivo_service,
     financial_service,
     producao_etapa_service,
     producao_liberacao_service,
@@ -170,6 +171,7 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
             _dados_producao(service._resposta(model)),
         )
         producao_etapa_service.instanciar(db, producao, model)
+        cota_arquivo_service.instanciar(db, producao, model)  # 5.09
     try:
         financial_service.criar_para_proposta(
             db,
