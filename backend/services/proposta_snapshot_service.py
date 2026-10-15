@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
 from models.servico import ServicoModel
+from schemas import servico_estrutura as estrutura_servico
 from schemas.proposta import PropostaItem, SnapshotEconomico
 from services import proposta_service as service
 from sqlalchemy import select
@@ -115,6 +116,9 @@ def _etapas(servico: ServicoModel, valor_contratado: Decimal):
         return []
     pesos = [_weight(etapa.peso_percentual) for etapa in etapas]
     valores = distribuir_centavos(_cents(valor_contratado), pesos)
+    # Catalog rework: the service's included reviews belong to its last stage (the delivery).
+    revisoes = estrutura_servico.ler(servico.estrutura_servico)["limites"]["revisoes"]
+    ultima = len(etapas)
     return [{
         "ordem": index,
         "nome": etapa.nome,
@@ -122,7 +126,7 @@ def _etapas(servico: ServicoModel, valor_contratado: Decimal):
         "valor": str(_money(valor)),
         "prazo_dias": etapa.prazo_dias,
         "unidade": etapa.unidade or "",
-        "revisoes_incluidas": etapa.revisoes_incluidas,
+        "revisoes_incluidas": etapa.revisoes_incluidas if revisoes is None else (revisoes if index == ultima else None),
         "depende_da_anterior": bool(etapa.depende_da_anterior),
         "administrativa": bool(etapa.administrativa),
     } for index, (etapa, valor) in enumerate(zip(etapas, valores), start=1)]

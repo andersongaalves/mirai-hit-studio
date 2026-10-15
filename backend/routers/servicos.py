@@ -8,7 +8,7 @@ from schemas.servico import (ServicoCreate, ServicoResponse)
 
 from core.dependencies import require_admin
 from schemas.servico_etapa import ServicoEtapaOut, ServicoEtapasUpdate
-from services import audit_service
+from services import audit_service, catalogo_service
 
 router = APIRouter(prefix="/servicos", tags=["Serviços"])
 
@@ -25,9 +25,13 @@ def criar_servico(
     user=Depends(require_admin),
 ):
 
-    novo = models.ServicoModel(**servico.model_dump())
+    dados = servico.model_dump()
+    dados["categoria"] = dados.get("categoria") or "avulso"  # Combos live in the combos catalog (5.08).
+    novo = models.ServicoModel(**dados)
 
     db.add(novo)
+    db.flush()
+    catalogo_service.sincronizar_cotas(db, novo)
     db.commit()
     db.refresh(novo)
 
@@ -52,8 +56,12 @@ def atualizar_servico(
         raise HTTPException(status_code=404)
 
     for key, value in srv_atualizado.model_dump().items():
+        if key == "categoria" and value is None:
+            continue  # The editor no longer chooses a category; legacy rows keep theirs.
         setattr(servico, key, value)
 
+    db.flush()
+    catalogo_service.sincronizar_cotas(db, servico)
     db.commit()
 
     db.refresh(servico)

@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Column,
@@ -9,8 +10,9 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy.sql import false, func
 
 from database import Base
 
@@ -28,9 +30,13 @@ class ComboModel(Base):
 
     id = Column(Integer, primary_key=True)
     nome = Column(String(100), nullable=False)
-    descricao = Column(String(300), nullable=False, default="")
+    descricao = Column(String(1000), nullable=False, default="")
     preco_base = Column(Numeric(12, 2), nullable=False)
     ativo = Column(Boolean, nullable=False, default=True)
+    # Catalog rework: a combo is sold like a service; limits, stages and quotas come from its services.
+    subtitulo = Column(String(150), nullable=False, default="", server_default="")
+    aplica_desconto = Column(Boolean, nullable=False, default=False, server_default=false())
+    destaques = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False, default=list)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

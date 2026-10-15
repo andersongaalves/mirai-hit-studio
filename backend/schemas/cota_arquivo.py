@@ -18,6 +18,7 @@ class CotaArquivo(BaseModel):
     max_versoes: int | None = Field(default=None, ge=1, le=50)  # Versions per logical file.
     max_tamanho_mb: int | None = Field(default=None, ge=1, le=50)  # Per uploaded file.
     max_total_mb: int | None = Field(default=None, ge=1, le=5000)  # Physical storage of the type.
+    max_duracao_min: int | None = Field(default=None, ge=1, le=60)  # Per audio track (catalog rework).
     formatos: list[str] | None = Field(default=None, max_length=20)
 
     @field_validator("formatos")

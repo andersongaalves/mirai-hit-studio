@@ -12,15 +12,23 @@ class ComboWrite(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nome: str = Field(min_length=3, max_length=100)
-    descricao: str = Field(default="", max_length=300)
+    descricao: str = Field(default="", max_length=1000)
+    subtitulo: str = Field(default="", max_length=150)
     preco_base: Money
+    aplica_desconto: bool = False
+    destaques: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(default_factory=list, max_length=20)
     ativo: bool = True
     servicos: list[Annotated[int, Field(gt=0)]] = Field(min_length=2, max_length=10)
 
-    @field_validator("nome", "descricao")
+    @field_validator("nome", "descricao", "subtitulo")
     @classmethod
     def strip(cls, value: str) -> str:
         return value.strip()
+
+    @field_validator("destaques")
+    @classmethod
+    def clean_highlights(cls, value):
+        return [item.strip() for item in value if item.strip()]
 
     @field_validator("servicos")
     @classmethod
@@ -35,13 +43,20 @@ class ComboServico(BaseModel):
     nome: str
     valor_base: Decimal
     etapas: int
+    # Catalog rework: what each service includes, inherited by the combo.
+    estrutura: dict | None = None
+    parametros: str = ""
 
 
 class ComboResponse(BaseModel):
     id: int
     nome: str
     descricao: str
+    subtitulo: str = ""
     preco_base: Decimal
+    aplica_desconto: bool = False
+    destaques: list[str] = []
+    parametros: str = ""  # Union of the services' calculator parameters.
     ativo: bool
     soma_servicos: Decimal
     servicos: list[ComboServico]

@@ -18,6 +18,7 @@ _LIMITES_CHECK = (
     " AND (max_tamanho_mb IS NULL OR max_tamanho_mb BETWEEN 1 AND 50)"
     " AND (max_total_mb IS NULL OR max_total_mb BETWEEN 1 AND 5000)"
 )
+_DURACAO_CHECK = "max_duracao_min IS NULL OR max_duracao_min BETWEEN 1 AND 60"
 
 
 class ServicoCotaArquivoModel(Base):
@@ -26,6 +27,7 @@ class ServicoCotaArquivoModel(Base):
         UniqueConstraint("servico_id", "tipo", name="uq_servico_cotas_arquivo_servico_tipo"),
         CheckConstraint(_TIPO_CHECK, name="ck_servico_cotas_arquivo_tipo"),
         CheckConstraint(_LIMITES_CHECK, name="ck_servico_cotas_arquivo_limites"),
+        CheckConstraint(_DURACAO_CHECK, name="ck_servico_cotas_arquivo_duracao"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -35,6 +37,7 @@ class ServicoCotaArquivoModel(Base):
     max_versoes = Column(Integer, nullable=True)
     max_tamanho_mb = Column(Integer, nullable=True)
     max_total_mb = Column(Integer, nullable=True)
+    max_duracao_min = Column(Integer, nullable=True)  # Per audio track (catalog rework).
     formatos = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)  # MIME list; null = all allowed.
 
 
@@ -44,6 +47,7 @@ class ProducaoCotaArquivoModel(Base):
         UniqueConstraint("producao_id", "tipo", name="uq_producao_cotas_arquivo_producao_tipo"),
         CheckConstraint(_TIPO_CHECK, name="ck_producao_cotas_arquivo_tipo"),
         CheckConstraint(_LIMITES_CHECK, name="ck_producao_cotas_arquivo_limites"),
+        CheckConstraint(_DURACAO_CHECK, name="ck_producao_cotas_arquivo_duracao"),
         CheckConstraint("origem IN ('contrato', 'admin')", name="ck_producao_cotas_arquivo_origem"),
     )
 
@@ -54,6 +58,7 @@ class ProducaoCotaArquivoModel(Base):
     max_versoes = Column(Integer, nullable=True)
     max_tamanho_mb = Column(Integer, nullable=True)
     max_total_mb = Column(Integer, nullable=True)
+    max_duracao_min = Column(Integer, nullable=True)  # Per audio track (catalog rework).
     formatos = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     origem = Column(String(20), nullable=False, default="contrato")
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
