@@ -7,7 +7,7 @@ class ServicoBase(BaseModel):
     nome: str = Field(..., min_length=3, max_length=100)
     subtitulo: str
     valor_base: float
-    categoria: str
+    categoria: str | None = None  # Catalog rework: services are single ("avulso"); combos are separate.
     aplica_desconto: bool
     parametros: str
     estrutura_servico: str
@@ -16,7 +16,7 @@ class ServicoBase(BaseModel):
 class ServicoCreate(ServicoBase):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     subtitulo: str = Field(max_length=1000)
-    categoria: str = Field(max_length=100)
+    categoria: str | None = Field(default=None, max_length=100)
     valor_base: float = Field(ge=0)
     parametros: str = Field(max_length=500)
     _estrutura = field_validator("estrutura_servico")(validar_estrutura)

@@ -82,8 +82,8 @@ function render() {
         deadline.addEventListener("input", () => { stage.prazo_dias = deadline.value === "" ? null : Number(deadline.value); });
         const unit = input("text", stage.unidade, `Unidade da etapa ${index + 1}`, { maxlength: "30", placeholder: "unidade (ex.: faixa)" });
         unit.addEventListener("input", () => { stage.unidade = unit.value; });
-        const revisions = input("number", stage.revisoes_incluidas ?? "", `Revisões incluídas na etapa ${index + 1}`, { min: "0", max: "20", placeholder: "revisões" });
-        revisions.addEventListener("input", () => { stage.revisoes_incluidas = revisions.value === "" ? null : Number(revisions.value); });
+        // Catalog rework: included reviews are set once per service ("O que o serviço inclui")
+        // and apply to the last stage; the stage editor no longer edits them.
 
         const dependency = checkbox(stage.depende_da_anterior, "Depende da anterior");
         dependency.box.disabled = index === 0;
@@ -122,7 +122,7 @@ function render() {
 
         const extras = document.createElement("div");
         extras.className = "servico-etapa__extras";
-        extras.append(unit, revisions, dependency.wrapper, admin.wrapper, actions);
+        extras.append(unit, dependency.wrapper, admin.wrapper, actions);
         row.append(order, name, weight, deadline, extras);
         list.append(row);
     });

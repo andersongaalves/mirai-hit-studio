@@ -136,7 +136,7 @@ def upload(
         try:
             cota_arquivo_service.verificar(
                 db, production.id, tipo=file_type, mime_type=mime_type, tamanho=len(data),
-                nova_versao=version if previous is not None else None,
+                nova_versao=version if previous is not None else None, data=data,
             )
         except cota_arquivo_service.CotaFormato as exc:
             db.rollback()

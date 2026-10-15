@@ -25,11 +25,11 @@ from models import (
     ServicoCotaArquivoModel,
     ServicoModel,
 )
-from services import audit_service
+from services import audio_duracao, audit_service
 from services.producao_arquivo_storage import ALLOWED_MIME_TYPES
 
 TIPOS = ("material", "referencia", "previa", "entrega")
-CAMPOS = ("max_arquivos", "max_versoes", "max_tamanho_mb", "max_total_mb", "formatos")
+CAMPOS = ("max_arquivos", "max_versoes", "max_tamanho_mb", "max_total_mb", "max_duracao_min", "formatos")
 LIMITES = {"max_arquivos": 100, "max_total_mb": 5000}
 MB = 1024 * 1024
 ROTULOS = {"material": "materiais", "referencia": "referencias", "previa": "previas", "entrega": "entregas"}
@@ -139,7 +139,7 @@ def agregar(snapshot: dict) -> list[dict]:
                 None if any(valor is None for valor in valores)
                 else min(LIMITES[campo], sum(quantidade * cota[campo] for quantidade, cota in porcoes))
             )
-        for campo in ("max_versoes", "max_tamanho_mb"):
+        for campo in ("max_versoes", "max_tamanho_mb", "max_duracao_min"):
             valores = [cota.get(campo) for _, cota in porcoes]
             agregada[campo] = None if any(valor is None for valor in valores) else max(valores)
         formatos = [cota.get("formatos") for _, cota in porcoes]
@@ -221,7 +221,8 @@ def travar_producao(db: Session, producao_id: int) -> None:
     db.execute(select(ProducaoModel.id).where(ProducaoModel.id == producao_id).with_for_update())
 
 
-def verificar(db: Session, producao_id: int, *, tipo: str, mime_type: str, tamanho: int, nova_versao: int | None):
+def verificar(db: Session, producao_id: int, *, tipo: str, mime_type: str, tamanho: int, nova_versao: int | None,
+              data: bytes | None = None):
     """Raises when a client/producer upload breaks the production's quota for its type.
 
     nova_versao is None for a new logical file, or the version number being created.
@@ -237,6 +238,13 @@ def verificar(db: Session, producao_id: int, *, tipo: str, mime_type: str, taman
         raise CotaFormato(f"Formato nao permitido pelo contrato para {rotulo}.")
     if cota.max_tamanho_mb is not None and tamanho > cota.max_tamanho_mb * MB:
         raise CotaFormato(f"O contrato permite {rotulo} de ate {cota.max_tamanho_mb} MB por arquivo.")
+    if cota.max_duracao_min is not None and mime_type.startswith("audio/") and data is not None:
+        # Catalog rework: tracks longer than the contract allows are refused.
+        duracao = audio_duracao.segundos(data)
+        if duracao is None:
+            raise CotaFormato(f"Nao foi possivel conferir a duracao deste audio ({rotulo}); envie um MP3, WAV, FLAC ou M4A valido.")
+        if duracao > cota.max_duracao_min * 60 + 1:  # One second of tolerance for encoder padding.
+            raise CotaFormato(f"O contrato permite {rotulo} de ate {cota.max_duracao_min} min por faixa.")
     arquivos, total = _uso(db, producao_id).get(tipo, (0, 0))
     if nova_versao is None and cota.max_arquivos is not None and arquivos >= cota.max_arquivos:
         raise CotaExcedida(f"Limite de {cota.max_arquivos} arquivo(s) de {rotulo} do contrato atingido.")

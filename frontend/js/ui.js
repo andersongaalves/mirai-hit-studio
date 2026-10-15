@@ -2,7 +2,7 @@ import { escapeHtml, safeURL } from "./utils/security.js";
 import { getProjetos } from "./api.js"; // <- Movido para o topo!
 import { money } from "./utils/format.js";
 import { $, $$ } from "./utils/dom.js";
-import { renderizarEstrutura } from "./modules/service_renderer.js";
+import { renderizarCombo, renderizarEstrutura } from "./modules/service_renderer.js";
 import { state } from "./state.js";
 
 export const PARAM_TEMPLATES = {
@@ -54,7 +54,10 @@ export const PARAM_TEMPLATES = {
 };
 
 export function renderizarBotoes(servicos) {
-    servicos = Array.isArray(servicos) ? servicos.filter(s => s && Number.isInteger(s.id)) : [];
+    // Catalog rework: combos come from the combos catalog; legacy "combo" services stay off the site.
+    servicos = Array.isArray(servicos)
+        ? servicos.filter(s => s && (s.tipo === "combo" ? s.combo : Number.isInteger(s.id) && s.categoria !== "combo"))
+        : [];
     const boxAvulso = $("render-avulsos");
     const boxCombo = $("render-combos");
 
@@ -91,12 +94,12 @@ export function renderizarBotoes(servicos) {
             `
             : "";
 
-        const descricaoHTML = srv.estrutura_servico
+        const descricaoHTML = srv.estrutura_servico || srv.combo
             ? `
             <div class="service-details">
 
                 <div class="service-description">
-                    ${renderizarEstrutura(srv.estrutura_servico)}
+                    ${srv.tipo === "combo" ? renderizarCombo(srv.combo) : renderizarEstrutura(srv.estrutura_servico)}
                 </div>
 
                 <div class="service-price">
@@ -142,7 +145,7 @@ export function renderizarBotoes(servicos) {
             </div>
         `;
 
-        if (srv.categoria === "combo") {
+        if (srv.tipo === "combo") {
             boxCombo.innerHTML += html;
         } else {
             boxAvulso.innerHTML += html;

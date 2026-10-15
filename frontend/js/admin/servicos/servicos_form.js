@@ -11,7 +11,6 @@ const formFields = [
     "srv_nome",
     "srv_subtitulo",
     "srv_valor",
-    "srv_categoria",
     "srv_aplica_desconto",
 ];
 
@@ -52,7 +51,6 @@ export function abrirFormularioServico(servico = null) {
     setValue("srv_nome", servico.nome);
     setValue("srv_subtitulo", servico.subtitulo);
     setValue("srv_valor", servico.valor_base);
-    setValue("srv_categoria", servico.categoria);
     setValue("srv_aplica_desconto", String(!!servico.aplica_desconto));
 
     Builder.carregarBuilder(servico.estrutura_servico);
@@ -73,7 +71,6 @@ export function limparFormularioServico() {
     });
 
     setValue("srv_valor", 0);
-    setValue("srv_categoria", "avulso");
     setValue("srv_aplica_desconto", "false");
 
     Builder.resetBuilder();
@@ -87,7 +84,6 @@ export function getServicoFormPayload(parametros = []) {
             nome: getValue("srv_nome").trim(),
             subtitulo: getValue("srv_subtitulo").trim(),
             valor_base: Number(getValue("srv_valor") || 0),
-            categoria: getValue("srv_categoria"),
             aplica_desconto: getValue("srv_aplica_desconto") === "true",
             parametros: parametros.join(","),
             estrutura_servico: Builder.gerarJSON(),

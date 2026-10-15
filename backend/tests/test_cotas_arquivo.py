@@ -84,7 +84,7 @@ snapshot = {'itens': [
 ]}
 assert quotas.agregar(snapshot) == [{
     'tipo': 'previa', 'max_arquivos': 6, 'max_total_mb': None, 'max_versoes': 5, 'max_tamanho_mb': 20,
-    'formatos': ['audio/mpeg', 'audio/wav'],
+    'max_duracao_min': None, 'formatos': ['audio/mpeg', 'audio/wav'],
 }]  # 2x2 + 2x1 files (1.5 rounds up); 'entrega' is only in one service, so it has no contractual limit.
 assert quotas.agregar({'itens': [{'indice': 1, 'servico_id': 1, 'quantidade': '1'}]}) == []  # Before 5.09.
 assert quotas.agregar({'itens': [{'indice': 1, 'servico_id': 1, 'quantidade': '80', 'cotas_arquivos': s1}]})[0][

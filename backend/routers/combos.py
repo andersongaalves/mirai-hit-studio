@@ -39,3 +39,12 @@ def atualizar(combo_id: IdPath, dados: ComboWrite, request: Request, db: Db, use
         return service.atualizar(db, combo_id, dados, actor=user, request_id=getattr(request.state, "request_id", None))
     except service.ComboError as exc:
         raise _error(exc) from None
+
+
+# Catalog rework: active combos are sold on the public site like services.
+public_router = APIRouter(prefix="/catalogo", tags=["Combos"])
+
+
+@public_router.get("/combos", response_model=list[ComboResponse])
+def listar_publicos(db: Db):
+    return service.listar(db, somente_ativos=True)

@@ -27,6 +27,7 @@ from routers.producao_mensagens import router as producao_mensagens_router
 from routers.producao_etapas import router as producao_etapas_router
 from routers.cotas_arquivo import router as cotas_arquivo_router
 from routers.politicas import router as politicas_router
+from routers.combos import public_router as combos_public_router
 from routers.combos import router as combos_router
 from routers.projetos import router as projetos_router
 from routers.propostas import router as propostas_router
@@ -97,6 +98,7 @@ app.include_router(producao_etapas_router)
 app.include_router(cotas_arquivo_router)
 app.include_router(politicas_router)
 app.include_router(combos_router)
+app.include_router(combos_public_router)
 
 
 @app.get("/")

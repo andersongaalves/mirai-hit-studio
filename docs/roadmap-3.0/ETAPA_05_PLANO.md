@@ -352,3 +352,31 @@ padrao 0, aditivo).
 | Storage Provider Rollout Evidence | run `38747574863` (sucesso) |
 | Protected Production Release | run `38749661557`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
 | Autorizacao | `CTRL-20261015-R3-510` |
+
+## Ajuste do catalogo (pedido do responsavel em 15/10/2026)
+
+Antes da 5.11, a pedido do responsavel: o servico deixa de escolher "avulso ou combo" e as
+secoes de texto livre viram limites que o sistema aplica (migration `e8a0c2d4f659`).
+
+- Servico (sempre avulso): "O que o servico inclui" com campos tipados.
+  - Faixas enviadas pelo cliente e duracao maxima por faixa: viram a cota de materiais do
+    cliente (5.09). O servidor le a duracao do audio (MP3, WAV, FLAC, M4A, com `mutagen`) e
+    recusa faixas acima do limite do contrato, ou audios cuja duracao nao pode ser lida.
+  - Revisoes incluidas: valem na ultima etapa do servico (a entrega); o editor de etapas
+    deixa de ter revisoes por etapa. A contagem e a politica de excedentes seguem a 5.10.
+  - Melodias e artistas: so exibicao; a conferencia e do estudio, ouvindo.
+  - Destaques: textos curtos sem limite (ex.: "Instrumentos eletronicos").
+  - Estrutura v2 em `estrutura_servico` (`versao`, `intro`, `destaques`, `limites`); o
+    formato antigo (secoes/beneficios) e convertido na leitura e ao salvar.
+- Combo (catalogo da 5.08): ganha subtitulo, descricao de ate 1000 caracteres, escolha de
+  desconto e destaques; preco editavel. Combos ativos aparecem no site (`GET /catalogo/combos`)
+  com o que cada servico inclui; limites, etapas, cotas e politicas vem dos servicos. Na
+  calculadora, os parametros do combo sao a uniao dos parametros dos servicos.
+- Servicos antigos marcados como combo ("Launch", "Legend") ficam guardados e saem do site;
+  o Admin os identifica como "Combo antigo". O Launch e recriado como combo novo
+  (Instrumental + Mixagem + Masterizacao, mesmo preco e desconto) pelo SQL de dados.
+- Fora do escopo: limites contratados a mais pela calculadora (ex.: mais canais pagos)
+  continuam ajustados pelo Admin na producao (excecao de cotas/politicas).
+
+**Publicacao:** rodar `e8a0c2d4f659` antes do release; o SQL de dados (conversao das secoes,
+cotas derivadas e combo Launch) depois do release, conferindo o conteudo de cada servico.

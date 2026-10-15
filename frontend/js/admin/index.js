@@ -89,7 +89,7 @@ document.addEventListener("admin:logout", () => {
         input.value = "";
         if (input.type === "checkbox") input.checked = false;
     });
-    for (const id of ["dashboard-content", "orcamentos-list", "producoes-list", "clientes-list", "cliente-historico", "usuarios-list", "newsletter-campaigns-list", "newsletter-subscribers-list", "financeiro-metrics", "financeiro-list", "financeiro-detail-summary", "financeiro-payments", "audit-list", "lista-servicos", "portfolio-list", "builder-preview-render", "builder-sections", "builder-benefits", "param_list_render", "prod_etapas", "inbox-list", "inbox-detail", "inbox-pagination"]) {
+    for (const id of ["dashboard-content", "orcamentos-list", "producoes-list", "clientes-list", "cliente-historico", "usuarios-list", "newsletter-campaigns-list", "newsletter-subscribers-list", "financeiro-metrics", "financeiro-list", "financeiro-detail-summary", "financeiro-payments", "audit-list", "lista-servicos", "portfolio-list", "builder-preview-render", "param_list_render", "prod_etapas", "inbox-list", "inbox-detail", "inbox-pagination"]) {
         document.getElementById(id)?.replaceChildren();
     }
     document.querySelectorAll("#modal-orcamento span, #modal-producao span, #modal-orcamento h2, #modal-producao h2").forEach(el => { el.textContent = ""; });

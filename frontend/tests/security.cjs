@@ -26,7 +26,6 @@ const root = path.resolve(__dirname, '..');
         const result = await page.evaluate(async () => {
             const security = await import('/js/utils/security.js');
             const renderer = await import('/js/modules/service_renderer.js');
-            const builder = await import('/js/admin/builder/builder_dom.js');
             const preview = await import('/js/admin/builder/builder_preview.js');
             const { builderState } = await import('/js/admin/builder/builder_state.js');
             const portfolio = await import('/js/portfolio_ui.js');
@@ -36,8 +35,9 @@ const root = path.resolve(__dirname, '..');
             const host = document.createElement('div');
             host.id = 'security-test'; document.body.append(host);
             host.innerHTML = renderer.renderizarEstrutura({ intro:attack, sections:[{icon:attack,title:attack,items:[attack]}], benefits:[attack] });
-            host.append(builder.createSectionCardElement({icon:quote,title:quote,open:true}));
-            Object.assign(builderState, { intro:attack, sections:[{icon:attack,title:attack,items:[attack]}], benefits:[attack] });
+            const field = document.createElement('input'); field.className = 'builder-title'; field.value = quote; host.append(field);
+            host.insertAdjacentHTML('beforeend', renderer.renderizarCombo({ descricao:attack, destaques:[attack], servicos:[{ nome:attack, estrutura:{ versao:2, intro:attack, destaques:[attack], limites:{} } }] }));
+            Object.assign(builderState, { intro:attack, destaques:[attack], limites:{ faixas:null, duracao_min:null, revisoes:null, melodias:null, artistas:null } });
             preview.renderPreview();
             for (const id of ['render-portfolio','filtros-portfolio']) { const div = document.createElement('div'); div.id=id; host.append(div); }
             portfolio.renderizarProjetos([{id:1,titulo:attack,artista:attack,descricao:attack,categoria:quote,link_audio:'https://example.com/audio',link_capa:'data:text/html,x',vertical:'artists',segmentos_json:[],case_type:'demo'}]);

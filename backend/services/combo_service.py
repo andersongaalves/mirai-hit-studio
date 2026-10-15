@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from models import ComboItemModel, ComboModel, ServicoModel
 from schemas.combo import ComboWrite
+from schemas.servico_estrutura import ler
 from services import audit_service
 
 CENT = Decimal("0.01")
@@ -44,12 +45,23 @@ def serializar(combo: ComboModel) -> dict:
         "nome": item.servico.nome,
         "valor_base": _money(item.servico.valor_base),
         "etapas": len(item.servico.etapas),
+        "estrutura": ler(item.servico.estrutura_servico),
+        "parametros": item.servico.parametros or "",
     } for item in combo.itens]
+    parametros = []
+    for servico in servicos:
+        for parametro in servico["parametros"].split(","):
+            if parametro.strip() and parametro.strip() not in parametros:
+                parametros.append(parametro.strip())
     return {
         "id": combo.id,
         "nome": combo.nome,
         "descricao": combo.descricao,
+        "subtitulo": combo.subtitulo or "",
         "preco_base": _money(combo.preco_base),
+        "aplica_desconto": bool(combo.aplica_desconto),
+        "destaques": list(combo.destaques or []),
+        "parametros": ",".join(parametros),
         "ativo": bool(combo.ativo),
         "soma_servicos": sum((servico["valor_base"] for servico in servicos), Decimal("0.00")),
         "servicos": servicos,
@@ -58,8 +70,8 @@ def serializar(combo: ComboModel) -> dict:
     }
 
 
-def listar(db: Session):
-    return [serializar(combo) for combo in carregar(db)]
+def listar(db: Session, *, somente_ativos=False):
+    return [serializar(combo) for combo in carregar(db, somente_ativos=somente_ativos)]
 
 
 def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
@@ -72,6 +84,9 @@ def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
     combo.descricao = dados.descricao
     combo.preco_base = dados.preco_base
     combo.ativo = dados.ativo
+    combo.subtitulo = dados.subtitulo
+    combo.aplica_desconto = dados.aplica_desconto
+    combo.destaques = list(dados.destaques)
     combo.itens.clear()
     db.flush()
     combo.itens.extend(ComboItemModel(servico_id=servico_id, ordem=ordem)
@@ -80,7 +95,8 @@ def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
 
 def criar(db: Session, dados: ComboWrite, *, actor=None, request_id=None):
     try:
-        combo = ComboModel(nome=dados.nome, descricao=dados.descricao, preco_base=dados.preco_base, ativo=dados.ativo)
+        combo = ComboModel(nome=dados.nome, descricao=dados.descricao, preco_base=dados.preco_base, ativo=dados.ativo,
+                           subtitulo=dados.subtitulo, aplica_desconto=dados.aplica_desconto, destaques=list(dados.destaques))
         _aplicar(db, combo, dados)
         db.add(combo)
         db.flush()

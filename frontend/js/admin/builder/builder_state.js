@@ -1,13 +1,12 @@
 /**
- * Estado global do Builder.
+ * Estado global do editor de conteúdo do serviço (catálogo estruturado).
  *
- * Este objeto nunca deve ser substituído.
- * Apenas suas propriedades devem ser alteradas.
+ * Este objeto nunca deve ser substituído; apenas suas propriedades mudam.
  */
 export const builderState = Object.seal({
     intro: "",
 
-    sections: [],
+    destaques: [],
 
-    benefits: [],
+    limites: { faixas: null, duracao_min: null, revisoes: null, melodias: null, artistas: null },
 });

@@ -88,8 +88,8 @@ const QUOTAS = [
         await page.getByLabel('WAV — Materiais do cliente', { exact: true }).check();
         await page.getByLabel('Versões por arquivo — Prévias').fill('');
         assert.deepEqual(await page.evaluate(() => window.readEditor()), { ok: [
-            { tipo: 'material', max_arquivos: 2, max_versoes: null, max_tamanho_mb: null, max_total_mb: 500, formatos: ['audio/wav'] },
-            { tipo: 'previa', max_arquivos: 1, max_versoes: null, max_tamanho_mb: 10, max_total_mb: null, formatos: ['audio/mpeg'] },
+            { tipo: 'material', max_arquivos: 2, max_versoes: null, max_tamanho_mb: null, max_total_mb: 500, max_duracao_min: null, formatos: ['audio/wav'] },
+            { tipo: 'previa', max_arquivos: 1, max_versoes: null, max_tamanho_mb: 10, max_total_mb: null, max_duracao_min: null, formatos: ['audio/mpeg'] },
         ] });
         await page.getByLabel('Limitar prévias').uncheck();
         assert.equal((await page.evaluate(() => window.readEditor())).ok.length, 1);

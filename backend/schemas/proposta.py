@@ -83,6 +83,7 @@ class SnapshotCota(Contract):
     max_versoes: int | None = None
     max_tamanho_mb: int | None = None
     max_total_mb: int | None = None
+    max_duracao_min: int | None = None
     formatos: list[str] | None = None
 
 
