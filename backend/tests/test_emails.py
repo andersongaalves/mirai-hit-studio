@@ -99,7 +99,7 @@ with patch.object(resend.Emails, 'send', side_effect=capture):
 welcome, news = sent
 check_common(welcome['html'])
 assert 'Joao Silva' in welcome['html'] and 'Cancelar inscrição' in welcome['html']
-assert news['text'].endswith('Cancelar inscrição: ' + settings.PUBLIC_API_URL.rstrip('/') + '/newsletter/unsubscribe?token=opaque')
+assert news['text'].endswith('Cancelar inscrição: ' + EmailService._url_cancelamento('opaque'))
 ''')
 
 
