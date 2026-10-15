@@ -120,10 +120,41 @@ function openEditor(combo = null) {
     active.type = "checkbox";
     active.checked = combo ? Boolean(combo.ativo) : true;
 
-    const selected = new Set(combo ? combo.servicos.map(item => item.servico_id) : []);
+    // The order of the services in the combo (stages, proposal and site follow it).
+    const order = combo ? combo.servicos.map(item => item.servico_id) : [];
+    const selected = { has: id => order.includes(id), get size() { return order.length; } };
     const sum = element("p", "combo-form__sum");
     const useSum = element("button", "btn-outline", "Usar soma dos serviços");
     useSum.type = "button";
+    const orderList = element("ol", "combo-form__ordem");
+    orderList.setAttribute("aria-label", "Ordem dos serviços no combo");
+    const nameOf = id => state.servicos.find(servico => servico.id === id)?.nome
+        ?? combo?.servicos.find(item => item.servico_id === id)?.nome ?? `Serviço ${id}`;
+    const renderOrder = () => {
+        orderList.replaceChildren();
+        if (!order.length) {
+            orderList.append(element("li", "admin-help", "Marque os serviços abaixo; depois ajuste a ordem aqui."));
+            return;
+        }
+        order.forEach((id, index) => {
+            const item = element("li", "combo-form__ordem-item");
+            item.append(element("span", "", `${index + 1}. ${nameOf(id)}`));
+            const move = (delta, text, label) => {
+                const button = element("button", "btn-small", text);
+                button.type = "button";
+                button.setAttribute("aria-label", `${label}: ${nameOf(id)}`);
+                button.disabled = index + delta < 0 || index + delta >= order.length;
+                button.addEventListener("click", () => {
+                    [order[index], order[index + delta]] = [order[index + delta], order[index]];
+                    renderOrder();
+                    orderList.querySelectorAll("button")[Math.max(0, (index + delta) * 2 + (delta > 0 ? 1 : 0))]?.focus();
+                });
+                return button;
+            };
+            item.append(move(-1, "↑", "Mover para cima"), move(1, "↓", "Mover para baixo"));
+            orderList.append(item);
+        });
+    };
     const updateSum = () => {
         const total = state.servicos.filter(servico => selected.has(servico.id))
             .reduce((acc, servico) => acc + Math.round(Number(servico.valor_base || 0) * 100), 0) / 100;
@@ -133,7 +164,6 @@ function openEditor(combo = null) {
 
     const services = element("fieldset", "combo-form__servicos");
     services.append(element("legend", "", "Serviços do combo (mínimo 2)"));
-    // Component order follows the catalog order of the chosen services.
     state.servicos.forEach(servico => {
         const label = element("label", "combo-form__servico");
         const box = element("input");
@@ -141,13 +171,19 @@ function openEditor(combo = null) {
         box.value = String(servico.id);
         box.checked = selected.has(servico.id);
         box.addEventListener("change", () => {
-            if (box.checked) selected.add(servico.id); else selected.delete(servico.id);
+            const at = order.indexOf(servico.id);
+            if (box.checked && at < 0) order.push(servico.id);
+            if (!box.checked && at >= 0) order.splice(at, 1);
             updateSum();
+            renderOrder();
         });
         label.append(box, document.createTextNode(` ${servico.nome} — ${money(servico.valor_base)}`));
         services.append(label);
     });
     updateSum();
+    renderOrder();
+    const orderBox = element("fieldset", "combo-form__servicos");
+    orderBox.append(element("legend", "", "Ordem dos serviços no combo"), orderList);
 
     const activeLabel = element("label", "combo-form__check");
     activeLabel.append(active, document.createTextNode(" Ativo (aparece no site e em novas propostas)"));
@@ -171,6 +207,7 @@ function openEditor(combo = null) {
         sum,
         useSum,
         services,
+        orderBox,
         activeLabel,
         feedback,
         actions,
@@ -178,7 +215,7 @@ function openEditor(combo = null) {
     form.addEventListener("submit", async event => {
         event.preventDefault();
         if (state.busy) return;
-        const ordered = state.servicos.filter(servico => selected.has(servico.id)).map(servico => servico.id);
+        const ordered = [...order];
         if (name.value.trim().length < 3) { feedback.textContent = "Informe um nome com pelo menos 3 letras."; return; }
         if (price.value === "" || Number(price.value) < 0) { feedback.textContent = "Informe o preço do combo."; return; }
         if (ordered.length < 2) { feedback.textContent = "Escolha pelo menos dois serviços."; return; }
