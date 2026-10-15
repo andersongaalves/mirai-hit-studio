@@ -341,6 +341,18 @@ testes de downgrade.
 **Publicacao:** aplicar `d6f8b0c2e437` antes do release (tres tabelas novas e uma coluna com
 padrao 0, aditivo).
 
+### Publicacao da 5.10 (15/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #47 (registro da 5.09) e #48 (5.10) |
+| Commit publicado | `23c7b58b43193f8da15a1268979112f7f2e985a2` |
+| Migration | `d6f8b0c2e437`, aplicada pelo responsavel no SQL Editor do Supabase antes do release; conferida (tres tabelas de politicas e `producao_etapas.revisoes_usadas` com padrao 0, nenhuma etapa alterada) |
+| CI da `main` | Storage Integration Gate `38746570385`, Portals E2E e Client access migration verdes (o gate dos PRs #47 e #48 foi repetido por falha ao baixar imagem Docker; no #48 tambem houve linha em branco no fim de arquivo, corrigida) |
+| Storage Provider Rollout Evidence | run `38747574863` (sucesso) |
+| Protected Production Release | run `38749661557`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261015-R3-510` |
+
 ## Ajuste do catalogo (pedido do responsavel em 15/10/2026)
 
 Antes da 5.11, a pedido do responsavel: o servico deixa de escolher "avulso ou combo" e as
