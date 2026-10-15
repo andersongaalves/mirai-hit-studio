@@ -71,8 +71,8 @@ def buscar_financeiro(db: Session, producao_id: int, cliente_id: int):
         ],
     }
     if politica_service.vigentes(db, producao.id)["financeiro_cliente"] == "resumido":
-        # 5.10: summary view keeps status, totals, balance and the payment link; no history.
-        resposta["cobranca"]["pagamentos"] = []
+        # 5.10: summary view keeps status, balance, due date and the payment link only.
+        resposta["cobranca"].update(valor_total=None, valor_pago=None, pagamentos=[])
         resposta["resumido"] = True
     if saldo > 0 and status.value not in {"paga", "cancelada"}:
         try:

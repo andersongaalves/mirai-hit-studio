@@ -65,9 +65,19 @@ async function loadStages(production) {
     } catch {
         return;
     }
-    if (route().view !== "detail" || route().id !== production.id || !data?.etapas?.length) return;
+    if (route().view !== "detail" || route().id !== production.id) return;
     const panel = document.getElementById("production-stages-panel");
     if (!panel) return;
+    if (data?.etapas_ocultas) {
+        // 5.10: the contract shows only the overall progress to the client.
+        const title = document.createElement("h2");
+        title.textContent = "Etapas";
+        const progress = document.createElement("p");
+        progress.textContent = `Progresso do projeto: ${Number(data.progresso_percentual) || 0}%`;
+        panel.replaceChildren(title, progress);
+        return;
+    }
+    if (!data?.etapas?.length) return;
     panel.replaceChildren(stagesPanel({
         role: "cliente",
         data,

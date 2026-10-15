@@ -104,7 +104,9 @@ assert 'revisoes_usadas' not in client_stages['etapas'][0] or client_stages['eta
 finance = api.get(f'/portal/cliente/producoes/{production_id}/financeiro', headers=bearer('client-a'))
 assert finance.status_code == 200, finance.text
 if finance.json()['cobranca'] is not None:
-    assert finance.json()['resumido'] is True and finance.json()['cobranca']['pagamentos'] == []
+    charge = finance.json()['cobranca']
+    assert finance.json()['resumido'] is True and charge['pagamentos'] == [] and charge['valor_pago'] is None
+    assert charge['saldo_pendente'] is not None
 
 # Reviews: the producer returns a stage from review once (included); the second needs the admin.
 with Session(engine) as db:

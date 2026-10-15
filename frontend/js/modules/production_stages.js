@@ -9,6 +9,17 @@ export const STAGE_LABELS = Object.freeze({
     concluida: "Concluída",
 });
 
+// 5.10: review rounds used against the included ones; beyond them they are extra.
+function reviewSummary(stage) {
+    const included = Number.isInteger(stage.revisoes_incluidas) ? stage.revisoes_incluidas : null;
+    const used = Number.isInteger(stage.revisoes_usadas) ? stage.revisoes_usadas : 0;
+    if (included === null) return used ? `${used} ${used === 1 ? "revisão usada" : "revisões usadas"}` : "";
+    const base = included === 1 ? "1 revisão incluída" : `${included} revisões incluídas`;
+    if (!used) return base;
+    const extra = used - included;
+    return extra > 0 ? `${base} (${used} usadas, ${extra} extra)` : `${base} (${used} ${used === 1 ? "usada" : "usadas"})`;
+}
+
 function actionLabel(from, to) {
     if (to === "em_andamento") return from === "pendente" ? "Iniciar" : from === "concluida" ? "Reabrir" : "Retomar";
     if (to === "em_revisao") return "Enviar para revisão";
@@ -109,14 +120,19 @@ export function stagesPanel({
         item.append(head);
 
         const meta = [];
-        meta.push(stage.prazo ? `Prazo: ${formatDate(stage.prazo)}` : "Sem prazo definido");
+        // 5.10: the contract may hide stage deadlines from the client; say nothing then.
+        if (stage.prazo) meta.push(`Prazo: ${formatDate(stage.prazo)}`);
+        else if (role !== "cliente") meta.push("Sem prazo definido");
         if (stage.concluida_em) meta.push(`Concluída em ${formatDate(stage.concluida_em)}`);
         if (stage.depende_da_anterior) meta.push("Depende da etapa anterior");
         // 5.07: producers see only "Você"/"Outro produtor"; the admin sees names and the executor.
         if (role === "produtor" && stage.responsavel_rotulo) meta.push(`Responsável: ${stage.responsavel_rotulo === "Voce" ? "Você" : stage.responsavel_rotulo === "Sem responsavel" ? "sem responsável" : "outro produtor"}`);
         if (role === "admin") meta.push(`Responsável: ${stage.responsavel_nome || "sem responsável"}`);
         if (role === "admin" && stage.executor_nome) meta.push(`Executada por ${stage.executor_nome}`);
-        if (role !== "cliente" && Number.isInteger(stage.revisoes_incluidas)) meta.push(`${stage.revisoes_incluidas} revisões incluídas`);
+        if (role !== "cliente") {
+            const reviewText = reviewSummary(stage);
+            if (reviewText) meta.push(reviewText);
+        }
         if (role === "admin" && stage.valor != null) meta.push(`${money(stage.valor)} (${String(stage.peso_percentual).replace(".", ",")}%)`);
         item.append(element("p", "production-stage__meta", meta.join(" · ")));
 

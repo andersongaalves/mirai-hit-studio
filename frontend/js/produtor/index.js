@@ -188,9 +188,13 @@ async function uploadFile(production, file, type, replacesId, button, note = "")
     button.disabled = true;
     setAlert();
     try {
-        await api.enviarArquivo(production.id, file, type, replacesId, note);
+        const sent = await api.enviarArquivo(production.id, file, type, replacesId, note);
         await openDetail(production.id);
-        setAlert(type === "previa" ? "Prévia enviada ao cliente com sucesso!" : "Arquivo enviado como uma nova versão.");
+        // 5.10: the contract may hold previews until the studio approves them.
+        const previewMessage = sent?.visivel_cliente === false
+            ? "Prévia enviada. O cliente verá depois da aprovação do estúdio."
+            : "Prévia enviada ao cliente com sucesso!";
+        setAlert(type === "previa" ? previewMessage : "Arquivo enviado como uma nova versão.");
     } catch (error) {
         setAlert(error.message, true);
         button.disabled = false;
