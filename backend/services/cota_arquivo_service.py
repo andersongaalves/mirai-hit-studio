@@ -241,6 +241,6 @@ def verificar(db: Session, producao_id: int, *, tipo: str, mime_type: str, taman
     if nova_versao is None and cota.max_arquivos is not None and arquivos >= cota.max_arquivos:
         raise CotaExcedida(f"Limite de {cota.max_arquivos} arquivo(s) de {rotulo} do contrato atingido.")
     if nova_versao is not None and cota.max_versoes is not None and nova_versao > cota.max_versoes:
-        raise CotaExcedida(f"Limite de {cota.max_versoes} versao(oes) por arquivo de {rotulo} atingido.")
+        raise CotaExcedida(f"Limite de {cota.max_versoes} versao(oes) por arquivo de {rotulo} do contrato atingido.")
     if cota.max_total_mb is not None and total + tamanho > cota.max_total_mb * MB:
         raise CotaExcedida(f"Espaco contratado para {rotulo} ({cota.max_total_mb} MB) esgotado.")

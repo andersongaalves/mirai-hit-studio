@@ -219,6 +219,7 @@ jobs:
                   node frontend/tests/proposta_editor.cjs
                   node frontend/tests/proposta_catalogo.cjs
                   node frontend/tests/combos_admin.cjs
+                  node frontend/tests/file_quotas.cjs
                   node frontend/tests/production_stages_admin.cjs
 
             - name: Prove lifecycle and migration safety gates

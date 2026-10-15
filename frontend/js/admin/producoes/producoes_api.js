@@ -193,4 +193,3 @@ export async function salvarCotasArquivos(id, cotas) {
         body: JSON.stringify({ cotas }),
     }), "Erro ao salvar cotas de arquivos.");
 }
-

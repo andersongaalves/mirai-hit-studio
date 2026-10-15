@@ -13,3 +13,4 @@
 .file-quotas__origin { color: var(--color-text-secondary); font-size: 0.8rem; }
 .file-quota-hint { margin: 0; color: var(--color-text-secondary); font-size: 0.85rem; overflow-wrap: anywhere; }
 .file-quota-hint.is-exhausted { color: var(--color-warning); }
+.producer-upload .file-quota-hint { grid-column: 1 / -1; }

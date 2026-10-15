@@ -192,7 +192,10 @@ function filesPanel(production, files, handlers) {
     note.setAttribute("aria-label", "Observação para esta versão");
     const submit = element("button", "btn-cta", "Enviar arquivo");
     submit.type = "submit";
-    form.append(type, input, replaces, note, submit);
+    const quotaHint = element("p", "file-quota-hint hidden");
+    quotaHint.dataset.quotaHint = "";
+    quotaHint.setAttribute("aria-live", "polite");
+    form.append(type, input, replaces, quotaHint, note, submit);
     form.addEventListener("submit", event => {
         event.preventDefault();
         if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value);

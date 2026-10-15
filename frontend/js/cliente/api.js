@@ -146,3 +146,11 @@ export async function listarEtapas(producaoId) {
         "Não foi possível carregar as etapas.",
     );
 }
+
+// Roadmap 5.09: contractual file quotas of the production, with usage.
+export async function listarCotas(producaoId) {
+    return responseData(
+        await authFetch(`/portal/cliente/producoes/${producaoId}/cotas-arquivos`),
+        "Não foi possível carregar as cotas de arquivos.",
+    );
+}

@@ -164,3 +164,43 @@ export function quotaList(cotas = []) {
     });
     return list;
 }
+
+/** Text for a portal upload form: the quota of the selected type and what still fits. */
+export function uploadHint(cotas, tipo, newFile = true) {
+    const cota = (cotas || []).find(item => item.tipo === tipo);
+    if (!cota) return { text: "", exhausted: false };
+    const text = `Cota do contrato: ${describeQuota(cota)}.`;
+    const space = cota.max_total_mb != null && cota.total_usado_bytes >= cota.max_total_mb * 1024 * 1024;
+    if (space) return { text: `${text} O espaço contratado acabou; fale com a equipe.`, exhausted: true };
+    const files = cota.max_arquivos != null && cota.arquivos_usados >= cota.max_arquivos;
+    if (files && newFile) {
+        return { text: `${text} Limite de arquivos atingido: envie uma nova versão de um arquivo existente.`, exhausted: true };
+    }
+    return { text, exhausted: false };
+}
+
+/**
+ * Keeps the quota hint of every portal upload form under root in sync with its type and
+ * replacement selects. Safe to call again after a re-render or new quotas.
+ */
+export function syncUploadHints(root, cotas) {
+    root.querySelectorAll("form.producer-upload").forEach(form => {
+        const hint = form.querySelector("[data-quota-hint]");
+        const type = form.querySelector('select[aria-label="Tipo de arquivo"]');
+        if (!hint || !type) return;
+        const replaces = form.querySelector('select[aria-label="Versão substituída"]');
+        form.quotaCotas = cotas;
+        const update = () => {
+            const { text, exhausted } = uploadHint(form.quotaCotas, type.value, !replaces?.value);
+            hint.textContent = text;
+            hint.classList.toggle("hidden", !text);
+            hint.classList.toggle("is-exhausted", exhausted);
+        };
+        if (!form.dataset.quotaHintBound) {
+            form.dataset.quotaHintBound = "true";
+            type.addEventListener("change", update);
+            replaces?.addEventListener("change", update);
+        }
+        update();
+    });
+}

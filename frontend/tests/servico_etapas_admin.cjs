@@ -1,4 +1,4 @@
-// Roadmap 3.0, 5.04: service stages editor (order, weights summing to 100%).
+// Roadmap 3.0, 5.04: service stages editor (order, weights summing to 100%); 5.09: file quotas.
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -9,6 +9,7 @@ const service = { id: 3, nome: 'Plano Start', subtitulo: '', valor_base: 1000, c
 let stored = [{ id: 1, ordem: 1, nome: 'Briefing', descricao: '', peso_percentual: '0.00', prazo_dias: null, unidade: '', revisoes_incluidas: null, depende_da_anterior: false, administrativa: true }];
 const puts = [];
 let rejectNext = false;
+const quotaPuts = [];
 
 async function staticResponse(route) {
     const url = new URL(route.request().url());
@@ -50,6 +51,14 @@ async function staticResponse(route) {
             }
             stored = body.etapas.map((stage, index) => ({ id: index + 10, ordem: index + 1, ...stage, peso_percentual: Number(stage.peso_percentual).toFixed(2) }));
             return route.fulfill({ json: stored });
+        }
+        if (url.pathname === '/servicos/3/cotas-arquivos' && request.method() === 'GET') {
+            return route.fulfill({ json: [{ tipo: 'previa', max_arquivos: 2, max_versoes: null, max_tamanho_mb: null, max_total_mb: null, formatos: null }] });
+        }
+        if (url.pathname === '/servicos/3/cotas-arquivos' && request.method() === 'PUT') {
+            const body = request.postDataJSON();
+            quotaPuts.push(body);
+            return route.fulfill({ json: body.cotas });
         }
         if (url.pathname === '/config') return route.fulfill({ json: {} });
         if (url.pathname === '/config/portfolio-segments') return route.fulfill({ json: { segments: [], revision: '0'.repeat(64) } });
@@ -116,15 +125,27 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Remover etapa 1' }).click();
         assert.equal(await page.locator('.servico-etapa').first().getByLabel('Depende da anterior').isChecked(), false);
 
+        // 5.09: quotas of the service, saved as a typed list.
+        await page.waitForSelector('#servico-cotas .file-quota');
+        assert.equal(await page.locator('#servico-cotas-unsaved').isVisible(), false);
+        assert.equal(await page.getByLabel('Arquivos — Prévias').inputValue(), '2');
+        await page.getByLabel('Limitar entregas').check();
+        await page.getByLabel('MB por arquivo — Entregas').fill('50');
+        await page.getByRole('button', { name: 'Salvar cotas' }).click();
+        await page.waitForFunction(() => document.body.textContent.includes('Cotas salvas.'));
+        assert.deepEqual(quotaPuts.at(-1).cotas.map(cota => [cota.tipo, cota.max_arquivos, cota.max_tamanho_mb]), [
+            ['previa', 2, null], ['entrega', null, 50],
+        ]);
+
         // The legacy builder layout already overflows on phones; the stages section itself must not.
         for (const width of [390, 1024, 1400]) {
             await page.setViewportSize({ width, height: 900 });
-            const overflow = await page.evaluate(() => [...document.querySelectorAll('#servico-etapas, #servico-etapas *')]
+            const overflow = await page.evaluate(() => [...document.querySelectorAll('#servico-etapas, #servico-etapas *, #servico-cotas, #servico-cotas *')]
                 .some(element => element.getBoundingClientRect().right > Math.max(window.innerWidth, document.getElementById('servico-etapas').parentElement.getBoundingClientRect().right) + 1));
             assert.equal(overflow, false, `stages overflow at ${width}`);
         }
         assert.deepEqual(errors, []);
-        console.log('PASS: service stages editor validates 100% total, ordering, dependencies and saves the typed list.');
+        console.log('PASS: service stages editor validates 100% total, ordering, dependencies and saves the typed list; file quotas save.');
     } finally {
         await browser.close();
     }
