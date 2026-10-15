@@ -48,4 +48,3 @@ public_router = APIRouter(prefix="/catalogo", tags=["Combos"])
 @public_router.get("/combos", response_model=list[ComboResponse])
 def listar_publicos(db: Db):
     return service.listar(db, somente_ativos=True)
-
