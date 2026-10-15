@@ -40,7 +40,8 @@ function normalizarItem(item = {}) {
         quantidade: toNumber(item.quantidade || 0),
         valor_unitario: toNumber(item.valor_unitario || 0),
         desconto: toNumber(item.desconto || 0),
-        servico_id: Number.isInteger(item.servico_id) ? item.servico_id : null
+        servico_id: Number.isInteger(item.servico_id) ? item.servico_id : null,
+        combo_id: Number.isInteger(item.combo_id) ? item.combo_id : null
     };
 }
 
@@ -129,16 +130,22 @@ export function adicionarItem() {
     sincronizarTotais();
 }
 
-// Roadmap 3.0, 5.05: a catalog line starts at the base price; the admin negotiates it.
-export function adicionarItemCatalogo(servico) {
-    if (!podeEditar() || !Number.isInteger(servico?.id)) return;
+// Roadmap 3.0, 5.05/5.08: a catalog line (service or combo) starts at the reference price;
+// the admin negotiates it. A line points to a service or to a combo, never both.
+export function adicionarItemCatalogo(entrada, tipo = "servico") {
+    if (!podeEditar() || !Number.isInteger(entrada?.id)) return;
 
     propostaState.proposta.itens.push(
-        normalizarItem({
-            descricao: servico.nome,
+        normalizarItem(tipo === "combo" ? {
+            descricao: entrada.nome,
             quantidade: 1,
-            valor_unitario: servico.valor_base,
-            servico_id: servico.id
+            valor_unitario: entrada.preco_base,
+            combo_id: entrada.id
+        } : {
+            descricao: entrada.nome,
+            quantidade: 1,
+            valor_unitario: entrada.valor_base,
+            servico_id: entrada.id
         })
     );
 
@@ -150,6 +157,7 @@ export function desvincularItem(index) {
     if (!podeEditar() || !propostaState.proposta?.itens[index]) return;
 
     propostaState.proposta.itens[index].servico_id = null;
+    propostaState.proposta.itens[index].combo_id = null;
     marcarAlterado();
 }
 

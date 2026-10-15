@@ -226,3 +226,28 @@ o historico inicial das etapas existentes).
 Nota tecnica: `executor_usuario_id` ficou sem chave estrangeira (registro historico, como
 `servico_id`), apos divergencia de nome de constraint entre `create_all` e migration nos
 testes de downgrade.
+
+## 5.08 - Combos modulares
+
+- Catalogo de combos (migration `b2d4f6a8c913`): `combos` (nome, descricao, preco de
+  referencia, ativo) e `combo_itens` (servicos em ordem, sem repeticao, minimo 2). Admin em
+  Servicos > Combos: criar, editar e desativar; servico que esta em um combo nao pode ser
+  excluido (409). Decisao de preco: o combo tem preco de referencia no catalogo e o preco
+  final e negociado na proposta, como nos servicos.
+- Proposta: cada item aponta para um servico ou para um combo ativo (`combo_id`), nunca os
+  dois. A linha comeca no preco de referencia; o valor unitario continua negociavel.
+- Distribuicao em dois niveis, congelada no envio (5.05): o valor contratado da linha e
+  dividido entre os servicos do combo pelo preco de catalogo de cada um (maior resto em
+  centavos; divisao igual se todos custarem zero) e, depois, a parcela de cada servico entre
+  as suas etapas pelos pesos. Soma dos servicos = valor da linha; soma das etapas = parcela
+  do servico. Descontos ficam distribuidos pelo mesmo caminho.
+- Envio bloqueado (409) se o combo foi removido, ficou sem servicos ou algum servico tem
+  etapas que nao somam 100%. Aceite de proposta antiga continua tolerante.
+- Producao (5.06): as etapas do combo sao criadas com o servico de origem de cada uma e
+  agrupadas por "combo — servico"; dependencias valem dentro de cada servico.
+- Telas: painel Combos no Admin; seletor de itens da proposta com grupos Servicos e Combos;
+  valores congelados mostram a parcela de cada servico e suas etapas.
+- Fora do escopo: venda de combos no site publico e regra comercial explicita de desconto
+  diferente da proporcional.
+
+**Publicacao:** aplicar `b2d4f6a8c913` antes do release (duas tabelas novas).

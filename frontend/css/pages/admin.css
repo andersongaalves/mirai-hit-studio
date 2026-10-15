@@ -1756,3 +1756,30 @@
 .servico-etapas__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
 #servico-etapas-total[data-state="error"] { color: var(--color-danger); }
 #servico-etapas-total[data-state="ok"] { color: var(--color-success, #10b981); }
+
+/* Roadmap 3.0, 5.08: catalog combos. */
+.combos-panel { display: grid; gap: var(--space-3); margin-top: var(--space-6); padding: var(--space-4); border: var(--border-subtle); border-radius: var(--radius-md); min-width: 0; }
+.combos-panel__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.combos-panel__header h2 { margin: 0; font-size: 1.25rem; }
+.combos-list { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.combo-card { display: grid; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: var(--border-subtle); border-left: 3px solid var(--color-accent); border-radius: var(--radius-md); overflow-wrap: anywhere; }
+.combo-card--inativo { opacity: 0.7; border-left-color: var(--color-text-secondary); }
+.combo-card p, .combo-card ul { margin: 0; }
+.combo-card__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+.combo-card__badge { padding: 0 var(--space-2); border: 1px solid currentColor; border-radius: 999px; font-size: 0.75rem; color: var(--color-text-secondary); }
+.combo-card__meta, .combo-card__servicos { color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.combo-card__servicos { padding-left: var(--space-4); }
+.combo-card button { justify-self: start; }
+.combo-editor { min-width: 0; }
+.combo-form { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border: var(--border-subtle); border-radius: var(--radius-md); }
+.combo-form h3 { margin: 0; overflow-wrap: anywhere; }
+.combo-form__field { display: grid; gap: var(--space-1); min-width: 0; }
+.combo-form__field input { min-width: 0; max-width: 100%; }
+.combo-form__sum, .combo-form__feedback { margin: 0; color: var(--color-text-secondary); }
+.combo-form__feedback:empty { display: none; }
+.combo-form > button.btn-outline { justify-self: start; }
+.combo-form__servicos { display: grid; gap: var(--space-2); min-width: 0; margin: 0; padding: var(--space-3); border: var(--border-subtle); border-radius: var(--radius-sm); }
+.combo-form__servico, .combo-form__check { display: flex; align-items: baseline; gap: var(--space-2); overflow-wrap: anywhere; }
+.combo-form__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.proposta-snapshot__componente { display: grid; gap: var(--space-1); min-width: 0; padding-left: var(--space-3); border-left: 2px solid var(--color-accent); }
+.proposta-snapshot__componente p { margin: 0; overflow-wrap: anywhere; }

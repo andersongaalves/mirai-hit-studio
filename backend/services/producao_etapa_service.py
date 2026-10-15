@@ -123,8 +123,12 @@ def instanciar(db: Session, producao: ProducaoModel, proposta: PropostaModel, *,
                 producao_id=producao.id,
                 proposta_id=proposta.id,
                 item_indice=int(item["indice"]),
-                item_descricao=str(item.get("descricao", ""))[:200],
-                servico_id=item.get("servico_id"),
+                # 5.08: combo stages keep their component service as origin and group label.
+                item_descricao=(
+                    f"{item.get('descricao', '')} — {etapa['servico_nome']}" if etapa.get("servico_nome")
+                    else str(item.get("descricao", ""))
+                )[:200],
+                servico_id=etapa.get("servico_id") or item.get("servico_id"),
                 ordem=ordem,
                 ordem_no_item=posicao,
                 nome=str(etapa["nome"])[:100],

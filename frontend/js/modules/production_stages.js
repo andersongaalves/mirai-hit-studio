@@ -88,12 +88,14 @@ export function stagesPanel({
 
     const feedback = element("p", "production-stages__feedback");
     feedback.setAttribute("role", "status");
-    const multipleItems = new Set(stages.map(stage => stage.item_indice)).size > 1;
+    // Group by contract item and, inside combos (5.08), by component service label.
+    const groupKey = stage => `${stage.item_indice}|${stage.item_descricao}`;
+    const multipleItems = new Set(stages.map(groupKey)).size > 1;
     const list = element("ol", "production-stages__list");
     let currentItem = null;
     stages.forEach(stage => {
-        if (multipleItems && stage.item_indice !== currentItem) {
-            currentItem = stage.item_indice;
+        if (multipleItems && groupKey(stage) !== currentItem) {
+            currentItem = groupKey(stage);
             list.append(element("li", "production-stages__group", stage.item_descricao || `Item ${stage.item_indice}`));
         }
         const item = element("li", `production-stage production-stage--${stage.status}`);

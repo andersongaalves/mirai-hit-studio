@@ -72,7 +72,7 @@ with engine.begin() as connection:
     Base.metadata.create_all(connection, tables=[table for table in Base.metadata.sorted_tables
                                                 if table.name not in ai_tables])
 command.stamp(migration_config(), 'f6c2a8d4e1b9')
-assert ScriptDirectory.from_config(migration_config()).get_heads() == ['a9c1e3f5b702']
+assert ScriptDirectory.from_config(migration_config()).get_heads() == ['b2d4f6a8c913']
 command.upgrade(migration_config(), 'f2a8c4e6d901')
 assert ai_tables <= set(inspect(engine).get_table_names())
 with engine.connect() as connection:

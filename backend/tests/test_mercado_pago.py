@@ -386,7 +386,7 @@ from alembic.script import ScriptDirectory
 
 config = migration_config()
 head = bootstrap(engine)
-assert head == 'a9c1e3f5b702'
+assert head == 'b2d4f6a8c913'
 command.downgrade(config, 'c4f8a2d19e73')
 columns = {column['name'] for column in inspect(engine).get_columns('pagamentos')}
 assert 'provider_idempotency_key' not in columns

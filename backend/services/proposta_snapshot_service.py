@@ -57,17 +57,56 @@ def carregar_servicos(db: Session, ids) -> dict[int, ServicoModel]:
     return {servico.id: servico for servico in db.scalars(query)}
 
 
+def carregar_combos(db: Session, ids) -> dict:
+    from services import combo_service  # Local import: combo_service imports schemas only.
+
+    ids = {identifier for identifier in ids if identifier is not None}
+    return {combo.id: combo for combo in combo_service.carregar(db, ids)} if ids else {}
+
+
 def validar_servicos(db: Session, itens: list[PropostaItem]) -> None:
-    """Draft rule: every catalog reference must point to an existing service."""
+    """Draft rule: every catalog reference must point to an existing service or active combo."""
     ids = {item.servico_id for item in itens if item.servico_id is not None}
     if ids - set(carregar_servicos(db, ids)):
         raise service.PropostaInvalida("Servico do catalogo nao encontrado.")
+    combo_ids = {item.combo_id for item in itens if item.combo_id is not None}
+    combos = carregar_combos(db, combo_ids)
+    if combo_ids - {combo_id for combo_id, combo in combos.items() if combo.ativo}:
+        raise service.PropostaInvalida("Combo do catalogo nao encontrado ou inativo.")
 
 
 def _linha(item: PropostaItem):
     bruto = (item.quantidade * item.valor_unitario).quantize(CENT, rounding=ROUND_HALF_UP)
     desconto = min(bruto, item.desconto.quantize(CENT, rounding=ROUND_HALF_UP))
     return bruto, desconto, bruto - desconto
+
+
+def _componentes(combo, valor_contratado: Decimal):
+    """5.08, first level: split the combo value among its services by catalog price.
+
+    Weights are the services' base prices in cents (equal split if they are all zero), so
+    the components always add up exactly to the contracted value of the line.
+    """
+    itens = sorted(combo.itens, key=lambda item: item.ordem)
+    if not itens:
+        raise ValueError("combo_vazio")
+    precos = [_cents(Decimal(str(item.servico.valor_base or 0))) for item in itens]
+    if sum(precos) <= 0:
+        precos = [1] * len(itens)
+    valores = _distribuir_por_precos(_cents(valor_contratado), precos)
+    return [(indice, item.servico, _money(valor)) for indice, (item, valor) in enumerate(zip(itens, valores), start=1)]
+
+
+def _distribuir_por_precos(total_centavos: int, precos: list[int]) -> list[int]:
+    """Largest-remainder split of cents proportional to integer prices (exact sum)."""
+    soma = sum(precos)
+    exatos = [total_centavos * preco for preco in precos]
+    partes = [valor // soma for valor in exatos]
+    sobra = total_centavos - sum(partes)
+    ordem = sorted(range(len(precos)), key=lambda index: (-(exatos[index] % soma), index))
+    for index in ordem[:sobra]:
+        partes[index] += 1
+    return partes
 
 
 def _etapas(servico: ServicoModel, valor_contratado: Decimal):
@@ -89,6 +128,59 @@ def _etapas(servico: ServicoModel, valor_contratado: Decimal):
     } for index, (etapa, valor) in enumerate(zip(etapas, valores), start=1)]
 
 
+def _linha_combo(indice, item, combo, bruto, desconto, valor, *, estrito: bool) -> dict:
+    """5.08: combo line. Value -> components (by catalog price) -> stages (by weight).
+
+    Each stage keeps its service origin, so nothing is counted twice: the sum of the
+    components is the contracted value and the stages of a component add up to its share.
+    """
+    componentes, etapas = [], []
+    disponivel = combo is not None and bool(combo.itens)
+    if not disponivel and estrito:
+        raise service.PropostaConflito(
+            f"O combo do item {indice} foi removido do catalogo ou nao tem servicos; revise os itens."
+        )
+    if disponivel:
+        for posicao, servico, alocado in _componentes(combo, valor):
+            try:
+                etapas_servico = _etapas(servico, alocado)
+            except ValueError:
+                if estrito:
+                    raise service.PropostaConflito(
+                        f"As etapas do servico '{servico.nome}' (combo '{combo.nome}') nao somam 100%; revise o catalogo."
+                    ) from None
+                etapas_servico = []
+            componentes.append({
+                "indice": posicao,
+                "servico_id": servico.id,
+                "servico_nome": servico.nome,
+                "preco_catalogo": str(_money(_cents(Decimal(str(servico.valor_base or 0))))),
+                "valor_alocado": str(alocado),
+            })
+            for etapa in etapas_servico:
+                etapas.append({**etapa, "servico_id": servico.id, "servico_nome": servico.nome,
+                               "componente_indice": posicao})
+        if sum(Decimal(componente["valor_alocado"]) for componente in componentes) != valor:
+            raise service.PropostaConflito("Distribuicao do combo inconsistente; nenhuma alteracao confirmada.")
+    return {
+        "indice": indice,
+        "descricao": item.descricao,
+        "servico_id": None,
+        "servico_nome": None,
+        "preco_catalogo": str(_money(_cents(Decimal(str(combo.preco_base))))) if disponivel else None,
+        "catalogo_disponivel": disponivel,
+        "quantidade": str(item.quantidade),
+        "valor_unitario": str(item.valor_unitario),
+        "bruto": str(bruto),
+        "desconto": str(desconto),
+        "valor_contratado": str(valor),
+        "etapas": etapas,
+        "combo_id": item.combo_id,
+        "combo_nome": combo.nome if combo is not None else None,
+        "componentes": componentes,
+    }
+
+
 def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
     """Builds the snapshot dict (JSON-ready) for the proposal's current items.
 
@@ -98,9 +190,14 @@ def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
     """
     itens = [PropostaItem.model_validate(item) for item in model.itens_json]
     servicos = carregar_servicos(db, [item.servico_id for item in itens])
+    combos = carregar_combos(db, [item.combo_id for item in itens])
     linhas = []
     for indice, item in enumerate(itens, start=1):
         bruto, desconto, valor = _linha(item)
+        if item.combo_id is not None:
+            linhas.append(_linha_combo(indice, item, combos.get(item.combo_id), bruto, desconto, valor,
+                                       estrito=estrito))
+            continue
         servico = servicos.get(item.servico_id) if item.servico_id is not None else None
         etapas = []
         if servico is not None:

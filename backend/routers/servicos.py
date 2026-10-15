@@ -74,6 +74,11 @@ def deletar_servico(
 
     if not servico:
         raise HTTPException(status_code=404)
+    # 5.08: a service inside a combo cannot be deleted (the combo would lose a component).
+    from services import combo_service
+
+    if combo_service.servico_em_combo(db, servico_id):
+        raise HTTPException(status_code=409, detail="Este servico faz parte de um combo; remova-o do combo antes.")
 
     db.delete(servico)
     db.commit()

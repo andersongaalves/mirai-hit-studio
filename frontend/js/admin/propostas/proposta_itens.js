@@ -17,16 +17,23 @@ import {
     escapeHtml
 } from "./proposta_utils.js";
 
-// Roadmap 3.0, 5.05: catalog services are loaded once per page; failures keep manual items.
-const catalogo = { servicos: null, erro: false, pedido: null };
+// Roadmap 3.0, 5.05/5.08: catalog services and combos are loaded once per page; failures keep
+// manual items. Combos are optional: if they fail, services still work.
+const catalogo = { servicos: null, combos: [], erro: false, pedido: null };
+
+async function listar(path) {
+    const response = await authFetch(path);
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !Array.isArray(data)) throw new Error("catalogo_indisponivel");
+    return data;
+}
 
 function carregarCatalogo() {
     if (catalogo.servicos || catalogo.pedido) return catalogo.pedido ?? Promise.resolve(catalogo.servicos);
-    catalogo.pedido = authFetch("/servicos")
-        .then(async response => {
-            const data = await response.json().catch(() => null);
-            if (!response.ok || !Array.isArray(data)) throw new Error("catalogo_indisponivel");
-            catalogo.servicos = data.filter(servico => Number.isInteger(servico?.id) && servico.nome);
+    catalogo.pedido = Promise.all([listar("/servicos"), listar("/combos").catch(() => [])])
+        .then(([servicos, combos]) => {
+            catalogo.servicos = servicos.filter(servico => Number.isInteger(servico?.id) && servico.nome);
+            catalogo.combos = combos.filter(combo => Number.isInteger(combo?.id) && combo.nome);
             catalogo.erro = false;
             return catalogo.servicos;
         })
@@ -42,15 +49,34 @@ function servicoPorId(id) {
     return catalogo.servicos?.find(servico => servico.id === id) ?? null;
 }
 
+function comboPorId(id) {
+    return catalogo.combos.find(combo => combo.id === id) ?? null;
+}
+
+// Reference price of the line's catalog origin (service base price or combo reference price).
+function precoReferencia(item) {
+    if (Number.isInteger(item.combo_id)) {
+        const combo = comboPorId(item.combo_id);
+        return combo ? Number(combo.preco_base) : null;
+    }
+    const servico = Number.isInteger(item.servico_id) ? servicoPorId(item.servico_id) : null;
+    return servico ? Number(servico.valor_base) : null;
+}
+
 function origemCatalogo(item) {
-    if (!Number.isInteger(item.servico_id)) return "";
-    const servico = servicoPorId(item.servico_id);
-    const nome = servico ? servico.nome : `Serviço #${item.servico_id}`;
-    const base = servico ? Number(servico.valor_base) : null;
+    const ehCombo = Number.isInteger(item.combo_id);
+    if (!ehCombo && !Number.isInteger(item.servico_id)) return "";
+    const entrada = ehCombo ? comboPorId(item.combo_id) : servicoPorId(item.servico_id);
+    const nome = entrada ? entrada.nome : (ehCombo ? `Combo #${item.combo_id}` : `Serviço #${item.servico_id}`);
+    const base = precoReferencia(item);
     const negociado = base !== null && Math.abs(Number(item.valor_unitario || 0) - base) > 0.004;
+    const rotulo = ehCombo ? "Combo" : "Catálogo";
+    const preco = ehCombo ? "preço de referência" : "preço base";
+    const servicos = ehCombo && entrada?.servicos?.length
+        ? ` · ${entrada.servicos.map(servico => escapeHtml(servico.nome)).join(" + ")}` : "";
     return `
         <p class="proposta-item-origem" data-origem>
-            <span>Catálogo: <strong>${escapeHtml(nome)}</strong>${base !== null ? ` · preço base ${money(base)}` : ""}</span>
+            <span>${rotulo}: <strong>${escapeHtml(nome)}</strong>${base !== null ? ` · ${preco} ${money(base)}` : ""}${servicos}</span>
             ${negociado ? '<span class="proposta-item-origem__tag">Preço negociado</span>' : ""}
             <button class="btn-small" type="button" data-desvincular>Desvincular</button>
         </p>`;
@@ -65,12 +91,26 @@ function preencherSeletor(select, button, aviso) {
         return;
     }
     const servicos = catalogo.servicos ?? [];
-    select.replaceChildren(new Option(servicos.length ? "Escolha um serviço do catálogo" : "Nenhum serviço no catálogo", ""));
-    servicos.forEach(servico => select.append(
-        new Option(`${servico.nome} — ${money(servico.valor_base)}`, String(servico.id))
+    const combos = catalogo.combos.filter(combo => combo.ativo !== false);
+    const vazio = !servicos.length && !combos.length;
+    select.replaceChildren(new Option(vazio ? "Nenhum serviço no catálogo" : "Escolha um serviço ou combo do catálogo", ""));
+    const grupoServicos = document.createElement("optgroup");
+    grupoServicos.label = "Serviços";
+    servicos.forEach(servico => grupoServicos.append(
+        new Option(`${servico.nome} — ${money(servico.valor_base)}`, `s:${servico.id}`)
     ));
+    if (servicos.length) select.append(grupoServicos);
+    // 5.08: only active combos can enter new proposal lines.
+    if (combos.length) {
+        const grupoCombos = document.createElement("optgroup");
+        grupoCombos.label = "Combos";
+        combos.forEach(combo => grupoCombos.append(
+            new Option(`${combo.nome} — ${money(combo.preco_base)}`, `c:${combo.id}`)
+        ));
+        select.append(grupoCombos);
+    }
     const editavel = podeEditar();
-    select.disabled = !editavel || !servicos.length;
+    select.disabled = !editavel || vazio;
     button.disabled = true;
     select.onchange = () => { button.disabled = !editavel || !select.value; };
 }
@@ -86,7 +126,38 @@ function formatarData(valor) {
 function renderizarSnapshot(snapshot) {
     if (!snapshot) return "";
     const origem = snapshot.origem === "aceite" ? "no aceite" : "no envio";
+    const tabela = etapas => `<table class="proposta-snapshot__etapas">
+                    <thead><tr><th>Etapa</th><th>Peso</th><th>Valor</th></tr></thead>
+                    <tbody>${etapas.map(etapa => `
+                        <tr>
+                            <td>${escapeHtml(etapa.nome)}${etapa.administrativa ? " <small>(administrativa)</small>" : ""}</td>
+                            <td>${escapeHtml(String(etapa.peso_percentual).replace(".", ","))}%</td>
+                            <td>${money(etapa.valor)}</td>
+                        </tr>`).join("")}
+                    </tbody>
+               </table>`;
     const itens = (snapshot.itens ?? []).map(item => {
+        if (item.combo_id) {
+            // 5.08: combo value -> services (by catalog price) -> stages (by weight).
+            const componentes = (item.componentes ?? []).map(componente => {
+                const etapas = (item.etapas ?? []).filter(etapa => etapa.componente_indice === componente.indice);
+                return `
+                    <div class="proposta-snapshot__componente">
+                        <p>${escapeHtml(componente.servico_nome)} — ${money(componente.valor_alocado)}
+                            <small>(catálogo ${money(componente.preco_catalogo)})</small></p>
+                        ${etapas.length ? tabela(etapas) : '<p class="proposta-snapshot__sem-etapas">Serviço sem etapas no catálogo na data do congelamento.</p>'}
+                    </div>`;
+            }).join("");
+            const comboInfo = item.combo_nome
+                ? `Combo: ${escapeHtml(item.combo_nome)} · preço de referência ${money(item.preco_catalogo)}`
+                : "Combo indisponível no congelamento";
+            return `
+            <div class="proposta-snapshot__item">
+                <p><strong>${item.indice}. ${escapeHtml(item.descricao)}</strong> — contratado ${money(item.valor_contratado)}</p>
+                <p class="proposta-snapshot__meta">${comboInfo}</p>
+                ${componentes || '<p class="proposta-snapshot__sem-etapas">Sem serviços no combo na data do congelamento.</p>'}
+            </div>`;
+        }
         const etapas = item.etapas?.length
             ? `<table class="proposta-snapshot__etapas">
                     <thead><tr><th>Etapa</th><th>Peso</th><th>Valor</th></tr></thead>
@@ -186,9 +257,9 @@ export function renderizarItens(proposta, onRefresh = () => {}, onChange = () =>
                 row.querySelector("[data-subtotal]").textContent = money(calcularSubtotalItem(item));
                 $("proposta-itens-total").textContent = money(getTotalItens());
                 const tag = row.querySelector(".proposta-item-origem__tag");
-                const servico = servicoPorId(item.servico_id);
-                if (campo === "valor_unitario" && servico) {
-                    const negociado = Math.abs(Number(item.valor_unitario || 0) - Number(servico.valor_base)) > 0.004;
+                const referencia = precoReferencia(item);
+                if (campo === "valor_unitario" && referencia !== null) {
+                    const negociado = Math.abs(Number(item.valor_unitario || 0) - referencia) > 0.004;
                     if (negociado && !tag) {
                         const novo = document.createElement("span");
                         novo.className = "proposta-item-origem__tag";
@@ -227,13 +298,15 @@ export function renderizarItens(proposta, onRefresh = () => {}, onChange = () =>
     const button = $("btn-add-proposta-catalogo");
     const aviso = $("proposta-catalogo-aviso");
     button.onclick = () => {
-        const servico = servicoPorId(Number(select.value));
-        if (!servico) return;
-        adicionarItemCatalogo(servico);
+        const [tipo, id] = String(select.value).split(":");
+        const entrada = tipo === "c" ? comboPorId(Number(id)) : servicoPorId(Number(id));
+        if (!entrada) return;
+        adicionarItemCatalogo(entrada, tipo === "c" ? "combo" : "servico");
         onRefresh();
         onChange();
     };
-    const precisaRecarregarOrigem = !catalogo.servicos && itens.some(item => Number.isInteger(item.servico_id));
+    const precisaRecarregarOrigem = !catalogo.servicos
+        && itens.some(item => Number.isInteger(item.servico_id) || Number.isInteger(item.combo_id));
     carregarCatalogo().then(() => {
         if (!document.body.contains(select)) return;
         // Origin labels need the catalog names; redraw once when they first arrive.
