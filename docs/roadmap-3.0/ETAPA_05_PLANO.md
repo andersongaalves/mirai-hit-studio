@@ -251,3 +251,15 @@ testes de downgrade.
   diferente da proporcional.
 
 **Publicacao:** aplicar `b2d4f6a8c913` antes do release (duas tabelas novas).
+
+### Publicacao da 5.08 (14/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #43 (registro da 5.07) e #44 (5.08) |
+| Commit publicado | `af2ef7bd72fc265154ad5c127671a2d32c114c17` |
+| Migration | `b2d4f6a8c913`, aplicada pelo responsavel no SQL Editor do Supabase antes do release; conferida (`combos` e `combo_itens` presentes) |
+| CI da `main` | Storage Integration Gate `38658303952`, Portals E2E e Client access migration verdes |
+| Storage Provider Rollout Evidence | run `38659118302` (sucesso) |
+| Protected Production Release | run `38660859481`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261014-R3-508` |
