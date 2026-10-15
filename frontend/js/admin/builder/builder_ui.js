@@ -1,147 +1,64 @@
 import * as Builder from "./builder.js";
 import { builderState } from "./builder_state.js";
 import { renderPreview } from "./builder_preview.js";
-import { renderBenefits } from "./builder_benefits.js";
-import { renderSections } from "./builder_sections.js";
+import { LIMIT_FIELDS } from "../../modules/service_catalog.js";
 
-/* ============================================================
- * Inicialização
- * ========================================================== */
+const byId = id => document.getElementById(id);
 
 export function initBuilder() {
     registerEvents();
-
     renderBuilder();
 }
 
-/* ============================================================
- * Renderização
- * ========================================================== */
-
+/** Copies the state into the form and refreshes the preview. */
 export function renderBuilder() {
-    syncIntro();
-
-    renderSections();
-
-    renderBenefits();
-
+    const intro = byId("builder-intro");
+    if (intro) intro.value = builderState.intro;
+    LIMIT_FIELDS.forEach(({ key }) => {
+        const input = byId(`builder-lim-${key}`);
+        if (input) input.value = builderState.limites[key] ?? "";
+    });
+    const destaques = byId("builder-destaques");
+    if (destaques) destaques.value = builderState.destaques.join("\n");
     renderPreview();
 }
 
-export function refresh(type = "all") {
-    switch (type) {
-        case "preview":
-            renderPreview();
-
-            break;
-
-        case "sections":
-            renderSections();
-
-            renderPreview();
-
-            break;
-
-        case "benefits":
-            renderBenefits();
-
-            renderPreview();
-
-            break;
-
-        default:
-            renderBuilder();
-    }
+export function refresh() {
+    renderPreview();
 }
-
-/* ============================================================
- * Eventos
- * ========================================================== */
 
 function registerEvents() {
-    bindIntro();
-
-    bindButtons();
-}
-
-function bindIntro() {
-    const intro = document.getElementById("builder-intro");
-
-    if (!intro) return;
-
-    intro.oninput = (e) => {
-        Builder.atualizarIntro(e.target.value);
-
-        refresh("preview");
-    };
-}
-
-function bindButtons() {
-    const btnAddSection = document.getElementById("btn-add-section");
-
-    if (btnAddSection) {
-        btnAddSection.onclick = handleAddSection;
+    const intro = byId("builder-intro");
+    if (intro) {
+        intro.oninput = event => {
+            Builder.atualizarIntro(event.target.value);
+            refresh();
+        };
     }
-
-    const btnAddBenefit = document.getElementById("btn-add-benefit");
-
-    if (btnAddBenefit) {
-        btnAddBenefit.onclick = handleAddBenefit;
+    LIMIT_FIELDS.forEach(({ key }) => {
+        const input = byId(`builder-lim-${key}`);
+        if (input) {
+            input.oninput = event => {
+                Builder.atualizarLimite(key, event.target.value.trim());
+                refresh();
+            };
+        }
+    });
+    const destaques = byId("builder-destaques");
+    if (destaques) {
+        destaques.oninput = event => {
+            Builder.atualizarDestaques(event.target.value);
+            refresh();
+        };
     }
-}
-
-/* ============================================================
- * Ações
- * ========================================================== */
-
-function handleAddSection() {
-    Builder.adicionarSecao();
-
-    refresh();
-}
-
-function handleAddBenefit() {
-    Builder.adicionarBeneficio();
-
-    refresh();
-}
-
-/* ============================================================
- * Estado
- * ========================================================== */
-
-function syncIntro() {
-    const intro = document.getElementById("builder-intro");
-
-    if (!intro) return;
-
-    intro.value = builderState.intro;
 }
 
 export function atualizarBuilder(json) {
     Builder.carregarBuilder(json);
-
     renderBuilder();
 }
 
 export function limparBuilder() {
     Builder.resetBuilder();
-
     renderBuilder();
 }
-
-/* ============================================================
- * Debug
- * ========================================================== */
-
-window.BuilderUI = {
-    initBuilder,
-
-    renderBuilder,
-
-    refresh,
-
-    atualizarBuilder,
-
-    limparBuilder,
-};

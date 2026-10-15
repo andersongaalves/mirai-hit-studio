@@ -15,18 +15,37 @@ function setCalculatorStatus(message, stateName = "") {
     status.classList.toggle("hidden", !message);
 }
 
+// A combo is chosen like a service: same price, discount and calculator parameters.
+function comboComoServico(combo) {
+    return {
+        id: `c${combo.id}`,
+        tipo: "combo",
+        nome: combo.nome,
+        subtitulo: combo.subtitulo || "",
+        valor_base: Number(combo.preco_base) || 0,
+        aplica_desconto: Boolean(combo.aplica_desconto),
+        parametros: combo.parametros || "",
+        combo,
+    };
+}
+
 export async function initCalculadora() {
     setCalculatorStatus("Carregando serviços...");
     try {
-        const [config, servicos] = await Promise.all([
+        const [config, servicos, combos] = await Promise.all([
             API.getAPI("config"),
             API.getAPI("servicos"),
+            // Catalog rework: a failure loading combos never hides the single services.
+            API.getAPI("catalogo/combos").catch(() => []),
         ]);
         state.configGlobal = {
             ...config,
             mult_desconto: (100 - Number(config.desconto || 0)) / 100,
         };
-        state.servicosDB = Array.isArray(servicos) ? servicos : [];
+        state.servicosDB = [
+            ...(Array.isArray(servicos) ? servicos : []),
+            ...(Array.isArray(combos) ? combos : []).map(comboComoServico),
+        ];
         UI.renderizarBotoes(state.servicosDB);
         setCalculatorStatus(
             state.servicosDB.length

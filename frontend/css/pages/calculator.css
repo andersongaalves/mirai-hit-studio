@@ -251,3 +251,4 @@
     .botoes-navegacao button { width: 100%; }
     .total-price { font-size: 2.2rem; }
 }
+.service-limits { display: grid; gap: var(--space-1); margin: var(--space-3) 0 0; padding-left: var(--space-5); color: var(--color-text-secondary); }

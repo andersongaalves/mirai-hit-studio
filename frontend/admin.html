@@ -230,20 +230,6 @@
                                         "
                                     >
                                         <div class="form-group">
-                                            <label>Categoria</label
-                                            ><select id="srv_categoria">
-                                                <option value="avulso">
-                                                    Avulso
-                                                </option>
-                                                <option value="combo">
-                                                    Combo/Pacote
-                                                </option>
-                                                <option value="personalizado">
-                                                    Personalizado
-                                                </option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
                                             <label>Aplicar Desconto?</label
                                             ><select id="srv_aplica_desconto">
                                                 <option value="false">
@@ -274,23 +260,23 @@
                                         ></textarea>
                                     </div>
 
-                                    <div id="builder-sections"></div>
+                                    <!-- Catalog rework: typed limits instead of free-text sections. -->
+                                    <fieldset id="builder-limites" class="servico-limites">
+                                        <legend>O que o serviço inclui</legend>
+                                        <p class="admin-help">Faixas e duração viram a cota de materiais do cliente e são conferidas no envio; as revisões valem na última etapa. Melodias e artistas aparecem no site e são conferidos por vocês. Deixe em branco o que não se aplica.</p>
+                                        <div class="servico-limites__grid">
+                                            <label>Faixas enviadas pelo cliente<input type="number" id="builder-lim-faixas" min="1" max="100" step="1" placeholder="sem limite"></label>
+                                            <label>Duração máxima por faixa (min)<input type="number" id="builder-lim-duracao_min" min="1" max="60" step="1" placeholder="sem limite"></label>
+                                            <label>Revisões incluídas<input type="number" id="builder-lim-revisoes" min="0" max="20" step="1" placeholder="sem limite"></label>
+                                            <label>Melodias (só exibição)<input type="number" id="builder-lim-melodias" min="1" max="50" step="1" placeholder="—"></label>
+                                            <label>Artistas (só exibição)<input type="number" id="builder-lim-artistas" min="1" max="20" step="1" placeholder="—"></label>
+                                        </div>
+                                    </fieldset>
 
-                                    <button id="btn-add-section">
-                                        + Nova Seção
-                                    </button>
-
-                                    <hr style="margin: 30px 0" />
-
-                                    <h4 style="color: var(--cor-roxo)">
-                                        Benefícios
-                                    </h4>
-
-                                    <div id="builder-benefits"></div>
-
-                                    <button id="btn-add-benefit">
-                                        + Novo Benefício
-                                    </button>
+                                    <div class="form-group">
+                                        <label for="builder-destaques">Destaques (um por linha, até 20)</label>
+                                        <textarea id="builder-destaques" rows="4" placeholder="Ex.: Instrumentos eletrônicos"></textarea>
+                                    </div>
 
                                     <h4
                                         style="
