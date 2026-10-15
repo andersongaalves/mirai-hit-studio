@@ -210,3 +210,19 @@ entao as migrations foram aplicadas e verificadas antes de disparar o release.
 
 **Publicacao:** aplicar `a9c1e3f5b702` antes do release (coluna nula + tabela nova; insere
 o historico inicial das etapas existentes).
+
+### Publicacao da 5.07 (14/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #41 (registro da 5.06) e #42 (5.07) |
+| Commit publicado | `8a2aa7f09265697fcbada78ffe37ee7671d754f3` |
+| Migration | `a9c1e3f5b702`, aplicada pelo responsavel no SQL Editor do Supabase antes do release; conferida (coluna `executor_usuario_id` inteira, tabela de historico vazia, dados inalterados) |
+| CI da `main` | Storage Integration Gate `38609324628`, Portals E2E e Client access migration verdes |
+| Storage Provider Rollout Evidence | run `38610503081` (sucesso) |
+| Protected Production Release | run `38614580711`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261014-R3-507` |
+
+Nota tecnica: `executor_usuario_id` ficou sem chave estrangeira (registro historico, como
+`servico_id`), apos divergencia de nome de constraint entre `create_all` e migration nos
+testes de downgrade.
