@@ -142,11 +142,20 @@ function store(id, body) {
         assert.equal(await form.getByLabel('Master <i>pro</i> — R$').isChecked(), true);
         await form.getByLabel('Ativo (aparece no site e em novas propostas)').uncheck();
         await form.getByLabel('Vocal — R$').check();
+        // Order of the services: new ones go last and can be moved.
+        assert.deepEqual(await form.locator('.combo-form__ordem-item > span').allTextContents(),
+            ['1. Plano Start', '2. Master <i>pro</i>', '3. Vocal']);
+        assert.equal(await form.getByRole('button', { name: 'Mover para cima: Plano Start' }).isDisabled(), true);
+        await form.getByRole('button', { name: 'Mover para cima: Vocal' }).click();
+        await form.getByRole('button', { name: 'Mover para cima: Vocal' }).click();
+        assert.deepEqual(await form.locator('.combo-form__ordem-item > span').allTextContents(),
+            ['1. Vocal', '2. Plano Start', '3. Master <i>pro</i>']);
+        assert.equal(await form.locator('.combo-form__ordem b, .combo-form__ordem i').count(), 0);
         await form.getByRole('button', { name: 'Salvar combo' }).click();
         await page.waitForFunction(() => document.querySelector('.combo-card--inativo'));
         assert.deepEqual(writes.at(-1), { method: 'PUT', id: 9, body: {
             nome: 'Combo <b>antigo</b>', descricao: 'Primeiro combo', subtitulo: '', preco_base: '1200.00', aplica_desconto: false,
-            destaques: [], ativo: false, servicos: [1, 2, 3] } });
+            destaques: [], ativo: false, servicos: [3, 1, 2] } });
         assert.match(await panel.locator('.combo-card--inativo').textContent(), /Inativo/);
 
         // Narrow screens: the panel and the form stay inside the viewport.
@@ -158,7 +167,7 @@ function store(id, body) {
         assert.equal(await page.locator('#combo-editor').isVisible(), false);
 
         assert.deepEqual(errors, []);
-        console.log('PASS: combos list as text, create with validation, sum helper, subtitle/discount/highlights, server error feedback, edit/deactivate and narrow layout.');
+        console.log('PASS: combos list as text, create with validation, sum helper, subtitle/discount/highlights, server error feedback, edit/deactivate, service order and narrow layout.');
     } finally {
         await browser.close();
     }
