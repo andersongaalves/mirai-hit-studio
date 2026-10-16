@@ -90,7 +90,7 @@ jobs:
       actions: read
       deployments: read
     steps:
-      - name: Confirm main has not advanced during approval
+      - name: Confirm main still matches the publication request
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

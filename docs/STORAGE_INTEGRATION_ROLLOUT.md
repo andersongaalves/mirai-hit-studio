@@ -78,13 +78,16 @@ verifies fixed SHA-256 pins for the smoke, signer, and verifier modules; it
 repeats the signer/verifier checks immediately before those modules receive the
 HMAC key. The publication workflow similarly pins the verifier. Any source
 change requires a reviewed workflow change to update the pin. The workflow
-definition on protected `main`, its Environment approval, and these source pins
+definition on protected `main`, its main-only Environment restrictions, and these source pins
 are the trust roots; a separate candidate branch is never checked out. A
 no-secret guard queries GitHub before any job
 references `storage-rollout`, so a missing Environment is not auto-created and
-mistaken for a protected one. The guard requires reviewers, prevents self-review
-and administrator bypass, and restricts deployments to the single `main`
-branch policy.
+mistaken for a protected one. The workflows explicitly select
+`--without-manual-approval`: the guard queries GitHub and requires no reviewer,
+wait-timer or custom approval rule, administrator bypass disabled, and exactly
+one deployment policy of type `branch` named `main`. Missing or incomplete API
+responses still fail closed. Legacy reviewer-based modes remain available to
+other callers, but are not used by publication workflows.
 
 The emitter retains a sanitized, run-scoped report and a two-hour signed
 manifest as a one-day GitHub artifact. It signs only after every real provider
@@ -93,10 +96,13 @@ successful issuer run and invokes
 `python -m scripts.storage_preflight --require-rollout-ready` in a protected
 job with Storage configuration/HMAC access but no Render or Pages deploy
 credentials. Python dependencies are not installed in this secret-bearing
-job; the preflight uses the standard library. Environment approval is the authorization control; the free-form
-authorization reference is traceability only. The verifier requires a manual
+job; the preflight uses the standard library. Repository workflow-dispatch
+permissions, protected `main`, and its mandatory CI are the authorization
+controls; the free-form authorization reference is traceability only, not
+proof of a human approval. The verifier requires an explicit
 dispatch from `main`, exact SHA, allowlisted workflow, complete evidence,
-unchanged configuration fingerprint, and Commercial V2 exactly off.
+unchanged configuration fingerprint, and a valid, consistent Commercial V2
+state (`true` or `false`).
 
 These workflows are definitions only. A read-only API audit on 2026-10-09
 confirmed that `storage-rollout`, `render-production`, and
@@ -204,15 +210,15 @@ No secret was generated, inspected, rotated, or stored by phase 3.8S.
 
 ### Required external setup before use
 
-1. Protect existing `storage-rollout` for the explicit solo administrator
-   `andersongaalves`: this must be the sole required user reviewer,
-   `prevent_self_review=false`, administrator bypass disabled, and exactly the
-   `main` deployment policy. The API guard rejects a different/multiple
-   reviewer, an unprotected Environment, or a self-review prohibition that
-   would deadlock the only administrator.
+1. Keep the existing `storage-rollout` Environment with administrator bypass
+   disabled and exactly one deployment policy: type `branch`, name `main`.
+   Required reviewers and wait timers must be removed, as explicitly requested
+   by the owner on 2026-10-16. Do not delete/recreate the Environment, move its
+   secrets to repository scope, widen branch access, or enable provider
+   auto-deploy. Publication remains explicitly dispatched, not push-triggered.
 2. Add least-privilege R2, Cloudinary, and Supabase values referenced by the
    issuer. Keep `STORAGE_PREFLIGHT_EVIDENCE_HMAC_KEY` in this Environment only.
-3. Apply the same solo-admin protection independently to `render-production`
+3. Apply the same main-only, no-manual-approval policy independently to `render-production`
    and `cloudflare-pages-production`, then store each provider credential only
    in its matching Environment. Storage jobs do not use deployment credentials.
 4. Confirm rollback availability in both provider dashboards. Only after an
@@ -243,8 +249,8 @@ The Rulesets API omits `bypass_actors` unless the caller has write access to the
 Ruleset. The guard therefore requires that field to be explicitly present as an
 empty list; a missing, null, or non-empty value fails closed. The ordinary
 `GITHUB_TOKEN` remains limited to the workflow's existing read permissions and
-is used for Environment and run metadata queries. Only after approval of the
-protected `storage-rollout` Environment does the relevant job mint a short-lived
+is used for Environment and run metadata queries. Only inside the main-only
+`storage-rollout` Environment does the relevant job mint a short-lived
 GitHub App installation token for the Ruleset read. The workflow uses that token
 only for GET requests to list/read Rulesets; it never sends a Ruleset mutation.
 
