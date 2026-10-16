@@ -94,6 +94,7 @@ class SnapshotPoliticas(Contract):
     cliente_ve_etapas: bool
     cliente_ve_prazos_etapas: bool
     financeiro_cliente: str
+    entrega_final: Literal["apos_quitacao", "liberada"] = "apos_quitacao"
 
 
 class SnapshotComponente(Contract):

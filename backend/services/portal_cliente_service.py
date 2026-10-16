@@ -1,9 +1,8 @@
-from sqlalchemy.orm import Session
-
 from core.config import settings
 from crud import crud_producao
 from models.orcamento import OrcamentoModel
 from services import checkout_service, financial_service, politica_service
+from sqlalchemy.orm import Session
 
 PRODUCOES_FINALIZADAS = ("finalizado", "entregue")
 TIPO_ENTREGA_FINAL = "entrega"
@@ -92,21 +91,34 @@ def buscar_financeiro(db: Session, producao_id: int, cliente_id: int):
 
 
 def entrega_bloqueada(db: Session, producao) -> bool:
-    """5.14: final delivery waits for the full payment, computed live from the charge.
-
-    Released when the contract policy (or an admin exception) says "liberada", when there is
-    no charge (legacy productions), when it is paid or cancelled. Previews are never held.
-    """
-    if politica_service.vigentes(db, producao.id)["entrega_final"] == "liberada":
+    """Re-evaluate settlement on every read; only a reasoned production exception bypasses it."""
+    politicas = politica_service.detalhar(db, producao.id)
+    if (
+        politicas["vigentes"]["entrega_final"] == "liberada"
+        and politicas["origens"]["entrega_final"] == "excecao"
+        and len((politicas["motivo"] or "").strip()) >= 5
+    ):
         return False
     orcamento = db.get(OrcamentoModel, producao.orcamento_id)
+    if orcamento is None:
+        return True
     proposta = orcamento.proposta if orcamento else None
     cobranca = proposta.cobranca if proposta else None
     if cobranca is None:
+        # Historical unbilled productions keep their existing access rules.
         return False
+    if (
+        proposta.orcamento_id != orcamento.id
+        or cobranca.proposta_id != proposta.id
+        or cobranca.cliente_id not in {None, orcamento.cliente_id}
+        or cobranca.moeda != "BRL"
+        or cobranca.status == "cancelada"
+        or any(p.reconciliation_status for p in cobranca.pagamentos)
+    ):
+        return True
     try:
         status = financial_service.status_calculado(cobranca)
         saldo = financial_service.saldo_pendente(cobranca)
-    except financial_service.FinanceiroConflito:
-        return False  # Paid above the contract: needs reconciliation, never holds the client.
-    return saldo > 0 and status.value not in {"paga", "cancelada"}
+    except (financial_service.FinanceiroConflito, financial_service.FinanceiroInvalido):
+        return True
+    return saldo != 0 or status.value != "paga"

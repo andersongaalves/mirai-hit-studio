@@ -292,6 +292,19 @@ function expectStatus(result, status, label) {
         await previewItem.getByRole('button', { name: 'Reproduzir' }).click();
         await previewItem.locator('audio.client-player').waitFor({ state: 'attached' });
         const deliveryItem = page.locator('.producer-file').filter({ hasText: 'entrega-browser.wav' });
+        assert.equal(await deliveryItem.getByRole('button', { name: 'Baixar' }).count(), 0);
+        expectStatus(await api(page, 'GET', `/portal/cliente/arquivos/${delivery.id}/conteudo`),
+            402, 'unpaid final delivery denied by real backend');
+        await deliveryItem.getByRole('link', { name: 'Pagar saldo e liberar' }).click();
+        await page.waitForURL('**/checkout?proposta=*');
+        await page.locator('#checkout-content').waitFor({ state: 'visible' });
+        assert.equal(await page.locator('input[name="payment_option"]').count(), 1);
+        assert.equal(await page.locator('input[name="payment_option"]').inputValue(), 'saldo');
+        await page.getByRole('button', { name: 'Gerar Pix' }).click();
+        await page.locator('#checkout-terminal').getByText('Pagamento confirmado!', { exact: true }).waitFor();
+        await page.goto(`${FRONTEND}/cliente/projetos/${productionId}`);
+        await page.locator('#client-loading').waitFor({ state: 'hidden' });
+        await deliveryItem.getByRole('button', { name: 'Baixar' }).waitFor();
         const downloadPromise = page.waitForEvent('download');
         await deliveryItem.getByRole('button', { name: 'Baixar' }).click();
         const download = await downloadPromise;

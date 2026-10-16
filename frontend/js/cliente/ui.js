@@ -203,7 +203,7 @@ function filesPanel(production, files, handlers) {
         fileGroup("Prévias", files.filter(file => file.tipo === "previa"), handlers),
         fileGroup("Entregas finais", files.filter(file => file.tipo === "entrega"), handlers,
             files.some(file => file.bloqueado_pagamento)
-                ? "Os arquivos finais são liberados após a quitação do saldo (50% antes da liberação dos arquivos finais)."
+                ? "Os arquivos finais serão liberados após a quitação do saldo."
                 : ""),
         fileGroup("Materiais e referências", files.filter(file => ["material", "referencia"].includes(file.tipo)), handlers),
     );

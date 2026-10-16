@@ -5,18 +5,32 @@ import test_bootstrap_database as isolated
 from test_politicas import SETUP as POLICIES_SETUP
 
 SETUP = POLICIES_SETUP + '''
+import socket
 from decimal import Decimal
 from models import CobrancaModel, PagamentoModel
 from services import financial_service
 from services import portal_cliente_service as client_portal
 
+# Windows' event loop creates an internal loopback socket; external traffic stays forbidden.
+original_connect = network_guard.temp_original
+network_guard.stop()
+def loopback_only(sock, address):
+    if isinstance(address, tuple) and address[0] in {'127.0.0.1', '::1'}:
+        return original_connect(sock, address)
+    raise AssertionError('external network forbidden')
+patch.object(socket.socket, 'connect', loopback_only).start()
+
 with Session(engine) as db:
-    p = service.atualizar(db, service.criar_por_orcamento(db, 1).id, PropostaUpdate(itens=CATALOG_ITEMS))
+    p = service.atualizar(db, service.criar_por_orcamento(db, 1).id, PropostaUpdate(itens=[
+        {**CATALOG_ITEMS[0], 'valor_unitario': '100.00', 'desconto': '0.00'}]))
     with patch.object(resend.Emails, 'send', return_value={'id': 'synthetic-message'}):
         commercial.enviar(db, p.id)
     commercial.aprovar(db, p.id)
     PROPOSAL_ID = p.id
     PRODUCTION_ID = crud_producao.buscar_por_orcamento(db, 1).id
+    # Model a historical, unbilled production; individual cases seed their own charge.
+    db.delete(db.query(CobrancaModel).filter_by(proposta_id=p.id).one())
+    db.commit()
 
 storage = MemoryStorage()
 def upload(kind, name, mime='audio/mpeg'):
@@ -62,6 +76,9 @@ assert policies._completas({'financeiro_cliente': 'resumido'})['entrega_final'] 
 assert policies.agregar({'itens': [{'indice': 1, 'servico_id': 1, 'politicas': policies.padroes()},
                                    {'indice': 2, 'servico_id': 2, 'politicas': liberada}]})['entrega_final'] == 'liberada'
 assert api.put('/servicos/1/politicas', headers=ADMIN, json={'entrega_final': 'nunca'}).status_code == 422
+assert api.put('/servicos/1/politicas', headers=ADMIN, json={'entrega_final': 'liberada'}).status_code == 422
+assert api.put('/politicas/globais', headers=ADMIN, json={
+    'base_versao': 0, 'politicas': liberada}).status_code == 422
 ''')
 
     def test_delivery_held_until_paid(self):
@@ -107,7 +124,7 @@ assert client_files()[delivery_id]['bloqueado_pagamento'] is False
 released = download(delivery_id)
 assert released.status_code == 200 and released.content == b'x' * 100
 
-# A cancelled charge never holds the delivery.
+# Cancellation does not establish settlement and cannot release an unpaid delivery.
 with Session(engine) as db:
     db.query(PagamentoModel).filter_by(cobranca_id=charge_id).delete()
     db.get(CobrancaModel, charge_id).status = 'pendente'
@@ -116,7 +133,7 @@ assert blocked() is True
 with Session(engine) as db:
     db.get(CobrancaModel, charge_id).status = 'cancelada'
     db.commit()
-assert blocked() is False
+assert blocked() is True and download(delivery_id).status_code == 402
 
 # The producer always reaches its own delivery, whatever the balance.
 with Session(engine) as db:
@@ -125,6 +142,74 @@ with Session(engine) as db:
 with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage):
     own = api.get(f'/portal/produtor/arquivos/{delivery_id}/conteudo', headers=bearer('producer-a'))
 assert own.status_code == 200, own.text
+''')
+
+    def test_identity_reconciliation_and_refund_fail_closed(self):
+        self.run_case('''
+delivery_id = upload('entrega', 'final.wav', 'audio/wav')
+with Session(engine) as db:
+    charge = CobrancaModel(proposta_id=PROPOSAL_ID, cliente_id=1, valor_total=Decimal('100.00'),
+                           moeda='BRL', status='pendente')
+    db.add(charge)
+    db.flush()
+    charge_id = charge.id
+    financial_service.registrar_pagamento(db, charge_id, tipo='integral', valor=Decimal('100.00'), status='aprovado')
+    db.commit()
+assert download(delivery_id).status_code == 200
+with Session(engine) as db:
+    payment = db.query(PagamentoModel).filter_by(cobranca_id=charge_id).one()
+    payment.reconciliation_status = 'conflict'
+    db.commit()
+assert blocked() is True and download(delivery_id).status_code == 402
+with Session(engine) as db:
+    payment = db.query(PagamentoModel).filter_by(cobranca_id=charge_id).one()
+    payment.reconciliation_status = None
+    payment.status = 'reembolsado'
+    db.commit()
+assert blocked() is True and download(delivery_id).status_code == 402
+with Session(engine) as db:
+    db.query(PagamentoModel).filter_by(cobranca_id=charge_id).one().status = 'aprovado'
+    db.add(ClienteModel(id=2, nome='Cliente B', email='b@example.test'))
+    db.get(CobrancaModel, charge_id).cliente_id = 2
+    db.commit()
+assert blocked() is True and download(delivery_id).status_code == 402
+with Session(engine) as db:
+    db.get(CobrancaModel, charge_id).cliente_id = 1
+    db.query(PagamentoModel).filter_by(cobranca_id=charge_id).one().valor = Decimal('101.00')
+    db.commit()
+assert blocked() is True and download(delivery_id).status_code == 402
+''')
+
+    def test_only_authorized_admin_can_record_a_reasoned_exception(self):
+        self.run_case('''
+delivery_id = upload('entrega', 'final.wav', 'audio/wav')
+with Session(engine) as db:
+    db.add(CobrancaModel(proposta_id=PROPOSAL_ID, cliente_id=1, valor_total=Decimal('100.00'),
+                         moeda='BRL', status='pendente'))
+    db.commit()
+path = f'/producoes/{PRODUCTION_ID}/politicas'
+payload = {'politicas': {'entrega_final': 'liberada'}, 'motivo': 'Acordo comercial registrado'}
+for user in ('client-a', 'producer-a'):
+    assert api.put(path, headers=bearer(user), json=payload).status_code == 403
+assert api.put(path, headers=ADMIN, json={**payload, 'motivo': '    '}).status_code == 422
+assert download(delivery_id).status_code == 402
+assert api.put(path, headers=ADMIN, json=payload).status_code == 200
+assert download(delivery_id).status_code == 200
+from models.audit_log import AuditLogModel
+with Session(engine) as db:
+    event = db.query(AuditLogModel).filter_by(action='production.policies_exception_set').one()
+    assert event.actor_user_id == 6 and event.entity_id == str(PRODUCTION_ID)
+    assert 'entrega_final' in event.metadata_json['policy_keys']
+    assert db.get(ProducaoPoliticaModel, PRODUCTION_ID).motivo == payload['motivo']
+assert api.delete(path, headers=ADMIN).status_code == 200
+assert download(delivery_id).status_code == 402
+with Session(engine) as db:
+    db.add(ClienteModel(id=2, nome='Cliente B', email='b@example.test'))
+    db.add(UsuarioModel(id=7, username='client-b', password_hash='unused', role='cliente',
+                       is_admin=False, ativo=True, cliente_id=2))
+    db.commit()
+assert api.get(f'/portal/cliente/arquivos/{delivery_id}/conteudo', headers=bearer('client-b')).status_code == 404
+assert api.get(f'/portal/cliente/producoes/{PRODUCTION_ID}/arquivos', headers=bearer('client-b')).status_code == 404
 ''')
 
 

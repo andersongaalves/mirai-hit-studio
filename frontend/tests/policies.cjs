@@ -60,9 +60,14 @@ const stage = (extra) => ({ id: 1, ordem: 1, item_indice: 1, item_descricao: 'Pl
         assert.equal(await page.locator('.policy-form select').count(), 6);
         await page.getByLabel('Cliente vê as etapas').selectOption('false');
         await page.getByLabel('Prévias do produtor').selectOption('aprovacao_admin');
-        await page.getByLabel('Entrega final ao cliente').selectOption('liberada');
+        assert.equal(await page.getByLabel('Entrega final ao cliente').locator('option[value="liberada"]').count(), 0);
         assert.deepEqual(await page.evaluate(() => window.readForm()), {
-            ...DEFAULTS, cliente_ve_etapas: false, publicacao_previa: 'aprovacao_admin', entrega_final: 'liberada' });
+            ...DEFAULTS, cliente_ve_etapas: false, publicacao_previa: 'aprovacao_admin' });
+
+        // Only the reasoned production-exception editor offers release without settlement.
+        await page.evaluate(values => window.renderForm({ values, allowDeliveryRelease: true }), DEFAULTS);
+        await page.getByLabel('Entrega final ao cliente').selectOption('liberada');
+        assert.equal((await page.evaluate(() => window.readForm())).entrega_final, 'liberada');
 
         // Service form: inherits by default and sends only what it overrides.
         await page.evaluate(values => window.renderForm({ values: { financeiro_cliente: 'resumido' }, inherited: values,
