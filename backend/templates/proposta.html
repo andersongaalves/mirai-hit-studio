@@ -23,23 +23,30 @@ th { text-align: left; font-size: 8pt; border-bottom: 2px solid #111; }
 .payment { margin: 0 0 12pt; }
 .qr { width: 85pt; height: 85pt; }
 a { color: #111; text-decoration: underline; overflow-wrap: anywhere; }
+.partes td { border: 1px solid #ccc; }
+.condicoes { margin: 0 0 4pt 14pt; padding: 0; }
+.condicoes li { margin: 0 0 4pt; }
 .footer { margin-top: 24pt; border-top: 1px solid #111; padding-top: 8pt; font-size: 8pt; }
 </style>
 </head>
 <body><main>
 <img class="logo" src="{{ logo }}" alt="Mirai Hit Studio">
-<h1>Proposta Comercial</h1>
-<p><strong>Mirai Hit Studio</strong></p>
-<p>N&uacute;mero {{ proposta.numero }} &middot; Vers&atilde;o {{ proposta.versao }} &middot; Data {{ proposta.created_at.strftime('%d/%m/%Y') if proposta.created_at else '-' }}</p>
-<h2>Cliente</h2>
-{% for line in cliente.nome|linhas %}<p>{{ line }}</p>{% endfor %}
-{% for line in cliente.email|linhas %}<p>{{ line }}</p>{% endfor %}
-{% if cliente.whatsapp %}<p>WhatsApp: {{ cliente.whatsapp }}</p>{% endif %}
-<p>Produtor respons&aacute;vel: {{ produtor }}</p>
-<h2>Objeto e descri&ccedil;&atilde;o</h2>
+<h1>Proposta Comercial e Ordem de Presta&ccedil;&atilde;o de Servi&ccedil;os</h1>
+<p>N&ordm; <strong>{{ proposta.numero }}</strong> &middot; Vers&atilde;o {{ proposta.versao }} &middot; Data {{ data_emissao }}</p>
+<table class="partes"><tr>
+<td width="50%"><p><strong>Prestador</strong></p>
+<p>Mirai Hit Studio</p>
+<p>miraihitstudio@gmail.com &middot; @miraihitstudio</p>
+<p>Produtor respons&aacute;vel: {{ produtor }}</p></td>
+<td width="50%"><p><strong>Cliente</strong></p>
+{% for line in cliente.nome|linhas(45) %}<p>{{ line }}</p>{% endfor %}
+{% for line in cliente.email|linhas(45) %}<p>{{ line }}</p>{% endfor %}
+{% if cliente.whatsapp %}<p>WhatsApp: {{ cliente.whatsapp }}</p>{% endif %}</td>
+</tr></table>
+
+<h2>Objeto da proposta</h2>
 {% for line in proposta.objeto|linhas %}<p><strong>{{ line }}</strong></p>{% endfor %}
 {% for line in proposta.descricao|linhas %}<p>{{ line }}</p>{% endfor %}
-<h2>Servi&ccedil;os e valores</h2>
 <table class="items" repeat="1">
 <thead><tr><th width="38%">Descri&ccedil;&atilde;o</th><th width="8%">Qtd.</th><th width="18%">Unit&aacute;rio</th><th width="18%">Desconto</th><th width="18%">Subtotal</th></tr></thead>
 <tbody>{% for row in itens %}{% for parte in row.partes %}
@@ -48,19 +55,58 @@ a { color: #111; text-decoration: underline; overflow-wrap: anywhere; }
 <p class="number">Subtotal: {{ totais.subtotal|moeda }}</p>
 <p class="number">Desconto: {{ totais.desconto|moeda }}</p>
 <p class="number total">Total: {{ totais.total|moeda }}</p>
-<h2>Condi&ccedil;&otilde;es comerciais</h2>
-<p><strong>Pol&iacute;tica de pagamento:</strong> {{ politica_pagamento }}</p>
-{% for line in proposta.condicoes|linhas %}<p>{{ line }}</p>{% endfor %}
-<p class="muted">Prazo, validade e observa&ccedil;&otilde;es: conforme condi&ccedil;&otilde;es comerciais acima, quando informados.</p>
-{% if pagamentos %}<h2>Pagamento</h2>{% endif %}
+
+{% if incluido %}
+<h2>O que est&aacute; inclu&iacute;do</h2>
+{% for linha in incluido %}<p>&bull; <strong>{{ linha.servico }}</strong>{% if linha.detalhes %}: {{ linha.detalhes }}{% endif %}</p>{% endfor %}
+{% endif %}
+
+<h2>Condi&ccedil;&otilde;es do servi&ccedil;o</h2>
+<ol class="condicoes">
+{% if politica == "entrada_50_50" %}
+<li>Pagamento em duas etapas: 50% na confirma&ccedil;&atilde;o da contrata&ccedil;&atilde;o, para iniciar a produ&ccedil;&atilde;o, e 50% antes da libera&ccedil;&atilde;o dos arquivos finais.</li>
+{% else %}
+<li>Pagamento integral na confirma&ccedil;&atilde;o da contrata&ccedil;&atilde;o, para iniciar a produ&ccedil;&atilde;o.</li>
+{% endif %}
+<li>O cliente &eacute; respons&aacute;vel por enviar pelo Portal do Cliente os arquivos, refer&ecirc;ncias e informa&ccedil;&otilde;es necess&aacute;rios. O prazo de entrega fica suspenso enquanto houver pend&ecirc;ncia de material.</li>
+<li>As revis&otilde;es inclu&iacute;das s&atilde;o as indicadas em &quot;O que est&aacute; inclu&iacute;do&quot;. Revis&otilde;es al&eacute;m dessas poder&atilde;o ser cobradas &agrave; parte.</li>
+<li>Ap&oacute;s o in&iacute;cio da produ&ccedil;&atilde;o, os valores pagos n&atilde;o s&atilde;o reembols&aacute;veis, considerando o car&aacute;ter personalizado da produ&ccedil;&atilde;o musical e o tempo t&eacute;cnico empregado, ressalvadas as hip&oacute;teses previstas na legisla&ccedil;&atilde;o aplic&aacute;vel.</li>
+<li>Os direitos autorais e as condi&ccedil;&otilde;es de licenciamento do instrumental, quando aplic&aacute;veis, s&atilde;o definidos em documento pr&oacute;prio ou conforme acordado entre as partes, n&atilde;o sendo transferidos automaticamente por esta proposta.</li>
+<li>Aprova&ccedil;&otilde;es, revis&otilde;es e entregas s&atilde;o feitas pelo Portal do Cliente (mensagens e arquivos). E-mail e WhatsApp servem de apoio e t&ecirc;m o mesmo efeito de comunica&ccedil;&atilde;o escrita.</li>
+<li>Se o cliente ficar mais de 30 (trinta) dias sem responder solicita&ccedil;&otilde;es, enviar materiais ou aprovar revis&otilde;es, o projeto ser&aacute; considerado suspenso e poder&aacute; ser retomado conforme a agenda do est&uacute;dio, sem garantia do prazo original.</li>
+<li>A Mirai Hit Studio poder&aacute; utilizar trechos, imagens, capas e materiais do projeto para divulga&ccedil;&atilde;o institucional, portf&oacute;lio e redes sociais, salvo manifesta&ccedil;&atilde;o contr&aacute;ria do cliente antes da publica&ccedil;&atilde;o.</li>
+<li>Se o cliente fornecer samples, acapellas ou outros materiais protegidos por direitos autorais, ser&aacute; o &uacute;nico respons&aacute;vel pelas autoriza&ccedil;&otilde;es necess&aacute;rias, isentando a Mirai Hit Studio de responsabilidade pelo uso desses materiais.</li>
+<li>Sempre que poss&iacute;vel, o cliente dever&aacute; creditar &quot;Produ&ccedil;&atilde;o: Mirai Hit Studio&quot; ou &quot;Produced by {{ produtor_credito }} / Mirai Hit Studio&quot; nas plataformas e materiais promocionais.</li>
+</ol>
+{% if condicoes_especificas %}
+<p><strong>Condi&ccedil;&otilde;es espec&iacute;ficas desta proposta</strong></p>
+{% for line in condicoes_especificas|linhas %}<p>{{ line }}</p>{% endfor %}
+{% endif %}
+
+<h2>Prazos e entrega</h2>
+<p>A produ&ccedil;&atilde;o ser&aacute; iniciada ap&oacute;s a confirma&ccedil;&atilde;o do pagamento inicial.</p>
+{% if prazo_dias %}
+<p>Prazo de entrega: at&eacute; {{ prazo_dias }} dias corridos, contados da confirma&ccedil;&atilde;o do pagamento inicial e do recebimento de todos os arquivos, refer&ecirc;ncias e informa&ccedil;&otilde;es necess&aacute;rios.</p>
+{% endif %}
+<p>Os arquivos finais ficam dispon&iacute;veis no Portal do Cliente ap&oacute;s a confirma&ccedil;&atilde;o do pagamento integral. Recomendamos guardar uma c&oacute;pia pr&oacute;pria.</p>
+
+<h2>Pagamento</h2>
+<p>O pagamento &eacute; feito com seguran&ccedil;a pelo Mercado Pago, no Portal do Cliente, ap&oacute;s o aceite. Formas dispon&iacute;veis: PIX, cart&atilde;o de cr&eacute;dito, saldo Mercado Pago e outras modalidades da plataforma.</p>
+<p class="muted">Pagamentos por modalidades diferentes do PIX poder&atilde;o ter juros e taxas cobrados pela plataforma de pagamento.</p>
 {% for payment in pagamentos %}
 <table class="payment"><tr><td width="28%"><img class="qr" src="{{ payment.qr }}" alt="QR Code {{ payment.titulo }}"></td><td width="72%"><p><strong>{{ payment.titulo }}</strong></p>
 {% for line in payment.url|linhas(55) %}<p><a href="{{ payment.url }}">{{ line }}</a></p>{% endfor %}
 </td></tr></table>
 {% endfor %}
+
+<h2>Validade da proposta</h2>
+<p>Esta proposta tem validade de 10 (dez) dias corridos, contados da data de emiss&atilde;o.</p>
+
 <h2>Aceite</h2>
-<p>Nome: ____________________________________________________</p>
-<p>Assinatura: ___________________________________ Data: ____/____/________</p>
-<p class="footer">Mirai Hit Studio &middot; Proposta {{ proposta.numero }} &middot; Vers&atilde;o {{ proposta.versao }}</p>
+<p>O aceite &eacute; feito no Portal do Cliente, que registra a data, a hora e a vers&atilde;o aceita. Ao aceitar, o cliente declara ter lido, compreendido e aceitado integralmente os valores, prazos, condi&ccedil;&otilde;es e especifica&ccedil;&otilde;es desta Proposta Comercial e Ordem de Presta&ccedil;&atilde;o de Servi&ccedil;os, caracterizando a contrata&ccedil;&atilde;o.</p>
+
+<p class="footer"><strong>Mirai Hit Studio</strong> &middot; Criando hits do futuro.<br>
+Instrumental &bull; Mixagem &bull; Masteriza&ccedil;&atilde;o &bull; Produ&ccedil;&otilde;es Personalizadas<br>
+miraihitstudio@gmail.com &middot; @miraihitstudio &middot; Proposta {{ proposta.numero }} &middot; Vers&atilde;o {{ proposta.versao }}</p>
 </main></body>
 </html>

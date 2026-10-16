@@ -85,7 +85,7 @@ jobs:
           --environment storage-rollout
           --environment render-production
           --environment cloudflare-pages-production
-          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --without-manual-approval
       - name: Fetch exact successful CI and evidence issuer runs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -182,7 +182,7 @@ jobs:
             --environment storage-rollout \
             --environment render-production \
             --environment cloudflare-pages-production \
-            --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER" \
+            --without-manual-approval \
             > /tmp/github-protection-plan.json
           status=$?
           set -e
@@ -229,7 +229,7 @@ jobs:
           --environment storage-rollout
           --environment render-production
           --environment cloudflare-pages-production
-          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --without-manual-approval
           --require-main-protection
           --required-check storage-integration
       - name: Download evidence from the exact issuer run

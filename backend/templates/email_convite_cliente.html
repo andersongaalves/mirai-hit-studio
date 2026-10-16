@@ -1,8 +1,11 @@
 {% extends "email_base.html" %}
 {% block content %}
-<h1>Ative seu acesso ao Portal Mirai</h1>
+<h1>Ative seu acesso ao Portal do Cliente</h1>
 <p>Olá, {{ nome }}.</p>
-<p>Uma proposta comercial está disponível para você no Portal Mirai.</p>
-<p><a href="{{ activation_url }}">Ativar acesso e visualizar proposta</a></p>
-<p>Este link é pessoal, expira em 48 horas e deixa de funcionar após o uso.</p>
+<p>Uma proposta comercial está disponível para você no Portal do Cliente da Mirai Hit Studio.
+Ative seu acesso para ver a proposta, aceitar e pagar com segurança e acompanhar a produção.</p>
+<div style="text-align: center; margin: 30px 0">
+    <a class="button" href="{{ activation_url }}">Ativar acesso e ver proposta</a>
+</div>
+<p>Este link é pessoal, expira em {{ validade_horas }} horas e deixa de funcionar após o uso.</p>
 {% endblock %}

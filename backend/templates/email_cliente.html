@@ -40,7 +40,7 @@
     <div class="info">
         <strong>💰 Valor estimado</strong><br />
 
-        R$ {{ valor }}
+        {{ valor }}
     </div>
 
     <div class="info">
@@ -48,18 +48,6 @@
 
         {{ data }}
     </div>
-</div>
-
-<div class="info">
-    <strong>💰 Valor estimado</strong><br />
-
-    R$ {{ valor }}
-</div>
-
-<div class="info">
-    <strong>📅 Data da solicitação</strong><br />
-
-    {{ data }}
 </div>
 
 {% if observacoes %}
@@ -78,31 +66,26 @@
 
 <table width="100%" style="margin-top: 20px">
     <tr>
-        <td style="padding: 12px 0">✅ Análise das informações enviadas.</td>
+        <td style="padding: 12px 0">✅ Análise das informações enviadas e avaliação técnica.</td>
     </tr>
-
+    <tr>
+        <td style="padding: 12px 0">📄 Envio da proposta personalizada para este e-mail.</td>
+    </tr>
     <tr>
         <td style="padding: 12px 0">
-            🎼 Avaliação técnica da produção solicitada.
+            🔐 Acesso ao Portal do Cliente, onde você aceita a proposta e faz o pagamento com segurança.
         </td>
     </tr>
-
     <tr>
         <td style="padding: 12px 0">
-            📄 Preparação de uma proposta personalizada.
-        </td>
-    </tr>
-
-    <tr>
-        <td style="padding: 12px 0">
-            📧 Retorno através deste e-mail ou WhatsApp informado.
+            🎧 Acompanhamento da produção pelo portal: etapas, prévias, mensagens e entregas.
         </td>
     </tr>
 </table>
 
 <div style="text-align: center; margin-top: 45px">
-    <a class="button" href="https://miraihitstudio.com.br">
-        Conhecer nosso Portfólio
+    <a class="button" href="{{ portfolio_url }}">
+        Conhecer nosso portfólio
     </a>
 </div>
 

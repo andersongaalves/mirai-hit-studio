@@ -15,13 +15,9 @@ from schemas.proposta import (
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-CONDICOES_PADRAO = (
-    "Esta proposta contempla os servi\u00e7os descritos neste documento.\n\n"
-    "Altera\u00e7\u00f5es de escopo poder\u00e3o gerar revis\u00e3o de valores e prazos.\n\n"
-    "O in\u00edcio da produ\u00e7\u00e3o ocorre ap\u00f3s confirma\u00e7\u00e3o da condi\u00e7\u00e3o de pagamento "
-    "definida nesta proposta "
-    "e envio dos materiais necess\u00e1rios."
-)
+# The standard conditions are part of the proposal document itself (template); this field
+# holds only what is specific to one proposal.
+CONDICOES_PADRAO = ""
 COLUNAS_JSON = {"itens": "itens_json", "pagamentos": "pagamentos_json"}
 
 

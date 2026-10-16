@@ -13,8 +13,9 @@ export function renderizarCondicoes(
     container.innerHTML = `
         <div class="admin-info">
             <div class="form-group">
-                <label>Condições comerciais</label>
-                <textarea id="proposta_condicoes" rows="14">${escapeHtml(proposta.condicoes)}</textarea>
+                <label for="proposta_condicoes">Condições específicas desta proposta (opcional)</label>
+                <p class="admin-help">As condições padrão (pagamento, revisões, reembolso, direitos, comunicação, prazo, validade de 10 dias e aceite pelo Portal do Cliente) já fazem parte do documento. Use este campo só para o que for particular deste projeto.</p>
+                <textarea id="proposta_condicoes" rows="8">${escapeHtml(proposta.condicoes)}</textarea>
             </div>
         </div>
     `;

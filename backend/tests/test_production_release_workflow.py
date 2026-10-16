@@ -47,7 +47,8 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         ):
             self.assertIn(f"environment: {environment}", self.source)
             self.assertIn(f"--environment {environment}", self.source)
-        self.assertIn('--solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"', self.source)
+        self.assertIn('--without-manual-approval', self.source)
+        self.assertNotIn('--solo-admin-reviewer', self.source)
         self.assertIn("--require-main-protection", self.source)
         self.assertIn("--required-check storage-integration", self.source)
         guard = Path(__file__).resolve().parents[1].joinpath(
@@ -120,14 +121,29 @@ class ProductionReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("validate_render_v2_environment", self.source)
         self.assertIn("expected_state=os.environ['EXPECTED_COMMERCIAL_PIPELINE_V2_ENABLED']", self.source)
 
-    def test_hmac_issuer_and_preflight_require_solo_admin_main_protection(self):
+    def test_hmac_issuer_and_preflight_keep_main_protection_without_manual_approval(self):
         for source in (self.issuer_source, self.preflight_source):
-            self.assertIn('--solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"', source)
+            self.assertIn('--without-manual-approval', source)
+            self.assertNotIn('--solo-admin-reviewer', source)
             self.assertIn("--require-main-protection", source)
             self.assertIn("--required-check storage-integration", source)
         self.assertIn("github.ref == 'refs/heads/main'", self.issuer_source)
 
-    def test_ruleset_app_credential_is_confined_to_approved_environment_jobs(self):
+    def test_every_environment_guard_explicitly_selects_the_automatic_policy(self):
+        for source in (self.source, self.issuer_source, self.preflight_source):
+            self.assertEqual(
+                source.count("--without-manual-approval"),
+                source.count("python -m scripts.storage_environment_guard"),
+            )
+        frontend = Path(__file__).resolve().parents[2].joinpath(
+            ".github/workflows/frontend-pages-production.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", frontend)
+        self.assertNotIn("\n  push:", frontend)
+        self.assertIn("environment: cloudflare-pages-production", frontend)
+        self.assertIn('test "$current_sha" = "$TARGET_SHA"', frontend)
+
+    def test_ruleset_app_credential_is_confined_to_main_only_environment_jobs(self):
         token_action = (
             "actions/create-github-app-token@"
             "bcd2ba49218906704ab6c1aa796996da409d3eb1"

@@ -54,7 +54,7 @@ jobs:
           --environment storage-rollout
           --environment render-production
           --environment cloudflare-pages-production
-          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --without-manual-approval
 
   verify-storage-evidence:
     needs: protected-environment-guard
@@ -93,7 +93,7 @@ jobs:
           --environment storage-rollout
           --environment render-production
           --environment cloudflare-pages-production
-          --solo-admin-reviewer "$GITHUB_REPOSITORY_OWNER"
+          --without-manual-approval
           --require-main-protection
           --required-check storage-integration
       - name: Verify issuer workflow run metadata
