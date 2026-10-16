@@ -2,7 +2,10 @@
 {% block content %}
 <h1>Sua proposta está disponível</h1>
 <p>Olá, {{ nome }}.</p>
-<p>A proposta comercial <strong>{{ proposta_numero }}</strong> está disponível no Portal Mirai.</p>
-<p><a href="{{ proposal_url }}">Visualizar proposta</a></p>
-<p>Entre com sua conta para consultar os detalhes e responder com segurança.</p>
+<p>A proposta comercial <strong>{{ proposta_numero }}</strong> está disponível no Portal do Cliente.</p>
+<div style="text-align: center; margin: 30px 0">
+    <a class="button" href="{{ proposal_url }}">Ver proposta</a>
+</div>
+<p>Entre com sua conta para conferir os detalhes, aceitar ou recusar e, se aceitar, fazer o
+pagamento com segurança. Depois disso, você acompanha a produção pelo próprio portal.</p>
 {% endblock %}
