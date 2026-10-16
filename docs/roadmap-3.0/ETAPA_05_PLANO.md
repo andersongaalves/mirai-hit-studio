@@ -394,3 +394,100 @@ cotas derivadas e combo Launch) depois do release, conferindo o conteudo de cada
 | Protected Production Release | run `38753370096`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
 | Conferencia | `GET /catalogo/combos` em producao lista "Start" e "Launch" com os servicos e os parametros unidos |
 | Autorizacao | `CTRL-20261015-R3-CAT` |
+
+### Publicacao da ordem dos servicos nos combos (15/10/2026)
+
+No editor de combos do Admin, os servicos escolhidos aparecem numa lista ordenada com
+botoes para subir e descer; a ordem e salva no combo e seguida no site, na calculadora e
+nas propostas.
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #51 (registro do ajuste do catalogo) e #52 (ordem dos servicos) |
+| Commit publicado | `ccd9eec5a904ec031a5dd6157d0ce2cfb04f953f` |
+| Migration | nenhuma |
+| CI da `main` | Storage Integration Gate `38785620610` verde |
+| Storage Provider Rollout Evidence | run `38786541882` (sucesso) |
+| Protected Production Release | run `38788216233`, `publish`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Autorizacao | `CTRL-20261015-R3-ORD` |
+
+## Novos itens do roadmap (pedido do responsavel em 15/10/2026)
+
+Itens 5.14 a 5.22, com as sugestoes aceitas pelo responsavel. As fases 5.11 a 5.13
+(creditos e repasses 80/20) continuam no roadmap; a ordem entre as duas trilhas e
+decidida a cada fase.
+
+### Ordem sugerida
+
+| Ordem | Fase | Setores | Complexidade | Depende de |
+| --- | --- | --- | --- | --- |
+| 1 | 5.14 Entrega final so com quitacao | S06 / S07 / S08 | Media | 5.05 (politica de pagamento) |
+| 2 | 5.15 Contato do cliente para o produtor | S07 / S08 / S09 | Baixa | 5.07, 5.10 |
+| 3 | 5.16 Cards do catalogo (site e calculadora) | S01 / S04 | Baixa-media | ajuste do catalogo |
+| 4 | 5.17 Promocoes de servicos e combos | S04 / S05 | Media | 5.16 |
+| 5 | 5.18 Notificacoes nos portais | S07 / S08 / S11 | Media | 5.03 |
+| 6 | 5.19 Creditos de produtores no portfolio | S02 / S09 | Media | - |
+| 7 | 5.20 Produtor envia projetos ao portfolio | S02 / S08 | Media | 5.19 |
+| 8 | 5.21 Tag automatica nas previas | S07 / S08 / S12 | Alta | 5.09 (leitura de audio) |
+| 9 | 5.22 Catalogo interno de beats | S04 / S05 / S07 / S08 | Alta | 5.21, 5.16, 5.17 |
+
+### 5.14 - Entrega final so com quitacao
+- Hoje nada impede baixar a entrega final com saldo pendente. Com politica 50/50 e saldo
+  em aberto, o cliente ve que a entrega existe ("pronta, aguardando pagamento") e o link de
+  pagamento, mas o download de arquivos `entrega` e recusado pelo servidor.
+- Liberacao automatica quando o segundo pagamento for confirmado (webhook do Mercado Pago),
+  idempotente. Excecao do Admin com motivo obrigatorio e auditoria para acordos fora do
+  sistema. Previas continuam liberadas.
+
+### 5.15 - Contato do cliente para o produtor
+- Nome, e-mail e WhatsApp do cliente no detalhe da producao do Portal do Produtor, somente
+  para quem trabalha nela (coordenador e responsaveis de etapa, 5.07).
+- Nova politica (5.10) para o Admin esconder o contato quando quiser intermediar.
+
+### 5.16 - Cards do catalogo (site e calculadora)
+- Um componente unico de card: o servico avulso no formato do card de combo.
+- Na calculadora, cards no estilo do Admin, com informacoes do cliente: preco, o que inclui
+  e prazo; sem dados internos (etapas com valores, cotas avancadas, politicas).
+
+### 5.17 - Promocoes de servicos e combos
+- Promocao por servico avulso ou combo: percentual especial, inicio e fim opcionais, ativa
+  ou nao.
+- Decisao do responsavel: nao soma com o desconto geral; vale o maior dos dois.
+- Card com preco riscado e selo de promocao; a calculadora usa o preco promocional.
+- O preco promocional fica congelado na proposta enviada (snapshot da 5.05).
+
+### 5.18 - Notificacoes nos portais
+- Notificacoes por usuario (cliente e produtor) com "vista em". Ao abrir o portal, as nao
+  vistas aparecem uma vez na tela; um sino guarda o historico.
+- Eventos iniciais: nova mensagem, nova previa ou entrega, etapa concluida, pagamento
+  confirmado, proposta enviada, revisao liberada, entrega liberada (5.14).
+- Cada evento vira notificacao no portal e, quando fizer sentido, o e-mail que ja existe.
+
+### 5.19 - Creditos de produtores no portfolio
+- Projetos do portfolio com produtores responsaveis e funcoes de uma lista fixa (producao,
+  mixagem, masterizacao, composicao, gravacao, beat, outra com texto).
+- Aceita colaborador externo sem conta (apenas nome). Exibicao dos creditos no site; base
+  para uma pagina por produtor no futuro.
+
+### 5.20 - Produtor envia projetos ao portfolio
+- Area no Portal do Produtor para propor um projeto ao portfolio: entra como rascunho e so
+  e publicado com aprovacao do Admin; quem enviou ja entra nos creditos (5.19).
+- Pode ser ligado a uma producao do estudio (sem duplicar dados) e exige confirmar a
+  autorizacao do artista para publicar.
+
+### 5.21 - Tag automatica nas previas
+- Cada produtor cadastra a propria tag de audio no perfil; existe uma tag padrao do estudio
+  para quem nao tiver. O Admin define o intervalo (padrao 10 segundos) e o volume da tag.
+- Previas de audio enviadas na producao ganham uma versao com tag, gerada em segundo plano
+  (aviso de "processando"); o cliente recebe a versao com tag e o original fica so para o
+  estudio. A entrega final nunca leva tag.
+
+### 5.22 - Catalogo interno de beats
+- Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
+  enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes
+  logados, ouvidos com tag (5.21).
+- Decisao do responsavel: cada beat pode ser comprado como exclusivo ou lease (precos
+  proprios). Na compra exclusiva o beat sai do catalogo; o lease pode ser vendido varias
+  vezes enquanto o beat nao for vendido como exclusivo.
+- Compra pelo fluxo atual: o beat vira item de proposta, como um servico, com promocoes
+  (5.17) e regras de pagamento existentes.
