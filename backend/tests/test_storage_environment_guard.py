@@ -67,6 +67,112 @@ def protected_main_ruleset():
 
 
 class StorageEnvironmentGuardTests(unittest.TestCase):
+    def test_automatic_mode_requires_explicit_main_branch_without_approval_rules(self):
+        environment = dict(protected_environment(), protection_rules=[{"type": "branch_policy"}])
+        policies = {"branch_policies": [{"name": "main", "type": "branch"}]}
+        self.assertEqual(
+            protection_status(environment, policies, manual_approval_required=False),
+            "protected",
+        )
+        self.assertEqual(protection_status(environment, policies), "required_reviewers_missing")
+        self.assertEqual(
+            protection_status(
+                environment, policies,
+                manual_approval_required=False, solo_admin_reviewer="andersongaalves",
+            ),
+            "approval_policy_conflict",
+        )
+
+    def test_automatic_mode_fails_closed_for_incomplete_or_unsafe_configuration(self):
+        environment = dict(protected_environment(), protection_rules=[])
+        policies = {"branch_policies": [{"name": "main", "type": "branch"}]}
+        for change, expected in (
+            ({"can_admins_bypass": True}, "administrator_bypass_not_disabled"),
+            ({"can_admins_bypass": None}, "administrator_bypass_not_disabled"),
+            ({"protection_rules": None}, "required_reviewers_missing"),
+            ({"protection_rules": [{}]}, "manual_approval_or_wait_rule_present"),
+            ({"protection_rules": [{"type": "branch_policy"}, {"type": "branch_policy"}]},
+             "manual_approval_or_wait_rule_present"),
+            ({"protection_rules": [{"type": "wait_timer", "wait_timer": 1}]},
+             "manual_approval_or_wait_rule_present"),
+            ({"deployment_branch_policy": None}, "deployment_branch_policy_not_main_only"),
+        ):
+            with self.subTest(change=change):
+                self.assertEqual(
+                    protection_status(
+                        dict(environment, **change), policies, manual_approval_required=False,
+                    ),
+                    expected,
+                )
+        self.assertEqual(
+            protection_status(protected_environment(), policies, manual_approval_required=False),
+            "manual_approval_or_wait_rule_present",
+        )
+        for branches in (
+            [], [{"name": "main"}], [{"name": "main", "type": "tag"}],
+            [{"name": "*", "type": "branch"}],
+            [{"name": "main", "type": "branch"}, {"name": "release", "type": "branch"}],
+        ):
+            with self.subTest(branches=branches):
+                self.assertEqual(
+                    protection_status(
+                        environment, {"branch_policies": branches}, manual_approval_required=False,
+                    ),
+                    "deployment_branch_policy_not_main_only",
+                )
+        for field in ("can_admins_bypass", "protection_rules", "deployment_branch_policy"):
+            missing = dict(environment)
+            del missing[field]
+            with self.subTest(missing=field):
+                self.assertNotEqual(
+                    protection_status(missing, policies, manual_approval_required=False), "protected",
+                )
+
+    def test_automatic_cli_checks_live_environment_and_preserves_main_guard(self):
+        output = StringIO()
+        with patch.dict("os.environ", {
+            "GITHUB_REPOSITORY": "andersongaalves/mirai-hit-studio",
+            "GH_TOKEN": "test-token",
+        }, clear=True), patch(
+            "scripts.storage_environment_guard._get_json",
+            side_effect=[
+                dict(protected_environment(), protection_rules=[{"type": "branch_policy"}]),
+                {"branch_policies": [{"name": "main", "type": "branch"}]},
+                {
+                    "required_pull_request_reviews": {"required_approving_review_count": 0},
+                    "required_status_checks": {"strict": True, "contexts": ["storage-integration"]},
+                    "enforce_admins": {"enabled": True},
+                    "allow_force_pushes": {"enabled": False},
+                    "allow_deletions": {"enabled": False},
+                },
+            ],
+        ) as get_json, redirect_stdout(output):
+            self.assertEqual(main([
+                "--environment", "storage-rollout", "--without-manual-approval",
+                "--require-main-protection",
+            ]), 0)
+        self.assertEqual(get_json.call_count, 3)
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["approval_mode"], "automatic")
+        self.assertEqual(report["main"], "protected")
+        self.assertNotIn("test-token", output.getvalue())
+
+    def test_automatic_mode_rejects_api_failure_and_missing_environment(self):
+        from urllib.error import HTTPError, URLError
+
+        for error, expected in (
+            (HTTPError("url", 404, "missing", {}, None), "environment_not_found"),
+            (URLError("network"), "github_api_unavailable"),
+            (TypeError("invalid_response"), "github_api_unavailable"),
+        ):
+            with self.subTest(expected=expected), patch(
+                "scripts.storage_environment_guard._get_json", side_effect=error,
+            ):
+                self.assertEqual(check_environment(
+                    "https://api.github.com", "andersongaalves/mirai-hit-studio",
+                    "storage-rollout", "test-token", manual_approval_required=False,
+                ), expected)
+
     def test_requires_reviewer_self_review_bypass_and_main_only(self):
         environment = protected_environment()
         policies = {"branch_policies": [{"name": "main"}]}

@@ -25,6 +25,7 @@ def protection_status(
     branch_policies: object,
     *,
     solo_admin_reviewer: str | None = None,
+    manual_approval_required: bool = True,
 ) -> str:
     if not isinstance(environment, dict) or not isinstance(branch_policies, dict):
         return "environment_or_branch_policy_missing"
@@ -35,7 +36,15 @@ def protection_status(
     if not isinstance(rules, list):
         return "required_reviewers_missing"
     reviewer_rules = [rule for rule in rules if isinstance(rule, dict) and rule.get("type") == "required_reviewers"]
-    if solo_admin_reviewer:
+    if not manual_approval_required:
+        if solo_admin_reviewer:
+            return "approval_policy_conflict"
+        if len(rules) > 1 or any(
+            not isinstance(rule, dict) or rule.get("type") != "branch_policy"
+            for rule in rules
+        ):
+            return "manual_approval_or_wait_rule_present"
+    elif solo_admin_reviewer:
         expected = solo_admin_reviewer.lower()
         if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?", expected):
             return "authorized_reviewer_invalid"
@@ -66,6 +75,7 @@ def protection_status(
         or len(policies) != 1
         or not isinstance(policies[0], dict)
         or policies[0].get("name") != "main"
+        or (not manual_approval_required and policies[0].get("type") != "branch")
     ):
         return "deployment_branch_policy_not_main_only"
     return "protected"
@@ -191,6 +201,7 @@ def check_environment(
     token: str,
     *,
     solo_admin_reviewer: str | None = None,
+    manual_approval_required: bool = True,
 ) -> str:
     if not _valid_request(api_url, repository, token):
         return "request_configuration_invalid"
@@ -209,6 +220,7 @@ def check_environment(
         environment,
         policies,
         solo_admin_reviewer=solo_admin_reviewer,
+        manual_approval_required=manual_approval_required,
     )
 
 
@@ -271,7 +283,13 @@ def check_main_protection(
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", action="append", required=True)
-    parser.add_argument("--solo-admin-reviewer")
+    approval = parser.add_mutually_exclusive_group()
+    approval.add_argument("--solo-admin-reviewer")
+    approval.add_argument(
+        "--without-manual-approval",
+        action="store_true",
+        help="Require a pre-existing main-only Environment with no approval or wait rules",
+    )
     parser.add_argument("--require-main-protection", action="store_true")
     parser.add_argument("--required-check", default="storage-integration")
     parser.add_argument("--main-ruleset", default="mirai-main-protection")
@@ -287,6 +305,7 @@ def main(argv=None) -> int:
             name,
             token,
             solo_admin_reviewer=args.solo_admin_reviewer,
+            manual_approval_required=not args.without_manual_approval,
         )
         for name in args.environment
     }
@@ -300,7 +319,10 @@ def main(argv=None) -> int:
             required_check=args.required_check,
             ruleset_name=args.main_ruleset,
         )
-    report = {"environments": results}
+    report = {
+        "approval_mode": "automatic" if args.without_manual_approval else "manual",
+        "environments": results,
+    }
     if main_status is not None:
         report["main"] = main_status
     print(json.dumps(report, sort_keys=True))
