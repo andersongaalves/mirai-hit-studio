@@ -9,6 +9,7 @@ from sqlalchemy import (
     Text,
     text,
 )
+from sqlalchemy.orm import relationship
 
 from database import Base
 
@@ -74,3 +75,10 @@ class ProjetoModel(Base):
     link_audio = Column(String(500), nullable=False)
 
     link_capa = Column(String(500), nullable=False)
+
+    # Roadmap 5.19: ordered credits (producers with an account or external collaborators).
+    creditos = relationship(
+        "ProjetoCreditoModel",
+        order_by="ProjetoCreditoModel.ordem",
+        cascade="all, delete-orphan",
+    )

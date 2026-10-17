@@ -1,9 +1,10 @@
 """Transactional portfolio rules shared by project routes."""
 
 from fastapi import HTTPException
-from models import ProjetoModel
+from sqlalchemy import select, text
+
+from models import ProjetoCreditoModel, ProjetoModel, UsuarioModel
 from services.portfolio_segments_service import validate_project_segments
-from sqlalchemy import text
 
 PUBLIC_VERTICALS = ("artists", "creators", "media_games")
 PUBLIC_CASE_TYPES = ("client_case", "demo", "concept_project", "study")
@@ -68,7 +69,30 @@ def configure_landing_comparison(db, project: ProjetoModel, enabled: bool, order
         item.landing_order = position
 
 
+def replace_credits(db, project: ProjetoModel, creditos: list[dict]) -> None:
+    """Roadmap 5.19: the ordered list replaces the previous one; linked accounts must be active producers."""
+    ids = {credito["usuario_id"] for credito in creditos if credito.get("usuario_id") is not None}
+    if ids:
+        validos = set(db.scalars(select(UsuarioModel.id).where(
+            UsuarioModel.id.in_(ids), UsuarioModel.ativo.is_(True), UsuarioModel.role == "produtor",
+            UsuarioModel.is_admin.is_(False),
+        )))
+        if ids - validos:
+            raise HTTPException(status_code=422, detail="Credito vinculado a um produtor inexistente ou inativo.")
+    project.creditos.clear()
+    db.flush()  # Old rows go first so the (projeto_id, ordem) uniqueness never collides.
+    for ordem, credito in enumerate(creditos, start=1):
+        project.creditos.append(ProjetoCreditoModel(
+            ordem=ordem,
+            funcao=credito["funcao"],
+            funcao_outra=credito.get("funcao_outra"),
+            nome=credito["nome"],
+            usuario_id=credito.get("usuario_id"),
+        ))
+
+
 def apply_project_data(db, project: ProjetoModel, data: dict) -> None:
+    creditos = data.pop("creditos", None)
     if "segmentos_json" in data:
         validate_project_segments(
             db,
@@ -86,6 +110,8 @@ def apply_project_data(db, project: ProjetoModel, data: dict) -> None:
     order = data.pop("landing_order", project.landing_order)
     for field, value in data.items():
         setattr(project, field, value)
+    if creditos is not None:
+        replace_credits(db, project, creditos)
 
     if not comparison_changed and not (
         classification_changed and project.show_mix_comparison_on_landing

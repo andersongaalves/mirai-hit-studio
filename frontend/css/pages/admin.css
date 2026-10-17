@@ -445,6 +445,38 @@
     .config-financial-grid { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
+/* 5.19: ordered credits of a portfolio project. */
+.portfolio-credits {
+    display: grid;
+    gap: var(--space-3);
+    margin: var(--space-5) 0 0;
+    padding: var(--space-4);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+.portfolio-credits legend {
+    padding: 0 var(--space-2);
+    color: var(--color-text-primary);
+    font-family: var(--font-subtitulos);
+}
+.portfolio-credits__help { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.portfolio-credits__list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.portfolio-credits__empty { color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.portfolio-credits__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: var(--space-2);
+    align-items: center;
+}
+.portfolio-credits__item input[hidden] { display: none; }
+.portfolio-credits__item select,
+.portfolio-credits__item input { min-width: 0; width: 100%; }
+.portfolio-credits__role { display: grid; gap: var(--space-1); min-width: 0; }
+.portfolio-credits__actions { display: flex; gap: var(--space-1); }
+@media (max-width: 720px) {
+    .portfolio-credits__item { grid-template-columns: minmax(0, 1fr); }
+}
+
 .portfolio-mix-comparison {
     display: grid;
     gap: var(--space-4);

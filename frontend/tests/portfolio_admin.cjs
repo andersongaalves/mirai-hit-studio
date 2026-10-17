@@ -110,7 +110,8 @@ async function staticResponse(route) {
             projects = projects.map(item => item.id === 7 ? { ...item, link_capa } : item);
             return route.fulfill({ json: projects.find(item => item.id === 7) });
         }
-        const empty = ["/config", "/servicos", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores", "/newsletter/subscribers", "/newsletter/campaigns"];
+        if (url.pathname === "/usuarios/produtores") return route.fulfill({ json: [{ id: 2, username: "beatmaker", role: "produtor", ativo: true }] });
+        const empty = ["/config", "/servicos", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/newsletter/subscribers", "/newsletter/campaigns"];
         if (empty.includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
         if (url.pathname === "/dashboard") return route.fulfill({ json: { metrics: {}, pipeline: {}, attention: {}, recent_activity: [] } });
         return route.fulfill({ status: 404, json: { detail: "Not found" } });
@@ -222,6 +223,49 @@ async function staticResponse(route) {
         assert.doesNotMatch(multipleMessage, /\[object Object\]/);
         assert.equal(await page.locator("#proj_titulo").inputValue(), "xx");
         assert.equal(await page.locator('#proj_segmentos_opcoes input[value="rock"]').isChecked(), true);
+        await page.evaluate(() => window.fecharModalProjeto());
+
+        // Roadmap 5.19: ordered credits with linked producers and external collaborators.
+        const beforeCredits = writes.length;
+        await openProject(8);
+        assert.match(await page.locator("#proj_creditos").textContent(), /Nenhum crédito adicionado/);
+        await page.getByRole("button", { name: "Adicionar crédito" }).click();
+        await page.getByLabel("Função do crédito 1", { exact: true }).selectOption("mixagem");
+        await page.getByLabel("Pessoa do crédito 1").selectOption("2");
+        assert.equal(await page.getByLabel("Nome do crédito 1").inputValue(), "beatmaker");
+        await page.getByRole("button", { name: "Adicionar crédito" }).click();
+        assert.equal(await page.getByLabel("Outra função do crédito 2").isVisible(), false);
+        await page.getByLabel("Função do crédito 2", { exact: true }).selectOption("outra");
+        await page.getByLabel("Outra função do crédito 2").fill("Direção vocal");
+        await page.getByLabel("Nome do crédito 2").fill("Fulana <b>Externa</b>");
+        await page.getByRole("button", { name: "Mover crédito 2 para cima" }).click();
+        assert.equal(await page.getByLabel("Nome do crédito 1").inputValue(), "Fulana <b>Externa</b>");
+        for (const width of [1280, 390]) {
+            await page.setViewportSize({ width, height: 900 });
+            assert.equal(await page.locator(".portfolio-credits").evaluate(element => element.scrollWidth <= element.clientWidth + 1), true);
+        }
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await page.getByRole("button", { name: "Salvar Projeto" }).click();
+        await page.waitForFunction(() => document.getElementById("modal-projeto").classList.contains("hidden"));
+        assert.deepEqual(writes.slice(beforeCredits).map(item => item.payload), [{ creditos: [
+            { funcao: "outra", funcao_outra: "Direção vocal", nome: "Fulana <b>Externa</b>", usuario_id: null },
+            { funcao: "mixagem", funcao_outra: null, nome: "beatmaker", usuario_id: 2 },
+        ] }]);
+
+        // Saved credits load back in order; an unnamed credit is blocked before any request.
+        await page.evaluate(() => window.fecharModalProjeto?.());
+        await openProject(8);
+        assert.equal(await page.getByLabel("Pessoa do crédito 2").inputValue(), "2");
+        assert.equal(await page.getByLabel("Outra função do crédito 1").inputValue(), "Direção vocal");
+        const beforeInvalidCredit = writes.length;
+        await page.getByRole("button", { name: "Adicionar crédito" }).click();
+        await page.getByRole("button", { name: "Salvar Projeto" }).click();
+        await page.waitForFunction(() => [...document.querySelectorAll(".notification.error .notification-message")]
+            .some(element => element.textContent.includes("Informe o nome do crédito 3.")));
+        assert.equal(writes.length, beforeInvalidCredit);
+        await page.getByRole("button", { name: "Remover crédito 3" }).click();
+        assert.equal(await page.locator("#proj_creditos li.portfolio-credits__item").count(), 2);
+        assert.equal(await page.locator("#proj_creditos b").count(), 0);
         assert.deepEqual(errors, []);
         console.log("PASS: Portfolio Admin legacy edits, A/B preservation and readable validation errors.");
     } finally {

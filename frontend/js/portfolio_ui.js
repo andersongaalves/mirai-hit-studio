@@ -1,5 +1,6 @@
 import { safeURL } from "./utils/security.js";
 import { $, clear } from "./utils/dom.js";
+import { creditsList } from "./modules/portfolio_credits.js";
 
 const VERTICAL_LABELS = {
     artists: "Artistas",
@@ -108,6 +109,9 @@ function createProjectCard(project, segmentLabels = {}) {
     listen.append(element("span", "portfolio-card__listen-arrow", "↗"));
 
     body.append(badges, title, credit);
+    // 5.19: who worked on the project (name and role only).
+    const credits = creditsList(project.creditos);
+    if (credits) body.append(credits);
     if (service.childElementCount) body.append(service);
     if (segments.childElementCount) body.append(segments);
     body.append(description);

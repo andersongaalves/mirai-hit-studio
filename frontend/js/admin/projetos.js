@@ -6,6 +6,8 @@ import * as Notify from "../utils/notifications.js";
 
 import { $, clear } from "../utils/dom.js";
 import { closeAdminModal, openAdminModal } from "./admin_modal.js";
+import { normalizeCredits } from "../modules/portfolio_credits.js";
+import { bindCreditControls, readCredits, setCredits, setProducers } from "./portfolio_creditos.js";
 
 // ===========================
 // STATE
@@ -37,6 +39,13 @@ export async function carregarPortfolio() {
         if (!response.ok || !segmentResponse.ok) throw new Error("Erro ao carregar projetos.");
         projetos = await response.json();
         segmentCatalog = (await segmentResponse.json()).segments || [];
+        // 5.19: producers that can be linked to credits; the editor still works without them.
+        try {
+            const producersResponse = await authFetch("/usuarios/produtores");
+            setProducers(producersResponse.ok ? await producersResponse.json() : []);
+        } catch {
+            setProducers([]);
+        }
 
         renderizarProjetos();
     } catch (error) {
@@ -226,6 +235,7 @@ function bindCoverControls() {
 
 export function novoProjeto() {
     limparFormulario();
+    bindCreditControls();
 
     bindAudioControls();
     bindCoverControls();
@@ -267,6 +277,9 @@ export function editarProjeto(id) {
     $("proj_descricao").value = projeto.descricao;
 
     $("proj_destaque").checked = projeto.destaque;
+
+    bindCreditControls();
+    setCredits(projeto.creditos);
 
     setAudioPreview("before", projeto.audio_before_url);
     setAudioPreview("after", projeto.audio_after_url);
@@ -312,6 +325,8 @@ function projetoPayload(showComparison, order) {
         show_mix_comparison_on_landing: showComparison,
 
         landing_order: showComparison ? order : null,
+
+        creditos: readCredits(),
     };
 }
 
@@ -346,6 +361,7 @@ function projetoChanges(payload, project) {
         landing_order: project.show_mix_comparison_on_landing
             ? project.landing_order || 1
             : null,
+        creditos: normalizeCredits(project.creditos),
     };
 
     return Object.fromEntries(Object.entries(payload).filter(([field, value]) => (
@@ -366,6 +382,7 @@ const PROJECT_FIELD_LABELS = {
     destaque: "Destaque",
     show_mix_comparison_on_landing: "Comparação A/B",
     landing_order: "Ordem da comparação A/B",
+    creditos: "Créditos",
 };
 
 function validationErrorMessage(error) {
@@ -601,6 +618,7 @@ function limparFormulario() {
 
     $("proj_segmentos_busca").value = "";
     renderSegmentPicker([]);
+    setCredits([]);
 
     $("proj_destaque").checked = false;
     $("proj_audio_before").value = "";

@@ -4,10 +4,10 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const assetVersion = "20261012-portfolio-card";
+const assetVersion = "20261017-portfolio-creditos";
 const types = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".webp": "image/webp", ".ttf": "font/ttf" };
 let projects = [
-    { id: 1, titulo: "Faixa <script>alert(1)</script>", artista: "Artista teste", categoria: "Mixagem", link_audio: "https://example.com/audio.mp3", link_capa: "javascript:alert(1)", descricao: "Descrição <img src=x onerror=alert(1)>", destaque: true, vertical: "artists", segmentos_json: ["rap"], case_type: "client_case" },
+    { id: 1, titulo: "Faixa <script>alert(1)</script>", artista: "Artista teste", categoria: "Mixagem", link_audio: "https://example.com/audio.mp3", link_capa: "javascript:alert(1)", descricao: "Descrição <img src=x onerror=alert(1)>", destaque: true, vertical: "artists", segmentos_json: ["rap"], case_type: "client_case", creditos: [{ funcao: "mixagem", funcao_outra: null, nome: "Beat <b>Maker</b>" }, { funcao: "outra", funcao_outra: "Direção vocal", nome: "Fulana" }, { funcao: "beat", funcao_outra: null, nome: "   " }] },
     { id: 2, titulo: "Estudo de interface", artista: "Mirai Hit Studio", categoria: "Sound design", link_audio: "https://www.youtube.com/watch?v=abcdefghijk", link_capa: "https://example.com/cover.webp", descricao: "Material conceitual", destaque: false, vertical: "media_games", segmentos_json: ["games"], case_type: "study" },
     { id: 3, titulo: "Nao classificado", artista: "Interno", categoria: "Outro", link_audio: "https://example.com/private.mp3", link_capa: "https://example.com/private.webp", descricao: "Nao publicar", destaque: false, vertical: null, segmentos_json: [], case_type: null },
 ];
@@ -55,8 +55,8 @@ async function staticResponse(route) {
         await page.goto("http://localhost:4173/portfolio");
         assert.ok((await page.locator('link[href*="integrado-portfolio.css"]').getAttribute("href")).endsWith(`?v=${assetVersion}`));
         assert.ok((await page.locator('script[src*="js/main.js"]').getAttribute("src")).endsWith(`?v=${assetVersion}`));
-        assert.match(await fs.readFile(path.join(root, "js", "main.js"), "utf8"), /modules\/portfolio\.js\?v=20261012-portfolio-card/);
-        assert.match(await fs.readFile(path.join(root, "js", "modules", "portfolio.js"), "utf8"), /portfolio_ui\.js\?v=20261012-portfolio-card/);
+        assert.match(await fs.readFile(path.join(root, "js", "main.js"), "utf8"), /modules\/portfolio\.js\?v=20261017-portfolio-creditos/);
+        assert.match(await fs.readFile(path.join(root, "js", "modules", "portfolio.js"), "utf8"), /portfolio_ui\.js\?v=20261017-portfolio-creditos/);
         await page.waitForSelector(".portfolio-card");
         assert.equal(await page.locator(".portfolio-card").count(), 2);
         assert.equal(await page.getByText("Nao classificado", { exact: true }).count(), 0);
@@ -65,6 +65,11 @@ async function staticResponse(route) {
         assert.equal(await page.locator("script").filter({ hasText: "alert(1)" }).count(), 0);
         assert.match(await page.locator(".portfolio-card").first().textContent(), /<script>alert\(1\)<\/script>/);
         assert.match(await page.locator(".portfolio-card").first().textContent(), /Rap\/Geek/);
+        // Roadmap 5.19: credits as text (role and name), blank names skipped.
+        const credits = page.locator(".portfolio-card").first().locator(".portfolio-card__credits li");
+        assert.deepEqual(await credits.allTextContents(), ["MixagemBeat <b>Maker</b>", "Direção vocalFulana"]);
+        assert.equal(await page.locator(".portfolio-card__credits b").count(), 0);
+        assert.equal(await page.locator(".portfolio-card").nth(1).locator(".portfolio-card__credits").count(), 0);
         assert.equal(await page.locator("audio").getAttribute("autoplay"), null);
         assert.equal(await page.locator("audio").getAttribute("preload"), "none");
         assert.ok((await page.locator(".portfolio-card__cover").first().getAttribute("src")).includes("logo-principal.webp"));

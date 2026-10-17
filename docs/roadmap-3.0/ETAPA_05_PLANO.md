@@ -558,6 +558,22 @@ Implementacao em 17/10/2026, integrada pela PR #65:
 - Aceita colaborador externo sem conta (apenas nome). Exibicao dos creditos no site; base
   para uma pagina por produtor no futuro.
 
+Implementacao em 17/10/2026 (branch `feat/5.19-creditos-portfolio`):
+- Tabela `projeto_creditos` (migration aditiva `a2c4e6f8b135`, posterior a `f3b5d7a9c124`,
+  sem backfill; RLS ativa e sem grants para `anon`/`authenticated`). Aplicar antes de
+  publicar este backend.
+- Cada credito tem ordem, funcao da lista fixa (producao, mixagem, masterizacao,
+  composicao, gravacao, beat ou outra com descricao de ate 60 caracteres) e o nome exibido.
+  O vinculo com a conta e opcional e aceita apenas produtor ativo; colaborador externo entra
+  so com o nome. Se a conta for apagada, o nome publicado permanece (vinculo vira nulo).
+- Admin: editor no modal do projeto (adicionar, ordenar, remover; ate 20 creditos). A lista
+  enviada substitui a anterior; editar outros campos nao mexe nos creditos.
+- Site: o card do portfolio mostra funcao e nome em texto puro. A API publica nunca expoe o
+  vinculo com a conta (`usuario_id` so aparece no Admin). Cache dos modulos do portfolio
+  versionado em `20261017-portfolio-creditos`.
+- Base para a 5.20 (o produtor que enviar o projeto entra nos creditos pela conta) e para a
+  pagina por produtor no futuro (indice por `usuario_id`).
+
 ### 5.20 - Produtor envia projetos ao portfolio
 - Area no Portal do Produtor para propor um projeto ao portfolio: entra como rascunho e so
   e publicado com aprovacao do Admin; quem enviou ja entra nos creditos (5.19).
