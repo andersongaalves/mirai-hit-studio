@@ -522,10 +522,10 @@ Implementacao em 17/10/2026, integrada pelas PRs #61 e #62:
   confirmado, proposta enviada, revisao liberada, entrega liberada (5.14).
 - Cada evento vira notificacao no portal e, quando fizer sentido, o e-mail que ja existe.
 
-Implementacao em 17/10/2026 (branch `feat/5.18-notificacoes-portais`):
+Implementacao em 17/10/2026, integrada pela PR #65:
 - Tabela privada `portal_notificacoes` com RLS e sem acesso de `anon`/`authenticated`;
   migration aditiva `f3b5d7a9c124`, posterior a `f1a3c5e7b902`, sem backfill historico.
-  Aplicar antes de publicar este backend.
+  Aplicada em producao antes do release; nao reaplicar nem fazer downgrade.
 - Uma linha por usuario e evento (`usuario_id` + `chave_evento` unicos): reenvios,
   webhooks repetidos e abas concorrentes nao duplicam. A marcacao de vista trava as
   linhas em ordem fixa, entao cada notificacao e "reivindicada" uma unica vez.
@@ -538,6 +538,19 @@ Implementacao em 17/10/2026 (branch `feat/5.18-notificacoes-portais`):
   escondidas pela politica `cliente_ve_etapas` nao aparecem. O autor da acao nao recebe
   a propria notificacao. Textos fixos, sem nome de arquivo nem dados livres.
 - Sino com historico paginado nos dois portais; as nao vistas aparecem uma vez ao abrir.
+
+### Publicacao da 5.18 (17/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #64 (registro da 5.14 a 5.17) e #65 (5.18, com a correcao de imports em `schemas/proposta.py`) |
+| Commit publicado | `c098068f3fed3a1d1ccff71fee76f41776bb3edb` |
+| Migration | `f3b5d7a9c124`, aplicada no Supabase antes do release (tabela criada vazia, RLS ativa, sem grants para `anon`/`authenticated`) |
+| CI da `main` | Storage Integration Gate `39032072080`, Portals E2E e Client access verdes |
+| Storage Provider Rollout Evidence | run `39050250059` (sucesso) |
+| Protected Production Release | dry-run `39050375057` e publish `39050452907`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Conferencia | dados da Yonda preservados (cobranca 74 paga, pagamento 85 aprovado, producao 48) |
+| Autorizacao | `CTRL-20261017-R3-518` |
 
 ### 5.19 - Creditos de produtores no portfolio
 - Projetos do portfolio com produtores responsaveis e funcoes de uma lista fixa (producao,
