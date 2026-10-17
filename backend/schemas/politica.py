@@ -30,6 +30,7 @@ class PoliticasCompletas(BaseModel):
     cliente_ve_prazos_etapas: bool = True
     financeiro_cliente: FinanceiroCliente = "completo"
     entrega_final: EntregaFinal = "apos_quitacao"
+    produtor_ve_contato_cliente: bool = True
 
 
 class PoliticasParciais(BaseModel):
@@ -42,6 +43,7 @@ class PoliticasParciais(BaseModel):
     cliente_ve_prazos_etapas: bool | None = None
     financeiro_cliente: FinanceiroCliente | None = None
     entrega_final: EntregaFinal | None = None
+    produtor_ve_contato_cliente: bool | None = None
 
 
 class PoliticasGlobaisPublicar(BaseModel):

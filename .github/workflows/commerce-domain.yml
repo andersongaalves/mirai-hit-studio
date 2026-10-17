@@ -120,6 +120,7 @@ jobs:
                   python -m unittest discover -s tests -p 'test_cotas_arquivo.py' -v
                   python -m unittest discover -s tests -p 'test_politicas.py' -v
                   python -m unittest discover -s tests -p 'test_entrega_final.py' -v
+                  python -m unittest discover -s tests -p 'test_contato_cliente_produtor.py' -v
                   python -m unittest discover -s tests -p 'test_catalogo.py' -v
                   python -m unittest discover -s tests -p 'test_emails.py' -v
                   python -m unittest discover -s tests -p 'test_portal_produtor.py' -v

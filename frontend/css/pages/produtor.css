@@ -22,6 +22,13 @@
 
 .producer-file .producer-file__shared { color: var(--color-accent); }
 
+.producer-client-contact {
+    margin-top: var(--space-3);
+    overflow-wrap: anywhere;
+}
+
+.producer-client-contact h3 { font-size: var(--font-size-body); }
+
 @media (max-width: 767px) {
     .producer-payout { grid-template-columns: 1fr; }
     .producer-payout p { grid-column: auto; }

@@ -456,6 +456,15 @@ Implementacao retomada em 16/10/2026, ainda em validacao para integracao:
   para quem trabalha nela (coordenador e responsaveis de etapa, 5.07).
 - Nova politica (5.10) para o Admin esconder o contato quando quiser intermediar.
 
+Implementacao em 17/10/2026, em validacao para integracao:
+- Contato canonico do cliente ativo, somente no detalhe autorizado; nao e
+  incluido na listagem de producoes nem inferido dos dados antigos do orcamento.
+- Coordenador e responsaveis de etapa autorizados; retirar a atribuicao revoga
+  o acesso. Politica restritiva prevalece quando ha varios servicos.
+- Contratos enviados permanecem congelados: para ocultar contato em producoes
+  existentes, usar a excecao administrativa com motivo e auditoria.
+- Links de e-mail/WhatsApp e texto seguro no Portal do Produtor. Sem migration.
+
 ### 5.16 - Cards do catalogo (site e calculadora)
 - Um componente unico de card: o servico avulso no formato do card de combo.
 - Na calculadora, cards no estilo do Admin, com informacoes do cliente: preco, o que inclui

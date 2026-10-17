@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from core.dependencies import require_producer
 from crud import crud_producao
 from database import get_db
+from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
 from models.usuario import UsuarioModel
 from schemas.portal_produtor import ProducaoProdutorResponse
@@ -27,6 +28,21 @@ def _com_papel(producao, user):
     return data
 
 
+def _detalhe(db, producao, user):
+    """Called only after the coordinator/stage-owner scoped production lookup."""
+    data = _com_papel(producao, user)
+    if politica_service.vigentes(db, producao.id)["produtor_ve_contato_cliente"]:
+        orcamento = db.get(OrcamentoModel, producao.orcamento_id)
+        cliente = orcamento.cliente if orcamento is not None else None
+        if cliente is not None and cliente.ativo:
+            data["contato_cliente"] = {
+                "nome": cliente.nome,
+                "email": cliente.email,
+                "whatsapp": cliente.telefone,
+            }
+    return data
+
+
 PRODUCER_STATUS_TRANSITIONS = {
     "aguardando_inicio": {"em_producao"},
     "em_producao": {"revisao"},
@@ -34,7 +50,11 @@ PRODUCER_STATUS_TRANSITIONS = {
 }
 
 
-@router.get("/producoes", response_model=list[ProducaoProdutorResponse])
+@router.get(
+    "/producoes",
+    response_model=list[ProducaoProdutorResponse],
+    response_model_exclude={"__all__": {"contato_cliente"}},
+)
 def listar_minhas_producoes(
     db: Db,
     user: CurrentProducer,
@@ -51,7 +71,7 @@ def obter_minha_producao(
     producao = crud_producao.buscar_por_produtor(db, producao_id, user.id)
     if not producao:
         raise HTTPException(status_code=404, detail="Producao nao encontrada.")
-    return _com_papel(producao, user)
+    return _detalhe(db, producao, user)
 
 
 @router.patch(
@@ -74,7 +94,7 @@ def atualizar_andamento(
 
     status_anterior = producao.status
     if dados.status == status_anterior:
-        return _com_papel(producao, user)
+        return _detalhe(db, producao, user)
 
     permitidos = PRODUCER_STATUS_TRANSITIONS.get(status_anterior, set())
     if dados.status not in permitidos:
@@ -95,7 +115,7 @@ def atualizar_andamento(
     )
     db.commit()
     db.refresh(producao)
-    return _com_papel(producao, user)
+    return _detalhe(db, producao, user)
 
 
 def _file_error(exc):
