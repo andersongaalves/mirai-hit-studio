@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from schemas.promocao import PrecoCatalogo, Promocao
 
 Money = Annotated[Decimal, Field(ge=0, le=Decimal("9999999999.99"), max_digits=12, decimal_places=2, allow_inf_nan=False)]
 
@@ -18,6 +19,7 @@ class ComboWrite(BaseModel):
     aplica_desconto: bool = False
     destaques: list[Annotated[str, Field(max_length=200)]] = Field(default_factory=list, max_length=20)
     ativo: bool = True
+    promocao: Promocao | None = None
     servicos: list[Annotated[int, Field(gt=0)]] = Field(min_length=2, max_length=10)
 
     @field_validator("nome", "descricao", "subtitulo")
@@ -60,6 +62,8 @@ class ComboResponse(BaseModel):
     parametros: str = ""  # Union of the services' calculator parameters.
     prazo_estimado_dias: int | None = None
     ativo: bool
+    promocao: Promocao | None = None
+    preco_catalogo: PrecoCatalogo | None = None
     soma_servicos: Decimal
     servicos: list[ComboServico]
     created_at: datetime | None

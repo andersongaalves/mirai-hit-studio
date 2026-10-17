@@ -439,7 +439,7 @@ decidida a cada fase.
   idempotente. Excecao do Admin com motivo obrigatorio e auditoria para acordos fora do
   sistema. Previas continuam liberadas.
 
-Implementacao retomada em 16/10/2026, ainda em validacao para integracao:
+Implementacao retomada em 16/10/2026, integrada em 17/10 pela PR #58:
 - Bloqueio real no endpoint de conteudo, inclusive se o ID do arquivo for conhecido.
 - Recalculo a cada leitura: entrada nao basta; quitacao libera; reembolso,
   cancelamento, divergencia de titularidade e conciliacao pendente bloqueiam.
@@ -456,7 +456,7 @@ Implementacao retomada em 16/10/2026, ainda em validacao para integracao:
   para quem trabalha nela (coordenador e responsaveis de etapa, 5.07).
 - Nova politica (5.10) para o Admin esconder o contato quando quiser intermediar.
 
-Implementacao em 17/10/2026, em validacao para integracao:
+Implementacao em 17/10/2026, integrada pela PR #59:
 - Contato canonico do cliente ativo, somente no detalhe autorizado; nao e
   incluido na listagem de producoes nem inferido dos dados antigos do orcamento.
 - Coordenador e responsaveis de etapa autorizados; retirar a atribuicao revoga
@@ -470,7 +470,7 @@ Implementacao em 17/10/2026, em validacao para integracao:
 - Na calculadora, cards no estilo do Admin, com informacoes do cliente: preco, o que inclui
   e prazo; sem dados internos (etapas com valores, cotas avancadas, politicas).
 
-Implementacao em 17/10/2026, em validacao para integracao:
+Implementacao em 17/10/2026, integrada pela PR #60:
 - Mesmo renderer para avulsos e combos; preco, escopo e prazo sempre visiveis,
   inclusive antes da selecao. Selecao por card e teclado preservada.
 - Prazo estimado e a soma dos dias das etapas do catalogo (como no contrato);
@@ -484,6 +484,18 @@ Implementacao em 17/10/2026, em validacao para integracao:
 - Decisao do responsavel: nao soma com o desconto geral; vale o maior dos dois.
 - Card com preco riscado e selo de promocao; a calculadora usa o preco promocional.
 - O preco promocional fica congelado na proposta enviada (snapshot da 5.05).
+
+Implementacao em 17/10/2026, em validacao para integracao:
+- Configuracao tipada por servico/combo, ativa e com datas opcionais com fuso;
+  inicio inclusivo e fim exclusivo. O maior desconto elegivel vence, sem soma.
+- Cards e calculadora compartilham o percentual calculado no backend. O Admin
+  inicia novos itens pelo preco vigente e continua podendo negociar.
+- Snapshot guarda o valor contratado e o contexto promocional no envio; alteracoes
+  posteriores do catalogo nao reescrevem propostas ou pagamentos existentes.
+- Migration aditiva `f1a3c5e7b902` (duas colunas JSON opcionais), posterior a
+  `e8a0c2d4f659`. Aplicar antes de publicar este backend; nao executada em producao.
+- Testes cobrem periodos, limites, arredondamento, nao acumulacao, acesso Admin,
+  editores antigos, congelamento e upgrade/downgrade/upgrade descartavel.
 
 ### 5.18 - Notificacoes nos portais
 - Notificacoes por usuario (cliente e produtor) com "vista em". Ao abrir o portal, as nao

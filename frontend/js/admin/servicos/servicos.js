@@ -110,9 +110,13 @@ export function moverParametro(index, direcao) {
 }
 
 export async function salvarServico() {
-    const { id, payload } = ServicosForm.getServicoFormPayload(
-        servicosState.parametros,
-    );
+    let id, payload;
+    try {
+        ({ id, payload } = ServicosForm.getServicoFormPayload(servicosState.parametros));
+    } catch (error) {
+        Notify.warning(error.message);
+        return;
+    }
 
     if (!payload.nome) {
         Notify.warning("Informe o nome do serviço.");

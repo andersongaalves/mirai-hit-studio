@@ -155,6 +155,8 @@
 .catalog-card .service-price { width: 100%; }
 .catalog-card .service-section-title { cursor: inherit; }
 .service-discount { color: var(--color-warning); }
+.service-price s { color: var(--color-text-secondary); margin-right: var(--space-2); }
+.service-promotion { display: inline-block; color: var(--color-warning); margin-right: var(--space-2); }
 
 .panel,
 .result-panel {

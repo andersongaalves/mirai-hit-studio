@@ -42,6 +42,10 @@ ALLOWED_METADATA = {
     "extra_review",
     "policy_keys",
     "changed_keys",
+    "old_promotion_percent", "new_promotion_percent",
+    "old_promotion_active", "new_promotion_active",
+    "old_promotion_start", "new_promotion_start",
+    "old_promotion_end", "new_promotion_end",
 }
 
 

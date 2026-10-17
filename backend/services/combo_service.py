@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from models import ComboItemModel, ComboModel, ServicoModel
 from schemas.combo import ComboWrite
 from schemas.servico_estrutura import ler
-from services import audit_service, catalogo_service
+from services import audit_service, catalogo_service, promocao_service
 
 CENT = Decimal("0.01")
 
@@ -39,7 +39,7 @@ def carregar(db: Session, ids=None, *, somente_ativos=False):
     return list(db.scalars(query))
 
 
-def serializar(combo: ComboModel) -> dict:
+def serializar(combo: ComboModel, desconto=0) -> dict:
     servicos = [{
         "servico_id": item.servico_id,
         "nome": item.servico.nome,
@@ -61,6 +61,8 @@ def serializar(combo: ComboModel) -> dict:
         "subtitulo": combo.subtitulo or "",
         "preco_base": _money(combo.preco_base),
         "aplica_desconto": bool(combo.aplica_desconto),
+        "promocao": combo.promocao,
+        "preco_catalogo": promocao_service.preco(combo, desconto),
         "destaques": list(combo.destaques or []),
         "parametros": ",".join(parametros),
         "prazo_estimado_dias": (
@@ -77,7 +79,8 @@ def serializar(combo: ComboModel) -> dict:
 
 
 def listar(db: Session, *, somente_ativos=False):
-    return [serializar(combo) for combo in carregar(db, somente_ativos=somente_ativos)]
+    desconto = promocao_service.desconto_global(db)
+    return [serializar(combo, desconto) for combo in carregar(db, somente_ativos=somente_ativos)]
 
 
 def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
@@ -93,6 +96,8 @@ def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
     combo.subtitulo = dados.subtitulo
     combo.aplica_desconto = dados.aplica_desconto
     combo.destaques = list(dados.destaques)
+    if "promocao" in dados.model_fields_set:
+        combo.promocao = dados.promocao.model_dump(mode="json") if dados.promocao else None
     combo.itens.clear()
     db.flush()
     combo.itens.extend(ComboItemModel(servico_id=servico_id, ordem=ordem)
@@ -106,10 +111,11 @@ def criar(db: Session, dados: ComboWrite, *, actor=None, request_id=None):
         _aplicar(db, combo, dados)
         db.add(combo)
         db.flush()
+        promocao_service.auditar_alteracao(db, combo, None, actor=actor, request_id=request_id)
         audit_service.record(db, actor=actor, action="combo.created", entity_type="combo", entity_id=combo.id,
                              metadata={}, request_id=request_id)
         db.commit()
-        return serializar(carregar(db, [combo.id])[0])
+        return serializar(carregar(db, [combo.id])[0], promocao_service.desconto_global(db))
     except Exception:
         db.rollback()
         raise
@@ -120,13 +126,15 @@ def atualizar(db: Session, combo_id: int, dados: ComboWrite, *, actor=None, requ
         combo = db.get(ComboModel, combo_id)
         if combo is None:
             raise ComboNaoEncontrado("Combo nao encontrado.")
+        promocao_anterior = combo.promocao
         _aplicar(db, combo, dados)
         db.flush()
+        promocao_service.auditar_alteracao(db, combo, promocao_anterior, actor=actor, request_id=request_id)
         audit_service.record(db, actor=actor, action="combo.updated", entity_type="combo", entity_id=combo.id,
                              metadata={}, request_id=request_id)
         db.commit()
         db.expire_all()
-        return serializar(carregar(db, [combo.id])[0])
+        return serializar(carregar(db, [combo.id])[0], promocao_service.desconto_global(db))
     except Exception:
         db.rollback()
         raise

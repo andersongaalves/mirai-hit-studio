@@ -1,6 +1,7 @@
 import { escapeHtml } from "../utils/security.js";
 import { limitLines, readStructure } from "./service_catalog.js";
 import { money } from "../utils/format.js";
+import { catalogDiscount } from "./catalog_pricing.js";
 // Catalog rework: intro, what the service includes (typed limits) and highlights.
 // Legacy structures are converted on read (readStructure); everything is escaped.
 export function renderizarEstrutura(estrutura) {
@@ -48,8 +49,8 @@ export function renderizarCombo(combo) {
 
 /** The same customer-facing card for single services and modular combos. */
 export function renderizarCardServico(servico, config = {}) {
-    const desconto = servico.aplica_desconto ? Number(config.desconto) || 0 : 0;
-    const preco = Number(servico.valor_base) * (1 - desconto / 100);
+    const desconto = catalogDiscount(servico, config);
+    const preco = servico.preco_catalogo?.preco_vigente ?? Number(servico.valor_base) * (1 - desconto / 100);
     const dias = servico.prazo_estimado_dias;
     const prazo = Number.isInteger(dias) && dias >= 0
         ? `Prazo estimado: ${dias} ${dias === 1 ? "dia" : "dias"}`
@@ -64,6 +65,8 @@ export function renderizarCardServico(servico, config = {}) {
             <span class="service-title">${escapeHtml(servico.nome)}</span>
             ${servico.subtitulo ? `<span class="service-subtitle">${escapeHtml(servico.subtitulo)}</span>` : ""}
             <div class="service-price">A partir de <strong>${money(preco)}</strong>
+                ${desconto > 0 ? `<s>${money(servico.valor_base)}</s>` : ""}
+                ${servico.preco_catalogo?.promocao_ativa ? '<span class="service-promotion">Promoção</span>' : ""}
                 ${desconto > 0 ? `<span class="service-discount">-${escapeHtml(desconto)}% OFF</span>` : ""}
             </div>
             <p class="catalog-card__deadline">${prazo}</p>

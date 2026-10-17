@@ -8,21 +8,24 @@ from schemas.servico import (ServicoCreate, ServicoResponse)
 
 from core.dependencies import require_admin
 from schemas.servico_etapa import ServicoEtapaOut, ServicoEtapasUpdate
-from services import audit_service, catalogo_service
+from schemas.promocao import PrecoCatalogo
+from services import audit_service, catalogo_service, promocao_service
 
 router = APIRouter(prefix="/servicos", tags=["Serviços"])
 
 
-def _resposta_servico(servico):
+def _resposta_servico(servico, desconto=0):
     resposta = ServicoResponse.model_validate(servico)
     resposta.prazo_estimado_dias = catalogo_service.prazo_estimado(servico.etapas)
+    resposta.preco_catalogo = PrecoCatalogo.model_validate(promocao_service.preco(servico, desconto))
     return resposta
 
 
 @router.get("", response_model=list[ServicoResponse])
 def listar_servicos(db: Session = Depends(get_db)):
     servicos = db.query(models.ServicoModel).options(selectinload(models.ServicoModel.etapas)).all()
-    return [_resposta_servico(servico) for servico in servicos]
+    desconto = promocao_service.desconto_global(db)
+    return [_resposta_servico(servico, desconto) for servico in servicos]
 
 
 @router.post("", response_model=ServicoResponse)
@@ -32,17 +35,18 @@ def criar_servico(
     user=Depends(require_admin),
 ):
 
-    dados = servico.model_dump()
+    dados = servico.model_dump(mode="json")
     dados["categoria"] = dados.get("categoria") or "avulso"  # Combos live in the combos catalog (5.08).
     novo = models.ServicoModel(**dados)
 
     db.add(novo)
     db.flush()
     catalogo_service.sincronizar_cotas(db, novo)
+    promocao_service.auditar_alteracao(db, novo, None, actor=user)
     db.commit()
     db.refresh(novo)
 
-    return _resposta_servico(novo)
+    return _resposta_servico(novo, promocao_service.desconto_global(db))
 
 
 @router.put("/{servico_id}", response_model=ServicoResponse)
@@ -62,18 +66,22 @@ def atualizar_servico(
     if not servico:
         raise HTTPException(status_code=404)
 
-    for key, value in srv_atualizado.model_dump().items():
+    promocao_anterior = servico.promocao
+    for key, value in srv_atualizado.model_dump(mode="json").items():
+        if key == "promocao" and key not in srv_atualizado.model_fields_set:
+            continue  # Older editors must not erase a separately configured promotion.
         if key == "categoria" and value is None:
             continue  # The editor no longer chooses a category; legacy rows keep theirs.
         setattr(servico, key, value)
 
     db.flush()
     catalogo_service.sincronizar_cotas(db, servico)
+    promocao_service.auditar_alteracao(db, servico, promocao_anterior, actor=user)
     db.commit()
 
     db.refresh(servico)
 
-    return _resposta_servico(servico)
+    return _resposta_servico(servico, promocao_service.desconto_global(db))
 
 
 @router.delete("/{servico_id}")

@@ -1770,6 +1770,11 @@
 .combo-card__meta, .combo-card__servicos { color: var(--color-text-secondary); font-size: var(--font-size-small); }
 .combo-card__servicos { padding-left: var(--space-4); }
 .combo-card button { justify-self: start; }
+.catalog-promotion { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-3) 0; border: var(--border-subtle); }
+.catalog-promotion label { min-width: 0; display: grid; gap: var(--space-1); }
+.catalog-promotion input { max-width: 100%; min-width: 0; }
+.catalog-promotion input[type="checkbox"] { width: auto; justify-self: start; }
+@media (max-width: 600px) { .catalog-promotion { grid-template-columns: 1fr; } }
 .combo-editor { min-width: 0; }
 .combo-form { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border: var(--border-subtle); border-radius: var(--radius-md); }
 .combo-form h3 { margin: 0; overflow-wrap: anywhere; }

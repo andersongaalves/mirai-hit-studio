@@ -1,6 +1,7 @@
 // Roadmap 3.0, 5.08: catalog combos (admin). Everything is rendered as text.
 import { authFetch } from "../auth.js";
 import * as Notify from "../../utils/notifications.js";
+import { promotionForm } from "../../modules/promotion_form.js";
 
 const state = { combos: [], servicos: [], editing: null, busy: false };
 const byId = id => document.getElementById(id);
@@ -107,6 +108,7 @@ function openEditor(combo = null) {
         discount.append(option);
     });
     discount.value = String(Boolean(combo?.aplica_desconto));
+    const promotion = promotionForm(combo?.promocao, "combo-promocao");
     const highlights = element("textarea");
     highlights.rows = 3;
     highlights.placeholder = "Ex.: Desconto de combo";
@@ -203,6 +205,7 @@ function openEditor(combo = null) {
         field("Descrição", description),
         field("Preço (R$)", price),
         field("Aplicar desconto?", discount),
+        promotion.element,
         field("Destaques do combo (um por linha, até 20)", highlights),
         sum,
         useSum,
@@ -229,6 +232,7 @@ function openEditor(combo = null) {
                 subtitulo: subtitle.value.trim(),
                 preco_base: Number(price.value).toFixed(2),
                 aplica_desconto: discount.value === "true",
+                promocao: promotion.read(),
                 destaques: highlights.value.split("\n").map(item => item.trim().slice(0, 200)).filter(Boolean).slice(0, 20),
                 ativo: active.checked,
                 servicos: ordered,

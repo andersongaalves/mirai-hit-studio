@@ -6,6 +6,7 @@ import { registerCalcular } from "./globals.js";
 import { money } from "../utils/format.js";
 import {$} from "../utils/dom.js";
 import { track } from "../analytics.js";
+import { catalogDiscount } from "./catalog_pricing.js";
 
 function setCalculatorStatus(message, stateName = "") {
     const status = $("calculator-status");
@@ -26,6 +27,7 @@ function comboComoServico(combo) {
         aplica_desconto: Boolean(combo.aplica_desconto),
         parametros: combo.parametros || "",
         prazo_estimado_dias: combo.prazo_estimado_dias ?? null,
+        preco_catalogo: combo.preco_catalogo ?? null,
         combo,
     };
 }
@@ -87,12 +89,13 @@ export function calcular() {
 
     const badge = $("badge-desconto");
 
-    if (state.servicoSelecionadoOBJ.aplica_desconto) {
-        total *= state.configGlobal.mult_desconto;
+    const desconto = catalogDiscount(state.servicoSelecionadoOBJ, state.configGlobal);
+    if (desconto > 0) {
+        total *= 1 - desconto / 100;
 
         if (badge) {
             badge.hidden = false;
-            badge.innerText = `DESCONTO DE ${state.configGlobal.desconto}% APLICADO`;
+            badge.innerText = `DESCONTO DE ${desconto}% APLICADO`;
         }
     } else {
         if (badge) {

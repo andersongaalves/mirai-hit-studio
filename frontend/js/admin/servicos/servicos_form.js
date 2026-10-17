@@ -5,6 +5,14 @@ import * as BuilderUI from "../builder/builder_ui.js";
 import { carregarEtapasServico } from "./servicos_etapas.js";
 import { carregarCotasServico } from "./servicos_cotas.js";
 import { carregarPoliticasServico } from "./servicos_politicas.js";
+import { promotionForm } from "../../modules/promotion_form.js";
+
+let promotion = null;
+function carregarPromocao(value = null) {
+    const slot = $("servico-promocao-editor");
+    promotion = slot ? promotionForm(value, "servico-promocao") : null;
+    slot?.replaceChildren(...(promotion ? [promotion.element] : []));
+}
 
 const formFields = [
     "srv_id",
@@ -52,6 +60,7 @@ export function abrirFormularioServico(servico = null) {
     setValue("srv_subtitulo", servico.subtitulo);
     setValue("srv_valor", servico.valor_base);
     setValue("srv_aplica_desconto", String(!!servico.aplica_desconto));
+    carregarPromocao(servico.promocao);
 
     Builder.carregarBuilder(servico.estrutura_servico);
 
@@ -72,6 +81,7 @@ export function limparFormularioServico() {
 
     setValue("srv_valor", 0);
     setValue("srv_aplica_desconto", "false");
+    carregarPromocao();
 
     Builder.resetBuilder();
     BuilderUI.initBuilder();
@@ -87,6 +97,7 @@ export function getServicoFormPayload(parametros = []) {
             aplica_desconto: getValue("srv_aplica_desconto") === "true",
             parametros: parametros.join(","),
             estrutura_servico: Builder.gerarJSON(),
+            ...(promotion ? { promocao: promotion.read() } : {}),
         },
     };
 }

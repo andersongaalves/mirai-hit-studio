@@ -266,6 +266,16 @@ def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
         })
     _congelar_cotas(db, linhas)
     _congelar_politicas(db, linhas)
+    from services import promocao_service
+
+    desconto_global = promocao_service.desconto_global(db)
+    for linha in linhas:
+        origem_catalogo = combos.get(linha.get("combo_id")) or servicos.get(linha.get("servico_id"))
+        if origem_catalogo is not None and linha["catalogo_disponivel"]:
+            linha["preco_catalogo_vigente"] = {
+                **promocao_service.preco(origem_catalogo, desconto_global),
+                "promocao": origem_catalogo.promocao,
+            }
     totais = service.calcular_totais(itens)
     if sum(Decimal(linha["valor_contratado"]) for linha in linhas) != totais.total:
         raise service.PropostaConflito("Snapshot economico inconsistente; nenhuma alteracao confirmada.")
