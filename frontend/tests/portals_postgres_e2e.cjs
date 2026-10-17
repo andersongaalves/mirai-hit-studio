@@ -295,8 +295,12 @@ function expectStatus(result, status, label) {
         assert.equal(await deliveryItem.getByRole('button', { name: 'Baixar' }).count(), 0);
         expectStatus(await api(page, 'GET', `/portal/cliente/arquivos/${delivery.id}/conteudo`),
             402, 'unpaid final delivery denied by real backend');
-        await deliveryItem.getByRole('link', { name: 'Pagar saldo e liberar' }).click();
-        await page.waitForURL('**/checkout?proposta=*');
+        const balanceLink = deliveryItem.getByRole('link', { name: 'Pagar saldo e liberar' });
+        const balanceUrl = new URL(await balanceLink.getAttribute('href'));
+        assert.equal(balanceUrl.origin, FRONTEND);
+        assert.match(balanceUrl.pathname, /^\/checkout\/[0-9a-f-]{36}$/);
+        await balanceLink.click();
+        await page.waitForURL(balanceUrl.href);
         await page.locator('#checkout-content').waitFor({ state: 'visible' });
         assert.equal(await page.locator('input[name="payment_option"]').count(), 1);
         assert.equal(await page.locator('input[name="payment_option"]').inputValue(), 'saldo');
