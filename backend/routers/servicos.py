@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
 import models
@@ -13,9 +13,16 @@ from services import audit_service, catalogo_service
 router = APIRouter(prefix="/servicos", tags=["Serviços"])
 
 
+def _resposta_servico(servico):
+    resposta = ServicoResponse.model_validate(servico)
+    resposta.prazo_estimado_dias = catalogo_service.prazo_estimado(servico.etapas)
+    return resposta
+
+
 @router.get("", response_model=list[ServicoResponse])
 def listar_servicos(db: Session = Depends(get_db)):
-    return db.query(models.ServicoModel).all()
+    servicos = db.query(models.ServicoModel).options(selectinload(models.ServicoModel.etapas)).all()
+    return [_resposta_servico(servico) for servico in servicos]
 
 
 @router.post("", response_model=ServicoResponse)
@@ -35,7 +42,7 @@ def criar_servico(
     db.commit()
     db.refresh(novo)
 
-    return novo
+    return _resposta_servico(novo)
 
 
 @router.put("/{servico_id}", response_model=ServicoResponse)
@@ -66,7 +73,7 @@ def atualizar_servico(
 
     db.refresh(servico)
 
-    return servico
+    return _resposta_servico(servico)
 
 
 @router.delete("/{servico_id}")

@@ -1,5 +1,6 @@
 import { escapeHtml } from "../utils/security.js";
 import { limitLines, readStructure } from "./service_catalog.js";
+import { money } from "../utils/format.js";
 // Catalog rework: intro, what the service includes (typed limits) and highlights.
 // Legacy structures are converted on read (readStructure); everything is escaped.
 export function renderizarEstrutura(estrutura) {
@@ -29,15 +30,12 @@ export function renderizarEstrutura(estrutura) {
 export function renderizarCombo(combo) {
     if (!combo) return "";
     let html = combo.descricao ? `<p class="service-intro">${escapeHtml(combo.descricao)}</p>` : "";
-    (combo.servicos || []).forEach((servico, index) => {
+    (combo.servicos || []).forEach((servico) => {
         const linhas = limitLines(readStructure(servico.estrutura).limites);
         const destaques = readStructure(servico.estrutura).destaques;
         html += `
-            <div class="service-section ${index === 0 ? "active" : ""}">
-                <div class="service-section-title" data-service-toggle>
-                    <div><span>${escapeHtml(servico.nome)}</span></div>
-                    <span class="section-arrow">▼</span>
-                </div>
+            <div class="service-section active">
+                <strong class="service-section-title">${escapeHtml(servico.nome)}</strong>
                 <ul class="service-items">${[...linhas, ...destaques].map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
             </div>`;
     });
@@ -46,6 +44,35 @@ export function renderizarCombo(combo) {
             .map(item => `<div class="service-benefit">✓ ${escapeHtml(item)}</div>`).join("")}</div>`;
     }
     return html;
+}
+
+/** The same customer-facing card for single services and modular combos. */
+export function renderizarCardServico(servico, config = {}) {
+    const desconto = servico.aplica_desconto ? Number(config.desconto) || 0 : 0;
+    const preco = Number(servico.valor_base) * (1 - desconto / 100);
+    const dias = servico.prazo_estimado_dias;
+    const prazo = Number.isInteger(dias) && dias >= 0
+        ? `Prazo estimado: ${dias} ${dias === 1 ? "dia" : "dias"}`
+        : "Prazo a combinar na proposta";
+    const conteudo = servico.tipo === "combo"
+        ? renderizarCombo(servico.combo)
+        : renderizarEstrutura(servico.estrutura_servico);
+    return `<div class="radio-card catalog-card">
+        <input type="radio" name="servico" id="srv_${escapeHtml(servico.id)}" value="${escapeHtml(servico.id)}">
+        <label for="srv_${escapeHtml(servico.id)}">
+            <span class="catalog-card__kind">${servico.tipo === "combo" ? "Combo" : "Serviço avulso"}</span>
+            <span class="service-title">${escapeHtml(servico.nome)}</span>
+            ${servico.subtitulo ? `<span class="service-subtitle">${escapeHtml(servico.subtitulo)}</span>` : ""}
+            <div class="service-price">A partir de <strong>${money(preco)}</strong>
+                ${desconto > 0 ? `<span class="service-discount">-${escapeHtml(desconto)}% OFF</span>` : ""}
+            </div>
+            <p class="catalog-card__deadline">${prazo}</p>
+            <div class="service-details"><strong class="catalog-card__includes">O que inclui</strong>
+                <div class="service-description">${conteudo || "Escopo definido na proposta."}</div>
+            </div>
+            <span class="service-selected" aria-hidden="true">Selecionado</span>
+        </label>
+    </div>`;
 }
 
 // ===========================

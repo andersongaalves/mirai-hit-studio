@@ -2,7 +2,7 @@ import { escapeHtml, safeURL } from "./utils/security.js";
 import { getProjetos } from "./api.js"; // <- Movido para o topo!
 import { money } from "./utils/format.js";
 import { $, $$ } from "./utils/dom.js";
-import { renderizarCombo, renderizarEstrutura } from "./modules/service_renderer.js";
+import { renderizarCardServico } from "./modules/service_renderer.js";
 import { state } from "./state.js";
 
 export const PARAM_TEMPLATES = {
@@ -69,81 +69,7 @@ export function renderizarBotoes(servicos) {
     $("categoria-combo").hidden = true;
 
     servicos.forEach((srv) => {
-        const temDesconto =
-            srv.aplica_desconto &&
-            state.configGlobal.desconto > 0;
-
-        const valorFinal = temDesconto
-            ? srv.valor_base * state.configGlobal.mult_desconto
-            : srv.valor_base;
-
-        const subtituloHTML = srv.subtitulo
-            ? `
-                <small class="service-subtitle">
-                    ${escapeHtml(srv.subtitulo)}
-                </small>
-            `
-            : "";
-
-        const descontoHTML = temDesconto
-            ? `
-                <span class="service-discount">
-                    -${escapeHtml(state.configGlobal.desconto)}% OFF
-                </span>
-                <br>
-            `
-            : "";
-
-        const descricaoHTML = srv.estrutura_servico || srv.combo
-            ? `
-            <div class="service-details">
-
-                <div class="service-description">
-                    ${srv.tipo === "combo" ? renderizarCombo(srv.combo) : renderizarEstrutura(srv.estrutura_servico)}
-                </div>
-
-                <div class="service-price">
-                    A partir de
-
-                    <strong>
-                        ${money(valorFinal)}
-                    </strong>
-
-                    ${descontoHTML}
-
-                </div>
-
-                <div class="service-selected">
-
-                    ✓ Serviço selecionado
-
-                </div>
-
-            </div>
-        `
-            : "";
-
-        const html = `
-            <div class="radio-card">
-
-                <input
-                    type="radio"
-                    name="servico"
-                    id="srv_${escapeHtml(srv.id)}"
-                    value="${escapeHtml(srv.id)}"
-                >
-
-                <label for="srv_${escapeHtml(srv.id)}">
-                    <span class="service-title">
-                        ${escapeHtml(srv.nome)}
-                    </span>
-
-                    ${subtituloHTML}
-                    ${descricaoHTML}
-                </label>
-
-            </div>
-        `;
+        const html = renderizarCardServico(srv, state.configGlobal);
 
         if (srv.tipo === "combo") {
             boxCombo.innerHTML += html;

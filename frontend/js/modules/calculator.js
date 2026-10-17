@@ -25,6 +25,7 @@ function comboComoServico(combo) {
         valor_base: Number(combo.preco_base) || 0,
         aplica_desconto: Boolean(combo.aplica_desconto),
         parametros: combo.parametros || "",
+        prazo_estimado_dias: combo.prazo_estimado_dias ?? null,
         combo,
     };
 }

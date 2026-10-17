@@ -46,6 +46,7 @@ class ComboServico(BaseModel):
     # Catalog rework: what each service includes, inherited by the combo.
     estrutura: dict | None = None
     parametros: str = ""
+    prazo_estimado_dias: int | None = None
 
 
 class ComboResponse(BaseModel):
@@ -57,6 +58,7 @@ class ComboResponse(BaseModel):
     aplica_desconto: bool = False
     destaques: list[str] = []
     parametros: str = ""  # Union of the services' calculator parameters.
+    prazo_estimado_dias: int | None = None
     ativo: bool
     soma_servicos: Decimal
     servicos: list[ComboServico]

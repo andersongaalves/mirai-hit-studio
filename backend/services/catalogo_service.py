@@ -13,6 +13,14 @@ from schemas.servico_estrutura import ler
 CAMPOS_COTA = ("max_arquivos", "max_versoes", "max_tamanho_mb", "max_total_mb", "max_duracao_min", "formatos")
 
 
+def prazo_estimado(etapas) -> int | None:
+    """Only publish a complete estimate, never a partial stage total."""
+    etapas = list(etapas)
+    if not etapas or any(etapa.prazo_dias is None for etapa in etapas):
+        return None
+    return sum(etapa.prazo_dias for etapa in etapas)
+
+
 def sincronizar_cotas(db: Session, servico: ServicoModel) -> None:
     """Writes faixas/duracao_min into the service's 'material' quota (no commit)."""
     limites = ler(servico.estrutura_servico)["limites"]
