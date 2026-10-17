@@ -558,10 +558,10 @@ Implementacao em 17/10/2026, integrada pela PR #65:
 - Aceita colaborador externo sem conta (apenas nome). Exibicao dos creditos no site; base
   para uma pagina por produtor no futuro.
 
-Implementacao em 17/10/2026 (branch `feat/5.19-creditos-portfolio`):
+Implementacao em 17/10/2026, integrada pela PR #67:
 - Tabela `projeto_creditos` (migration aditiva `a2c4e6f8b135`, posterior a `f3b5d7a9c124`,
-  sem backfill; RLS ativa e sem grants para `anon`/`authenticated`). Aplicar antes de
-  publicar este backend.
+  sem backfill; RLS ativa e sem grants para `anon`/`authenticated`). Aplicada em producao
+  antes do release; nao reaplicar nem fazer downgrade.
 - Cada credito tem ordem, funcao da lista fixa (producao, mixagem, masterizacao,
   composicao, gravacao, beat ou outra com descricao de ate 60 caracteres) e o nome exibido.
   O vinculo com a conta e opcional e aceita apenas produtor ativo; colaborador externo entra
@@ -573,6 +573,19 @@ Implementacao em 17/10/2026 (branch `feat/5.19-creditos-portfolio`):
   versionado em `20261017-portfolio-creditos`.
 - Base para a 5.20 (o produtor que enviar o projeto entra nos creditos pela conta) e para a
   pagina por produtor no futuro (indice por `usuario_id`).
+
+### Publicacao da 5.19 (17/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PR na `main` | #67 (5.19) |
+| Commit publicado | `bc8b8400eaa3167058b3d24090880f954a7aa7a2` |
+| Migration | `a2c4e6f8b135`, aplicada no Supabase antes do release com autorizacao do responsavel (tabela criada vazia, RLS ativa, sem grants para `anon`/`authenticated`) |
+| CI da `main` | Storage Integration Gate `39058553022`, Portals E2E e Client access verdes |
+| Storage Provider Rollout Evidence | run `39058986774` (sucesso) |
+| Protected Production Release | dry-run `39059109076` e publish `39059189900`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Conferencia | 19 projetos do portfolio preservados; dados da Yonda preservados (cobranca 74 paga, pagamento 85 aprovado) |
+| Autorizacao | `CTRL-20261017-R3-519` |
 
 ### 5.20 - Produtor envia projetos ao portfolio
 - Area no Portal do Produtor para propor um projeto ao portfolio: entra como rascunho e so
