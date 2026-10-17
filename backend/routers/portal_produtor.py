@@ -50,7 +50,11 @@ PRODUCER_STATUS_TRANSITIONS = {
 }
 
 
-@router.get("/producoes", response_model=list[ProducaoProdutorResponse])
+@router.get(
+    "/producoes",
+    response_model=list[ProducaoProdutorResponse],
+    response_model_exclude={"__all__": {"contato_cliente"}},
+)
 def listar_minhas_producoes(
     db: Db,
     user: CurrentProducer,
