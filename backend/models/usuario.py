@@ -1,4 +1,3 @@
-from database import Base
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -13,6 +12,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
+from database import Base
 
 
 class UsuarioModel(Base):
@@ -34,6 +35,9 @@ class UsuarioModel(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     username = Column(String(50), unique=True, nullable=False, index=True)
+
+    # Public name (credits, portals); changes independently of the login username.
+    nome_exibicao = Column(String(80), nullable=True)
 
     password_hash = Column(String(255), nullable=False)
 

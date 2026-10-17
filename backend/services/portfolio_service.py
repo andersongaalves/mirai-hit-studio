@@ -72,12 +72,13 @@ def configure_landing_comparison(db, project: ProjetoModel, enabled: bool, order
 def replace_credits(db, project: ProjetoModel, creditos: list[dict]) -> None:
     """Roadmap 5.19: the ordered list replaces the previous one; linked accounts must be active producers."""
     ids = {credito["usuario_id"] for credito in creditos if credito.get("usuario_id") is not None}
+    contas = {}
     if ids:
-        validos = set(db.scalars(select(UsuarioModel.id).where(
+        contas = {conta.id: conta for conta in db.scalars(select(UsuarioModel).where(
             UsuarioModel.id.in_(ids), UsuarioModel.ativo.is_(True), UsuarioModel.role == "produtor",
             UsuarioModel.is_admin.is_(False),
-        )))
-        if ids - validos:
+        ))}
+        if ids - set(contas):
             raise HTTPException(status_code=422, detail="Credito vinculado a um produtor inexistente ou inativo.")
     project.creditos.clear()
     db.flush()  # Old rows go first so the (projeto_id, ordem) uniqueness never collides.
@@ -86,7 +87,8 @@ def replace_credits(db, project: ProjetoModel, creditos: list[dict]) -> None:
             ordem=ordem,
             funcao=credito["funcao"],
             funcao_outra=credito.get("funcao_outra"),
-            nome=credito["nome"],
+            # A linked account is credited by its display name (kept as fallback if it is removed).
+            nome=getattr(contas.get(credito.get("usuario_id")), "nome_exibicao", None) or credito["nome"],
             usuario_id=credito.get("usuario_id"),
         ))
 

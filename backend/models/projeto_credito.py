@@ -8,6 +8,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.orm import relationship
 
 from database import Base
 
@@ -39,3 +40,12 @@ class ProjetoCreditoModel(Base):
     nome = Column(String(100), nullable=False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    usuario = relationship("UsuarioModel", lazy="selectin")
+
+    @property
+    def nome_publico(self) -> str:
+        """A linked account always shows its current display name; otherwise the stored name."""
+        if self.usuario is not None and self.usuario.nome_exibicao:
+            return self.usuario.nome_exibicao
+        return self.nome

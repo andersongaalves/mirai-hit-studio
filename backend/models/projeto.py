@@ -81,4 +81,5 @@ class ProjetoModel(Base):
         "ProjetoCreditoModel",
         order_by="ProjetoCreditoModel.ordem",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )

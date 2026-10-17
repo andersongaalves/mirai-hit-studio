@@ -110,7 +110,7 @@ async function staticResponse(route) {
             projects = projects.map(item => item.id === 7 ? { ...item, link_capa } : item);
             return route.fulfill({ json: projects.find(item => item.id === 7) });
         }
-        if (url.pathname === "/usuarios/produtores") return route.fulfill({ json: [{ id: 2, username: "beatmaker", role: "produtor", ativo: true }] });
+        if (url.pathname === "/usuarios/produtores") return route.fulfill({ json: [{ id: 2, username: "beatmaker", nome_exibicao: "DJ Beat", role: "produtor", ativo: true }] });
         const empty = ["/config", "/servicos", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/newsletter/subscribers", "/newsletter/campaigns"];
         if (empty.includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
         if (url.pathname === "/dashboard") return route.fulfill({ json: { metrics: {}, pipeline: {}, attention: {}, recent_activity: [] } });
@@ -232,7 +232,9 @@ async function staticResponse(route) {
         await page.getByRole("button", { name: "Adicionar crédito" }).click();
         await page.getByLabel("Função do crédito 1", { exact: true }).selectOption("mixagem");
         await page.getByLabel("Pessoa do crédito 1").selectOption("2");
-        assert.equal(await page.getByLabel("Nome do crédito 1").inputValue(), "beatmaker");
+        assert.equal(await page.getByLabel("Nome do crédito 1").inputValue(), "DJ Beat");
+        assert.equal(await page.getByLabel("Nome do crédito 1").evaluate(input => input.readOnly), true);
+        assert.match(await page.getByLabel("Pessoa do crédito 1").locator("option:checked").textContent(), /DJ Beat \(@beatmaker\)/);
         await page.getByRole("button", { name: "Adicionar crédito" }).click();
         assert.equal(await page.getByLabel("Outra função do crédito 2").isVisible(), false);
         await page.getByLabel("Função do crédito 2", { exact: true }).selectOption("outra");
@@ -249,7 +251,7 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.getElementById("modal-projeto").classList.contains("hidden"));
         assert.deepEqual(writes.slice(beforeCredits).map(item => item.payload), [{ creditos: [
             { funcao: "outra", funcao_outra: "Direção vocal", nome: "Fulana <b>Externa</b>", usuario_id: null },
-            { funcao: "mixagem", funcao_outra: null, nome: "beatmaker", usuario_id: 2 },
+            { funcao: "mixagem", funcao_outra: null, nome: "DJ Beat", usuario_id: 2 },
         ] }]);
 
         // Saved credits load back in order; an unnamed credit is blocked before any request.

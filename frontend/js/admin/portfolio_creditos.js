@@ -11,6 +11,11 @@ function element(tag, className = "", text = "") {
     return node;
 }
 
+// Accounts are credited by their display name; the username is the fallback.
+function displayName(producer) {
+    return String(producer?.nome_exibicao || producer?.username || "").trim();
+}
+
 function list() {
     return document.getElementById("proj_creditos");
 }
@@ -65,7 +70,10 @@ function row(credit, index) {
         person.append(legacy);
     }
     producers.forEach(producer => {
-        const option = element("option", "", `Produtor: ${producer.username}`);
+        const label = producer.nome_exibicao && producer.nome_exibicao !== producer.username
+            ? `${producer.nome_exibicao} (@${producer.username})`
+            : producer.username;
+        const option = element("option", "", `Produtor: ${label}`);
         option.value = String(producer.id);
         person.append(option);
     });
@@ -77,6 +85,16 @@ function row(credit, index) {
     name.placeholder = "Nome exibido no site";
     name.setAttribute("aria-label", `Nome do crédito ${number}`);
     name.value = credit.nome || "";
+    const syncLinkedName = () => {
+        const producer = producers.find(item => item.id === credit.usuario_id);
+        name.readOnly = Boolean(producer);
+        name.title = producer ? "Nome de exibição da conta (altere em Usuários)" : "";
+        if (producer) {
+            name.value = displayName(producer);
+            credit.nome = name.value;
+        }
+    };
+    syncLinkedName();
 
     role.addEventListener("change", () => {
         credit.funcao = role.value;
@@ -86,11 +104,7 @@ function row(credit, index) {
     other.addEventListener("input", () => { credit.funcao_outra = other.value; });
     person.addEventListener("change", () => {
         credit.usuario_id = person.value ? Number(person.value) : null;
-        const producer = producers.find(item => item.id === credit.usuario_id);
-        if (producer && !name.value.trim()) {
-            name.value = producer.username;
-            credit.nome = producer.username;
-        }
+        syncLinkedName();
     });
     name.addEventListener("input", () => { credit.nome = name.value; });
 
@@ -130,7 +144,7 @@ function move(index, offset) {
 export function setProducers(items) {
     producers = (Array.isArray(items) ? items : [])
         .filter(item => Number.isInteger(item?.id) && item.ativo !== false)
-        .sort((a, b) => String(a.username).localeCompare(String(b.username), "pt-BR"));
+        .sort((a, b) => displayName(a).localeCompare(displayName(b), "pt-BR"));
 }
 
 export function setCredits(credits) {

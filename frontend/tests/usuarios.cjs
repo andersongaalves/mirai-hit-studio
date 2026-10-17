@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const now = '2026-09-13T12:00:00Z';
+const createdDisplayNames = [];
 const users = [
     { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true, created_at: now, updated_at: now },
     { id: 2, username: '<img src=x onerror=alert(1)>', role: 'produtor', is_admin: false, ativo: true, created_at: now, updated_at: now },
@@ -60,8 +61,9 @@ async function staticResponse(route) {
         if (url.pathname === '/usuarios' && request.method() === 'POST') {
             if (duplicate) return route.fulfill({ status: 409, json: { detail: 'Nome de usuario ja cadastrado.' } });
             const payload = request.postDataJSON();
-            assert.deepEqual(Object.keys(payload).sort(), ['password', 'role', 'username']);
-            const created = { id: 4, username: payload.username, role: payload.role, is_admin: payload.role === 'admin', ativo: true, created_at: now, updated_at: now };
+            assert.deepEqual(Object.keys(payload).sort(), ['nome_exibicao', 'password', 'role', 'username']);
+            createdDisplayNames.push(payload.nome_exibicao);
+            const created = { id: 4, username: payload.username, nome_exibicao: payload.nome_exibicao, role: payload.role, is_admin: payload.role === 'admin', ativo: true, created_at: now, updated_at: now };
             users.push(created);
             return route.fulfill({ status: 201, json: created });
         }
@@ -116,10 +118,15 @@ async function staticResponse(route) {
         await newButton.click();
         assert.equal(await page.evaluate(() => document.activeElement?.id), 'usuario-username');
         await page.locator('#usuario-username').fill('novo');
+        await page.locator('#usuario-nome-exibicao').fill('  Novo   Produtor ');
         await page.locator('#usuario-password').fill('secure-password');
         await page.locator('#usuario-save').click();
         await page.waitForFunction(() => document.getElementById('modal-usuario').classList.contains('hidden'));
         assert.equal(users.length, 4);
+        // Display name is independent from the login and shown first in the list.
+        assert.deepEqual(createdDisplayNames, ['Novo Produtor']);
+        await page.waitForFunction(() => [...document.querySelectorAll('.usuarios-table tbody tr')]
+            .some(row => row.textContent.includes('Novo Produtor') && row.textContent.includes('@novo')));
 
         const edit = page.locator('.usuarios-table tbody tr').filter({ hasText: 'novo' }).getByRole('button', {name:'Abrir usuario novo',exact:true});
         await edit.click();

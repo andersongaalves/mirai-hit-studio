@@ -1,7 +1,14 @@
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from schemas.validation import http_url
 
@@ -45,7 +52,8 @@ class CreditoProjetoResponse(BaseModel):
 
     funcao: FuncaoCredito
     funcao_outra: str | None = None
-    nome: str
+    # Linked accounts expose their current display name (5.19 + nome de exibicao).
+    nome: str = Field(validation_alias=AliasChoices("nome_publico", "nome"))
     usuario_id: int | None = None
 
 
@@ -55,7 +63,8 @@ class CreditoProjetoPublico(BaseModel):
 
     funcao: FuncaoCredito
     funcao_outra: str | None = None
-    nome: str
+    # Linked accounts expose their current display name (5.19 + nome de exibicao).
+    nome: str = Field(validation_alias=AliasChoices("nome_publico", "nome"))
 
 
 class ProjetoBase(BaseModel):
