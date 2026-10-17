@@ -183,6 +183,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             ConfigModel,
             OrcamentoModel,
             PagamentoModel,
+            PortalNotificacaoModel,
             ProducaoArquivoModel,
             ProducaoModel,
             PropostaModel,
@@ -197,6 +198,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 AuditLogModel,
                 AuthRateLimitModel,
                 ClienteAcessoModel,
+                PortalNotificacaoModel,
                 RepasseProdutorModel,
                 ProducaoArquivoModel,
                 ProviderWebhookEventModel,
@@ -1252,6 +1254,63 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         )
         self.assertEqual(created.status_code, 200, created.text)
         return created.json()["id"]
+
+    def test_portal_notifications_postgresql17_concurrent_insert_and_seen_claim(self):
+        from models import (
+            CobrancaModel,
+            PagamentoModel,
+            PortalNotificacaoModel,
+            ProducaoModel,
+        )
+        from services import portal_notificacao_service as notifications
+
+        admin = self._login("e2e-admin")
+        production_id = self._create_flow_production(admin)
+        client = self._login("e2e-client-a")
+        other_client = self._login("e2e-client-b")
+        with self.SessionLocal() as db:
+            before = (db.query(CobrancaModel).count(), db.query(PagamentoModel).count())
+            self.assertTrue(db.execute(text(
+                "SELECT relrowsecurity FROM pg_class WHERE oid='public.portal_notificacoes'::regclass"
+            )).scalar_one())
+        gate = Barrier(2)
+
+        def emit():
+            with self.SessionLocal.begin() as db:
+                db.execute(text("SET LOCAL lock_timeout='5s'"))
+                db.execute(text("SET LOCAL statement_timeout='8s'"))
+                production = db.get(ProducaoModel, production_id)
+                gate.wait(timeout=10)
+                notifications.emitir_producao(db, production, "nova_mensagem", f"concurrent:{production_id}")
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            tasks = [pool.submit(emit) for _ in range(2)]
+            for task in tasks:
+                task.result(timeout=20)
+        result = self.http.get("/portal/notificacoes", headers=client)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(result.json()["nao_vistas"], 1)
+        event_id = result.json()["itens"][0]["id"]
+        self.assertEqual(self.http.get("/portal/notificacoes", headers=other_client).json()["itens"], [])
+        path = "/portal/notificacoes/vistas"
+        self.assertEqual(self.http.post(path, headers=other_client, json={"ids": [event_id]}).json(), [])
+        gate = Barrier(2)
+
+        def claim():
+            gate.wait(timeout=10)
+            response = self.http.post(path, headers=client, json={"ids": [event_id]}, timeout=15)
+            self.assertEqual(response.status_code, 200, response.text)
+            return response.json()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            tasks = [pool.submit(claim) for _ in range(2)]
+            claims = [task.result(timeout=20) for task in tasks]
+        self.assertEqual(sorted(len(items) for items in claims), [0, 1])
+        self.assertEqual(self.http.post(path, headers=client, json={"ids": [event_id]}).json(), [])
+        self.assertEqual(self.http.get("/portal/notificacoes", headers=client).json()["nao_vistas"], 0)
+        with self.SessionLocal() as db:
+            self.assertEqual(db.query(PortalNotificacaoModel).count(), 1)
+            self.assertEqual((db.query(CobrancaModel).count(), db.query(PagamentoModel).count()), before)
 
     def test_client_proposal_acceptance_postgresql17_concurrency(self):
         from core.config import settings

@@ -507,6 +507,23 @@ Implementacao em 17/10/2026, em validacao para integracao:
   confirmado, proposta enviada, revisao liberada, entrega liberada (5.14).
 - Cada evento vira notificacao no portal e, quando fizer sentido, o e-mail que ja existe.
 
+Implementacao em 17/10/2026 (branch `feat/5.18-notificacoes-portais`):
+- Tabela privada `portal_notificacoes` com RLS e sem acesso de `anon`/`authenticated`;
+  migration aditiva `f3b5d7a9c124`, posterior a `f1a3c5e7b902`, sem backfill historico.
+  Aplicar antes de publicar este backend.
+- Uma linha por usuario e evento (`usuario_id` + `chave_evento` unicos): reenvios,
+  webhooks repetidos e abas concorrentes nao duplicam. A marcacao de vista trava as
+  linhas em ordem fixa, entao cada notificacao e "reivindicada" uma unica vez.
+- Eventos gravados na mesma transacao da acao: mensagem, previa, entrega (bloqueada ou
+  liberada pela 5.14), etapa concluida, revisao liberada, pagamento aprovado (manual ou
+  Mercado Pago, sem conciliacao pendente), proposta enviada e mudanca da excecao
+  `entrega_final`. Nenhum e-mail ou provider externo e chamado aqui.
+- Leitura sempre filtrada pelo acesso atual: cliente so ve as proprias producoes e
+  propostas; produtor so as producoes em que atua (5.07); arquivos ocultos e etapas
+  escondidas pela politica `cliente_ve_etapas` nao aparecem. O autor da acao nao recebe
+  a propria notificacao. Textos fixos, sem nome de arquivo nem dados livres.
+- Sino com historico paginado nos dois portais; as nao vistas aparecem uma vez ao abrir.
+
 ### 5.19 - Creditos de produtores no portfolio
 - Projetos do portfolio com produtores responsaveis e funcoes de uma lista fixa (producao,
   mixagem, masterizacao, composicao, gravacao, beat, outra com texto).

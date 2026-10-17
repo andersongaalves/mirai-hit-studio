@@ -179,4 +179,7 @@ def registrar_pagamento(
     db.flush()
     sincronizar_status(cobranca)
     db.flush()
+    from services import portal_notificacao_service
+
+    portal_notificacao_service.pagamento_confirmado(db, payment)
     return payment

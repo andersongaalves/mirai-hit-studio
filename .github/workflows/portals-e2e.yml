@@ -288,6 +288,7 @@ jobs:
                       (SELECT count(*) FROM orcamentos) +
                       (SELECT count(*) FROM producoes) +
                       (SELECT count(*) FROM producao_arquivos) +
+                      (SELECT count(*) FROM portal_notificacoes) +
                       (SELECT count(*) FROM repasses_produtor);
                   " 2>/dev/null | tr -d '[:space:]')"
                   if [[ -n "$remaining" && "$remaining" != "0" ]]; then

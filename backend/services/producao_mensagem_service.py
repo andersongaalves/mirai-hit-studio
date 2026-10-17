@@ -144,6 +144,13 @@ def post_message(
         arquivo_id=arquivo_id,
     )
     db.add(model)
+    db.flush()
+    from services import portal_notificacao_service
+
+    portal_notificacao_service.emitir_producao(
+        db, production, "nova_mensagem", f"mensagem:{model.id}", clientes=audiencia == "todos",
+        produtores=True, actor_id=user.id,
+    )
     db.commit()
     db.refresh(model)
     files = {linked.id: linked} if linked is not None else {}

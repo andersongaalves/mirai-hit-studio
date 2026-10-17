@@ -485,6 +485,9 @@ def _persistir_resultado(
             cobranca,
             request_id=request_id,
         )
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.pagamento_confirmado(db, payment)
         db.commit()
     except Exception:
         db.rollback()
@@ -543,6 +546,9 @@ def _apply_reconciliation(
             cobranca,
             request_id=request_id,
         )
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.pagamento_confirmado(db, payment)
         db.commit()
     except financial_service.FinanceiroConflito:
         db.rollback()

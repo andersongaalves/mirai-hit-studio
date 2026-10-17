@@ -20,6 +20,7 @@ sidebar?.addEventListener("click", event => {
 });
 
 document.addEventListener("keydown", event => {
+    if (event.target.closest("dialog[open]")) return;
     if (!mobile.matches || toggle?.getAttribute("aria-expanded") !== "true") return;
     if (event.key === "Escape") {
         event.preventDefault();

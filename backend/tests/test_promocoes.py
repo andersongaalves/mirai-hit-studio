@@ -127,8 +127,9 @@ with Session(engine) as db:
     def test_additive_migration_roundtrip(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
+from alembic.script import ScriptDirectory
 head = bootstrap(engine)
-assert head == 'f1a3c5e7b902'
+assert head == ScriptDirectory.from_config(migration_config()).get_current_head()
 with engine.begin() as connection:
     connection.exec_driver_sql("INSERT INTO servicos (id, nome, subtitulo, valor_base, estrutura_servico) VALUES (1, 'Sintetico', '', 100, '{}')")
 command.downgrade(migration_config(), 'e8a0c2d4f659')

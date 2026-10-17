@@ -125,6 +125,9 @@ def enviar(db, proposta_id, actor=None, request_id=None):
             metadata={"old_status": old_status, "new_status": model.status},
             request_id=request_id,
         )
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.proposta_enviada(db, model)
         response = service._resposta(model)
         db.commit()
         logger.info("proposal_sent")
