@@ -177,3 +177,18 @@
     .portfolio-filter-label { min-width: 0; }
     .filter-btn { width: auto; text-align: center; }
 }
+
+/* 5.19: project credits (name and role). */
+.portfolio-card__credits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-small);
+}
+.portfolio-card__credits li { display: inline-flex; gap: 6px; min-width: 0; }
+.portfolio-card__credits-role { color: var(--color-text-secondary); }
+.portfolio-card__credits-role::after { content: ":"; }
+.portfolio-card__credits-name { color: var(--color-text-primary); overflow-wrap: anywhere; }

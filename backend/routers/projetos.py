@@ -9,6 +9,7 @@ from database import get_db
 from schemas.projeto import (
     ProjetoCreate,
     ProjetoMixComparisonPublic,
+    ProjetoPublicResponse,
     ProjetoResponse,
     ProjetoUpdate,
 )
@@ -56,7 +57,7 @@ def _project_or_404(db, project_id):
     return project
 
 
-@router.get("", response_model=list[ProjetoResponse])
+@router.get("", response_model=list[ProjetoPublicResponse])
 def listar_projetos(db: Session = Depends(get_db)):
     return (
         db.query(models.ProjetoModel)

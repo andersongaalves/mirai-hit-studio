@@ -1,13 +1,61 @@
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from schemas.validation import http_url
 
 ProjetoVertical = Literal["artists", "creators", "media_games"]
 ProjetoCaseType = Literal["client_case", "demo", "concept_project", "study"]
 SEGMENTO_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
+FuncaoCredito = Literal["producao", "mixagem", "masterizacao", "composicao", "gravacao", "beat", "outra"]
+MAX_CREDITOS = 20
+
+
+class CreditoProjeto(BaseModel):
+    """Roadmap 5.19: one credit; producers may be linked to their account, externals by name only."""
+    model_config = ConfigDict(extra="forbid")
+
+    funcao: FuncaoCredito
+    funcao_outra: str | None = Field(default=None, max_length=60)
+    nome: str = Field(..., min_length=1, max_length=100)
+    usuario_id: int | None = Field(default=None, gt=0)
+
+    @field_validator("nome", "funcao_outra")
+    @classmethod
+    def strip_text(cls, value):
+        if value is None:
+            return None
+        value = " ".join(value.split())
+        return value or None
+
+    @model_validator(mode="after")
+    def check_role(self):
+        if not self.nome:
+            raise ValueError("credit_name_required")
+        if self.funcao == "outra" and not self.funcao_outra:
+            raise ValueError("credit_other_role_required")
+        if self.funcao != "outra":
+            self.funcao_outra = None
+        return self
+
+
+class CreditoProjetoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    funcao: FuncaoCredito
+    funcao_outra: str | None = None
+    nome: str
+    usuario_id: int | None = None
+
+
+class CreditoProjetoPublico(BaseModel):
+    """Public view: name and role only, never the account link."""
+    model_config = ConfigDict(from_attributes=True)
+
+    funcao: FuncaoCredito
+    funcao_outra: str | None = None
+    nome: str
 
 
 class ProjetoBase(BaseModel):
@@ -25,6 +73,7 @@ class ProjetoBase(BaseModel):
     case_type: ProjetoCaseType | None = None
     show_mix_comparison_on_landing: bool = False
     landing_order: int | None = Field(default=None, ge=1, le=4)
+    creditos: list[CreditoProjeto] = Field(default_factory=list, max_length=MAX_CREDITOS)
 
     _urls = field_validator("link_audio", "link_capa")(http_url)
 
@@ -63,6 +112,7 @@ class ProjetoUpdate(ProjetoBase):
     case_type: ProjetoCaseType | None = None
     show_mix_comparison_on_landing: bool | None = None
     landing_order: int | None = Field(default=None, ge=1, le=4)
+    creditos: list[CreditoProjeto] | None = Field(default=None, max_length=MAX_CREDITOS)
 
     @field_validator(
         "titulo",
@@ -74,6 +124,7 @@ class ProjetoUpdate(ProjetoBase):
         "destaque",
         "segmentos_json",
         "show_mix_comparison_on_landing",
+        "creditos",
         mode="before",
     )
     @classmethod
@@ -87,7 +138,12 @@ class ProjetoResponse(ProjetoBase):
     id: int
     audio_before_url: str | None = None
     audio_after_url: str | None = None
+    creditos: list[CreditoProjetoResponse] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProjetoPublicResponse(ProjetoResponse):
+    creditos: list[CreditoProjetoPublico] = Field(default_factory=list)
 
 
 class ProjetoMixComparisonPublic(BaseModel):

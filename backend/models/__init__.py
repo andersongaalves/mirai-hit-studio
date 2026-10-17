@@ -1,5 +1,6 @@
 from .usuario import UsuarioModel
 from .projeto import ProjetoModel
+from .projeto_credito import ProjetoCreditoModel
 from .servico import ServicoModel
 from .cliente import ClienteModel
 from .orcamento import OrcamentoModel

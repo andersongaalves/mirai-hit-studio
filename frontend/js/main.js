@@ -48,7 +48,7 @@ async function initApp() {
         await loadModule(
             "render-portfolio",
 
-            "./modules/portfolio.js?v=20261012-portfolio-card",
+            "./modules/portfolio.js?v=20261017-portfolio-creditos",
 
             (module) => module.initPortfolioPage(),
         );

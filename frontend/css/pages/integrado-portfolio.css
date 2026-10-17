@@ -112,6 +112,11 @@
     color: var(--integrado-secondary);
     font: 400 16px/24px var(--font-texto);
 }
+.portfolio-page .portfolio-card__credits {
+    margin-top: 8px;
+    font: 400 14px/20px var(--font-texto);
+}
+.portfolio-page .portfolio-card__credits-role { color: var(--integrado-secondary); }
 .portfolio-page .portfolio-card__service {
     display: grid;
     gap: 6px;
