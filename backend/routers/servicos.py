@@ -8,7 +8,7 @@ from schemas.servico import (ServicoCreate, ServicoResponse)
 
 from core.dependencies import require_admin
 from schemas.servico_etapa import ServicoEtapaOut, ServicoEtapasUpdate
-from schemas.promocao import PrecoCatalogo
+from schemas.promocao import PrecoCatalogo, Promocao, validar_preco
 from services import audit_service, catalogo_service, promocao_service
 
 router = APIRouter(prefix="/servicos", tags=["Serviços"])
@@ -74,6 +74,11 @@ def atualizar_servico(
             continue  # The editor no longer chooses a category; legacy rows keep theirs.
         setattr(servico, key, value)
 
+    try:
+        validar_preco(servico.valor_base, Promocao.model_validate(servico.promocao) if servico.promocao else None)
+    except ValueError:
+        db.rollback()
+        raise HTTPException(status_code=422, detail="A promocao deve manter um preco positivo.") from None
     db.flush()
     catalogo_service.sincronizar_cotas(db, servico)
     promocao_service.auditar_alteracao(db, servico, promocao_anterior, actor=user)

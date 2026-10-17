@@ -14,7 +14,7 @@ from pydantic import ValidationError
 from schemas.promocao import Promocao
 from services import promocao_service as promotions
 now = datetime(2026, 10, 17, 12, tzinfo=timezone.utc)
-for data in ({'percentual': '0'}, {'percentual': '100.01'}, {'percentual': 'NaN'},
+for data in ({'percentual': '0'}, {'percentual': '100'}, {'percentual': '100.01'}, {'percentual': 'NaN'},
              {'percentual': '10.001'}, {'percentual': '20', 'inicio': '2026-10-17T12:00:00'},
              {'percentual': '20', 'inicio': now, 'fim': now}):
     try:
@@ -39,8 +39,8 @@ with Session(engine) as db:
     assert promotions.preco(model, Decimal('30'), agora=now)['preco_vigente'] == Decimal('800.00')
     model.promocao['ativa'] = False
     assert promotions.preco(model, Decimal('30'), agora=now)['preco_vigente'] == Decimal('1000.00')
-    model.promocao = {'ativa': True, 'percentual': '100'}
-    assert promotions.preco(model, agora=now)['preco_vigente'] == Decimal('0.00')
+    model.promocao = {'ativa': True, 'percentual': '99.99'}
+    assert promotions.preco(model, agora=now)['preco_vigente'] == Decimal('0.10')
     model.valor_base = 10.01
     model.promocao = {'ativa': True, 'percentual': '50'}
     assert promotions.preco(model, agora=now)['preco_vigente'] == Decimal('5.01')
@@ -89,7 +89,13 @@ assert api.put('/servicos/1', headers=bearer('producer-a'), json=payload).status
 response = api.put('/servicos/1', headers=ADMIN, json=payload)
 assert response.status_code == 200, response.text
 assert response.json()['preco_catalogo']['preco_vigente'] == '80.00'
+assert api.put('/servicos/1', headers=ADMIN, json={**payload, 'valor_base': 0.01,
+    'promocao': {'ativa': True, 'percentual': '90'}}).status_code == 422
 payload.pop('promocao')
+payload['valor_base'] = 0
+assert api.put('/servicos/1', headers=ADMIN, json=payload).status_code == 422
+assert api.get('/servicos').json()[0]['valor_base'] == 100
+payload['valor_base'] = 100
 response = api.put('/servicos/1', headers=ADMIN, json=payload)
 assert response.status_code == 200 and response.json()['promocao']['ativa'] is True
 with Session(engine) as db:
@@ -99,6 +105,12 @@ combo = {'nome': 'Combo promocional', 'preco_base': '500.00', 'servicos': [1, 2]
 response = api.post('/combos', headers=ADMIN, json=combo)
 assert response.status_code == 201, response.text
 assert response.json()['preco_catalogo']['preco_vigente'] == '350.00'
+combo_id = response.json()['id']
+assert api.put(f'/combos/{combo_id}', headers=ADMIN, json={**combo, 'preco_base': '0.01',
+    'promocao': {'ativa': True, 'percentual': '90'}}).status_code == 422
+combo.pop('promocao')
+combo['preco_base'] = '0.00'
+assert api.put(f'/combos/{combo_id}', headers=ADMIN, json=combo).status_code == 422
 assert api.get('/catalogo/combos').json()[0]['preco_catalogo']['preco_vigente'] == '350.00'
 payload['promocao'] = {'ativa': True, 'percentual': '101'}
 assert api.put('/servicos/1', headers=ADMIN, json=payload).status_code == 422

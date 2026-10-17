@@ -3,8 +3,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from schemas.promocao import PrecoCatalogo, Promocao
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from schemas.promocao import PrecoCatalogo, Promocao, validar_preco
 
 Money = Annotated[Decimal, Field(ge=0, le=Decimal("9999999999.99"), max_digits=12, decimal_places=2, allow_inf_nan=False)]
 
@@ -21,6 +21,11 @@ class ComboWrite(BaseModel):
     ativo: bool = True
     promocao: Promocao | None = None
     servicos: list[Annotated[int, Field(gt=0)]] = Field(min_length=2, max_length=10)
+
+    @model_validator(mode="after")
+    def preco_promocional_positivo(self):
+        validar_preco(self.preco_base, self.promocao)
+        return self
 
     @field_validator("nome", "descricao", "subtitulo")
     @classmethod
