@@ -132,14 +132,14 @@ class PortfolioCreditosTests(unittest.TestCase):
                         assert created.status_code in (200, 201), created.text
                         assert created.json()['nome_exibicao'] == 'Novo Produtor'
                         assert created.json()['username'] == 'novo-produtor'
-                        too_long = await client.put('/usuarios/2', headers=headers, json={'nome_exibicao': 'x' * 81})
+                        too_long = await client.patch('/usuarios/2', headers=headers, json={'nome_exibicao': 'x' * 81})
                         assert too_long.status_code == 422
 
                         project = (await client.post('/projetos', headers=headers, json={**PAYLOAD, 'creditos': [
                             {'funcao': 'mixagem', 'nome': 'beatmaker', 'usuario_id': 2},
                             {'funcao': 'beat', 'nome': 'Externo'}]})).json()
 
-                        renamed = await client.put('/usuarios/2', headers=headers, json={'nome_exibicao': 'DJ Beat'})
+                        renamed = await client.patch('/usuarios/2', headers=headers, json={'nome_exibicao': 'DJ Beat'})
                         assert renamed.status_code == 200, renamed.text
                         assert renamed.json()['nome_exibicao'] == 'DJ Beat' and renamed.json()['username'] == 'beatmaker'
                         public = (await client.get('/projetos')).json()[0]['creditos']
@@ -156,7 +156,7 @@ class PortfolioCreditosTests(unittest.TestCase):
                         assert saved.json()['creditos'][0]['nome'] == 'DJ Beat'
 
                         # Clearing the display name falls back to the username; login stays unchanged.
-                        cleared = await client.put('/usuarios/2', headers=headers, json={'nome_exibicao': '   '})
+                        cleared = await client.patch('/usuarios/2', headers=headers, json={'nome_exibicao': '   '})
                         assert cleared.status_code == 200 and cleared.json()['nome_exibicao'] is None
                         assert (await client.get('/projetos')).json()[0]['creditos'][0]['nome'] == 'beatmaker'
                         listed = (await client.get('/usuarios/produtores', headers=headers)).json()
