@@ -95,7 +95,8 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             { servico_id: 5, nome: 'Mixagem <i>pro</i>', estrutura: LEGACY },
         ] };
         await page.evaluate(([legacy, comboData]) => window.renderCards([
-            { id: 5, nome: 'Mixagem', subtitulo: '', valor_base: 60, aplica_desconto: false, categoria: 'avulso', estrutura_servico: legacy },
+            { id: 5, nome: 'Mixagem', subtitulo: '', valor_base: 60, aplica_desconto: false, categoria: 'avulso',
+              prazo_estimado_dias: 7, estrutura_servico: legacy, cotas_arquivos: [{ max_arquivos: 999 }], politicas: { segredo: 'nao-expor' } },
             { id: 3, nome: 'Launch antigo', subtitulo: '', valor_base: 220, aplica_desconto: true, categoria: 'combo', estrutura_servico: legacy },
             { id: 'c1', tipo: 'combo', nome: 'Launch', subtitulo: 'Tudo pronto', valor_base: 220, aplica_desconto: true, parametros: 'duracao', combo: comboData },
         ]), [LEGACY, combo]);
@@ -109,11 +110,28 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
         assert.match(await comboCard.textContent(), /R\$\s198,00.*-10% OFF/s);
         assert.equal(await comboCard.locator('i, b').count(), 0);
         assert.match(await page.locator('#render-avulsos').textContent(), /Até 5 faixas.*Atendimento/s);
+        const singleCard = page.locator('#render-avulsos .catalog-card');
+        assert.equal(await singleCard.locator('.service-price').isVisible(), true);
+        assert.equal(await comboCard.locator('.service-price').isVisible(), true);
+        assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+        assert.match(await singleCard.textContent(), /Prazo estimado: 7 dias/);
+        assert.match(await comboCard.textContent(), /Prazo a combinar na proposta/);
+        assert.doesNotMatch(await page.locator('#render-avulsos').textContent(), /999|nao-expor|peso_percentual/);
+        await singleCard.locator('label').click();
+        assert.equal(await singleCard.locator('input').isChecked(), true);
+        assert.equal(await singleCard.locator('.service-selected').isVisible(), true);
+        await singleCard.locator('input').press('ArrowRight');
+        assert.equal(await comboCard.locator('input').isChecked(), true);
+        assert.equal(await singleCard.locator('.service-selected').isVisible(), false);
+        assert.equal(await singleCard.locator('.service-details').isVisible(), true);
 
         for (const width of [390, 1280]) {
             await page.setViewportSize({ width, height: 900 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false,
                 `catalog layout overflows at ${width}`);
+            if (process.env.VISUAL_OUTPUT) await page.screenshot({
+                path: path.join(process.env.VISUAL_OUTPUT, `catalog-${width}.png`), fullPage: true, animations: 'disabled',
+            });
         }
         assert.deepEqual(errors, []);
         console.log('PASS: typed limits (legacy conversion, editor state, preview) and public cards for services and combos.');

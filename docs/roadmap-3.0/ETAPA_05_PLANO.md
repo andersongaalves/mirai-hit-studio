@@ -470,6 +470,14 @@ Implementacao em 17/10/2026, em validacao para integracao:
 - Na calculadora, cards no estilo do Admin, com informacoes do cliente: preco, o que inclui
   e prazo; sem dados internos (etapas com valores, cotas avancadas, politicas).
 
+Implementacao em 17/10/2026, em validacao para integracao:
+- Mesmo renderer para avulsos e combos; preco, escopo e prazo sempre visiveis,
+  inclusive antes da selecao. Selecao por card e teclado preservada.
+- Prazo estimado e a soma dos dias das etapas do catalogo (como no contrato);
+  se alguma etapa nao tem prazo, mostrar "a combinar", sem total parcial.
+- Projecao publica acrescenta apenas dias estimados; nenhum valor de etapa,
+  politica ou cota interna e incluido no card. Sem migration.
+
 ### 5.17 - Promocoes de servicos e combos
 - Promocao por servico avulso ou combo: percentual especial, inicio e fim opcionais, ativa
   ou nao.

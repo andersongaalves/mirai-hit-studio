@@ -36,6 +36,7 @@ class ServicoUpdate(ServicoCreate):
 
 class ServicoResponse(ServicoBase):
     id: int
+    prazo_estimado_dias: int | None = None
 
     class Config:
         from_attributes = True

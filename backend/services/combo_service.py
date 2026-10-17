@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from models import ComboItemModel, ComboModel, ServicoModel
 from schemas.combo import ComboWrite
 from schemas.servico_estrutura import ler
-from services import audit_service
+from services import audit_service, catalogo_service
 
 CENT = Decimal("0.01")
 
@@ -47,6 +47,7 @@ def serializar(combo: ComboModel) -> dict:
         "etapas": len(item.servico.etapas),
         "estrutura": ler(item.servico.estrutura_servico),
         "parametros": item.servico.parametros or "",
+        "prazo_estimado_dias": catalogo_service.prazo_estimado(item.servico.etapas),
     } for item in combo.itens]
     parametros = []
     for servico in servicos:
@@ -62,6 +63,11 @@ def serializar(combo: ComboModel) -> dict:
         "aplica_desconto": bool(combo.aplica_desconto),
         "destaques": list(combo.destaques or []),
         "parametros": ",".join(parametros),
+        "prazo_estimado_dias": (
+            sum(servico["prazo_estimado_dias"] for servico in servicos)
+            if servicos and all(servico["prazo_estimado_dias"] is not None for servico in servicos)
+            else None
+        ),
         "ativo": bool(combo.ativo),
         "soma_servicos": sum((servico["valor_base"] for servico in servicos), Decimal("0.00")),
         "servicos": servicos,
