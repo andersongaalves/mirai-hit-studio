@@ -1,7 +1,3 @@
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from core.security import get_password_hash
 from crud import crud_usuario
 from models.cliente import ClienteModel
@@ -9,6 +5,9 @@ from models.projeto_credito import ProjetoCreditoModel
 from models.usuario import UsuarioModel
 from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioUpdate
 from services import audit_service
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 
 class UsuarioNaoEncontrado(Exception):

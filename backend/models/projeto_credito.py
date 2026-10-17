@@ -1,3 +1,4 @@
+from database import Base
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -9,8 +10,6 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import relationship
-
-from database import Base
 
 # Roadmap 5.19: fixed list of roles credited on a portfolio project.
 FUNCOES_CREDITO = ("producao", "mixagem", "masterizacao", "composicao", "gravacao", "beat", "outra")

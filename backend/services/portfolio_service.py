@@ -1,10 +1,9 @@
 """Transactional portfolio rules shared by project routes."""
 
 from fastapi import HTTPException
-from sqlalchemy import select, text
-
 from models import ProjetoCreditoModel, ProjetoModel, UsuarioModel
 from services.portfolio_segments_service import validate_project_segments
+from sqlalchemy import select, text
 
 PUBLIC_VERTICALS = ("artists", "creators", "media_games")
 PUBLIC_CASE_TYPES = ("client_case", "demo", "concept_project", "study")

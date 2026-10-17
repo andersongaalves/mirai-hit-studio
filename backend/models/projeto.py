@@ -1,3 +1,4 @@
+from database import Base
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -10,8 +11,6 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import relationship
-
-from database import Base
 
 
 class ProjetoModel(Base):
