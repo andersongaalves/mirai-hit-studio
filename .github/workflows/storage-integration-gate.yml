@@ -20,8 +20,8 @@ jobs:
         timeout-minutes: 35
         services:
             postgres:
-                # Official PostgreSQL mirror; no shared Docker Hub anonymous quota.
-                image: public.ecr.aws/docker/library/postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+                # Same official digest; a rerun uses the alternate registry if the shared quota fails.
+                image: ${{ github.run_attempt > 1 && 'public.ecr.aws/docker/library/postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826' || 'docker.io/library/postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826' }}
                 env:
                     POSTGRES_DB: mirai_portals_e2e_storage
                     POSTGRES_USER: mirai_integration
