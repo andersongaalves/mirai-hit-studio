@@ -7,6 +7,7 @@ from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from schemas.validation import http_url
+from schemas.promocao import SnapshotPrecoCatalogo
 
 Money = Annotated[Decimal, Field(ge=0, allow_inf_nan=False)]
 Quantity = Annotated[Decimal, Field(gt=0, allow_inf_nan=False)]
@@ -127,6 +128,7 @@ class SnapshotItem(Contract):
     componentes: list[SnapshotComponente] = []
     cotas_arquivos: list[SnapshotCota] | None = None  # 5.09: absent before 5.09 and on free lines.
     politicas: SnapshotPoliticas | None = None  # 5.10: absent before 5.10 and on free lines.
+    preco_catalogo_vigente: SnapshotPrecoCatalogo | None = None  # 5.17: context, never rewrites negotiated values.
 
 
 class SnapshotEconomico(Contract):

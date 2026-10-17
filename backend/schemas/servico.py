@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from schemas.servico_estrutura import validar_estrutura
+from schemas.promocao import PrecoCatalogo, Promocao
 
 
 class ServicoBase(BaseModel):
@@ -19,6 +20,7 @@ class ServicoCreate(ServicoBase):
     categoria: str | None = Field(default=None, max_length=100)
     valor_base: float = Field(ge=0)
     parametros: str = Field(max_length=500)
+    promocao: Promocao | None = None
     _estrutura = field_validator("estrutura_servico")(validar_estrutura)
 
     @field_validator("parametros")
@@ -37,6 +39,8 @@ class ServicoUpdate(ServicoCreate):
 class ServicoResponse(ServicoBase):
     id: int
     prazo_estimado_dias: int | None = None
+    promocao: Promocao | None = None
+    preco_catalogo: PrecoCatalogo | None = None
 
     class Config:
         from_attributes = True

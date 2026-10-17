@@ -125,6 +125,8 @@ function store(id, body) {
         // Catalog rework: sold like a service (subtitle, discount choice and highlights).
         await form.getByLabel('Subtítulo do botão').fill('Para quem já gravou');
         await form.getByLabel('Aplicar desconto?').selectOption('true');
+        await form.getByLabel('Promoção ativa').check();
+        await form.getByLabel('Desconto especial (%)').fill('20');
         await form.getByLabel('Destaques do combo (um por linha, até 20)').fill('Desconto de combo\n\n  1 revisão extra ');
         rejectNext = true;
         await form.getByRole('button', { name: 'Salvar combo' }).click();
@@ -134,6 +136,7 @@ function store(id, body) {
         assert.equal(await page.locator('#combo-editor').isVisible(), false);
         assert.deepEqual(writes.at(-1), { method: 'POST', id: null, body: {
             nome: 'Trio', descricao: 'Mix e voz', subtitulo: 'Para quem já gravou', preco_base: '1200.00', aplica_desconto: true,
+            promocao: { ativa: true, percentual: '20', inicio: null, fim: null },
             destaques: ['Desconto de combo', '1 revisão extra'], ativo: true, servicos: [1, 3] } });
 
         // Edit: deactivate and change services; the card shows "Inativo".
@@ -155,6 +158,7 @@ function store(id, body) {
         await page.waitForFunction(() => document.querySelector('.combo-card--inativo'));
         assert.deepEqual(writes.at(-1), { method: 'PUT', id: 9, body: {
             nome: 'Combo <b>antigo</b>', descricao: 'Primeiro combo', subtitulo: '', preco_base: '1200.00', aplica_desconto: false,
+            promocao: null,
             destaques: [], ativo: false, servicos: [3, 1, 2] } });
         assert.match(await panel.locator('.combo-card--inativo').textContent(), /Inativo/);
 

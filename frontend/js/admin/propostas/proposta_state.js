@@ -139,12 +139,12 @@ export function adicionarItemCatalogo(entrada, tipo = "servico") {
         normalizarItem(tipo === "combo" ? {
             descricao: entrada.nome,
             quantidade: 1,
-            valor_unitario: entrada.preco_base,
+            valor_unitario: entrada.preco_catalogo?.preco_vigente ?? entrada.preco_base,
             combo_id: entrada.id
         } : {
             descricao: entrada.nome,
             quantidade: 1,
-            valor_unitario: entrada.valor_base,
+            valor_unitario: entrada.preco_catalogo?.preco_vigente ?? entrada.valor_base,
             servico_id: entrada.id
         })
     );

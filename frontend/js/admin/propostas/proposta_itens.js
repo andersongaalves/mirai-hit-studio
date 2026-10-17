@@ -57,10 +57,10 @@ function comboPorId(id) {
 function precoReferencia(item) {
     if (Number.isInteger(item.combo_id)) {
         const combo = comboPorId(item.combo_id);
-        return combo ? Number(combo.preco_base) : null;
+        return combo ? Number(combo.preco_catalogo?.preco_vigente ?? combo.preco_base) : null;
     }
     const servico = Number.isInteger(item.servico_id) ? servicoPorId(item.servico_id) : null;
-    return servico ? Number(servico.valor_base) : null;
+    return servico ? Number(servico.preco_catalogo?.preco_vigente ?? servico.valor_base) : null;
 }
 
 function origemCatalogo(item) {
@@ -71,7 +71,7 @@ function origemCatalogo(item) {
     const base = precoReferencia(item);
     const negociado = base !== null && Math.abs(Number(item.valor_unitario || 0) - base) > 0.004;
     const rotulo = ehCombo ? "Combo" : "Catálogo";
-    const preco = ehCombo ? "preço de referência" : "preço base";
+    const preco = entrada?.preco_catalogo ? "preço vigente" : ehCombo ? "preço de referência" : "preço base";
     const servicos = ehCombo && entrada?.servicos?.length
         ? ` · ${entrada.servicos.map(servico => escapeHtml(servico.nome)).join(" + ")}` : "";
     return `
@@ -97,7 +97,7 @@ function preencherSeletor(select, button, aviso) {
     const grupoServicos = document.createElement("optgroup");
     grupoServicos.label = "Serviços";
     servicos.forEach(servico => grupoServicos.append(
-        new Option(`${servico.nome} — ${money(servico.valor_base)}`, `s:${servico.id}`)
+        new Option(`${servico.nome} — ${money(servico.preco_catalogo?.preco_vigente ?? servico.valor_base)}`, `s:${servico.id}`)
     ));
     if (servicos.length) select.append(grupoServicos);
     // 5.08: only active combos can enter new proposal lines.
@@ -105,7 +105,7 @@ function preencherSeletor(select, button, aviso) {
         const grupoCombos = document.createElement("optgroup");
         grupoCombos.label = "Combos";
         combos.forEach(combo => grupoCombos.append(
-            new Option(`${combo.nome} — ${money(combo.preco_base)}`, `c:${combo.id}`)
+            new Option(`${combo.nome} — ${money(combo.preco_catalogo?.preco_vigente ?? combo.preco_base)}`, `c:${combo.id}`)
         ));
         select.append(grupoCombos);
     }

@@ -37,6 +37,7 @@ class ComboModel(Base):
     subtitulo = Column(String(150), nullable=False, default="", server_default="")
     aplica_desconto = Column(Boolean, nullable=False, default=False, server_default=false())
     destaques = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False, default=list)
+    promocao = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
