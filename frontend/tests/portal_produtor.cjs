@@ -37,6 +37,8 @@ let productions = [
         id: 1,
         titulo: '<img src=x onerror=alert(1)>',
         cliente: '<script>Cliente A</script>',
+        contato_cliente: { nome: '<img src=x onerror=alert(1)> Cliente',
+            email: 'cliente.sintetico.com.endereco.longo.para.testar.quebras@example.test', whatsapp: '(11) 99999-0000' },
         servico: 'Mixagem',
         status: 'aguardando_inicio',
         etapas: JSON.stringify([{ nome: 'Briefing', feito: true }, { nome: 'Produção', feito: false }]),
@@ -221,6 +223,12 @@ async function staticResponse(route) {
 
         await unsafeCard.getByRole('button', { name: 'Abrir detalhes' }).click();
         await page.waitForURL('**/produtor/producoes/1');
+        const contact = page.locator('.producer-client-contact');
+        await contact.waitFor();
+        assert.match(await contact.textContent(), /<img src=x onerror=alert\(1\)> Cliente/);
+        assert.equal(await contact.locator('img, script').count(), 0);
+        assert.equal(await contact.getByRole('link', { name: 'Abrir WhatsApp' }).getAttribute('href'), 'https://wa.me/5511999990000');
+        assert.equal(await contact.locator('a').first().getAttribute('href'), `mailto:${encodeURIComponent(productions[0].contato_cliente.email)}`);
         assert.equal(await page.getByRole('heading', { name: '<img src=x onerror=alert(1)>' }).count(), 1);
         assert.equal(await page.locator('.producer-file img, .producer-file script').count(), 0);
         assert.match(await page.locator('.producer-file').first().textContent(), /<img src=x>/);
@@ -278,6 +286,7 @@ async function staticResponse(route) {
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });
+                assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
                 await page.screenshot({
                     path: path.join(process.env.VISUAL_OUTPUT, `producer-detail-${width}.png`),
                     fullPage: true,
@@ -285,6 +294,11 @@ async function staticResponse(route) {
                 });
             }
         }
+
+        productions[0].contato_cliente = null;
+        await page.reload();
+        await page.waitForSelector('#detail-title');
+        assert.equal(await page.locator('.producer-client-contact').count(), 0);
 
         await page.getByRole('link', { name: 'Financeiro' }).click();
         await page.waitForURL('**/produtor/financeiro');

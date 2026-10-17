@@ -221,6 +221,32 @@ export function renderDetail(production, files, handlers) {
         element("p", "", `Cliente: ${production.cliente}`),
         element("p", "", `Prazo: ${formatDate(production.prazo_entrega)}`),
     );
+    const contact = production.contato_cliente;
+    if (contact) {
+        const panel = element("section", "producer-client-contact");
+        panel.append(element("h3", "", "Contato do cliente"), element("p", "", contact.nome));
+        if (contact.email) {
+            const email = element("a", "", contact.email);
+            email.href = `mailto:${encodeURIComponent(contact.email)}`;
+            const line = element("p");
+            line.append(email);
+            panel.append(line);
+        }
+        if (contact.whatsapp) {
+            const digits = String(contact.whatsapp).replace(/\D/g, "");
+            const international = [10, 11].includes(digits.length) ? `55${digits}` : digits;
+            const line = element("p", "", `Telefone / WhatsApp: ${contact.whatsapp}`);
+            if (/^\d{12,15}$/.test(international)) {
+                const link = element("a", "", "Abrir WhatsApp");
+                link.href = `https://wa.me/${international}`;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                line.append(document.createTextNode(" "), link);
+            }
+            panel.append(line);
+        }
+        overview.append(panel);
+    }
 
     const progress = element("section", "producer-detail__panel");
     progress.id = "production-stages-panel";

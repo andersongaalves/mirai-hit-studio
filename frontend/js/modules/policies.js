@@ -26,6 +26,10 @@ export const POLICIES = Object.freeze([
         ["apos_quitacao", "Só após a quitação do saldo"],
         ["liberada", "Liberada mesmo com saldo pendente"],
     ] },
+    { key: "produtor_ve_contato_cliente", label: "Produtor vê o contato do cliente", options: [
+        [true, "Sim"],
+        [false, "Não (contato intermediado pelo Admin)"],
+    ] },
 ]);
 
 export const ORIGIN_LABELS = Object.freeze({
