@@ -20,6 +20,13 @@ def validar_username(value: str) -> str:
     return value
 
 
+def validar_nome_exibicao(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = " ".join(value.split())
+    return value or None
+
+
 def validar_senha(value: str) -> str:
     if len(value) < 8:
         raise ValueError("password_too_short")
@@ -50,6 +57,7 @@ class UsuarioCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     username: str = Field(min_length=1, max_length=50)
+    nome_exibicao: str | None = Field(default=None, max_length=80)
     password: str = Field(min_length=8, max_length=72)
     role: UsuarioRole = "produtor"
     cliente_id: int | None = Field(default=None, gt=0)
@@ -58,6 +66,11 @@ class UsuarioCreate(BaseModel):
     @classmethod
     def username_valido(cls, value: str) -> str:
         return validar_username(value)
+
+    @field_validator("nome_exibicao")
+    @classmethod
+    def nome_exibicao_valido(cls, value):
+        return validar_nome_exibicao(value)
 
     @field_validator("password")
     @classmethod
@@ -77,9 +90,16 @@ class UsuarioUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     username: str | None = Field(default=None, min_length=1, max_length=50)
+    # Null or blank clears it (the username is shown instead).
+    nome_exibicao: str | None = Field(default=None, max_length=80)
     role: UsuarioRole | None = None
     ativo: StrictBool | None = None
     cliente_id: int | None = Field(default=None, gt=0)
+
+    @field_validator("nome_exibicao")
+    @classmethod
+    def nome_exibicao_valido(cls, value):
+        return validar_nome_exibicao(value)
 
     @field_validator("username")
     @classmethod
@@ -111,6 +131,7 @@ class UsuarioResponse(BaseModel):
 
     id: int
     username: str
+    nome_exibicao: str | None = None
     role: str
     is_admin: bool
     ativo: bool

@@ -1417,6 +1417,10 @@
                             <h3>Conta</h3>
                             <div class="usuario-form-grid">
                                 <label class="admin-form-field">Nome de usuário<input id="usuario-username" maxlength="50" required /></label>
+                                <label class="admin-form-field">Nome de exibição
+                                    <input id="usuario-nome-exibicao" maxlength="80" placeholder="Como aparece nos créditos" />
+                                    <span class="admin-field-help">Usado nos créditos do portfólio. Muda sem alterar o login; em branco, vale o nome de usuário.</span>
+                                </label>
                                 <label class="admin-form-field">Papel
                                     <select id="usuario-role" required>
                                         <option value="produtor">Produtor</option>
@@ -1427,7 +1431,7 @@
                                     <input id="usuario-ativo" type="checkbox" /> Usuário ativo
                                 </label>
                             </div>
-                            <p id="usuario-self-help" class="admin-field-help hidden">Sua própria conta não pode ter acesso, papel ou nome alterados por esta tela.</p>
+                            <p id="usuario-self-help" class="admin-field-help hidden">Sua própria conta não pode ter acesso, papel ou nome de usuário alterados por esta tela; o nome de exibição pode.</p>
                         </section>
                         <section id="usuario-create-password" class="usuario-detail-block">
                             <label class="admin-form-field">Senha inicial
