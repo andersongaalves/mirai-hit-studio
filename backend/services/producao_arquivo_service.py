@@ -177,6 +177,9 @@ def upload(
             entity_id=model.id,
             request_id=request_id,
         )
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.arquivo_compartilhado(db, model, actor_id=getattr(actor, "id", None))
         db.commit()
         db.refresh(model)
         return model
@@ -327,6 +330,9 @@ def update_visibility(db, *, model, actor, producer, client, request_id=None):
         entity_id=model.id,
         request_id=request_id,
     )
+    from services import portal_notificacao_service
+
+    portal_notificacao_service.arquivo_compartilhado(db, model, actor_id=getattr(actor, "id", None))
     db.commit()
     db.refresh(model)
     return model

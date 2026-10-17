@@ -387,10 +387,19 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
                     metadata["extra_review"] = (
                         etapa.revisoes_incluidas is not None and etapa.revisoes_usadas > etapa.revisoes_incluidas
                     )
-                audit_service.record(
+                event = audit_service.record(
                     db, actor=usuario, action="production.stage_status_changed", entity_type="production",
                     entity_id=producao.id, metadata=metadata, request_id=request_id,
                 )
+                if status == "concluida" or revisao:
+                    from services import portal_notificacao_service
+
+                    portal_notificacao_service.emitir_producao(
+                        db, producao, "revisao_liberada" if revisao else "etapa_concluida",
+                        f"etapa-evento:{event.id}",
+                        clientes=politica_service.vigentes(db, producao.id)["cliente_ve_etapas"],
+                        produtores=True, actor_id=usuario.id,
+                    )
         if alterar_prazo and prazo != etapa.prazo:
             etapa.prazo = prazo
             audit_service.record(

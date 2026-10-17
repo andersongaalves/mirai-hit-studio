@@ -1,0 +1,61 @@
+.portal-notifications-button {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    color: var(--color-primary, #00ccef);
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.portal-notifications-icon {
+    width: 22px;
+    height: 22px;
+    background: currentColor;
+    mask: url("/assets/lucide-bell.svg") center / contain no-repeat;
+}
+.portal-notifications-count {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    min-width: 20px;
+    padding: 1px 4px;
+    background: #00ccef;
+    color: #06121e;
+    border-radius: 4px;
+    font-size: 12px;
+}
+.portal-notifications-dialog {
+    width: min(560px, calc(100% - 32px));
+    max-height: calc(100dvh - 48px);
+    margin: auto;
+    padding: 20px;
+    color: #edf4fa;
+    background: #0a1928;
+    border: 1px solid #64748b;
+    border-radius: 8px;
+    overflow: auto;
+}
+.portal-notifications-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.portal-notifications-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.portal-notifications-dialog h2 { font-size: 20px; margin: 0; }
+.portal-notifications-dialog ul,
+.portal-notifications-new ul { margin: 12px 0; padding: 0; list-style: none; }
+.portal-notifications-dialog li { display: grid; gap: 6px; padding: 14px 0; border-bottom: 1px solid #334155; }
+.portal-notifications-dialog time { font-size: 12px; color: #b8c9d8; }
+.portal-notifications-dialog a,
+.portal-notifications-new a { color: #67e8f9; overflow-wrap: anywhere; }
+.portal-notifications-dialog button,
+.portal-notifications-new button { padding: 8px 12px; color: #edf4fa; background: transparent; border: 1px solid #64748b; border-radius: 4px; cursor: pointer; }
+.portal-notifications-new { position: relative; padding: 16px; margin-bottom: 20px; border-left: 3px solid #00ccef; background: #102331; }
+.portal-notifications-new > p { margin: 0 76px 12px 0; font-weight: 600; }
+.portal-notifications-new > button { position: absolute; right: 12px; top: 10px; }
+.portal-notifications-new li { padding: 6px 0; }
+.portal-notifications-new ul { max-height: 220px; overflow: auto; }
+.producer-account:has(.portal-notifications-button) { flex-wrap: wrap; gap: 12px; }
+.portal-notifications-button:focus-visible,
+.portal-notifications-dialog :focus-visible,
+.portal-notifications-new :focus-visible { outline: 2px solid #f5d0fe; outline-offset: 3px; }

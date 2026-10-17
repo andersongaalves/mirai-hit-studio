@@ -22,6 +22,7 @@ from routers.portal_cliente import router as portal_cliente_router
 from routers.portal_config import router as portal_config_router
 from routers.portal_operacao_admin import router as portal_operacao_admin_router
 from routers.portal_produtor import router as portal_produtor_router
+from routers.portal_notificacoes import router as portal_notificacoes_router
 from routers.producao import router as producao_router
 from routers.producao_mensagens import router as producao_mensagens_router
 from routers.producao_etapas import router as producao_etapas_router
@@ -90,6 +91,7 @@ app.include_router(financeiro_router)
 app.include_router(ai_chat_router)
 app.include_router(ai_inbox_router)
 app.include_router(portal_produtor_router)
+app.include_router(portal_notificacoes_router)
 app.include_router(portal_cliente_router)
 app.include_router(portal_operacao_admin_router)
 app.include_router(portal_config_router)

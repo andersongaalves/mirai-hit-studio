@@ -3,6 +3,7 @@ import * as api from "./api.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
+import { startPortalNotifications } from "../modules/portal_notifications.js";
 import {
     applySettings,
     renderDashboard,
@@ -366,6 +367,7 @@ async function enterPortal() {
         return;
     }
     document.getElementById("client-username").textContent = user.username;
+    startPortalNotifications(user);
     document.getElementById("client-greeting").textContent = user.username;
     document.getElementById("client-loading").classList.remove("hidden");
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));

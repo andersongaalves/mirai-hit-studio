@@ -3,6 +3,7 @@ import * as api from "./api.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
+import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -216,6 +217,7 @@ async function enterPortal() {
     }
     setCurrentUserId(user.id);
     document.getElementById("producer-username").textContent = user.username;
+    startPortalNotifications(user);
     document.getElementById("producer-greeting").textContent = user.username;
     document.getElementById("producer-loading").classList.remove("hidden");
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));

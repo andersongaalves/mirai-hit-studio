@@ -6,8 +6,8 @@ from typing import Annotated, Literal
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
-from schemas.validation import http_url
 from schemas.promocao import SnapshotPrecoCatalogo
+from schemas.validation import http_url
 
 Money = Annotated[Decimal, Field(ge=0, allow_inf_nan=False)]
 Quantity = Annotated[Decimal, Field(gt=0, allow_inf_nan=False)]

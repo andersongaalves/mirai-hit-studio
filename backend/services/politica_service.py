@@ -286,6 +286,10 @@ def definir_excecao(db: Session, producao: ProducaoModel, politicas: dict, motiv
         row.atualizado_por_usuario_id = getattr(actor, "id", None)
         db.flush()
         depois = detalhar(db, producao.id)
+        if antes["entrega_final"] != depois["vigentes"]["entrega_final"]:
+            from services import portal_notificacao_service
+
+            portal_notificacao_service.entregas_liberadas(db, producao)
         audit_service.record(
             db, actor=actor, action="production.policies_exception_set", entity_type="production",
             entity_id=producao.id,
@@ -316,6 +320,10 @@ def remover_excecao(db: Session, producao: ProducaoModel, *, actor, request_id=N
             db, actor=actor, action="production.policies_exception_removed", entity_type="production",
             entity_id=producao.id, metadata={"policy_keys": ",".join(chaves)}, request_id=request_id,
         )
+        if "entrega_final" in chaves:
+            from services import portal_notificacao_service
+
+            portal_notificacao_service.entregas_liberadas(db, producao)
         db.commit()
         return detalhar(db, producao.id)
     except Exception:
