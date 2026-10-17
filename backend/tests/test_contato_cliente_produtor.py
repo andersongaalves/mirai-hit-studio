@@ -36,7 +36,7 @@ for username in ('producer-a', 'producer-b'):
     assert response.json()['contato_cliente'] == expected
     listed = api.get('/portal/produtor/producoes', headers=bearer(username))
     assert listed.status_code == 200
-    assert all(row['contato_cliente'] is None for row in listed.json())
+    assert all('contato_cliente' not in row for row in listed.json())
 assert detail('unassigned').status_code == 404
 assert detail('client-a').status_code == 403
 assert api.get('/portal/produtor/producoes/9999', headers=bearer('producer-a')).status_code == 404
