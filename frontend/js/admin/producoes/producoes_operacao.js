@@ -313,7 +313,7 @@ function renderPoliticas(slot, id, revision, data) {
 
 function editarPoliticas(slot, id, revision, data) {
     const base = Object.fromEntries(POLICIES.map(({ key }) => [key, data.contrato ? data.contrato[key] : data.vigentes[key]]));
-    const form = policyForm({ values: data.excecao || {}, inherited: base, inheritLabel: data.contrato ? "Contrato" : "Padrão", idPrefix: `prod-${id}-politica` });
+    const form = policyForm({ values: data.excecao || {}, inherited: base, inheritLabel: data.contrato ? "Contrato" : "Padrão", idPrefix: `prod-${id}-politica`, allowDeliveryRelease: true });
     const reasonLabel = node("label", "policy-form__field");
     const reason = node("textarea");
     reason.rows = 2;

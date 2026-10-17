@@ -12,11 +12,16 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 PublicacaoPrevia = Literal["automatica", "aprovacao_admin"]
 RevisoesExcedentes = Literal["permitir", "exigir_admin"]
 FinanceiroCliente = Literal["completo", "resumido"]
+EntregaFinal = Literal["apos_quitacao", "liberada"]
 Origem = Literal["excecao", "contrato", "global", "sistema"]
 
 
 class PoliticasCompletas(BaseModel):
-    """Every policy with its system default (today's behaviour)."""
+    """Every policy with its system default.
+
+    entrega_final (5.14): final delivery files are downloadable only once the charge is paid
+    in full; previews stay free. "liberada" releases them regardless of the balance.
+    """
     model_config = ConfigDict(extra="forbid")
 
     publicacao_previa: PublicacaoPrevia = "automatica"
@@ -24,6 +29,7 @@ class PoliticasCompletas(BaseModel):
     cliente_ve_etapas: bool = True
     cliente_ve_prazos_etapas: bool = True
     financeiro_cliente: FinanceiroCliente = "completo"
+    entrega_final: EntregaFinal = "apos_quitacao"
 
 
 class PoliticasParciais(BaseModel):
@@ -35,6 +41,7 @@ class PoliticasParciais(BaseModel):
     cliente_ve_etapas: bool | None = None
     cliente_ve_prazos_etapas: bool | None = None
     financeiro_cliente: FinanceiroCliente | None = None
+    entrega_final: EntregaFinal | None = None
 
 
 class PoliticasGlobaisPublicar(BaseModel):

@@ -151,6 +151,19 @@ function fileItem(file, handlers) {
         play.addEventListener("click", () => handlers.onPreview(file, player, play));
         actions.append(play);
     }
+    if (file.bloqueado_pagamento) {
+        // 5.14: the final delivery is ready but only released after the balance is paid.
+        item.classList.add("client-file--locked");
+        info.append(element("p", "client-file__locked", "Pronta · aguardando a quitação do saldo para liberar o download."));
+        const checkout = safeCheckoutUrl(handlers.finance);
+        if (checkout) {
+            const pay = element("a", "btn-cta", "Pagar saldo e liberar");
+            pay.href = checkout;
+            actions.append(pay);
+        }
+        item.append(info, actions, player);
+        return item;
+    }
     const download = element("button", "btn-outline", "Baixar");
     download.type = "button";
     download.addEventListener("click", () => handlers.onDownload(file.id, download));
@@ -159,9 +172,20 @@ function fileItem(file, handlers) {
     return item;
 }
 
-function fileGroup(title, files, handlers) {
+function safeCheckoutUrl(finance) {
+    if (!finance?.checkout_url) return "";
+    try {
+        const url = new URL(finance.checkout_url);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+    } catch {
+        return "";
+    }
+}
+
+function fileGroup(title, files, handlers, help = "") {
     const group = element("section", "client-file-group");
     group.append(element("h3", "", title));
+    if (help) group.append(element("p", "producer-help", help));
     const list = element("ul", "producer-file-list");
     if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo liberado."));
     else files.forEach(file => list.append(fileItem(file, handlers)));
@@ -177,7 +201,10 @@ function filesPanel(production, files, handlers) {
     }
     panel.append(
         fileGroup("Prévias", files.filter(file => file.tipo === "previa"), handlers),
-        fileGroup("Entregas finais", files.filter(file => file.tipo === "entrega"), handlers),
+        fileGroup("Entregas finais", files.filter(file => file.tipo === "entrega"), handlers,
+            files.some(file => file.bloqueado_pagamento)
+                ? "Os arquivos finais serão liberados após a quitação do saldo."
+                : ""),
         fileGroup("Materiais e referências", files.filter(file => ["material", "referencia"].includes(file.tipo)), handlers),
     );
 
@@ -290,15 +317,11 @@ function financePanel(finance) {
         grid.append(item);
     });
     panel.append(grid);
-    if (finance.checkout_url) {
-        try {
-            const url = new URL(finance.checkout_url);
-            if (["http:", "https:"].includes(url.protocol)) {
-                const link = element("a", "btn-cta client-payment-action", "Ir para pagamento");
-                link.href = url.href;
-                panel.append(link);
-            }
-        } catch { /* Invalid URLs are intentionally not rendered. */ }
+    const checkout = safeCheckoutUrl(finance);
+    if (checkout) {
+        const link = element("a", "btn-cta client-payment-action", "Ir para pagamento");
+        link.href = checkout;
+        panel.append(link);
     }
     return panel;
 }
@@ -335,7 +358,7 @@ export function renderDetail(production, files, finance, handlers) {
     grid.append(overview, progress);
     const messagesSlot = element("div");
     messagesSlot.id = "production-messages-slot";
-    detail.append(title, meta, grid, filesPanel(production, files, handlers), messagesSlot, financePanel(finance));
+    detail.append(title, meta, grid, filesPanel(production, files, { ...handlers, finance }), messagesSlot, financePanel(finance));
     root.append(detail);
 }
 

@@ -11,11 +11,6 @@ Inheritance for a production, per key: admin exception > contract > global > sys
   audited and can be removed (back to the contract).
 Policies never disable authentication, permissions or audit; the backend enforces them.
 """
-from pydantic import ValidationError
-from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from models import (
     PoliticaGlobalModel,
     ProducaoModel,
@@ -23,8 +18,12 @@ from models import (
     ServicoModel,
     ServicoPoliticaModel,
 )
+from pydantic import ValidationError
 from schemas.politica import PoliticasCompletas, PoliticasParciais
 from services import audit_service
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 CHAVES = tuple(PoliticasCompletas.model_fields)
 # Options in order of preference for the client: the first one wins when services disagree.
@@ -34,6 +33,7 @@ FAVORAVEL = {
     "cliente_ve_etapas": (True, False),
     "cliente_ve_prazos_etapas": (True, False),
     "financeiro_cliente": ("completo", "resumido"),
+    "entrega_final": ("liberada", "apos_quitacao"),
 }
 MAX_VERSOES_LISTADAS = 20
 
@@ -110,6 +110,8 @@ def versoes(db: Session) -> list[dict]:
 def publicar_globais(db: Session, politicas: dict, *, actor, base_versao: int, restaurada_de=None,
                      request_id=None) -> dict:
     dados = PoliticasCompletas.model_validate(politicas).model_dump()
+    if dados["entrega_final"] != "apos_quitacao":
+        raise PoliticaInvalida("Liberacao sem quitacao exige excecao por producao com motivo.")
     atual = globais(db)
     if base_versao != atual["versao"]:
         raise PoliticaConflito("As politicas foram alteradas por outra pessoa. Recarregue antes de publicar.")
@@ -159,6 +161,8 @@ def salvar_servico(db: Session, servico_id: int, politicas: dict, *, actor, requ
         if db.get(ServicoModel, servico_id) is None:
             raise PoliticaNaoEncontrada("Servico nao encontrado.")
         dados = PoliticasParciais.model_validate(politicas).model_dump(exclude_none=True)
+        if dados.get("entrega_final", "apos_quitacao") != "apos_quitacao":
+            raise PoliticaInvalida("Liberacao sem quitacao exige excecao por producao com motivo.")
         row = db.get(ServicoPoliticaModel, servico_id)
         anterior = _parciais(row.dados if row else None)
         if row is None:
@@ -269,6 +273,8 @@ def definir_excecao(db: Session, producao: ProducaoModel, politicas: dict, motiv
         dados = PoliticasParciais.model_validate(politicas).model_dump(exclude_none=True)
         if not dados:
             raise PoliticaInvalida("Informe ao menos uma politica.")
+        if dados.get("entrega_final") == "liberada" and len((motivo or "").strip()) < 5:
+            raise PoliticaInvalida("Explique o motivo da liberacao da entrega final.")
         antes = detalhar(db, producao.id)["vigentes"]
         row = db.get(ProducaoPoliticaModel, producao.id)
         if row is None:

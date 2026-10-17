@@ -64,6 +64,8 @@ class ProducaoArquivoClienteResponse(BaseModel):
     substitui_arquivo_id: int | None
     enviado_por_mim: bool
     observacao: str | None = None
+    # 5.14: final delivery ready but held until the balance is paid.
+    bloqueado_pagamento: bool = False
     created_at: datetime
     updated_at: datetime
 

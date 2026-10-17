@@ -439,6 +439,18 @@ decidida a cada fase.
   idempotente. Excecao do Admin com motivo obrigatorio e auditoria para acordos fora do
   sistema. Previas continuam liberadas.
 
+Implementacao retomada em 16/10/2026, ainda em validacao para integracao:
+- Bloqueio real no endpoint de conteudo, inclusive se o ID do arquivo for conhecido.
+- Recalculo a cada leitura: entrada nao basta; quitacao libera; reembolso,
+  cancelamento, divergencia de titularidade e conciliacao pendente bloqueiam.
+- Excecao somente por producao, com motivo e auditoria; configuracao global e
+  catalogo nao podem liberar em massa entregas sem pagamento.
+- Producoes historicas sem cobranca preservam a visibilidade anterior. Nenhum
+  pagamento, documento historico ou objeto de Storage e reescrito.
+- Sem migration. Snapshot tipado aceita a nova chave com padrao retrocompativel.
+- Testes isolados e E2E real cobrem download negado antes do saldo e liberado
+  depois de pagamento sintetico; nenhum provider financeiro real e chamado.
+
 ### 5.15 - Contato do cliente para o produtor
 - Nome, e-mail e WhatsApp do cliente no detalhe da producao do Portal do Produtor, somente
   para quem trabalha nela (coordenador e responsaveis de etapa, 5.07).

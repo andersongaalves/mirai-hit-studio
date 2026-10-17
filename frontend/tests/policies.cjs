@@ -30,7 +30,7 @@ window.ready = true;
 </script></body></html>`;
 
 const DEFAULTS = { publicacao_previa: 'automatica', revisoes_excedentes: 'permitir', cliente_ve_etapas: true,
-    cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo' };
+    cliente_ve_prazos_etapas: true, financeiro_cliente: 'completo', entrega_final: 'apos_quitacao' };
 const stage = (extra) => ({ id: 1, ordem: 1, item_indice: 1, item_descricao: 'Plano', ordem_no_item: 1, nome: 'Rough Mix',
     status: 'em_revisao', prazo: null, iniciada_em: null, concluida_em: null, depende_da_anterior: false,
     administrativa: false, acoes: [], ...extra });
@@ -57,11 +57,17 @@ const stage = (extra) => ({ id: 1, ordem: 1, item_indice: 1, item_descricao: 'Pl
 
         // Global form: every key, booleans typed.
         await page.evaluate(values => window.renderForm({ values, idPrefix: 'g' }), DEFAULTS);
-        assert.equal(await page.locator('.policy-form select').count(), 5);
+        assert.equal(await page.locator('.policy-form select').count(), 6);
         await page.getByLabel('Cliente vê as etapas').selectOption('false');
         await page.getByLabel('Prévias do produtor').selectOption('aprovacao_admin');
+        assert.equal(await page.getByLabel('Entrega final ao cliente').locator('option[value="liberada"]').count(), 0);
         assert.deepEqual(await page.evaluate(() => window.readForm()), {
             ...DEFAULTS, cliente_ve_etapas: false, publicacao_previa: 'aprovacao_admin' });
+
+        // Only the reasoned production-exception editor offers release without settlement.
+        await page.evaluate(values => window.renderForm({ values, allowDeliveryRelease: true }), DEFAULTS);
+        await page.getByLabel('Entrega final ao cliente').selectOption('liberada');
+        assert.equal((await page.evaluate(() => window.readForm())).entrega_final, 'liberada');
 
         // Service form: inherits by default and sends only what it overrides.
         await page.evaluate(values => window.renderForm({ values: { financeiro_cliente: 'resumido' }, inherited: values,

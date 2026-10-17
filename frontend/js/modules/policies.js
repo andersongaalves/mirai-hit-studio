@@ -22,6 +22,10 @@ export const POLICIES = Object.freeze([
         ["completo", "Completo (com histórico de pagamentos)"],
         ["resumido", "Resumido (status, saldo e link de pagamento)"],
     ] },
+    { key: "entrega_final", label: "Entrega final ao cliente", options: [
+        ["apos_quitacao", "Só após a quitação do saldo"],
+        ["liberada", "Liberada mesmo com saldo pendente"],
+    ] },
 ]);
 
 export const ORIGIN_LABELS = Object.freeze({
@@ -49,7 +53,7 @@ export function optionLabel(key, value) {
  * every select starts with an "inherit" option and read() returns only the keys set;
  * without it, read() returns every key.
  */
-export function policyForm({ values = {}, inherited = null, inheritLabel = "Herdar", idPrefix = "politica" }) {
+export function policyForm({ values = {}, inherited = null, inheritLabel = "Herdar", idPrefix = "politica", allowDeliveryRelease = false }) {
     const root = element("div", "policy-form");
     const selects = POLICIES.map(({ key, label, options }) => {
         const field = element("label", "policy-form__field");
@@ -61,7 +65,7 @@ export function policyForm({ values = {}, inherited = null, inheritLabel = "Herd
             inherit.value = "";
             select.append(inherit);
         }
-        options.forEach(([value, text]) => {
+        options.filter(([value]) => key !== "entrega_final" || value !== "liberada" || allowDeliveryRelease).forEach(([value, text]) => {
             const option = element("option", "", text);
             option.value = String(value);
             select.append(option);

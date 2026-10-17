@@ -60,7 +60,7 @@ def _file_error(exc):
     return HTTPException(status_code=422, detail=str(exc))
 
 
-def _client_file(model, user_id):
+def _client_file(model, user_id, entrega_bloqueada=False):
     return {
         "id": model.id,
         "producao_id": model.producao_id,
@@ -74,6 +74,7 @@ def _client_file(model, user_id):
         "substitui_arquivo_id": model.substitui_arquivo_id,
         "enviado_por_mim": model.remetente_usuario_id == user_id,
         "observacao": model.observacao,
+        "bloqueado_pagamento": bool(entrega_bloqueada and model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL),
         "created_at": model.created_at,
         "updated_at": model.updated_at,
     }
@@ -348,16 +349,14 @@ def obter_meu_financeiro(producao_id: int, db: Db, user: CurrentClient):
 )
 def listar_meus_arquivos(producao_id: int, db: Db, user: CurrentClient):
     try:
-        return [
-            _client_file(model, user.id)
-            for model in producao_arquivo_service.list_for_client(
-                db,
-                producao_id,
-                user.cliente_id,
-            )
-        ]
+        models = producao_arquivo_service.list_for_client(db, producao_id, user.cliente_id)
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
+    bloqueada = False
+    if any(model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL for model in models):
+        bloqueada = portal_cliente_service.entrega_bloqueada(
+            db, portal_cliente_service.buscar_producao(db, producao_id, user.cliente_id))
+    return [_client_file(model, user.id, bloqueada) for model in models]
 
 
 @router.post(
@@ -411,6 +410,10 @@ async def enviar_material(
 def baixar_meu_arquivo(arquivo_id: int, db: Db, user: CurrentClient):
     try:
         model = producao_arquivo_service.get_for_client(db, arquivo_id, user.cliente_id)
+        if model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL and portal_cliente_service.entrega_bloqueada(
+            db, portal_cliente_service.buscar_producao(db, model.producao_id, user.cliente_id)
+        ):
+            raise HTTPException(status_code=402, detail=portal_cliente_service.MENSAGEM_ENTREGA_BLOQUEADA)
         content = producao_arquivo_service.read(model)
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
