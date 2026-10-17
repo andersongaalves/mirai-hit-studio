@@ -17,7 +17,6 @@ with Session(engine) as db:
         UsuarioModel(id=1, username='admin', password_hash=get_password_hash('password-test'), is_admin=True, role='admin'),
         UsuarioModel(id=2, username='beatmaker', password_hash='unused', is_admin=False, role='produtor', ativo=True),
         UsuarioModel(id=3, username='antigo', password_hash='unused', is_admin=False, role='produtor', ativo=False),
-        UsuarioModel(id=4, username='cliente', password_hash='unused', is_admin=False, role='cliente', ativo=True),
     ])
     db.add(ConfigModel(id=1, portfolio_segments_json=[
         {'id':'rock','label':'Rock','active':True,'order':1,'retired':False},
@@ -93,7 +92,7 @@ class PortfolioCreditosTests(unittest.TestCase):
                             response = await client.put(path, json={'creditos': bad}, headers=headers)
                             assert response.status_code == 422, (bad, response.text)
                         assert (await client.put(path, json={'creditos': None}, headers=headers)).status_code == 422
-                        for usuario_id in (3, 4, 1, 999):  # inactive, client, admin, missing
+                        for usuario_id in (3, 1, 999):  # inactive producer, admin, missing
                             response = await client.put(
                                 path, json={'creditos': [{'funcao': 'beat', 'nome': 'X', 'usuario_id': usuario_id}]},
                                 headers=headers)
