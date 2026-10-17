@@ -485,7 +485,7 @@ Implementacao em 17/10/2026, integrada pela PR #60:
 - Card com preco riscado e selo de promocao; a calculadora usa o preco promocional.
 - O preco promocional fica congelado na proposta enviada (snapshot da 5.05).
 
-Implementacao em 17/10/2026, em validacao para integracao:
+Implementacao em 17/10/2026, integrada pelas PRs #61 e #62:
 - Configuracao tipada por servico/combo, ativa e com datas opcionais com fuso;
   inicio inclusivo e fim exclusivo. O maior desconto elegivel vence, sem soma.
 - Cards e calculadora compartilham o percentual calculado no backend. O Admin
@@ -493,12 +493,27 @@ Implementacao em 17/10/2026, em validacao para integracao:
 - Snapshot guarda o valor contratado e o contexto promocional no envio; alteracoes
   posteriores do catalogo nao reescrevem propostas ou pagamentos existentes.
 - Migration aditiva `f1a3c5e7b902` (duas colunas JSON opcionais), posterior a
-  `e8a0c2d4f659`. Aplicar antes de publicar este backend; nao executada em producao.
+  `e8a0c2d4f659`. Aplicada em producao antes do release; nao reaplicar nem fazer
+  downgrade.
 - Testes cobrem periodos, limites, arredondamento, nao acumulacao, acesso Admin,
   editores antigos, congelamento e upgrade/downgrade/upgrade descartavel.
 - Percentual especial entre 0,01% e 99,99%; uma promocao ativa nao pode zerar
   o preco em centavos (inclusive ao editar o preco sem reenviar a promocao).
   A cobranca existente exige valor positivo e nao foi alterada para ofertas gratis.
+
+### Publicacao da 5.14 a 5.17 (17/10/2026)
+
+| Item | Valor |
+| --- | --- |
+| PRs na `main` | #58 (5.14), #59 (5.15), #60 (5.16), #61 (5.17), #62 (promocao sem preco zero), #63 (registro da imagem PostgreSQL no CI) |
+| Commit publicado | `c05d9477ea91cecbe8a12e5be473e20d1e95e6d5` |
+| Migration | `f1a3c5e7b902`, ja aplicada em producao antes do release (revision conferida no Supabase) |
+| CI da `main` | Storage Integration Gate `39027873379`, Client access e Portfolio segments verdes; Portals E2E `39027873411` verde na reexecucao (falha anterior instavel, nao reproduzida) |
+| Storage Provider Rollout Evidence | run `39027894835` (sucesso) |
+| Protected Production Release | dry-run `39028701708` e publish `39029251746`, `commercial_pipeline_v2=true` (sucesso, smokes finais verdes) |
+| Conferencia | dados da Yonda preservados (usuario 48, cliente 94, orcamento 238, proposta 73, cobranca 74 paga, pagamento 85 aprovado, producao 48) |
+| Observacao | producao 47 (finalizada, saldo pendente) passa a ter a entrega bloqueada ate a quitacao ou excecao do Admin |
+| Autorizacao | `CTRL-20261017-R3-514-517` |
 
 ### 5.18 - Notificacoes nos portais
 - Notificacoes por usuario (cliente e produtor) com "vista em". Ao abrir o portal, as nao
