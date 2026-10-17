@@ -21,7 +21,7 @@ export function promotionForm(value = null, idPrefix = "promotion") {
     field("ativa", "Promoção ativa", "checkbox").checked = Boolean(value?.ativa);
     const percentage = field("percentual", "Desconto especial (%)", "number");
     percentage.min = "0.01";
-    percentage.max = "100";
+    percentage.max = "99.99";
     percentage.step = "0.01";
     percentage.value = value?.percentual ?? "";
     for (const [key, text] of [["inicio", "Início (opcional)"], ["fim", "Fim (opcional)"]]) {
@@ -37,7 +37,7 @@ export function promotionForm(value = null, idPrefix = "promotion") {
         element,
         read() {
             if (!percentage.value && !controls.ativa.checked) return null;
-            if (!percentage.value || !percentage.checkValidity()) throw new Error("Informe um desconto entre 0,01% e 100%.");
+            if (!percentage.value || !percentage.checkValidity()) throw new Error("Informe um desconto entre 0,01% e 99,99%.");
             const inicio = controls.inicio.value ? new Date(controls.inicio.value).toISOString() : null;
             const fim = controls.fim.value ? new Date(controls.fim.value).toISOString() : null;
             if (inicio && fim && fim <= inicio) throw new Error("O fim da promoção deve ser posterior ao início.");

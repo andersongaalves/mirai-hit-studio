@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from schemas.servico_estrutura import validar_estrutura
-from schemas.promocao import PrecoCatalogo, Promocao
+from schemas.promocao import PrecoCatalogo, Promocao, validar_preco
 
 
 class ServicoBase(BaseModel):
@@ -22,6 +22,11 @@ class ServicoCreate(ServicoBase):
     parametros: str = Field(max_length=500)
     promocao: Promocao | None = None
     _estrutura = field_validator("estrutura_servico")(validar_estrutura)
+
+    @model_validator(mode="after")
+    def preco_promocional_positivo(self):
+        validar_preco(self.valor_base, self.promocao)
+        return self
 
     @field_validator("parametros")
     @classmethod

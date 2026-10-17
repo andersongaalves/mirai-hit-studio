@@ -496,6 +496,9 @@ Implementacao em 17/10/2026, em validacao para integracao:
   `e8a0c2d4f659`. Aplicar antes de publicar este backend; nao executada em producao.
 - Testes cobrem periodos, limites, arredondamento, nao acumulacao, acesso Admin,
   editores antigos, congelamento e upgrade/downgrade/upgrade descartavel.
+- Percentual especial entre 0,01% e 99,99%; uma promocao ativa nao pode zerar
+  o preco em centavos (inclusive ao editar o preco sem reenviar a promocao).
+  A cobranca existente exige valor positivo e nao foi alterada para ofertas gratis.
 
 ### 5.18 - Notificacoes nos portais
 - Notificacoes por usuario (cliente e produtor) com "vista em". Ao abrir o portal, as nao

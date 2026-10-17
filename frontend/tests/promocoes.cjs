@@ -49,6 +49,10 @@ window.ready = true;
         await page.getByLabel('Promoção ativa').check();
         assert.match(await page.evaluate(() => { try { window.form.read(); } catch (error) { return error.message; } }), /Informe um desconto/);
         await page.getByLabel('Desconto especial (%)').fill('20');
+        assert.equal(await page.getByLabel('Desconto especial (%)').getAttribute('max'), '99.99');
+        await page.getByLabel('Desconto especial (%)').fill('100');
+        assert.match(await page.evaluate(() => { try { window.form.read(); } catch (error) { return error.message; } }), /99,99/);
+        await page.getByLabel('Desconto especial (%)').fill('20');
         await page.getByLabel('Início (opcional)').fill('2026-10-17T10:00');
         await page.getByLabel('Fim (opcional)').fill('2026-10-18T10:00');
         assert.deepEqual(await page.evaluate(() => window.form.read()), {

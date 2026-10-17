@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from models import ComboItemModel, ComboModel, ServicoModel
 from schemas.combo import ComboWrite
+from schemas.promocao import Promocao, validar_preco
 from schemas.servico_estrutura import ler
 from services import audit_service, catalogo_service, promocao_service
 
@@ -98,6 +99,10 @@ def _aplicar(db: Session, combo: ComboModel, dados: ComboWrite):
     combo.destaques = list(dados.destaques)
     if "promocao" in dados.model_fields_set:
         combo.promocao = dados.promocao.model_dump(mode="json") if dados.promocao else None
+    try:
+        validar_preco(combo.preco_base, Promocao.model_validate(combo.promocao) if combo.promocao else None)
+    except ValueError:
+        raise ComboInvalido("A promocao deve manter um preco positivo.") from None
     combo.itens.clear()
     db.flush()
     combo.itens.extend(ComboItemModel(servico_id=servico_id, ordem=ordem)
