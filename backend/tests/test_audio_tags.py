@@ -107,6 +107,15 @@ class AudioTagTests(unittest.TestCase):
                         return rendered
                     assert tags.processar_um(session_factory, storage=storage, renderer=renderer)
                     assert not tags.processar_um(session_factory, storage=storage, renderer=renderer)
+                    from scripts.migrate_production_files import inventory
+                    with Session(engine) as db:
+                        before_objects = dict(storage.objects)
+                        report = inventory(db)
+                        assert report['tagged_previews_preserved_not_copied'] == 1
+                        assert report['references_printed'] == report['deletions'] == 0
+                        assert not db.new and not db.dirty and not db.deleted
+                        assert storage.objects == before_objects and not storage.deleted
+                        assert all(key not in str(report) for key in storage.objects)
                     with patch.object(files, 'new_production_file_storage', return_value=storage):
                         delivered = await api.get(f'/portal/cliente/arquivos/{file_id}/conteudo', headers=bearer('client-a'))
                         assert delivered.status_code == 200 and delivered.content == rendered

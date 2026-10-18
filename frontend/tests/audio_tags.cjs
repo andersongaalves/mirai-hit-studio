@@ -50,13 +50,9 @@ const root = path.resolve(__dirname, "..");
         await page.waitForFunction(() => typeof window.fazerLogin === "function");
         await page.evaluate(() => window.fazerLogin());
         await page.waitForFunction(() => document.getElementById("admin-area")?.classList.contains("hidden") === false);
-        await page.evaluate(async () => {
-            window.mostrarSecao("section-custos");
-            document.getElementById("admin-config-portals").hidden = false;
-            document.getElementById("admin-config-segments").hidden = true;
-            const { loadAudioTag } = await import("/js/modules/audio_tags.js");
-            await loadAudioTag(document.getElementById("audio-tag-settings"), { admin: true });
-        });
+        await page.evaluate(() => window.mostrarSecao("section-custos"));
+        await page.getByRole("tab", { name: "Portais", exact: true }).click();
+        await page.waitForFunction(() => document.getElementById("admin-config-portals-tab")?.getAttribute("aria-selected") === "true");
         const panel = page.locator("#audio-tag-settings");
         await panel.getByText("Nenhuma tag cadastrada.", { exact: true }).waitFor();
         await panel.locator('[name="intervalo_segundos"]').fill("15");

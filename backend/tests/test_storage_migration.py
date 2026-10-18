@@ -4,7 +4,6 @@ import hashlib
 import unittest
 
 import test_bootstrap_database as isolated
-
 from services.storage.contracts import StorageScope
 from services.storage.memory import InMemoryStorage
 from services.storage.migration import (
@@ -80,6 +79,7 @@ class StorageMigrationTests(unittest.TestCase):
                 report = inventory(db)
             assert report == {
                 'mode': 'inventory', 'total': 0, 'providers': {}, 'types': {},
+                'tagged_previews_preserved_not_copied': 0,
                 'references_printed': 0, 'deletions': 0,
             }
         """)
