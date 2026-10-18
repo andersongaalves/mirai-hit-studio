@@ -61,14 +61,17 @@ def _file_error(exc):
 
 
 def _client_file(model, user_id, entrega_bloqueada=False):
+    job = getattr(model, "tag_processamento", None)
+    ready = job is not None and job.estado == "pronto"
     return {
         "id": model.id,
         "producao_id": model.producao_id,
         "tipo": model.tipo,
-        "nome_exibicao": model.nome_exibicao,
-        "mime_type": model.mime_type,
-        "tamanho_bytes": model.tamanho_bytes,
-        "sha256": model.sha256,
+        "nome_exibicao": (model.nome_exibicao.rsplit(".", 1)[0] + ".mp3") if ready else model.nome_exibicao,
+        "mime_type": "audio/mpeg" if ready else model.mime_type,
+        "tamanho_bytes": job.tamanho_bytes if ready else model.tamanho_bytes,
+        "sha256": job.sha256 if ready else model.sha256,
+        "processamento_tag": job.estado if job is not None else None,
         "grupo_versao": model.grupo_versao,
         "versao": model.versao,
         "substitui_arquivo_id": model.substitui_arquivo_id,
@@ -414,13 +417,14 @@ def baixar_meu_arquivo(arquivo_id: int, db: Db, user: CurrentClient):
             db, portal_cliente_service.buscar_producao(db, model.producao_id, user.cliente_id)
         ):
             raise HTTPException(status_code=402, detail=portal_cliente_service.MENSAGEM_ENTREGA_BLOQUEADA)
-        content = producao_arquivo_service.read(model)
+        content = producao_arquivo_service.read(model, client=True)
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
-    filename = quote(model.nome_exibicao, safe="")
+    metadata = _client_file(model, user.id)
+    filename = quote(metadata["nome_exibicao"], safe="")
     return Response(
         content,
-        media_type=model.mime_type,
+        media_type=metadata["mime_type"],
         headers={
             "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
             "Cache-Control": "private, no-store",

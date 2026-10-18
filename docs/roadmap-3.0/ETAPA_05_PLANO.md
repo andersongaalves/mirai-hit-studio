@@ -632,6 +632,52 @@ Migration `b4d6f8a0c357` aplicada sem backfill; V2 permanece `true`.
   (aviso de "processando"); o cliente recebe a versao com tag e o original fica so para o
   estudio. A entrega final nunca leva tag.
 
+Implementacao: Admin > Configuracoes > Portais recebe upload e troca da tag padrao,
+intervalo (10 a 120 segundos, padrao 10) e volume (1 a 100%, padrao 40). O produtor
+cadastra sua propria tag em Meu perfil. Tags MP3/WAV tem limite de 2 MB e 10 segundos,
+validacao por decodificacao e versoes privadas imutaveis no banco; nao sao expostas na
+API publica nem no Data API. A tag pessoal tem prioridade sobre a do estudio.
+
+Decisao do responsavel em 18/10/2026: ainda nao existe tag padrao; disponibilizar o
+cadastro e a edicao posterior. Sem tag pessoal nem padrao, preservar o fluxo existente,
+sem afirmar que houve aplicacao de marca. O cadastro habilita a aplicacao nos proximos
+uploads; nao altera arquivos historicos nem reprocessa contratos automaticamente.
+
+Para previas de audio com tag configurada, uma tarefa persistida congela tag, intervalo
+e volume. Um worker local ao backend processa uma por vez, com bloqueio SKIP LOCKED,
+FFmpeg empacotado (`imageio-ffmpeg==0.6.0`), limite de duracao de 30 minutos e timeout
+de renderizacao de 120 segundos. [Dependencia oficial](https://github.com/imageio/imageio-ffmpeg).
+Arquivos de entrega, material, referencia, comprovante e previas de video nao mudam.
+
+O original fica privado para a equipe; o cliente so baixa a derivada com SHA-256
+verificado. Enquanto pendente ou com erro, nao ha fallback para o original. Uma
+constraint impede que backends antigos liberem o original pela flag de visibilidade.
+Ocultar excepcionalmente pelo Admin afeta a derivada, nao publica o original.
+O aviso ao cliente so nasce depois do processamento; a tela atualiza as previas
+pendentes sem desmontar o formulario de envio. Falhas podem ser reenfileiradas pelo
+Admin; o snapshot da tag nao e reescrito. Falha no commit compensa somente a nova
+derivada e preserva o original. Interrupcao abrupta do processo pode deixar uma
+derivada nao referenciada: nenhuma limpeza ampla ou exclusao automatica e autorizada.
+Upload e processamento verificam o estado persistido antes de compensar um commit
+cuja confirmacao falhou; um objeto ja referenciado nunca e apagado por esse erro.
+O espaco fisico da derivada e reservado junto ao upload, sob o mesmo lock da cota;
+quando pronta, o tamanho real substitui a reserva, sem duplicar a contagem de arquivos
+logicos. A renderizacao nunca pode ultrapassar a reserva. Erros mantem essa reserva
+para permitir uma nova tentativa sem exceder o contrato.
+
+Migration aditiva `e8a0c2d4f679`, pai `d7f9a1c3e568`, sem backfill. Tabelas novas com
+RLS e grants publicos revogados tanto no bootstrap quanto na migration.
+`AUDIO_TAG_WORKER_ENABLED` tem default true; apenas o restore drill e a fixture E2E o
+desligam para impedir que um banco restaurado dispare tarefas reais.
+Rollback conserva schema, originais e derivadas. Backends anteriores nao exibem as
+novas previas restritas; nunca fazer downgrade destrutivo para contornar isso.
+
+Marco 5.20: PR #71 integrada na main `1226a1ca9b5f2e1ed199acbf812b3343ca1e1eb8`.
+Storage CI `39125915630`, Portals E2E `39125915652`, restore drill `39125928791`:
+PASS. Migration `d7f9a1c3e568` aplicada atomicamente em 18/10/2026; tabela vazia,
+RLS ativa e sem grants anon/authenticated; 8 usuarios, 19 projetos e 4 servicos
+preservados. Publicacao conjunta pendente do gate da 5.21.
+
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
   enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes

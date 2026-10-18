@@ -136,7 +136,9 @@ function fileItem(file, onDownload) {
         info.append(element(
             "span",
             file.visivel_cliente ? "producer-file__shared" : "",
-            file.visivel_cliente ? "Compartilhada com o cliente" : "Não compartilhada com o cliente",
+            file.processamento_tag === "pendente" ? "Processando versão com tag"
+                : file.processamento_tag === "erro" ? "Falha ao processar tag. Solicite revisão ao estúdio."
+                : file.visivel_cliente ? "Compartilhada com o cliente" : "Não compartilhada com o cliente",
         ));
     }
     const button = element("button", "btn-outline", "Baixar");

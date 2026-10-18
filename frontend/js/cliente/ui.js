@@ -134,6 +134,8 @@ function currentVersions(files) {
 
 function fileItem(file, handlers) {
     const item = element("li", "producer-file");
+    if (file.tipo === "previa") item.dataset.previewFileId = String(file.id);
+    if (file.processamento_tag === "pendente") item.dataset.tagPending = "true";
     const info = element("div");
     info.append(
         element("strong", "", file.nome_exibicao),
@@ -145,6 +147,13 @@ function fileItem(file, handlers) {
     }
     const actions = element("div", "client-file__actions");
     const player = element("div");
+    if (["pendente", "erro"].includes(file.processamento_tag)) {
+        info.append(element("p", "producer-help", file.processamento_tag === "erro"
+            ? "Prévia indisponível. O estúdio precisa revisar o processamento."
+            : "Processando prévia..."));
+        item.append(info);
+        return item;
+    }
     if (file.tipo === "previa" && /^(audio|video)\//.test(file.mime_type)) {
         const play = element("button", "btn-outline", "Reproduzir");
         play.type = "button";
@@ -180,6 +189,14 @@ function safeCheckoutUrl(finance) {
     } catch {
         return "";
     }
+}
+
+export function updateProcessedPreviews(files, handlers) {
+    document.querySelectorAll('[data-preview-file-id][data-tag-pending="true"]').forEach(item => {
+        const file = files.find(file => String(file.id) === item.dataset.previewFileId);
+        if (file && file.processamento_tag !== "pendente") item.replaceWith(fileItem(file, handlers));
+        else if (!file) item.remove();
+    });
 }
 
 function fileGroup(title, files, handlers, help = "") {

@@ -14,6 +14,7 @@ import {
     renderProposalSummary,
     setAlert,
     showView,
+    updateProcessedPreviews,
 } from "./ui.js";
 
 let productions = [];
@@ -24,6 +25,23 @@ const objectUrls = new Set();
 const filters = { status: "todos", order: "recente" };
 let uploadFeedback = null;
 let filtersInitialized = false;
+let tagPollTimer = null;
+
+function watchTaggedPreviews(production, files, failures = 0) {
+    clearTimeout(tagPollTimer);
+    if (!files.some(file => file.processamento_tag === "pendente") || failures >= 3) return;
+    tagPollTimer = setTimeout(async () => {
+        if (route().view !== "detail" || route().id !== production.id || !getCurrentUser()) return;
+        try {
+            const updated = await api.listarArquivos(production.id);
+            if (route().view !== "detail" || route().id !== production.id || !getCurrentUser()) return;
+            updateProcessedPreviews(updated, { onDownload: downloadFile, onPreview: playPreview });
+            watchTaggedPreviews(production, updated);
+        } catch {
+            watchTaggedPreviews(production, files, failures + 1);
+        }
+    }, 5000);
+}
 
 function route() {
     const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
@@ -128,6 +146,7 @@ function rememberProduction(production) {
 }
 
 function navigate(path) {
+    clearTimeout(tagPollTimer);
     releaseObjectUrls();
     setAlert();
     uploadFeedback = null;
@@ -158,6 +177,7 @@ async function openDetail(id) {
             uploadFeedback,
         });
         showView("detail");
+        watchTaggedPreviews(production, files);
         loadMessages(production, files);
         loadStages(production);
         loadQuotas(production);
@@ -306,6 +326,7 @@ async function refreshFiles(production, setFeedback) {
             onPreview: playPreview,
             uploadFeedback,
         });
+        watchTaggedPreviews(production, files);
         loadMessages(production, files);
         loadStages(production);
         loadQuotas(production);
@@ -432,6 +453,7 @@ window.addEventListener("popstate", () => {
     renderRoute();
 });
 document.addEventListener("admin:logout", () => {
+    clearTimeout(tagPollTimer);
     releaseObjectUrls();
     uploadFeedback = null;
     productions = [];

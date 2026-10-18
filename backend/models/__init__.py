@@ -24,3 +24,4 @@ from .cota_arquivo import ProducaoCotaArquivoModel, ServicoCotaArquivoModel
 from .politica import PoliticaGlobalModel, ProducaoPoliticaModel, ServicoPoliticaModel
 from .portal_notificacao import PortalNotificacaoModel
 from .portfolio_envio import PortfolioEnvioModel
+from .audio_tag import AudioTagModel, AudioTagPerfilModel, PreviaTagJobModel

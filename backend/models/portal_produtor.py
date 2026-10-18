@@ -20,7 +20,21 @@ from database import Base
 
 class ProducaoArquivoModel(Base):
     __tablename__ = "producao_arquivos"
+    tag_processamento = relationship("PreviaTagJobModel", uselist=False, lazy="selectin")
+
+    @property
+    def processamento_tag(self):
+        return (self.tag_processamento.estado or "pendente") if self.tag_processamento else None
+
+    @property
+    def visibilidade_cliente_efetiva(self):
+        if self.original_restrito:
+            return bool(self.tag_processamento and self.tag_processamento.visivel_cliente)
+        return self.visivel_cliente
+
+    original_restrito = Column(Boolean, nullable=False, default=False, server_default=false())
     __table_args__ = (
+        CheckConstraint("NOT original_restrito OR NOT visivel_cliente", name="ck_producao_arquivos_original_tag_privado"),
         CheckConstraint(
             "tipo IN ('material', 'referencia', 'previa', 'entrega', 'comprovante')",
             name="ck_producao_arquivos_tipo_valido",

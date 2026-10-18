@@ -51,7 +51,10 @@ def plan_production_files(
     decisions = []
     for row in rows:
         category = f"production_{row.tipo}"
-        if row.id not in superseded_ids:
+        if getattr(row, "original_restrito", False):
+            action = LifecycleAction.PRESERVE
+            reason = "private_original_with_tagged_derivative"
+        elif row.id not in superseded_ids:
             action = LifecycleAction.PRESERVE
             reason = "active_version"
         elif row.tipo in {"entrega", "comprovante"}:

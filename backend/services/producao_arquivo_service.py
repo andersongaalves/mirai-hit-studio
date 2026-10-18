@@ -120,6 +120,9 @@ def upload(
 ):
     _validate_upload(data, mime_type, file_type)
     note = _normalize_note(note)
+    from services import audio_tag_service
+
+    tag_job = audio_tag_service.preparar(db, actor=actor, file_type=file_type, mime_type=mime_type, data=data)
     if file_type == "comprovante" and visible_to_client:
         raise ProducaoArquivoError("Comprovantes de repasse nao podem ser visiveis ao cliente.")
     if enforce_quota:
@@ -137,6 +140,7 @@ def upload(
             cota_arquivo_service.verificar(
                 db, production.id, tipo=file_type, mime_type=mime_type, tamanho=len(data),
                 nova_versao=version if previous is not None else None, data=data,
+                extra_storage_bytes=tag_job["reserva_bytes"] if tag_job is not None else 0,
             )
         except cota_arquivo_service.CotaFormato as exc:
             db.rollback()
@@ -163,12 +167,19 @@ def upload(
         versao=version,
         substitui_arquivo_id=previous.id if previous else None,
         visivel_produtor=visible_to_producer,
-        visivel_cliente=visible_to_client,
+        visivel_cliente=visible_to_client if tag_job is None else False,
+        original_restrito=tag_job is not None,
         observacao=note,
     )
+    production_id = production.id
+    sender_id = getattr(actor, "id", None)
     try:
         db.add(model)
         db.flush()
+        if tag_job is not None:
+            from models import PreviaTagJobModel
+
+            model.tag_processamento = PreviaTagJobModel(arquivo_id=model.id, visivel_cliente=visible_to_client, **tag_job)
         audit_service.record(
             db,
             actor=actor,
@@ -183,25 +194,29 @@ def upload(
         db.commit()
         db.refresh(model)
         return model
-    except IntegrityError:
+    except Exception as exc:
         db.rollback()
+        try:
+            persisted = db.query(ProducaoArquivoModel).filter_by(object_key=object_key).first()
+        except Exception:
+            logger.error("production_file_outcome_unknown production_id=%s", production_id)
+            raise ProducaoArquivoUnavailable("Envio nao confirmado. Atualize a lista antes de reenviar.") from None
+        if persisted is not None:
+            # Never compensate an object already referenced after an ambiguous commit.
+            if (persisted.producao_id == production_id and persisted.grupo_versao == group_id
+                    and persisted.versao == version and persisted.sha256 == hashlib.sha256(data).hexdigest()
+                    and persisted.tipo == file_type and persisted.remetente_usuario_id == sender_id):
+                return persisted
+            raise ProducaoArquivoConflict("Conflito ao registrar o arquivo.") from None
         try:
             storage.delete(object_key)
         except ProducaoArquivoStorageError:
             logger.error(
                 "production_file_compensation_failed production_id=%s",
-                production.id,
+                production_id,
             )
-        raise ProducaoArquivoConflict("Conflito ao registrar a nova versao.") from None
-    except Exception:
-        db.rollback()
-        try:
-            storage.delete(object_key)
-        except ProducaoArquivoStorageError:
-            logger.error(
-                "production_file_compensation_failed production_id=%s",
-                production.id,
-            )
+        if isinstance(exc, IntegrityError):
+            raise ProducaoArquivoConflict("Conflito ao registrar a nova versao.") from None
         raise
 
 
@@ -260,6 +275,8 @@ def get_for_producer(db, file_id, producer_id):
 
 
 def list_for_client(db, production_id, client_id):
+    from models import PreviaTagJobModel
+    from sqlalchemy import or_
     production = (
         db.query(ProducaoModel.id)
         .join(OrcamentoModel, ProducaoModel.orcamento_id == OrcamentoModel.id)
@@ -273,9 +290,10 @@ def list_for_client(db, production_id, client_id):
         raise ProducaoArquivoNotFound("Producao nao encontrada.")
     return (
         db.query(ProducaoArquivoModel)
+        .outerjoin(PreviaTagJobModel, PreviaTagJobModel.arquivo_id == ProducaoArquivoModel.id)
         .filter(
             ProducaoArquivoModel.producao_id == production_id,
-            ProducaoArquivoModel.visivel_cliente.is_(True),
+            or_(ProducaoArquivoModel.visivel_cliente.is_(True), PreviaTagJobModel.visivel_cliente.is_(True)),
             ProducaoArquivoModel.tipo != "comprovante",
         )
         .order_by(ProducaoArquivoModel.created_at.desc(), ProducaoArquivoModel.id.desc())
@@ -284,13 +302,16 @@ def list_for_client(db, production_id, client_id):
 
 
 def get_for_client(db, file_id, client_id):
+    from models import PreviaTagJobModel
+    from sqlalchemy import or_
     model = (
         db.query(ProducaoArquivoModel)
+        .outerjoin(PreviaTagJobModel, PreviaTagJobModel.arquivo_id == ProducaoArquivoModel.id)
         .join(ProducaoModel, ProducaoArquivoModel.producao_id == ProducaoModel.id)
         .join(OrcamentoModel, ProducaoModel.orcamento_id == OrcamentoModel.id)
         .filter(
             ProducaoArquivoModel.id == file_id,
-            ProducaoArquivoModel.visivel_cliente.is_(True),
+            or_(ProducaoArquivoModel.visivel_cliente.is_(True), PreviaTagJobModel.visivel_cliente.is_(True)),
             ProducaoArquivoModel.tipo != "comprovante",
             OrcamentoModel.cliente_id == client_id,
         )
@@ -301,13 +322,20 @@ def get_for_client(db, file_id, client_id):
     return model
 
 
-def read(model, storage=None):
+def read(model, storage=None, *, client=False):
     storage = storage or new_production_file_storage(model.tipo)
+    job = getattr(model, "tag_processamento", None) if client else None
+    if client and getattr(model, "original_restrito", False) and job is None:
+        raise ProducaoArquivoUnavailable("Previa em processamento.")
+    if job is not None and job.estado != "pronto":
+        raise ProducaoArquivoUnavailable("Previa em processamento. Tente novamente em instantes.")
+    key = job.object_key if job is not None else model.object_key
+    checksum = job.sha256 if job is not None else model.sha256
     try:
-        content = storage.read(model.object_key)
+        content = storage.read(key)
     except ProducaoArquivoStorageError as exc:
         raise ProducaoArquivoUnavailable(str(exc)) from None
-    if hashlib.sha256(content).hexdigest() != model.sha256:
+    if hashlib.sha256(content).hexdigest() != checksum:
         logger.error(
             "production_file_integrity_mismatch production_id=%s file_id=%s",
             model.producao_id,
@@ -321,7 +349,13 @@ def update_visibility(db, *, model, actor, producer, client, request_id=None):
     if model.tipo == "comprovante" and client:
         raise ProducaoArquivoConflict("Comprovantes de repasse nao podem ser visiveis ao cliente.")
     model.visivel_produtor = producer
-    model.visivel_cliente = client
+    if model.original_restrito:
+        if model.tag_processamento is None:
+            raise ProducaoArquivoConflict("Processamento da previa indisponivel.")
+        model.visivel_cliente = False
+        model.tag_processamento.visivel_cliente = client
+    else:
+        model.visivel_cliente = client
     audit_service.record(
         db,
         actor=actor,

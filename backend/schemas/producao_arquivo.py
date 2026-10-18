@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 TipoArquivoProducao = Literal[
     "material",
@@ -27,8 +27,9 @@ class ProducaoArquivoResponse(BaseModel):
     versao: int
     substitui_arquivo_id: int | None
     visivel_produtor: bool
-    visivel_cliente: bool
+    visivel_cliente: bool = Field(validation_alias=AliasChoices("visibilidade_cliente_efetiva", "visivel_cliente"))
     observacao: str | None = None
+    processamento_tag: str | None = None
     created_at: datetime
     updated_at: datetime
 
