@@ -678,6 +678,21 @@ PASS. Migration `d7f9a1c3e568` aplicada atomicamente em 18/10/2026; tabela vazia
 RLS ativa e sem grants anon/authenticated; 8 usuarios, 19 projetos e 4 servicos
 preservados. Publicacao conjunta pendente do gate da 5.21.
 
+Publicacao conjunta 5.20/5.21 concluida em 18/10/2026 na main
+`28a42c097cb37107588b30ef39c8bf7c79399bed` (PRs #71 e #72). Storage Integration Gate
+`39152365063`, Portals E2E PostgreSQL 17 `39152365133`, restore drill `39152378582`,
+smokes reais/HMAC/preflight `39152422645`, dry-run `39153069383` e release
+`39153155925`: PASS. Render `dep-dbagoom1egvs73ale5l0`; Cloudflare
+`62a79cdf-999a-49b2-9293-c008a602d881`, mesmo SHA e rotas oficiais com HTTP 200.
+Migration `e8a0c2d4f679` aplicada atomicamente, sem backfill; 8 usuarios, 19 projetos,
+4 servicos e 8 arquivos preservados. Nenhuma tag foi cadastrada em producao: o
+responsavel enviara o audio depois. Tabelas privadas vazias, RLS ativa e sem grants
+anon/authenticated. V2 permaneceu `true`; auto-deploys continuam desativados.
+Rollback de codigo disponivel para `1b1921ee1d2cb2e9e5339155f98399e327621692`
+(Render `dep-dba3kk3rjlhs738pd7g0`, Cloudflare `154d56da-aa70-46f4-85c3-2f0424f22caf`),
+sem downgrade de banco nem exclusao de arquivos. As previas novas restritas nao
+ficam visiveis no backend antigo; isso e uma limitacao segura, nao fallback para originais.
+
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
   enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes
