@@ -82,12 +82,13 @@ def replace_credits(db, project: ProjetoModel, creditos: list[dict]) -> None:
     project.creditos.clear()
     db.flush()  # Old rows go first so the (projeto_id, ordem) uniqueness never collides.
     for ordem, credito in enumerate(creditos, start=1):
+        conta = contas.get(credito.get("usuario_id"))
         project.creditos.append(ProjetoCreditoModel(
             ordem=ordem,
             funcao=credito["funcao"],
             funcao_outra=credito.get("funcao_outra"),
             # A linked account is credited by its display name (kept as fallback if it is removed).
-            nome=getattr(contas.get(credito.get("usuario_id")), "nome_exibicao", None) or credito["nome"],
+            nome=(conta.nome_exibicao or conta.username) if conta is not None else credito["nome"],
             usuario_id=credito.get("usuario_id"),
         ))
 

@@ -45,6 +45,6 @@ class ProjetoCreditoModel(Base):
     @property
     def nome_publico(self) -> str:
         """A linked account always shows its current display name; otherwise the stored name."""
-        if self.usuario is not None and self.usuario.nome_exibicao:
-            return self.usuario.nome_exibicao
+        if self.usuario is not None:
+            return self.usuario.nome_exibicao or self.usuario.username
         return self.nome
