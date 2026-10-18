@@ -29,7 +29,11 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
                 }
                 if (url.origin !== "http://localhost:8000") return route.abort();
                 const user = { id: role === "admin" ? 1 : 2, username: role, role, ativo: true, is_admin: role === "admin" };
-                if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "synthetic-session", user } });
+                if (url.pathname === "/auth/login") {
+                    // Reproduce a login completing after the click has returned to the test.
+                    if (role === "admin") await new Promise(resolve => setTimeout(resolve, 150));
+                    return route.fulfill({ json: { access_token: "synthetic-session", user } });
+                }
                 if (url.pathname === "/auth/me") return route.fulfill({ json: user });
                 if (url.pathname === "/portal/produtor/portfolio" && req.method() === "POST") {
                     const data = req.postDataJSON();
@@ -84,12 +88,8 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         await page.screenshot({ path: path.join(screenDir, "producer-mobile.png"), fullPage: true });
         await context.close();
         const admin = await setup("admin", 1280);
-        await admin.page.waitForFunction(() => typeof window.editarProjeto === "function");
-        await admin.page.evaluate(async () => {
-            document.getElementById("section-portfolio").classList.remove("hidden");
-            const { carregarPortfolio } = await import("/js/admin/projetos.js");
-            await carregarPortfolio();
-        });
+        await admin.page.locator('[data-admin-target="dashboard-menu"][aria-current="page"]').waitFor();
+        await admin.page.locator('[data-admin-target="section-portfolio"]').click();
         const review = admin.page.locator(".portfolio-submission-review");
         await review.getByRole("button", { name: "Recusar", exact: true }).click();
         assert.equal(posts.length, 1, "Refusal needs a reason");
