@@ -1,5 +1,9 @@
 import { authFetch } from "../auth.js";
 
+export async function reprocessarTag(arquivoId) {
+    return handleResponse(await authFetch(`/admin/audio-tag/previas/${arquivoId}/reprocessar`, { method: "POST" }), "Erro ao reprocessar tag.");
+}
+
 const jsonHeaders = { "Content-Type": "application/json" };
 
 async function handleResponse(response, fallback) {

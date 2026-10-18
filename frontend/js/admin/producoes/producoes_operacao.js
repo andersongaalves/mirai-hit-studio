@@ -55,6 +55,15 @@ function renderFiles() {
         );
         if (file.observacao) info.append(node("p", "file-note", `Observação: ${file.observacao}`));
         const actions = node("div", "producao-arquivo-row__actions");
+        if (file.processamento_tag) {
+            info.append(node("span", "", { pendente: "Processando tag", pronto: "Versão com tag pronta", erro: "Falha no processamento da tag" }[file.processamento_tag]));
+            if (file.processamento_tag === "erro") {
+                const retry = node("button", "btn-small", "Reprocessar tag");
+                retry.type = "button";
+                retry.onclick = () => run(retry, () => API.reprocessarTag(file.id));
+                actions.append(retry);
+            }
+        }
         const download = node("button", "btn-small", "Baixar");
         download.type = "button";
         download.onclick = () => run(download, async () => saveBlob(await API.baixarArquivo(productionId, file.id)));

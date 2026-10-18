@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from models.portal_produtor import ProducaoArquivoModel
+from models.audio_tag import PreviaTagJobModel
 from services import audit_service
 from services.storage.contracts import ObjectReference, StorageScope
 from services.storage.legacy import SupabaseProductionAdapter
@@ -46,6 +47,8 @@ def inventory(db: Session) -> dict:
         "total": len(rows),
         "providers": dict(sorted(providers.items())),
         "types": dict(sorted(types.items())),
+        "tagged_previews_preserved_not_copied": len(db.scalars(select(PreviaTagJobModel).where(
+            PreviaTagJobModel.object_key.is_not(None))).all()),
         "references_printed": 0,
         "deletions": 0,
     }

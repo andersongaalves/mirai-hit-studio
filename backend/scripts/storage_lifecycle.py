@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
 from models.portal_produtor import ProducaoArquivoModel
+from models.audio_tag import PreviaTagJobModel
 from models.projeto import ProjetoModel
 from models.proposta import PropostaModel
 from services.storage.lifecycle import RetentionPolicy, plan_production_files, summarize
@@ -28,6 +29,8 @@ def inventory(database_url: str, *, superseded_days: int | None) -> dict:
             return {
                 "mode": "dry-run",
                 "production_files": len(files),
+                "tagged_previews_preserved": db.scalar(select(func.count()).select_from(PreviaTagJobModel).where(
+                    PreviaTagJobModel.object_key.is_not(None))),
                 "production_decisions": summarize(decisions),
                 "proposal_documents": db.scalar(
                     select(func.count()).select_from(PropostaModel).where(

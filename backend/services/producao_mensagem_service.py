@@ -47,7 +47,7 @@ def _file_visible(role: str, model: ProducaoArquivoModel) -> bool:
         return True
     if role == "produtor":
         return bool(model.visivel_produtor)
-    return bool(model.visivel_cliente) and model.tipo != "comprovante"
+    return bool(model.visibilidade_cliente_efetiva) and model.tipo != "comprovante"
 
 
 def _message_visible(role: str, model: ProducaoMensagemModel) -> bool:

@@ -5,6 +5,7 @@ import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
+import { loadAudioTag } from "../modules/audio_tags.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -18,6 +19,7 @@ function route() {
     if (/^\/produtor\/producoes\/?$/.test(location.pathname)) return { view: "productions" };
     if (/^\/produtor\/financeiro\/?$/.test(location.pathname)) return { view: "financeiro" };
     if (/^\/produtor\/portfolio\/?$/.test(location.pathname)) return { view: "portfolio" };
+    if (/^\/produtor\/perfil\/?$/.test(location.pathname)) return { view: "perfil" };
     return { view: "dashboard" };
 }
 
@@ -110,6 +112,11 @@ async function openDetail(id) {
 
 function renderRoute() {
     const current = route();
+    if (current.view === "perfil") {
+        showView("perfil");
+        loadAudioTag(document.getElementById("producer-audio-tag"));
+        return;
+    }
     if (current.view === "portfolio") {
         showView("portfolio");
         loadPortfolioSubmissions(document.getElementById("producer-portfolio-content"), { productions });
@@ -202,7 +209,9 @@ async function uploadFile(production, file, type, replacesId, button, note = "")
         const previewMessage = sent?.visivel_cliente === false
             ? "Prévia enviada. O cliente verá depois da aprovação do estúdio."
             : "Prévia enviada ao cliente com sucesso!";
-        setAlert(type === "previa" ? previewMessage : "Arquivo enviado como uma nova versão.");
+        setAlert(sent?.processamento_tag === "pendente"
+            ? "Prévia enviada. Processando a versão com tag para o cliente."
+            : type === "previa" ? previewMessage : "Arquivo enviado como uma nova versão.");
     } catch (error) {
         setAlert(error.message, true);
         button.disabled = false;

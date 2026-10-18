@@ -28,6 +28,9 @@
 .portfolio-submission a { display: inline-block; margin-right: var(--space-4); }
 .portfolio-submission-review { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
 .portfolio-submission-review label { flex: 1 1 200px; }
+#audio-tag-settings { margin-bottom: var(--space-6); }
+#audio-tag-settings audio, #producer-audio-tag audio { display: block; max-width: 100%; margin-block: var(--space-4); }
+#audio-tag-settings form, #producer-audio-tag form { align-items: end; margin-top: var(--space-4); }
 @media (max-width: 767px) {
     .portfolio-submission-form { grid-template-columns: minmax(0, 1fr); }
 }

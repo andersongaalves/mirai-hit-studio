@@ -5,6 +5,7 @@ import { authFetch } from "./auth.js";
 import * as Notify from "../utils/notifications.js";
 
 import { $ } from "../utils/dom.js";
+import { loadAudioTag } from "../modules/audio_tags.js";
 
 // ===========================
 // CAMPOS
@@ -46,6 +47,7 @@ let segmentControlsBound = false;
 // ===========================
 
 export async function carregarConfiguracoes() {
+    loadAudioTag($("audio-tag-settings"), { admin: true });
     try {
         const response = await authFetch("/config");
         if (!response.ok) throw new Error("Erro ao carregar configurações.");

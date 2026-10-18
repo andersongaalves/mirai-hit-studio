@@ -172,12 +172,16 @@ def instanciar(db: Session, producao: ProducaoModel, proposta) -> list:
 
 
 def _uso(db: Session, producao_id: int) -> dict[str, tuple[int, int]]:
+    from models import PreviaTagJobModel
+
     rows = db.execute(
         select(
             ProducaoArquivoModel.tipo,
             func.count(func.distinct(ProducaoArquivoModel.grupo_versao)),
-            func.coalesce(func.sum(ProducaoArquivoModel.tamanho_bytes), 0),
+            func.coalesce(func.sum(ProducaoArquivoModel.tamanho_bytes + func.coalesce(
+                PreviaTagJobModel.tamanho_bytes, PreviaTagJobModel.reserva_bytes, 0)), 0),
         )
+        .outerjoin(PreviaTagJobModel, PreviaTagJobModel.arquivo_id == ProducaoArquivoModel.id)
         .where(ProducaoArquivoModel.producao_id == producao_id)
         .group_by(ProducaoArquivoModel.tipo)
     ).all()
@@ -222,7 +226,7 @@ def travar_producao(db: Session, producao_id: int) -> None:
 
 
 def verificar(db: Session, producao_id: int, *, tipo: str, mime_type: str, tamanho: int, nova_versao: int | None,
-              data: bytes | None = None):
+              data: bytes | None = None, extra_storage_bytes: int = 0):
     """Raises when a client/producer upload breaks the production's quota for its type.
 
     nova_versao is None for a new logical file, or the version number being created.
@@ -250,5 +254,5 @@ def verificar(db: Session, producao_id: int, *, tipo: str, mime_type: str, taman
         raise CotaExcedida(f"Limite de {cota.max_arquivos} arquivo(s) de {rotulo} do contrato atingido.")
     if nova_versao is not None and cota.max_versoes is not None and nova_versao > cota.max_versoes:
         raise CotaExcedida(f"Limite de {cota.max_versoes} versao(oes) por arquivo de {rotulo} do contrato atingido.")
-    if cota.max_total_mb is not None and total + tamanho > cota.max_total_mb * MB:
+    if cota.max_total_mb is not None and total + tamanho + extra_storage_bytes > cota.max_total_mb * MB:
         raise CotaExcedida(f"Espaco contratado para {rotulo} ({cota.max_total_mb} MB) esgotado.")

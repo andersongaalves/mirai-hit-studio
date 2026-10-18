@@ -74,7 +74,9 @@ def proposta_enviada(db, proposta):
 
 
 def arquivo_compartilhado(db, arquivo, *, actor_id=None):
-    if not arquivo.visivel_cliente or arquivo.tipo not in {"previa", "entrega"}:
+    if not getattr(arquivo, "visibilidade_cliente_efetiva", arquivo.visivel_cliente) or arquivo.tipo not in {"previa", "entrega"}:
+        return
+    if getattr(arquivo, "processamento_tag", None) in {"pendente", "erro"}:
         return
     producao = db.get(ProducaoModel, arquivo.producao_id)
     tipo = "nova_previa" if arquivo.tipo == "previa" else "nova_entrega"
@@ -125,7 +127,11 @@ def _visiveis(db, user):
             OrcamentoModel.cliente_id == user.cliente_id)
         query = query.filter(or_(PortalNotificacaoModel.producao_id.in_(producoes), and_(
             PortalNotificacaoModel.producao_id.is_(None), PortalNotificacaoModel.proposta_id.in_(propostas))))
-        arquivos = select(ProducaoArquivoModel.id).where(ProducaoArquivoModel.visivel_cliente.is_(True))
+        from models import PreviaTagJobModel
+
+        arquivos = select(ProducaoArquivoModel.id).outerjoin(
+            PreviaTagJobModel, PreviaTagJobModel.arquivo_id == ProducaoArquivoModel.id,
+        ).where(or_(ProducaoArquivoModel.visivel_cliente.is_(True), PreviaTagJobModel.visivel_cliente.is_(True)))
         from services import politica_service
 
         stage_types = ("etapa_concluida", "revisao_liberada")

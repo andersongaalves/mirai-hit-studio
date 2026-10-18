@@ -127,6 +127,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         app.dependency_overrides[public_provider] = lambda: cls.payment_client
         app.dependency_overrides[portal_provider] = lambda: cls.payment_client
         settings.PUBLIC_FRONTEND_URL = "http://localhost:4173"
+        settings.AUDIO_TAG_WORKER_ENABLED = False
 
         cls.stack = ExitStack()
         cls.stack.enter_context(
@@ -175,6 +176,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
     @classmethod
     def _cleanup(cls):
         from models import (
+            AudioTagModel,
+            AudioTagPerfilModel,
             AuditLogModel,
             AuthRateLimitModel,
             ClienteAcessoModel,
@@ -185,6 +188,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             PagamentoModel,
             PortalNotificacaoModel,
             PortfolioEnvioModel,
+            PreviaTagJobModel,
             ProducaoArquivoModel,
             ProducaoModel,
             ProjetoModel,
@@ -199,6 +203,9 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             for model in (
                 AuditLogModel,
                 AuthRateLimitModel,
+                PreviaTagJobModel,
+                AudioTagPerfilModel,
+                AudioTagModel,
                 ClienteAcessoModel,
                 PortalNotificacaoModel,
                 PortfolioEnvioModel,
@@ -1264,10 +1271,12 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             rows = db.execute(text("""
                 SELECT relname, relrowsecurity FROM pg_class
                 WHERE relnamespace = 'public'::regnamespace
-                  AND relname IN ('portal_notificacoes', 'portfolio_envios', 'projeto_creditos')
+                  AND relname IN ('audio_tag_perfis', 'audio_tags', 'portal_notificacoes',
+                                  'portfolio_envios', 'previa_tag_jobs', 'projeto_creditos')
                 ORDER BY relname
             """)).all()
-            self.assertEqual(rows, [('portal_notificacoes', True), ('portfolio_envios', True), ('projeto_creditos', True)])
+            self.assertEqual(rows, [('audio_tag_perfis', True), ('audio_tags', True), ('portal_notificacoes', True),
+                                    ('portfolio_envios', True), ('previa_tag_jobs', True), ('projeto_creditos', True)])
             for role in ('anon', 'authenticated'):
                 exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),
                                     {'role': role}).scalar_one()
@@ -1278,6 +1287,64 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                     self.assertFalse(db.execute(text("""
                         SELECT has_sequence_privilege(:role, 'public.projeto_creditos_id_seq', 'USAGE')
                     """), {'role': role}).scalar_one())
+
+    def test_audio_tags_postgresql17_worker_claim_and_private_original(self):
+        import io
+        import wave
+
+        from models import PreviaTagJobModel, ProducaoArquivoModel
+        from services import audio_tag_service
+
+        admin = self._login("e2e-admin")
+        producer = self._login("e2e-producer-a")
+        client = self._login("e2e-client-a")
+        other = self._login("e2e-client-b")
+        production_id = self._create_flow_production(admin)
+        buffer = io.BytesIO()
+        with wave.open(buffer, 'wb') as audio:
+            audio.setnchannels(1)
+            audio.setsampwidth(2)
+            audio.setframerate(22050)
+            audio.writeframes(b'\x00\x00' * 2205)
+        original = buffer.getvalue()
+        uploaded_tag = self.http.post('/admin/audio-tag', headers=admin, data={'versao': '0'},
+                                      files={'arquivo': ('synthetic.wav', original, 'audio/wav')})
+        self.assertEqual(uploaded_tag.status_code, 200, uploaded_tag.text)
+        uploaded = self.http.post(f'/portal/produtor/producoes/{production_id}/arquivos', headers=producer,
+                                  data={'tipo': 'previa'}, files={'arquivo': ('preview.wav', original, 'audio/wav')})
+        self.assertEqual(uploaded.status_code, 201, uploaded.text)
+        file_id = uploaded.json()['id']
+        self.assertEqual(uploaded.json()['processamento_tag'], 'pendente')
+        entered, release = Event(), Event()
+
+        def renderer(*args):
+            entered.set()
+            if not release.wait(timeout=10):
+                raise RuntimeError('synthetic worker timeout')
+            return b'synthetic tagged mp3'
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(audio_tag_service.processar_um, self.SessionLocal, storage=self.storage, renderer=renderer)
+            try:
+                self.assertTrue(entered.wait(timeout=10))
+                second = pool.submit(audio_tag_service.processar_um, self.SessionLocal, storage=self.storage, renderer=renderer)
+                self.assertFalse(second.result(timeout=5))
+                self.assertEqual(self.http.get(f'/portal/cliente/arquivos/{file_id}/conteudo', headers=client).status_code, 503)
+                self.assertEqual(self.http.get(f'/portal/cliente/arquivos/{file_id}/conteudo', headers=other).status_code, 404)
+            finally:
+                release.set()
+            self.assertTrue(first.result(timeout=10))
+        with self.SessionLocal() as db:
+            model = db.get(ProducaoArquivoModel, file_id)
+            job = db.get(PreviaTagJobModel, file_id)
+            self.assertFalse(model.visivel_cliente)
+            self.assertTrue(model.original_restrito)
+            self.assertEqual(job.estado, 'pronto')
+            self.assertEqual(job.sha256, sha256(b'synthetic tagged mp3').hexdigest())
+            self.assertEqual(len(self.storage.objects), 2)
+        result = self.http.get(f'/portal/cliente/arquivos/{file_id}/conteudo', headers=client)
+        self.assertEqual(result.content, b'synthetic tagged mp3')
+        self.assertEqual(self.http.get(f'/portal/produtor/arquivos/{file_id}/conteudo', headers=producer).content, original)
 
     def test_portfolio_submission_postgresql17_concurrent_review(self):
         from models import PortfolioEnvioModel, ProjetoModel, UsuarioModel

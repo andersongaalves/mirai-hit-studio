@@ -26,6 +26,9 @@ CRITICAL_TABLES = {
 }
 RESTORE_DATA_TABLES = {"usuarios", "clientes", "propostas", "cobrancas", "pagamentos"}
 RLS_TABLES = {
+    "audio_tags",
+    "audio_tag_perfis",
+    "previa_tag_jobs",
     "portal_notificacoes",
     "portfolio_envios",
     "projeto_creditos",
