@@ -1,5 +1,6 @@
 from database import Base
 from sqlalchemy import (
+    DDL,
     CheckConstraint,
     Column,
     DateTime,
@@ -8,6 +9,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    event,
     func,
 )
 
@@ -31,3 +33,14 @@ class PortalNotificacaoModel(Base):
     arquivo_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     vista_em = Column(DateTime(timezone=True), nullable=True)
+
+
+# Empty-database bootstrap uses metadata instead of running historical migrations.
+event.listen(PortalNotificacaoModel.__table__, "after_create", DDL(
+    "ALTER TABLE %(fullname)s ENABLE ROW LEVEL SECURITY"
+).execute_if(dialect="postgresql"))
+for role in ("anon", "authenticated"):
+    event.listen(PortalNotificacaoModel.__table__, "after_create", DDL(
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '" + role + "') "
+        "THEN REVOKE ALL ON TABLE %(fullname)s FROM " + role + "; END IF; END; $$"
+    ).execute_if(dialect="postgresql"))
