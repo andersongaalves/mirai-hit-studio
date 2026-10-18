@@ -198,6 +198,7 @@ jobs:
                     test_promocoes.py \
                     test_portal_notificacoes.py \
                     test_portfolio_creditos.py \
+                    test_portfolio_envios.py \
                     test_portfolio_taxonomy.py \
                     test_catalogo.py \
                     test_emails.py; do
@@ -218,6 +219,7 @@ jobs:
               run: |
                   set -euo pipefail
                   node frontend/tests/portfolio_admin.cjs
+                  node frontend/tests/portfolio_submissions.cjs
                   node frontend/tests/portfolio_public.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs

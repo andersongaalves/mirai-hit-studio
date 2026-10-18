@@ -7,6 +7,7 @@ import * as Notify from "../utils/notifications.js";
 import { $, clear } from "../utils/dom.js";
 import { closeAdminModal, openAdminModal } from "./admin_modal.js";
 import { normalizeCredits } from "../modules/portfolio_credits.js";
+import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { bindCreditControls, readCredits, setCredits, setProducers } from "./portfolio_creditos.js";
 
 // ===========================
@@ -31,6 +32,10 @@ document.addEventListener("portfolio-segments:changed", event => {
 // ===========================
 
 export async function carregarPortfolio() {
+    loadPortfolioSubmissions($("portfolio-submissions-admin"), {
+        admin: true,
+        onPublished: carregarPortfolio,
+    });
     try {
         const [response, segmentResponse] = await Promise.all([
             authFetch("/projetos/admin"),

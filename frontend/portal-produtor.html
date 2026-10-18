@@ -15,6 +15,7 @@
         <link rel="stylesheet" href="/css/components/production-stages.css" />
         <link rel="stylesheet" href="/css/components/file-quotas.css" />
         <link rel="stylesheet" href="/css/components/portal-notifications.css" />
+        <link rel="stylesheet" href="/css/components/portfolio-submissions.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -54,6 +55,7 @@
                         <a href="/produtor" data-route="dashboard">Dashboard</a>
                         <a href="/produtor/producoes" data-route="producoes" aria-label="Minhas produções">Produções</a>
                         <a href="/produtor/financeiro" data-route="financeiro">Financeiro</a>
+                        <a href="/produtor/portfolio" data-route="portfolio">Portfólio</a>
                     </nav>
 
                     <div class="producer-account">
@@ -135,6 +137,10 @@
                         </div>
                         <p id="producer-finance-help" class="producer-help">Valores e pagamentos registrados pela administração.</p>
                         <div id="producer-payouts" class="producer-list"></div>
+                    </section>
+                    <section id="producer-portfolio" class="producer-view hidden" aria-labelledby="producer-portfolio-title">
+                        <div class="producer-page-heading"><h1 id="producer-portfolio-title">Meus envios ao portfólio</h1></div>
+                        <div id="producer-portfolio-content"></div>
                     </section>
                 </div>
             </div>
