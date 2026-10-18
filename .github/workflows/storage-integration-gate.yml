@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["f9b1d3e5a780"], heads
+                  assert heads == ["a1c3e5f7b902"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -189,6 +189,7 @@ jobs:
                     test_proposta_comercial.py \
                     test_proposta_snapshot.py \
                     test_carteira_creditos.py \
+                    test_credito_alocacao.py \
                     test_producao_etapas.py \
                     test_combos.py \
                     test_cotas_arquivo.py \
@@ -224,6 +225,7 @@ jobs:
                   node frontend/tests/portfolio_submissions.cjs
                   node frontend/tests/audio_tags.cjs
                   node frontend/tests/service_credits.cjs
+                  node frontend/tests/credit_allocations.cjs
                   node frontend/tests/portfolio_public.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
@@ -354,6 +356,8 @@ jobs:
                       (SELECT count(*) FROM credito_contrato_itens) +
                       (SELECT count(*) FROM credito_lotes) +
                       (SELECT count(*) FROM credito_lancamentos) +
+                      (SELECT count(*) FROM credito_alocacoes) +
+                      (SELECT count(*) FROM credito_movimentos) +
                       (SELECT count(*) FROM portal_notificacoes) +
                       (SELECT count(*) FROM repasses_produtor);
                   " 2>/dev/null | tr -d '[:space:]')"
@@ -370,7 +374,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic f9b1d3e5a780: passed"
+                    echo "- PostgreSQL 17 and Alembic a1c3e5f7b902: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

@@ -194,16 +194,27 @@ def carteira(db, cliente_id):
     saldos = {}
     lotes = []
     for lote, lancamento in rows:
+        from services import credito_alocacao_service
+
+        uso = credito_alocacao_service.uso_lote(db, lote.id)
+        restante = lote.quantidade - uso["reservado"] - uso["consumido"]
+        if restante < 0 or uso["valor_usado"] > lote.valor_centavos:
+            raise financial_service.FinanceiroConflito("Saldo de creditos requer conciliacao.")
         cobranca = db.get(CobrancaModel, lote.cobranca_id)
         valida = (cobranca is not None and cobranca.cliente_id == cliente_id and finalidade_creditos(cobranca.proposta)
                   and financiamento_valido(cobranca) and lote.contrato_sha256 == _fingerprint(cobranca.proposta)
                   and lancamento.quantidade == lote.quantidade)
         key = (lote.servico_id, lote.unidade)
         saldo = saldos.setdefault(key, {"servico_id": lote.servico_id, "servico_nome": lote.servico_nome,
-                                      "unidade": lote.unidade, "disponivel": Decimal(0), "bloqueado": Decimal(0)})
-        saldo["disponivel" if valida else "bloqueado"] += lote.quantidade
+                                      "unidade": lote.unidade, "disponivel": Decimal(0), "bloqueado": Decimal(0),
+                                      "reservado": Decimal(0), "consumido": Decimal(0)})
+        saldo["disponivel" if valida else "bloqueado"] += restante
+        saldo["reservado"] += uso["reservado"]
+        saldo["consumido"] += uso["consumido"]
         lotes.append({"id": lote.id, "proposta_id": cobranca.proposta_id if cobranca else None,
                       "servico_nome": lote.servico_nome, "unidade": lote.unidade, "quantidade": str(lote.quantidade),
+                      "disponivel": str(restante if valida else Decimal(0)),
                       "estado": "disponivel" if valida else "bloqueado", "created_at": lote.created_at})
-    return {"saldos": [{**s, "disponivel": str(s["disponivel"]), "bloqueado": str(s["bloqueado"])} for s in saldos.values()],
+    return {"saldos": [{**s, **{k: str(s[k]) for k in ("disponivel", "bloqueado", "reservado", "consumido")}}
+                       for s in saldos.values()],
             "lotes": lotes}

@@ -85,6 +85,12 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
             resposta = _resposta(existente)
             db.commit()
             return resposta
+        from models import CreditoAlocacaoModel, ProducaoModel
+
+        if db.query(CreditoAlocacaoModel.id).join(ProducaoModel,
+                ProducaoModel.id == CreditoAlocacaoModel.producao_id).filter(
+                    ProducaoModel.orcamento_id == orcamento_id).first():
+            raise PropostaConflito("Esta producao utiliza creditos; nao gere outra cobranca para o mesmo trabalho.")
         _validar_produtor(db, orcamento.produtor_id)
         snapshot = PropostaSnapshot.model_validate({
             "cliente": {"nome": orcamento.nome_cliente, "email": orcamento.email, "whatsapp": orcamento.whatsapp},

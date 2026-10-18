@@ -201,7 +201,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
         with cls.SessionLocal.begin() as db:
             # Only this loopback PostgreSQL-17 fixture may reset append-only synthetic records.
-            db.execute(text("TRUNCATE TABLE credito_lancamentos, credito_lotes, credito_contrato_itens RESTART IDENTITY"))
+            db.execute(text("TRUNCATE TABLE credito_movimentos, credito_alocacoes, credito_lancamentos, credito_lotes, credito_contrato_itens RESTART IDENTITY"))
             for model in (
                 AuditLogModel,
                 AuthRateLimitModel,
@@ -1275,11 +1275,13 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 WHERE relnamespace = 'public'::regnamespace
                   AND relname IN ('audio_tag_perfis', 'audio_tags', 'portal_notificacoes',
                                   'portfolio_envios', 'previa_tag_jobs', 'projeto_creditos',
-                                  'credito_lotes', 'credito_lancamentos', 'credito_contrato_itens')
+                                  'credito_lotes', 'credito_lancamentos', 'credito_contrato_itens',
+                                  'credito_alocacoes', 'credito_movimentos')
                 ORDER BY relname
             """)).all()
             self.assertEqual(rows, [('audio_tag_perfis', True), ('audio_tags', True),
-                                    ('credito_contrato_itens', True), ('credito_lancamentos', True), ('credito_lotes', True), ('portal_notificacoes', True),
+                                    ('credito_alocacoes', True), ('credito_contrato_itens', True),
+                                    ('credito_lancamentos', True), ('credito_lotes', True), ('credito_movimentos', True), ('portal_notificacoes', True),
                                     ('portfolio_envios', True), ('previa_tag_jobs', True), ('projeto_creditos', True)])
             for role in ('anon', 'authenticated'):
                 exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),
@@ -1393,6 +1395,124 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("CREDITS_POSTGRES_BROWSER_PASS", result.stdout)
+
+    @patch("core.config.settings.COMMERCIAL_PIPELINE_V2_ENABLED", True)
+    def test_credit_allocation_postgresql17_conservation_and_duplicate_consumption(self):
+        from uuid import uuid4
+
+        from models import (
+            CreditoAlocacaoModel,
+            CreditoLoteModel,
+            CreditoMovimentoModel,
+            OrcamentoModel,
+            ProducaoModel,
+            PropostaModel,
+            ServicoModel,
+            UsuarioModel,
+        )
+        from schemas.credito_alocacao import MovimentoCreditos, ReservaCreditos
+        from schemas.proposta import PropostaUpdate
+        from services import (
+            carteira_creditos_service,
+            credito_alocacao_service,
+            financial_service,
+            producao_liberacao_service,
+            proposta_service,
+            proposta_snapshot_service,
+        )
+        from sqlalchemy.exc import DBAPIError
+
+        with self.SessionLocal() as db:
+            actor = db.scalar(select(UsuarioModel).where(UsuarioModel.username == "e2e-admin"))
+            actor_id = actor.id
+            catalog = db.scalar(select(ServicoModel).order_by(ServicoModel.id))
+            catalog.credito_servico = {"unidade": "canal", "quantidade": "20"}
+            source = OrcamentoModel(nome_cliente="Sintetico", email="synthetic@example.invalid", servico="Mix",
+                                    cliente_id=self.ids["client_a_id"])
+            target = OrcamentoModel(nome_cliente="Sintetico", email="synthetic@example.invalid", servico="Mix",
+                                    cliente_id=self.ids["client_a_id"])
+            db.add_all([source, target])
+            db.commit()
+            proposal = proposta_service.criar_por_orcamento(db, source.id)
+            proposta_service.atualizar(db, proposal.id, PropostaUpdate(finalidade="creditos", politica_pagamento="integral",
+                itens=[{"descricao": "Credito sintetico", "quantidade": 1, "valor_unitario": "1000", "servico_id": catalog.id}]))
+            model = db.get(PropostaModel, proposal.id)
+            proposta_snapshot_service.congelar(db, model, origem="envio", estrito=True)
+            model.status, model.enviada_em = "aceita", datetime.now(timezone.utc)
+            charge = financial_service.criar_para_proposta(db, model, cliente_id=self.ids["client_a_id"])
+            financial_service.registrar_pagamento(db, charge.id, tipo="integral", valor="1000", status="aprovado")
+            producao_liberacao_service.avaliar_liberacao_producao(db, charge.id)
+            production = ProducaoModel(titulo="Uso sintetico", cliente="Sintetico", servico="Mix", orcamento_id=target.id,
+                                       status="aguardando_inicio")
+            db.add(production)
+            db.commit()
+            production_id = production.id
+            lot_id = db.scalar(select(CreditoLoteModel.id))
+
+        barrier = Barrier(2)
+
+        def reserve():
+            with self.SessionLocal() as db:
+                db.execute(text("SET LOCAL lock_timeout='5s'"))
+                db.execute(text("SET LOCAL statement_timeout='10s'"))
+                actor = db.get(UsuarioModel, actor_id)
+                data = ReservaCreditos(lote_id=lot_id, quantidade="15", motivo="Reserva sintetica", idempotency_key=uuid4())
+                barrier.wait(timeout=10)
+                try:
+                    return credito_alocacao_service.reservar(db, production_id, data, actor=actor)["id"]
+                except credito_alocacao_service.AlocacaoConflito:
+                    return None
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first, second = pool.submit(reserve), pool.submit(reserve)
+            results = [first.result(timeout=20), second.result(timeout=20)]
+        self.assertEqual(sum(item is not None for item in results), 1)
+        allocation_id = next(item for item in results if item is not None)
+        with self.SessionLocal() as db:
+            balance = carteira_creditos_service.carteira(db, self.ids["client_a_id"])["saldos"][0]
+            self.assertEqual(Decimal(balance["disponivel"]), Decimal(5))
+            self.assertEqual(Decimal(balance["reservado"]), Decimal(15))
+            db.get(ProducaoModel, production_id).status = "em_producao"
+            db.commit()
+        barrier = Barrier(2)
+        key = uuid4()
+
+        def consume():
+            with self.SessionLocal() as db:
+                db.execute(text("SET LOCAL lock_timeout='5s'"))
+                actor = db.get(UsuarioModel, actor_id)
+                data = MovimentoCreditos(tipo="consumo", motivo="Consumo sintetico", idempotency_key=key)
+                barrier.wait(timeout=10)
+                return credito_alocacao_service.movimentar(db, production_id, allocation_id, data, actor=actor)["estado"]
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first, second = pool.submit(consume), pool.submit(consume)
+            self.assertEqual([first.result(timeout=20), second.result(timeout=20)], ["consumida", "consumida"])
+        with self.SessionLocal() as db:
+            self.assertEqual(len(db.scalars(select(CreditoAlocacaoModel)).all()), 1)
+            self.assertEqual(len(db.scalars(select(CreditoMovimentoModel)).all()), 2)
+            balance = carteira_creditos_service.carteira(db, self.ids["client_a_id"])["saldos"][0]
+            self.assertEqual(Decimal(balance["consumido"]), Decimal(15))
+        for table in ("credito_alocacoes", "credito_movimentos"):
+            for statement in (f"UPDATE {table} SET motivo='adulterado'", f"DELETE FROM {table}"):
+                with self.assertRaises(DBAPIError) as error, self.engine.begin() as connection:
+                    connection.execute(text(statement))
+                self.assertEqual(error.exception.orig.pgcode, "P0001")
+        producer = self._login("e2e-producer-a")
+        self.assertEqual(self.http.get(f"/producoes/{production_id}/creditos", headers=producer).status_code, 403)
+        admin = self._login("e2e-admin")
+        response = self.http.get(f"/producoes/{production_id}/creditos", headers=admin)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()[0]["estado"], "consumida")
+        creation = {"lote_id": lot_id, "quantidade": "3", "motivo": "Producao sintetica",
+                    "titulo": "Faixa sintetica", "produtor_id": self.ids["producer_a_id"], "idempotency_key": str(uuid4())}
+        endpoint = f"/producoes/creditos/cliente/{self.ids['client_a_id']}"
+        self.assertEqual(self.http.post(endpoint, headers=producer, json=creation).status_code, 403)
+        first = self.http.post(endpoint, headers=admin, json=creation)
+        second = self.http.post(endpoint, headers=admin, json=creation)
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(second.status_code, 200, second.text)
+        self.assertEqual(first.json()["producao_id"], second.json()["producao_id"])
 
     def test_audio_tags_postgresql17_worker_claim_and_private_original(self):
         import io

@@ -9,3 +9,8 @@
 @media (max-width: 767px) {
     .client-credit-balance { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 }
+.credit-allocations { display: grid; gap: 12px; min-width: 0; }
+.credit-allocations > textarea { width: 100%; max-width: 100%; min-height: 80px; box-sizing: border-box; resize: vertical; }
+.credit-allocations .producao-operacao-form label { display: grid; gap: 6px; min-width: 0; }
+.credit-allocations input, .credit-allocations select { max-width: 100%; min-width: 0; box-sizing: border-box; }
+.credit-allocations button, .credit-allocations input, .credit-allocations select, .credit-allocations textarea { font-family: inherit; }
