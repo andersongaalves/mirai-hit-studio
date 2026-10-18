@@ -1,4 +1,5 @@
 """Safe client-facing projection and actions for commercial proposals."""
+from models.carteira_creditos import CreditoContratoItemModel
 from models.cliente import ClienteModel
 from models.enums.proposta import PropostaStatus
 from models.orcamento import OrcamentoModel
@@ -7,7 +8,7 @@ from services import producao_liberacao_service, proposta_service
 from services import proposta_comercial_service as commercial
 from services import proposta_documento_service as documents
 from services.documento_storage import DocumentoIndisponivel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 VISIBLE_STATUSES = {
@@ -47,6 +48,11 @@ def _owned_query(cliente_id: int):
             OrcamentoModel.cliente_id == cliente_id,
             ClienteModel.ativo.is_(True),
             PropostaModel.status.in_(VISIBLE_STATUSES),
+            or_(PropostaModel.finalidade != "creditos", select(CreditoContratoItemModel.id).where(
+                CreditoContratoItemModel.proposta_id == PropostaModel.id,
+                CreditoContratoItemModel.proposta_versao == PropostaModel.versao,
+                CreditoContratoItemModel.cliente_id == cliente_id,
+            ).exists()),
         )
     )
 
@@ -82,6 +88,8 @@ def _project(model):
             "Os dados desta proposta precisam de conciliacao."
         )
     return {
+        "finalidade": proposal.finalidade,
+        "contrato_creditos": proposal.contrato_creditos.model_dump(mode="json") if proposal.contrato_creditos else None,
         "id": proposal.id,
         "numero": proposal.numero,
         "versao": proposal.versao,

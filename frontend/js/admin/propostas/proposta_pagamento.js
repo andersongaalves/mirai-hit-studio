@@ -36,7 +36,7 @@ export function renderizarPagamento(
                 <label for="proposta_politica_pagamento">Política de pagamento</label>
                 <select id="proposta_politica_pagamento">
                     <option value="integral" ${politica === "integral" ? "selected" : ""}>Pagamento integral</option>
-                    <option value="entrada_50_50" ${politica === "entrada_50_50" ? "selected" : ""}>Entrada de 50% + saldo de 50%</option>
+                    <option value="entrada_50_50" ${politica === "entrada_50_50" ? "selected" : ""} ${proposta.finalidade === "creditos" ? "disabled" : ""}>Entrada de 50% + saldo de 50%</option>
                 </select>
             </div>
 

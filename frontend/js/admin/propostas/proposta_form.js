@@ -44,6 +44,13 @@ export function renderizarProposta(
 
     container.innerHTML = `
         <div class="admin-info proposta-form-grid">
+            <div class="form-group">
+                <label for="proposta_finalidade">Finalidade</label>
+                <select id="proposta_finalidade">
+                    <option value="producao" ${proposta.finalidade !== "creditos" ? "selected" : ""}>Produção</option>
+                    <option value="creditos" ${proposta.finalidade === "creditos" ? "selected" : ""}>Créditos de serviços</option>
+                </select>
+            </div>
             ${campos.map(campo => `
                 <div class="form-group">
                     <label>${campo.label}</label>
@@ -79,6 +86,11 @@ export function renderizarProposta(
             onChange();
         };
     });
+    $("proposta_finalidade").onchange = event => {
+        atualizarCampoProposta("finalidade", event.target.value);
+        if (event.target.value === "creditos") atualizarCampoProposta("politica_pagamento", "integral");
+        onChange();
+    };
 
     const descricao = $("proposta_descricao");
 

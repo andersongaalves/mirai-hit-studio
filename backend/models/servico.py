@@ -14,6 +14,7 @@ class ServicoModel(Base):
     categoria = Column(String(100))
     aplica_desconto = Column(Boolean, default=False)
     promocao = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    credito_servico = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     parametros = Column(Text)
     estrutura_servico = Column(
         Text, nullable=False, default='{"intro":"","sections":[],"benefits":[]}'

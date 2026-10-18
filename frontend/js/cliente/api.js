@@ -17,6 +17,10 @@ export async function listarPropostas() {
     );
 }
 
+export async function obterCreditos() {
+    return responseData(await authFetch("/portal/cliente/creditos"), "Não foi possível carregar seus créditos.");
+}
+
 export async function obterProposta(id) {
     return responseData(
         await authFetch(`/portal/cliente/propostas/${id}`),

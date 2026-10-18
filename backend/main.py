@@ -33,6 +33,7 @@ from routers.combos import router as combos_router
 from routers.projetos import router as projetos_router
 from routers.portfolio_envios import router as portfolio_envios_router
 from routers.audio_tags import router as audio_tags_router
+from routers.carteira_creditos import router as carteira_creditos_router
 from routers.propostas import router as propostas_router
 from routers.servicos import router as servicos_router
 from routers.usuarios import router as usuarios_router
@@ -81,6 +82,7 @@ app.include_router(servicos_router)
 app.include_router(projetos_router)
 app.include_router(portfolio_envios_router)
 app.include_router(audio_tags_router)
+app.include_router(carteira_creditos_router)
 app.include_router(newsletter_router)
 app.include_router(usuarios_router)
 app.include_router(producao_router)

@@ -142,6 +142,8 @@ def enviar(db, proposta_id, actor=None, request_id=None):
 
 def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
     pipeline_v2 = producao_liberacao_service.pipeline_v2_habilitada()
+    if getattr(model, "finalidade", "producao") == "creditos" and not pipeline_v2:
+        raise service.PropostaConflito("Compra de creditos indisponivel sem a pipeline comercial V2.")
     if model.status == Status.ACEITA.value:
         if not crud_producao.buscar_por_orcamento(db, model.orcamento_id):
             if not pipeline_v2:
@@ -191,6 +193,12 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
     model.aprovada_em = datetime.now(timezone.utc)
     budget.status = OrcamentoStatus.APROVADO.value
     db.flush()
+    if getattr(model, "finalidade", "producao") == "creditos":
+        charge = financial_service.buscar_por_proposta(db, model.id)
+        try:
+            producao_liberacao_service.avaliar_liberacao_producao(db, charge.id, actor=actor, request_id=request_id)
+        except (financial_service.FinanceiroConflito, financial_service.FinanceiroInvalido) as error:
+            raise service.PropostaConflito(str(error)) from None
     audit_service.record(
         db,
         actor=actor,

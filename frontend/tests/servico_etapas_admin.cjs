@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const service = { id: 3, nome: 'Plano Start', subtitulo: '', valor_base: 1000, categoria: 'Mixagem', aplica_desconto: false, parametros: '', estrutura_servico: '{"intro":"","sections":[],"benefits":[]}' };
+service.credito_servico = { unidade: 'canal', quantidade: '10' };
 let stored = [{ id: 1, ordem: 1, nome: 'Briefing', descricao: '', peso_percentual: '0.00', prazo_dias: null, unidade: '', revisoes_incluidas: null, depende_da_anterior: false, administrativa: true }];
 const puts = [];
 let rejectNext = false;
@@ -91,6 +92,14 @@ async function staticResponse(route) {
         await page.locator('[data-admin-target="section-servicos"]').click();
         await page.locator('#section-servicos').getByRole('button', { name: 'Editar' }).click();
         await page.waitForSelector('.servico-etapa');
+        assert.equal(await page.locator('#srv_credito_unidade').inputValue(), 'canal');
+        await page.locator('#srv_credito_unidade').selectOption('hora');
+        await page.locator('#srv_credito_quantidade').fill('1.5');
+        const readCredits = () => page.evaluate(async () => (await import('/js/admin/servicos/servicos_form.js')).getServicoFormPayload().payload.credito_servico);
+        assert.deepEqual(await readCredits(), { unidade: 'hora', quantidade: '1.5' });
+        await page.locator('#srv_credito_unidade').selectOption('');
+        assert.equal(await readCredits(), null);
+        assert.equal(await page.locator('#srv_credito_quantidade').isDisabled(), true);
         assert.equal(await page.locator('.servico-etapa').count(), 1);
         assert.match(await page.locator('#servico-etapas-total').textContent(), /0,00%.*precisa somar 100%/);
         assert.equal(await page.locator('#servico-etapas-unsaved').isVisible(), false);

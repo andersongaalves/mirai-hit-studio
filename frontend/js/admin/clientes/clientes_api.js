@@ -29,6 +29,10 @@ export async function buscarCliente(id) {
     );
 }
 
+export async function buscarCreditosCliente(id) {
+    return responseData(await authFetch(`/clientes/${id}/creditos`), "Não foi possível consultar os créditos.");
+}
+
 
 export async function criarCliente(payload) {
     return responseData(

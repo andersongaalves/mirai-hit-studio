@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Annotated, Literal
 
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
+from schemas.credito_servico import ContratoCreditos
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from schemas.promocao import SnapshotPrecoCatalogo
@@ -182,6 +183,7 @@ class PropostaClassificacaoResponse(Contract):
 
 
 class PropostaUpdate(Contract):
+    finalidade: Literal["producao", "creditos"] | None = None
     produtor_id: PositiveId | None = None
     objeto: str | None = Field(default=None, max_length=200)
     descricao: str | None = Field(default=None, max_length=50000)
@@ -191,6 +193,7 @@ class PropostaUpdate(Contract):
     condicoes: str | None = Field(default=None, max_length=50000)
 
     @field_validator(
+        "finalidade",
         "objeto",
         "descricao",
         "itens",
@@ -213,6 +216,8 @@ class PropostaUpdate(Contract):
 
 
 class PropostaResponse(Contract):
+    finalidade: Literal["producao", "creditos"] = "producao"
+    contrato_creditos: ContratoCreditos | None = None
     id: PositiveId
     orcamento_id: PositiveId
     numero: str = Field(max_length=30)
@@ -239,7 +244,9 @@ class PropostaResponse(Contract):
     def from_orm_model(cls, proposta):
         mapping = {"itens": "itens_json", "pagamentos": "pagamentos_json", "totais": "totais_json"}
         data = {name: getattr(proposta, mapping.get(name, name)) for name in cls.model_fields
-                if name != "snapshot_economico"}
+                if name not in ("snapshot_economico", "finalidade", "contrato_creditos")}
+        data["finalidade"] = getattr(proposta, "finalidade", None) or "producao"
+        data["contrato_creditos"] = getattr(proposta, "contrato_creditos", None)
         # Optional 5.05 field: lightweight doubles without the column still serialize.
         data["snapshot_economico"] = getattr(proposta, "snapshot_economico", None)
         if data["totais"] == {}:

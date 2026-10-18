@@ -22,7 +22,9 @@ async function staticResponse(route) {
 const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/pages/admin.css"></head><body>
 <input id="clientes-search"><select id="clientes-status-filter"><option value="todos">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select><button id="clientes-clear-filters" class="hidden">Limpar filtros</button>
 <p id="clientes-summary"></p><div id="clientes-list"></div>
-<div id="modal-cliente" class="hidden" aria-labelledby="cliente-modal-title"><div class="modal-content cliente-modal-content"><div class="cliente-modal-header"><h2 id="cliente-modal-title"></h2><button aria-label="Fechar cliente">Fechar</button></div><input id="cliente-nome"><input id="cliente-email"><input id="cliente-telefone"><textarea id="cliente-observacoes"></textarea><input id="cliente-ativo" type="checkbox"><div id="cliente-history-block"><div id="cliente-historico"></div></div><button id="cliente-save">Salvar cliente</button></div></div>
+<div id="modal-cliente" class="hidden" aria-labelledby="cliente-modal-title"><div class="modal-content cliente-modal-content"><div class="cliente-modal-header"><h2 id="cliente-modal-title"></h2><button aria-label="Fechar cliente">Fechar</button></div><input id="cliente-nome"><input id="cliente-email"><input id="cliente-telefone"><textarea id="cliente-observacoes"></textarea><input id="cliente-ativo" type="checkbox"><div id="cliente-history-block"><div id="cliente-historico"></div></div>
+<section id="cliente-creditos-block"><button id="cliente-creditos-load" type="button">Consultar créditos</button><div id="cliente-creditos-content"></div></section>
+<button id="cliente-save">Salvar cliente</button></div></div>
 <script type="module">localStorage.setItem('mirai.auth.admin.access_token','test-token'); const module = await import('/js/admin/clientes/clientes.js'); window.crmModule = module; await module.initClientes();</script>
 </body></html>`;
 
@@ -47,6 +49,10 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         if (url.origin === 'http://localhost:4173') return staticResponse(route);
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 404 });
         calls.push(`${request.method()} ${url.pathname}`);
+        if (/^\/clientes\/\d+\/creditos$/.test(url.pathname)) return route.fulfill({ json: {
+            saldos: [{servico_id:1,servico_nome:'Mix',unidade:'canal',disponivel:'20.000',bloqueado:'0'}],
+            lotes: [{id:1,proposta_id:70,servico_nome:'Mix',unidade:'canal',quantidade:'20.000',estado:'disponivel'}],
+        } });
         if (url.pathname === '/clientes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha' } } : { json: clientes });
         }
@@ -93,6 +99,9 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         assert.equal(await page.evaluate(() => document.activeElement?.id), 'cliente-nome');
         assert.equal(await page.locator('#cliente-historico b').count(), 0);
         assert.match(await page.locator('#cliente-historico').textContent(), /<b>Orçamento seguro<\/b>/);
+        await page.locator('#cliente-creditos-load').click();
+        await page.locator('#cliente-creditos-content').getByText('Disponíveis: 20 canais', {exact:true}).waitFor();
+        assert.ok(calls.includes('GET /clientes/1/creditos'));
         await page.keyboard.press('Escape');
         await page.waitForFunction(() => document.getElementById('modal-cliente').classList.contains('hidden'));
         assert.equal(await opener.evaluate(element => element === document.activeElement), true);

@@ -693,6 +693,50 @@ Rollback de codigo disponivel para `1b1921ee1d2cb2e9e5339155f98399e327621692`
 sem downgrade de banco nem exclusao de arquivos. As previas novas restritas nao
 ficam visiveis no backend antigo; isso e uma limitacao segura, nao fallback para originais.
 
+## 5.11 - Carteira de creditos de servicos
+
+Implementacao em validacao, ainda nao publicada. O Admin configura opcionalmente no
+servico a unidade (faixa, canal ou hora) e a quantidade; nenhum servico historico
+recebe unidades presumidas. Faixas e canais sao inteiros; horas admitem tres casas.
+Uma proposta escolhe explicitamente producao ou compra de creditos. Compra exige
+cliente vinculado, pagamento integral e unidades configuradas para todos os itens,
+inclusive componentes de combos. O total deve ser positivo; um componente de combo
+sem custo mantem suas unidades e sua origem economica de zero centavos.
+
+No congelamento contratual sao persistidos os direitos por item, versao e titular.
+As unidades e os valores sao independentes de futuras edicoes do catalogo. O PDF
+informa o que foi contratado, sem criar producao nem prometer prazo de execucao.
+Nao ha dinheiro sacavel, expiracao ou concessao de saldo por simples aceite.
+
+Somente uma cobranca integralmente quitada em BRL, sem conciliacao pendente e de
+proposta aceita pode gerar lotes e lancamentos de aquisicao. A concessao compartilha
+a transacao e o bloqueio financeiro existentes; repeticoes nao duplicam direitos.
+Titular, valores, itens e fingerprint sao revalidados. Reembolso ou conflito bloqueia
+o saldo em leitura, sem editar nem apagar o historico. A proposta de compra nunca
+libera uma producao automaticamente, nem aceita vinculo manual a uma producao.
+
+Cliente consulta apenas a propria carteira; o Admin consulta no cadastro do cliente.
+API privada e sem cache, unidades e historico sem apresentar saldo monetario.
+Migration aditiva `f9b1d3e5a780`, pai `e8a0c2d4f679`, ainda nao aplicada em producao:
+configuracao opcional no catalogo, finalidade/contrato na proposta e tres tabelas
+privadas (`credito_contrato_itens`, `credito_lotes`, `credito_lancamentos`). Todas
+possuem RLS, grants anon/authenticated revogados e registros imutaveis tambem por
+trigger. FKs RESTRICT preservam o contrato e impedem exclusao do servico utilizado.
+Nao ha backfill de creditos nem alteracao de propostas historicas.
+
+Validacao: testes isolados de pagamento parcial/pendente, reembolso e conciliacao,
+repeticao, combos, snapshot/PDF, titularidade, rollback atomico e roundtrip descartavel;
+navegadores desktop/mobile, consulta Admin e isolamento entre clientes. O gate
+PostgreSQL 17 executa concessoes concorrentes, bloqueio de mutacao direta, RLS e
+carteira no navegador com FastAPI real. Resultados remotos devem ser registrados
+apos a execucao, nao presumidos.
+
+Dependencias para publicacao: concluir 5.12 (reserva, consumo e estorno) e validar
+a origem economica dos repasses da 5.13 antes de oferecer venda de creditos em
+producao. A fundacao pode ser integrada apos CI; o release comercial deve ser
+conjunto, schema-first e sem downgrade destrutivo. Producao permanece no marco
+5.20/5.21 ate o novo release autorizado e validado.
+
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
   enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes

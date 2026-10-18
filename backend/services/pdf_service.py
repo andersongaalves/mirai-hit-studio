@@ -29,7 +29,8 @@ def linhas(text, width=85):
     return [line for paragraph in str(text).splitlines() for line in (wrap(paragraph, width) or [""])]
 
 
-TEMPLATES.filters.update(moeda=moeda, linhas=linhas)
+TEMPLATES.filters.update(moeda=moeda, linhas=linhas,
+                         quantidade_credito=lambda value: format(Decimal(value).normalize(), "f").replace(".", ","))
 BRASILIA = timezone(timedelta(hours=-3))
 
 
@@ -46,6 +47,9 @@ def _sem_emoji(texto: str) -> str:
     """The PDF font has no emoji glyphs; catalog names like "🎛️ Mixagem" print without them."""
     limpo = "".join(c for c in str(texto) if unicodedata.category(c) != "So" and c not in "\ufe0f\u200d")
     return " ".join(limpo.split())
+
+
+TEMPLATES.filters["sem_emoji"] = _sem_emoji
 
 
 def _plural(n, um, varios):

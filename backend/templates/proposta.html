@@ -56,12 +56,26 @@ a { color: #111; text-decoration: underline; overflow-wrap: anywhere; }
 <p class="number">Desconto: {{ totais.desconto|moeda }}</p>
 <p class="number total">Total: {{ totais.total|moeda }}</p>
 
-{% if incluido %}
+{% if proposta.finalidade == "creditos" and proposta.contrato_creditos %}
+<h2>Cr&eacute;ditos de servi&ccedil;os contratados</h2>
+{% for direito in proposta.contrato_creditos.itens %}
+<p><strong>{{ direito.servico_nome|sem_emoji }}</strong>: {{ direito.quantidade|quantidade_credito }} {{ direito.unidade }}.</p>
+{% endfor %}
+<p>Os cr&eacute;ditos s&atilde;o direitos de consumo dos servi&ccedil;os indicados, sem expira&ccedil;&atilde;o.
+N&atilde;o representam saldo em dinheiro resgat&aacute;vel. A concess&atilde;o ocorre ap&oacute;s a quita&ccedil;&atilde;o integral,
+com a confirma&ccedil;&atilde;o financeira. A compra n&atilde;o inicia uma produ&ccedil;&atilde;o automaticamente.</p>
+{% endif %}
+{% if incluido and proposta.finalidade != "creditos" %}
 <h2>O que est&aacute; inclu&iacute;do</h2>
 {% for linha in incluido %}<p>&bull; <strong>{{ linha.servico }}</strong>{% if linha.detalhes %}: {{ linha.detalhes }}{% endif %}</p>{% endfor %}
 {% endif %}
 
 <h2>Condi&ccedil;&otilde;es do servi&ccedil;o</h2>
+{% if proposta.finalidade == "creditos" %}
+<p>Pagamento integral para aquisi&ccedil;&atilde;o dos cr&eacute;ditos. As unidades e os servi&ccedil;os
+congelados nesta proposta n&atilde;o mudam com altera&ccedil;&otilde;es posteriores no cat&aacute;logo.
+Os prazos de execu&ccedil;&atilde;o ser&atilde;o definidos na aloca&ccedil;&atilde;o a uma produ&ccedil;&atilde;o.</p>
+{% else %}
 <ol class="condicoes">
 {% if politica == "entrada_50_50" %}
 <li>Pagamento em duas etapas: 50% na confirma&ccedil;&atilde;o da contrata&ccedil;&atilde;o, para iniciar a produ&ccedil;&atilde;o, e 50% antes da libera&ccedil;&atilde;o dos arquivos finais.</li>
@@ -78,17 +92,20 @@ a { color: #111; text-decoration: underline; overflow-wrap: anywhere; }
 <li>Se o cliente fornecer samples, acapellas ou outros materiais protegidos por direitos autorais, ser&aacute; o &uacute;nico respons&aacute;vel pelas autoriza&ccedil;&otilde;es necess&aacute;rias, isentando a Mirai Hit Studio de responsabilidade pelo uso desses materiais.</li>
 <li>Sempre que poss&iacute;vel, o cliente dever&aacute; creditar &quot;Produ&ccedil;&atilde;o: Mirai Hit Studio&quot; ou &quot;Produced by {{ produtor_credito }} / Mirai Hit Studio&quot; nas plataformas e materiais promocionais.</li>
 </ol>
+{% endif %}
 {% if condicoes_especificas %}
 <p><strong>Condi&ccedil;&otilde;es espec&iacute;ficas desta proposta</strong></p>
 {% for line in condicoes_especificas|linhas %}<p>{{ line }}</p>{% endfor %}
 {% endif %}
 
+{% if proposta.finalidade != "creditos" %}
 <h2>Prazos e entrega</h2>
 <p>A produ&ccedil;&atilde;o ser&aacute; iniciada ap&oacute;s a confirma&ccedil;&atilde;o do pagamento inicial.</p>
 {% if prazo_dias %}
 <p>Prazo de entrega: at&eacute; {{ prazo_dias }} dias corridos, contados da confirma&ccedil;&atilde;o do pagamento inicial e do recebimento de todos os arquivos, refer&ecirc;ncias e informa&ccedil;&otilde;es necess&aacute;rios.</p>
 {% endif %}
 <p>Os arquivos finais ficam dispon&iacute;veis no Portal do Cliente ap&oacute;s a confirma&ccedil;&atilde;o do pagamento integral. Recomendamos guardar uma c&oacute;pia pr&oacute;pria.</p>
+{% endif %}
 
 <h2>Pagamento</h2>
 <p>O pagamento &eacute; feito com seguran&ccedil;a pelo Mercado Pago, no Portal do Cliente, ap&oacute;s o aceite. Formas dispon&iacute;veis: PIX, cart&atilde;o de cr&eacute;dito, saldo Mercado Pago e outras modalidades da plataforma.</p>
