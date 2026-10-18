@@ -1255,6 +1255,26 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         self.assertEqual(created.status_code, 200, created.text)
         return created.json()["id"]
 
+    def test_metadata_bootstrap_private_tables_postgresql17(self):
+        with self.SessionLocal() as db:
+            rows = db.execute(text("""
+                SELECT relname, relrowsecurity FROM pg_class
+                WHERE relnamespace = 'public'::regnamespace
+                  AND relname IN ('portal_notificacoes', 'projeto_creditos')
+                ORDER BY relname
+            """)).all()
+            self.assertEqual(rows, [('portal_notificacoes', True), ('projeto_creditos', True)])
+            for role in ('anon', 'authenticated'):
+                exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),
+                                    {'role': role}).scalar_one()
+                if exists:
+                    for table, _ in rows:
+                        self.assertFalse(db.execute(text("SELECT has_table_privilege(:role, :table, 'SELECT')"),
+                                                    {'role': role, 'table': 'public.' + table}).scalar_one())
+                    self.assertFalse(db.execute(text("""
+                        SELECT has_sequence_privilege(:role, 'public.projeto_creditos_id_seq', 'USAGE')
+                    """), {'role': role}).scalar_one())
+
     def test_portal_notifications_postgresql17_concurrent_insert_and_seen_claim(self):
         from models import (
             CobrancaModel,

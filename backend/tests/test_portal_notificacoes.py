@@ -30,6 +30,23 @@ with Session(engine) as db:
 
 
 class PortalNotificacoesTests(unittest.TestCase):
+    def test_metadata_bootstrap_keeps_notification_and_credit_tables_private(self):
+        isolated.BootstrapTests().run_case('''
+import models
+from sqlalchemy import create_mock_engine
+emitted = []
+mock = create_mock_engine('postgresql://', lambda statement, *args, **kwargs:
+    emitted.append(str(statement.compile(dialect=mock.dialect))))
+for name in ('portal_notificacoes', 'projeto_creditos'):
+    Base.metadata.tables[name].create(mock, checkfirst=False)
+    assert any('ALTER TABLE ' + name + ' ENABLE ROW LEVEL SECURITY' in sql for sql in emitted)
+    for role in ('anon', 'authenticated'):
+        assert any('REVOKE ALL ON TABLE ' + name + ' FROM ' + role in sql for sql in emitted)
+        assert any("IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '" + role + "')" in sql for sql in emitted)
+for role in ('anon', 'authenticated'):
+    assert any('REVOKE ALL ON SEQUENCE public.projeto_creditos_id_seq FROM ' + role in sql for sql in emitted)
+''')
+
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + source)
 

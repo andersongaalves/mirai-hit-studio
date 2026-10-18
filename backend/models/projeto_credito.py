@@ -1,5 +1,6 @@
 from database import Base
 from sqlalchemy import (
+    DDL,
     CheckConstraint,
     Column,
     DateTime,
@@ -7,6 +8,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    event,
     func,
 )
 from sqlalchemy.orm import relationship
@@ -48,3 +50,15 @@ class ProjetoCreditoModel(Base):
         if self.usuario is not None:
             return self.usuario.nome_exibicao or self.usuario.username
         return self.nome
+
+
+# Keep clean bootstrap as private as the Alembic migration (including its sequence).
+event.listen(ProjetoCreditoModel.__table__, "after_create", DDL(
+    "ALTER TABLE %(fullname)s ENABLE ROW LEVEL SECURITY"
+).execute_if(dialect="postgresql"))
+for role in ("anon", "authenticated"):
+    event.listen(ProjetoCreditoModel.__table__, "after_create", DDL(
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '" + role + "') "
+        "THEN REVOKE ALL ON TABLE %(fullname)s FROM " + role + "; "
+        "REVOKE ALL ON SEQUENCE public.projeto_creditos_id_seq FROM " + role + "; END IF; END; $$"
+    ).execute_if(dialect="postgresql"))
