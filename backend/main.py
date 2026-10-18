@@ -31,6 +31,7 @@ from routers.politicas import router as politicas_router
 from routers.combos import public_router as combos_public_router
 from routers.combos import router as combos_router
 from routers.projetos import router as projetos_router
+from routers.portfolio_envios import router as portfolio_envios_router
 from routers.propostas import router as propostas_router
 from routers.servicos import router as servicos_router
 from routers.usuarios import router as usuarios_router
@@ -77,6 +78,7 @@ app.include_router(config_router)
 app.include_router(orcamentos_router)
 app.include_router(servicos_router)
 app.include_router(projetos_router)
+app.include_router(portfolio_envios_router)
 app.include_router(newsletter_router)
 app.include_router(usuarios_router)
 app.include_router(producao_router)

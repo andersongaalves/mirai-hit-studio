@@ -23,3 +23,4 @@ from .combo import ComboItemModel, ComboModel
 from .cota_arquivo import ProducaoCotaArquivoModel, ServicoCotaArquivoModel
 from .politica import PoliticaGlobalModel, ProducaoPoliticaModel, ServicoPoliticaModel
 from .portal_notificacao import PortalNotificacaoModel
+from .portfolio_envio import PortfolioEnvioModel

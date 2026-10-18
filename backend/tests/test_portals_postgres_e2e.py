@@ -184,8 +184,10 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             OrcamentoModel,
             PagamentoModel,
             PortalNotificacaoModel,
+            PortfolioEnvioModel,
             ProducaoArquivoModel,
             ProducaoModel,
+            ProjetoModel,
             PropostaModel,
             ProviderWebhookEventModel,
             RepasseProdutorModel,
@@ -199,6 +201,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 AuthRateLimitModel,
                 ClienteAcessoModel,
                 PortalNotificacaoModel,
+                PortfolioEnvioModel,
+                ProjetoModel,
                 RepasseProdutorModel,
                 ProducaoArquivoModel,
                 ProviderWebhookEventModel,
@@ -1260,10 +1264,10 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             rows = db.execute(text("""
                 SELECT relname, relrowsecurity FROM pg_class
                 WHERE relnamespace = 'public'::regnamespace
-                  AND relname IN ('portal_notificacoes', 'projeto_creditos')
+                  AND relname IN ('portal_notificacoes', 'portfolio_envios', 'projeto_creditos')
                 ORDER BY relname
             """)).all()
-            self.assertEqual(rows, [('portal_notificacoes', True), ('projeto_creditos', True)])
+            self.assertEqual(rows, [('portal_notificacoes', True), ('portfolio_envios', True), ('projeto_creditos', True)])
             for role in ('anon', 'authenticated'):
                 exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),
                                     {'role': role}).scalar_one()
@@ -1274,6 +1278,61 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                     self.assertFalse(db.execute(text("""
                         SELECT has_sequence_privilege(:role, 'public.projeto_creditos_id_seq', 'USAGE')
                     """), {'role': role}).scalar_one())
+
+    def test_portfolio_submission_postgresql17_concurrent_review(self):
+        from models import PortfolioEnvioModel, ProjetoModel, UsuarioModel
+        from schemas.portfolio_envio import PortfolioEnvioRevisao
+        from services import portfolio_envio_service
+
+        producer = self._login("e2e-producer-a")
+        other = self._login("e2e-producer-b")
+        admin = self._login("e2e-admin")
+        production_id = self._create_flow_production(admin)
+        payload = {
+            "request_id": str(uuid.uuid4()), "producao_id": production_id,
+            "titulo": "Portfolio sintetico", "artista": "Artista sintetico", "categoria": "Mixagem",
+            "link_audio": "https://example.test/song.mp3", "link_capa": "https://example.test/cover.png",
+            "vertical": "artists", "case_type": "demo", "autorizacao_artista": True,
+        }
+        self.assertEqual(self.http.post("/portal/produtor/portfolio", headers=other, json=payload).status_code, 404)
+        gate = Barrier(2)
+
+        def submit():
+            gate.wait(timeout=10)
+            return self.http.post("/portal/produtor/portfolio", headers=producer, json=payload)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = [task.result(timeout=35) for task in [pool.submit(submit), pool.submit(submit)]]
+        self.assertEqual([r.status_code for r in results], [201, 201])
+        envio_id = results[0].json()["id"]
+        self.assertEqual(envio_id, results[1].json()["id"])
+        self.assertEqual(self.http.get("/portal/produtor/portfolio", headers=other).json(), [])
+        with self.SessionLocal() as db:
+            before = db.query(ProjetoModel).count()
+        gate = Barrier(2)
+
+        def approve():
+            with self.SessionLocal() as db:
+                db.execute(text("SET LOCAL lock_timeout='5s'"))
+                db.execute(text("SET LOCAL statement_timeout='8s'"))
+                actor = db.scalar(select(UsuarioModel).where(UsuarioModel.username == "e2e-admin"))
+                gate.wait(timeout=10)
+                return portfolio_envio_service.revisar(
+                    db, actor, envio_id, PortfolioEnvioRevisao(versao=1, decisao="aprovar"),
+                ).projeto_id
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            ids = [task.result(timeout=20) for task in [pool.submit(approve), pool.submit(approve)]]
+        self.assertEqual(ids[0], ids[1])
+        with self.SessionLocal() as db:
+            self.assertEqual(db.query(PortfolioEnvioModel).count(), 1)
+            self.assertEqual(db.query(ProjetoModel).count(), before + 1)
+            project = db.get(ProjetoModel, ids[0])
+            self.assertEqual(project.creditos[0].usuario_id, self.ids["producer_a_id"])
+            # Remove only this test's public project before the standard fixture cleanup.
+            db.delete(db.get(PortfolioEnvioModel, envio_id))
+            db.delete(project)
+            db.commit()
 
     def test_portal_notifications_postgresql17_concurrent_insert_and_seen_claim(self):
         from models import (

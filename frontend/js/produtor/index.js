@@ -4,6 +4,7 @@ import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
+import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -16,6 +17,7 @@ function route() {
     if (match) return { view: "detail", id: Number(match[1]) };
     if (/^\/produtor\/producoes\/?$/.test(location.pathname)) return { view: "productions" };
     if (/^\/produtor\/financeiro\/?$/.test(location.pathname)) return { view: "financeiro" };
+    if (/^\/produtor\/portfolio\/?$/.test(location.pathname)) return { view: "portfolio" };
     return { view: "dashboard" };
 }
 
@@ -108,6 +110,11 @@ async function openDetail(id) {
 
 function renderRoute() {
     const current = route();
+    if (current.view === "portfolio") {
+        showView("portfolio");
+        loadPortfolioSubmissions(document.getElementById("producer-portfolio-content"), { productions });
+        return;
+    }
     if (current.view === "detail") {
         openDetail(current.id);
         return;

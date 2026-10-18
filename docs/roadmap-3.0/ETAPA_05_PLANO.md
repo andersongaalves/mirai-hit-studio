@@ -605,6 +605,26 @@ Implementacao em 17/10/2026, integrada pela PR #67:
 - Pode ser ligado a uma producao do estudio (sem duplicar dados) e exige confirmar a
   autorizacao do artista para publicar.
 
+Implementacao: envios privados em `portfolio_envios`, com RLS e sem grants para os
+clientes Supabase. O produtor informa links publicos ja autorizados, confirma o
+consentimento do artista e pode vincular uma producao que coordena ou na qual atua.
+Nenhum arquivo privado e copiado ou transformado em publico pelo vinculo.
+O Admin revisa no Portfolio e aprova ou recusa com motivo; somente a aprovacao cria
+o projeto publico, incluindo automaticamente o produtor nos creditos. Envios sao
+imutaveis e possuem chave de repeticao por produtor. A revisao bloqueia a linha e
+impede publicacoes duplicadas, inclusive concorrentes. Projetos legados nao mudam.
+
+Migration aditiva: `d7f9a1c3e568`, pai `b4d6f8a0c357`. Rollback da aplicacao
+preserva a tabela e os envios; nenhum downgrade de producao deve ser automatico.
+Validacao: API isolada, consentimento, papeis, IDOR, repeticao, recusa, produtor
+inativo, bootstrap privado, roundtrip descartavel e navegador desktop/mobile.
+Concorrencia de envio e aprovacao e RLS verificados no PostgreSQL 17 do gate.
+
+Marco anterior: nome de exibicao (PR #69) e bootstrap privado (PR #70) publicados
+no SHA `1b1921ee1d2cb2e9e5339155f98399e327621692`; release `39093067000`,
+Storage CI `39092631241`, Portals E2E `39092631239`, restore drill `39092644040`.
+Migration `b4d6f8a0c357` aplicada sem backfill; V2 permanece `true`.
+
 ### 5.21 - Tag automatica nas previas
 - Cada produtor cadastra a propria tag de audio no perfil; existe uma tag padrao do estudio
   para quem nao tiver. O Admin define o intervalo (padrao 10 segundos) e o volume da tag.
