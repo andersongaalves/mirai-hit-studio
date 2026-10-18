@@ -32,6 +32,8 @@ const root = path.resolve(__dirname, "..");
                     writes.push(req.postDataJSON());
                     if (conflict) return route.fulfill({ status: 409, json: { detail: "A configuração foi alterada. Recarregue antes de salvar." } });
                     state = { ...state, ...req.postDataJSON(), versao: state.versao + 1 };
+                    // A slower response must not let the next action race the form reload.
+                    await new Promise(resolve => setTimeout(resolve, 150));
                 }
                 if (req.method() === "POST") {
                     writes.push({ upload: req.postData() });
@@ -57,8 +59,12 @@ const root = path.resolve(__dirname, "..");
         await panel.getByText("Nenhuma tag cadastrada.", { exact: true }).waitFor();
         await panel.locator('[name="intervalo_segundos"]').fill("15");
         await panel.locator('[name="volume_percentual"]').fill("25");
+        const previousParameters = await panel.locator('form').nth(1).elementHandle();
         await panel.getByRole("button", { name: "Salvar parâmetros" }).click();
-        await page.waitForFunction(() => document.querySelector('#audio-tag-settings [name="intervalo_segundos"]')?.value === "15");
+        await page.waitForFunction(form => !form.isConnected, previousParameters);
+        await panel.getByRole("button", { name: "Salvar parâmetros" }).waitFor();
+        assert.equal(await panel.locator('[name="intervalo_segundos"]').inputValue(), "15");
+        assert.equal(await panel.locator('[name="volume_percentual"]').inputValue(), "25");
         assert.deepEqual(writes[0], { versao: 0, intervalo_segundos: 15, volume_percentual: 25 });
         await panel.locator('input[type="file"]').setInputFiles({ name: "tag.wav", mimeType: "audio/wav", buffer: Buffer.from("synthetic-audio-boundary") });
         await panel.getByRole("button", { name: "Cadastrar tag" }).click();
