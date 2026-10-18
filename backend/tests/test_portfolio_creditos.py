@@ -54,7 +54,7 @@ class PortfolioCreditosTests(unittest.TestCase):
                         assert created.status_code == 200, created.text
                         project = created.json()
                         assert project['creditos'] == [
-                            {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'Beat Maker', 'usuario_id': 2},
+                            {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'beatmaker', 'usuario_id': 2},
                             {'funcao': 'composicao', 'funcao_outra': None, 'nome': 'Fulana Externa', 'usuario_id': None},
                             {'funcao': 'outra', 'funcao_outra': 'Direcao vocal', 'nome': 'Ciclano', 'usuario_id': None},
                         ]
@@ -62,7 +62,7 @@ class PortfolioCreditosTests(unittest.TestCase):
                         # Public list: name and role only, never the account link.
                         public = (await client.get('/projetos')).json()
                         assert public[0]['creditos'] == [
-                            {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'Beat Maker'},
+                            {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'beatmaker'},
                             {'funcao': 'composicao', 'funcao_outra': None, 'nome': 'Fulana Externa'},
                             {'funcao': 'outra', 'funcao_outra': 'Direcao vocal', 'nome': 'Ciclano'},
                         ]
@@ -75,10 +75,10 @@ class PortfolioCreditosTests(unittest.TestCase):
                         reordered = await client.put(path, json={'creditos': [creditos[2], creditos[0]]},
                                                      headers=headers)
                         assert reordered.status_code == 200, reordered.text
-                        assert [item['nome'] for item in reordered.json()['creditos']] == ['Ciclano', 'Beat Maker']
+                        assert [item['nome'] for item in reordered.json()['creditos']] == ['Ciclano', 'beatmaker']
                         with Session(engine) as db:
                             rows = db.query(ProjetoCreditoModel).order_by(ProjetoCreditoModel.ordem).all()
-                            assert [(row.ordem, row.nome) for row in rows] == [(1, 'Ciclano'), (2, 'Beat Maker')]
+                            assert [(row.ordem, row.nome) for row in rows] == [(1, 'Ciclano'), (2, 'beatmaker')]
 
                         # Validation: fixed roles, other role text, names, linked accounts and limits.
                         bad_lists = [
@@ -98,7 +98,7 @@ class PortfolioCreditosTests(unittest.TestCase):
                                 headers=headers)
                             assert response.status_code == 422, (usuario_id, response.text)
                         unchanged = (await client.get('/projetos/admin', headers=headers)).json()[0]
-                        assert [item['nome'] for item in unchanged['creditos']] == ['Ciclano', 'Beat Maker']
+                        assert [item['nome'] for item in unchanged['creditos']] == ['Ciclano', 'beatmaker']
 
                         # Role text is dropped for fixed roles; empty list clears credits.
                         normalized = await client.put(path, json={'creditos': [
@@ -119,11 +119,66 @@ class PortfolioCreditosTests(unittest.TestCase):
             asyncio.run(check())
         """)
 
+    def test_display_name_is_independent_and_feeds_credits(self):
+        self.run_case("""
+            async def check():
+                transport = httpx.ASGITransport(app=main.app)
+                with patch('socket.socket.connect', side_effect=AssertionError('external network')):
+                    async with httpx.AsyncClient(transport=transport, base_url='http://test') as client:
+                        # Display name is optional, trimmed, limited and separate from the login.
+                        created = await client.post('/usuarios', headers=headers, json={
+                            'username': 'novo-produtor', 'password': 'senha-segura-1', 'role': 'produtor',
+                            'nome_exibicao': '  Novo   Produtor  '})
+                        assert created.status_code in (200, 201), created.text
+                        assert created.json()['nome_exibicao'] == 'Novo Produtor'
+                        assert created.json()['username'] == 'novo-produtor'
+                        too_long = await client.patch('/usuarios/2', headers=headers, json={'nome_exibicao': 'x' * 81})
+                        assert too_long.status_code == 422
+
+                        project = (await client.post('/projetos', headers=headers, json={**PAYLOAD, 'creditos': [
+                            {'funcao': 'mixagem', 'nome': 'beatmaker', 'usuario_id': 2},
+                            {'funcao': 'beat', 'nome': 'Externo'}]})).json()
+
+                        renamed = await client.patch('/usuarios/2', headers=headers, json={'nome_exibicao': 'DJ Beat'})
+                        assert renamed.status_code == 200, renamed.text
+                        assert renamed.json()['nome_exibicao'] == 'DJ Beat' and renamed.json()['username'] == 'beatmaker'
+                        public = (await client.get('/projetos')).json()[0]['creditos']
+                        assert [item['nome'] for item in public] == ['DJ Beat', 'Externo']
+                        admin = (await client.get('/projetos/admin', headers=headers)).json()[0]['creditos']
+                        assert admin[0] == {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'DJ Beat', 'usuario_id': 2}
+                        with Session(engine) as db:
+                            stored = db.query(ProjetoCreditoModel).order_by(ProjetoCreditoModel.ordem).all()
+                            assert [row.nome for row in stored] == ['DJ Beat', 'Externo']  # Fallback kept current.
+
+                        # Saving with a linked producer always credits the account display name.
+                        saved = await client.put(f"/projetos/{project['id']}", headers=headers, json={'creditos': [
+                            {'funcao': 'producao', 'nome': 'qualquer coisa', 'usuario_id': 2}]})
+                        assert saved.json()['creditos'][0]['nome'] == 'DJ Beat'
+
+                        # Clearing the display name falls back to the username; login stays unchanged.
+                        cleared = await client.patch('/usuarios/2', headers=headers, json={'nome_exibicao': '   '})
+                        assert cleared.status_code == 200 and cleared.json()['nome_exibicao'] is None
+                        assert (await client.get('/projetos')).json()[0]['creditos'][0]['nome'] == 'beatmaker'
+                        listed = (await client.get('/usuarios/produtores', headers=headers)).json()
+                        assert {item['username']: item['nome_exibicao'] for item in listed} == {
+                            'beatmaker': None, 'novo-produtor': 'Novo Produtor'}
+                        # With no display name, a linked account ignores a supplied alias.
+                        saved = await client.put(f"/projetos/{project['id']}", headers=headers, json={'creditos': [
+                            {'funcao': 'producao', 'nome': 'nome-nao-autoritativo', 'usuario_id': 2}]})
+                        assert saved.status_code == 200 and saved.json()['creditos'][0]['nome'] == 'beatmaker'
+                        login_change = await client.patch('/usuarios/2', headers=headers, json={'username': 'beatmaker-novo'})
+                        assert login_change.status_code == 200, login_change.text
+                        assert (await client.get('/projetos')).json()[0]['creditos'][0]['nome'] == 'beatmaker-novo'
+                        with Session(engine) as db:
+                            assert db.query(ProjetoCreditoModel).filter_by(usuario_id=2).one().nome == 'beatmaker-novo'
+            asyncio.run(check())
+        """)
+
     def test_additive_migration_roundtrip(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
 from sqlalchemy import inspect
-assert bootstrap(engine) == 'a2c4e6f8b135'
+assert bootstrap(engine) == 'b4d6f8a0c357'
 assert 'projeto_creditos' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'f3b5d7a9c124')
 assert 'projeto_creditos' not in inspect(engine).get_table_names()

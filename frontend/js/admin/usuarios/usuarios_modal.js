@@ -17,16 +17,23 @@ function valid(...ids) {
 }
 
 
+function displayName() {
+    return field("usuario-nome-exibicao").value.replace(/\s+/g, " ").trim() || null;
+}
+
+
 function payload() {
     if (!current) {
         return {
             username: field("usuario-username").value.trim(),
+            nome_exibicao: displayName(),
             password: field("usuario-password").value,
             role: field("usuario-role").value,
         };
     }
     return {
         username: field("usuario-username").value.trim(),
+        nome_exibicao: displayName(),
         role: field("usuario-role").value,
         ativo: field("usuario-ativo").checked,
     };
@@ -40,6 +47,7 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     const self = usuario?.id === getCurrentUser()?.id;
     field("usuario-modal-title").textContent = usuario ? "Usuario" : "Novo usuario";
     field("usuario-username").value = usuario?.username || "";
+    field("usuario-nome-exibicao").value = usuario?.nome_exibicao || "";
     field("usuario-role").value = usuario?.role || "produtor";
     field("usuario-ativo").checked = usuario?.ativo ?? true;
     field("usuario-password").value = "";

@@ -35,6 +35,9 @@ class UsuarioModel(Base):
 
     username = Column(String(50), unique=True, nullable=False, index=True)
 
+    # Public name (credits, portals); changes independently of the login username.
+    nome_exibicao = Column(String(80), nullable=True)
+
     password_hash = Column(String(255), nullable=False)
 
     auth_version = Column(Integer, default=0, server_default="0", nullable=False)

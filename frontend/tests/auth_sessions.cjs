@@ -114,6 +114,8 @@ async function login(page, username) {
         assert.equal(await producerTab.evaluate(() => window.restoreResult), true);
         await producer.evaluate(() => window.Auth.logout());
         await producerTab.waitForFunction(() => window.Auth.getToken() === null);
+        // The cross-tab scenario is complete; do not let this tab restore later legacy fixtures.
+        await producerTab.close();
 
         assert.equal(await login(producer, 'producer'), true);
         const forbiddenStatus = await producer.evaluate(async () => (

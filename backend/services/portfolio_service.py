@@ -1,10 +1,9 @@
 """Transactional portfolio rules shared by project routes."""
 
 from fastapi import HTTPException
-from sqlalchemy import select, text
-
 from models import ProjetoCreditoModel, ProjetoModel, UsuarioModel
 from services.portfolio_segments_service import validate_project_segments
+from sqlalchemy import select, text
 
 PUBLIC_VERTICALS = ("artists", "creators", "media_games")
 PUBLIC_CASE_TYPES = ("client_case", "demo", "concept_project", "study")
@@ -72,21 +71,24 @@ def configure_landing_comparison(db, project: ProjetoModel, enabled: bool, order
 def replace_credits(db, project: ProjetoModel, creditos: list[dict]) -> None:
     """Roadmap 5.19: the ordered list replaces the previous one; linked accounts must be active producers."""
     ids = {credito["usuario_id"] for credito in creditos if credito.get("usuario_id") is not None}
+    contas = {}
     if ids:
-        validos = set(db.scalars(select(UsuarioModel.id).where(
+        contas = {conta.id: conta for conta in db.scalars(select(UsuarioModel).where(
             UsuarioModel.id.in_(ids), UsuarioModel.ativo.is_(True), UsuarioModel.role == "produtor",
             UsuarioModel.is_admin.is_(False),
-        )))
-        if ids - validos:
+        ))}
+        if ids - set(contas):
             raise HTTPException(status_code=422, detail="Credito vinculado a um produtor inexistente ou inativo.")
     project.creditos.clear()
     db.flush()  # Old rows go first so the (projeto_id, ordem) uniqueness never collides.
     for ordem, credito in enumerate(creditos, start=1):
+        conta = contas.get(credito.get("usuario_id"))
         project.creditos.append(ProjetoCreditoModel(
             ordem=ordem,
             funcao=credito["funcao"],
             funcao_outra=credito.get("funcao_outra"),
-            nome=credito["nome"],
+            # A linked account is credited by its display name (kept as fallback if it is removed).
+            nome=(conta.nome_exibicao or conta.username) if conta is not None else credito["nome"],
             usuario_id=credito.get("usuario_id"),
         ))
 

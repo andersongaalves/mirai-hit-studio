@@ -1,6 +1,7 @@
 from core.security import get_password_hash
 from crud import crud_usuario
 from models.cliente import ClienteModel
+from models.projeto_credito import ProjetoCreditoModel
 from models.usuario import UsuarioModel
 from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioUpdate
 from services import audit_service
@@ -99,6 +100,8 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
     usuario = _buscar(db, usuario_id)
     old_role = usuario.role
     old_active = usuario.ativo
+    old_display = usuario.nome_exibicao
+    old_username = usuario.username
     payload = dados.model_dump(exclude_unset=True)
     if "username" in payload and crud_usuario.username_em_uso(db, payload["username"], usuario.id):
         raise UsuarioConflito("Nome de usuario ja cadastrado.")
@@ -129,6 +132,10 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
         payload["is_admin"] = proximo_role == "admin"
     try:
         crud_usuario.atualizar_sem_commit(db, usuario, payload)
+        if usuario.nome_exibicao != old_display or usuario.username != old_username:
+            # Keeps the credited fallback name current (used if the account is ever removed).
+            db.query(ProjetoCreditoModel).filter(ProjetoCreditoModel.usuario_id == usuario.id).update(
+                {ProjetoCreditoModel.nome: usuario.nome_exibicao or usuario.username}, synchronize_session=False)
         action = "user.updated"
         if old_active and not usuario.ativo:
             action = "user.deactivated"
@@ -145,6 +152,7 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
                 "new_role": usuario.role,
                 "old_active": old_active,
                 "new_active": usuario.ativo,
+                **({"changed_keys": "nome_exibicao"} if usuario.nome_exibicao != old_display else {}),
             },
             request_id=request_id,
         )

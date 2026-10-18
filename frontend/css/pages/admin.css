@@ -1831,3 +1831,7 @@
 .combo-form__ordem { display: grid; gap: var(--space-2); margin: 0; padding-left: 0; list-style: none; }
 .combo-form__ordem-item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
 .combo-form__ordem-item > span { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+
+/* Display name (credits) with the login username below it. */
+.usuario-display-name { display: block; }
+.usuario-login-name { display: block; color: var(--color-text-secondary); font-size: var(--font-size-small); }

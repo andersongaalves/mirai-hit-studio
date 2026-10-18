@@ -587,6 +587,18 @@ Implementacao em 17/10/2026, integrada pela PR #67:
 | Conferencia | 19 projetos do portfolio preservados; dados da Yonda preservados (cobranca 74 paga, pagamento 85 aprovado) |
 | Autorizacao | `CTRL-20261017-R3-519` |
 
+### Nome de exibicao das contas (pedido do responsavel em 17/10/2026)
+
+- Campo `nome_exibicao` nas contas (migration aditiva `b4d6f8a0c357`, posterior a
+  `a2c4e6f8b135`, sem backfill), opcional, ate 80 caracteres, espacos normalizados. Muda
+  sem alterar o nome de usuario (login); em branco, vale o nome de usuario.
+- Admin > Usuarios: campo no cadastro e na edicao (inclusive da propria conta); a lista mostra
+  o nome de exibicao com o `@usuario` abaixo.
+- Creditos (5.19): credito vinculado a uma conta usa sempre o nome de exibicao atual dela, no
+  site e no Admin; ao mudar o nome, o nome guardado no credito (usado se a conta for removida)
+  e atualizado junto. No editor de creditos o nome fica somente leitura quando ha vinculo.
+- Auditoria: `user.updated` registra `changed_keys=nome_exibicao` quando o nome muda.
+
 ### 5.20 - Produtor envia projetos ao portfolio
 - Area no Portal do Produtor para propor um projeto ao portfolio: entra como rascunho e so
   e publicado com aprovacao do Admin; quem enviou ja entra nos creditos (5.19).

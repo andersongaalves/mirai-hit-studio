@@ -13,6 +13,19 @@ function classificationButton(user) {
 }
 
 
+// Display name first (used in credits); the login username stays visible below it.
+function nameCell(tag, usuario) {
+    const cell = document.createElement(tag);
+    if (usuario.nome_exibicao && usuario.nome_exibicao !== usuario.username) {
+        cell.append(textElement("span", usuario.nome_exibicao, "usuario-display-name"));
+        cell.append(textElement("small", `@${usuario.username}`, "usuario-login-name"));
+    } else {
+        cell.textContent = usuario.username;
+    }
+    return cell;
+}
+
+
 function tableView(usuarios, onOpen) {
     const wrapper = textElement("div", "", "admin-table-wrap usuarios-table-view");
     const table = document.createElement("table");
@@ -36,7 +49,7 @@ function tableView(usuarios, onOpen) {
         status.appendChild(statusBadge(usuario));
         action.appendChild(actionButton(usuario, onOpen));
         action.appendChild(classificationButton(usuario));
-        row.append(textElement("td", usuario.username), role, status, action);
+        row.append(nameCell("td", usuario), role, status, action);
         body.appendChild(row);
     });
     table.append(head, body);
@@ -52,7 +65,7 @@ function cardView(usuarios, onOpen) {
         const header = textElement("div", "", "admin-entity-card__header");
         const meta = textElement("div", "", "admin-entity-card__meta");
         const actions = textElement("div", "", "admin-entity-card__actions");
-        header.append(textElement("strong", usuario.username), statusBadge(usuario));
+        header.append(nameCell("strong", usuario), statusBadge(usuario));
         meta.appendChild(roleBadge(usuario));
         actions.appendChild(actionButton(usuario, onOpen));
         actions.appendChild(classificationButton(usuario));

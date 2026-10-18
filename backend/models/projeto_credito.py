@@ -1,3 +1,4 @@
+from database import Base
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -8,8 +9,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-
-from database import Base
+from sqlalchemy.orm import relationship
 
 # Roadmap 5.19: fixed list of roles credited on a portfolio project.
 FUNCOES_CREDITO = ("producao", "mixagem", "masterizacao", "composicao", "gravacao", "beat", "outra")
@@ -39,3 +39,12 @@ class ProjetoCreditoModel(Base):
     nome = Column(String(100), nullable=False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    usuario = relationship("UsuarioModel", lazy="selectin")
+
+    @property
+    def nome_publico(self) -> str:
+        """A linked account always shows its current display name; otherwise the stored name."""
+        if self.usuario is not None:
+            return self.usuario.nome_exibicao or self.usuario.username
+        return self.nome
