@@ -129,7 +129,7 @@ asyncio.run(check())
         isolated.BootstrapTests().run_case(r'''
 from alembic import command
 config = migration_config()
-assert bootstrap(engine) == 'e8a0c2d4f679'
+assert bootstrap(engine) == 'f9b1d3e5a780'
 command.downgrade(config, 'c8f4e2d91a7b')
 assert 'newsletter_campaigns' not in inspect(engine).get_table_names()
 command.upgrade(config, 'head')

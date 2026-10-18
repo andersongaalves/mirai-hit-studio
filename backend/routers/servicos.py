@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import ValidationError
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.exc import IntegrityError
 
 from database import get_db
 import models
@@ -67,8 +68,9 @@ def atualizar_servico(
         raise HTTPException(status_code=404)
 
     promocao_anterior = servico.promocao
+    credito_anterior = servico.credito_servico
     for key, value in srv_atualizado.model_dump(mode="json").items():
-        if key == "promocao" and key not in srv_atualizado.model_fields_set:
+        if key in ("promocao", "credito_servico") and key not in srv_atualizado.model_fields_set:
             continue  # Older editors must not erase a separately configured promotion.
         if key == "categoria" and value is None:
             continue  # The editor no longer chooses a category; legacy rows keep theirs.
@@ -82,6 +84,9 @@ def atualizar_servico(
     db.flush()
     catalogo_service.sincronizar_cotas(db, servico)
     promocao_service.auditar_alteracao(db, servico, promocao_anterior, actor=user)
+    if credito_anterior != servico.credito_servico:
+        audit_service.record(db, actor=user, action="service.credit_terms_updated", entity_type="service", entity_id=servico.id,
+                             metadata={"old": credito_anterior, "new": servico.credito_servico})
     db.commit()
 
     db.refresh(servico)
@@ -108,8 +113,15 @@ def deletar_servico(
     if combo_service.servico_em_combo(db, servico_id):
         raise HTTPException(status_code=409, detail="Este servico faz parte de um combo; remova-o do combo antes.")
 
+    if db.query(models.CreditoContratoItemModel.id).filter(models.CreditoContratoItemModel.servico_id == servico_id).first():
+        raise HTTPException(409, "Este servico possui direitos de credito contratados e deve ser preservado.")
+
     db.delete(servico)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Servico vinculado a um contrato; nenhuma exclusao confirmada.") from None
 
     return {"status": "ok"}
 

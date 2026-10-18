@@ -678,6 +678,65 @@ PASS. Migration `d7f9a1c3e568` aplicada atomicamente em 18/10/2026; tabela vazia
 RLS ativa e sem grants anon/authenticated; 8 usuarios, 19 projetos e 4 servicos
 preservados. Publicacao conjunta pendente do gate da 5.21.
 
+Publicacao conjunta 5.20/5.21 concluida em 18/10/2026 na main
+`28a42c097cb37107588b30ef39c8bf7c79399bed` (PRs #71 e #72). Storage Integration Gate
+`39152365063`, Portals E2E PostgreSQL 17 `39152365133`, restore drill `39152378582`,
+smokes reais/HMAC/preflight `39152422645`, dry-run `39153069383` e release
+`39153155925`: PASS. Render `dep-dbagoom1egvs73ale5l0`; Cloudflare
+`62a79cdf-999a-49b2-9293-c008a602d881`, mesmo SHA e rotas oficiais com HTTP 200.
+Migration `e8a0c2d4f679` aplicada atomicamente, sem backfill; 8 usuarios, 19 projetos,
+4 servicos e 8 arquivos preservados. Nenhuma tag foi cadastrada em producao: o
+responsavel enviara o audio depois. Tabelas privadas vazias, RLS ativa e sem grants
+anon/authenticated. V2 permaneceu `true`; auto-deploys continuam desativados.
+Rollback de codigo disponivel para `1b1921ee1d2cb2e9e5339155f98399e327621692`
+(Render `dep-dba3kk3rjlhs738pd7g0`, Cloudflare `154d56da-aa70-46f4-85c3-2f0424f22caf`),
+sem downgrade de banco nem exclusao de arquivos. As previas novas restritas nao
+ficam visiveis no backend antigo; isso e uma limitacao segura, nao fallback para originais.
+
+## 5.11 - Carteira de creditos de servicos
+
+Implementacao em validacao, ainda nao publicada. O Admin configura opcionalmente no
+servico a unidade (faixa, canal ou hora) e a quantidade; nenhum servico historico
+recebe unidades presumidas. Faixas e canais sao inteiros; horas admitem tres casas.
+Uma proposta escolhe explicitamente producao ou compra de creditos. Compra exige
+cliente vinculado, pagamento integral e unidades configuradas para todos os itens,
+inclusive componentes de combos. O total deve ser positivo; um componente de combo
+sem custo mantem suas unidades e sua origem economica de zero centavos.
+
+No congelamento contratual sao persistidos os direitos por item, versao e titular.
+As unidades e os valores sao independentes de futuras edicoes do catalogo. O PDF
+informa o que foi contratado, sem criar producao nem prometer prazo de execucao.
+Nao ha dinheiro sacavel, expiracao ou concessao de saldo por simples aceite.
+
+Somente uma cobranca integralmente quitada em BRL, sem conciliacao pendente e de
+proposta aceita pode gerar lotes e lancamentos de aquisicao. A concessao compartilha
+a transacao e o bloqueio financeiro existentes; repeticoes nao duplicam direitos.
+Titular, valores, itens e fingerprint sao revalidados. Reembolso ou conflito bloqueia
+o saldo em leitura, sem editar nem apagar o historico. A proposta de compra nunca
+libera uma producao automaticamente, nem aceita vinculo manual a uma producao.
+
+Cliente consulta apenas a propria carteira; o Admin consulta no cadastro do cliente.
+API privada e sem cache, unidades e historico sem apresentar saldo monetario.
+Migration aditiva `f9b1d3e5a780`, pai `e8a0c2d4f679`, ainda nao aplicada em producao:
+configuracao opcional no catalogo, finalidade/contrato na proposta e tres tabelas
+privadas (`credito_contrato_itens`, `credito_lotes`, `credito_lancamentos`). Todas
+possuem RLS, grants anon/authenticated revogados e registros imutaveis tambem por
+trigger. FKs RESTRICT preservam o contrato e impedem exclusao do servico utilizado.
+Nao ha backfill de creditos nem alteracao de propostas historicas.
+
+Validacao: testes isolados de pagamento parcial/pendente, reembolso e conciliacao,
+repeticao, combos, snapshot/PDF, titularidade, rollback atomico e roundtrip descartavel;
+navegadores desktop/mobile, consulta Admin e isolamento entre clientes. O gate
+PostgreSQL 17 executa concessoes concorrentes, bloqueio de mutacao direta, RLS e
+carteira no navegador com FastAPI real. Resultados remotos devem ser registrados
+apos a execucao, nao presumidos.
+
+Dependencias para publicacao: concluir 5.12 (reserva, consumo e estorno) e validar
+a origem economica dos repasses da 5.13 antes de oferecer venda de creditos em
+producao. A fundacao pode ser integrada apos CI; o release comercial deve ser
+conjunto, schema-first e sem downgrade destrutivo. Producao permanece no marco
+5.20/5.21 ate o novo release autorizado e validado.
+
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
   enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes

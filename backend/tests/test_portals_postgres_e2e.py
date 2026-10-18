@@ -200,6 +200,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         )
 
         with cls.SessionLocal.begin() as db:
+            # Only this loopback PostgreSQL-17 fixture may reset append-only synthetic records.
+            db.execute(text("TRUNCATE TABLE credito_lancamentos, credito_lotes, credito_contrato_itens RESTART IDENTITY"))
             for model in (
                 AuditLogModel,
                 AuthRateLimitModel,
@@ -1272,10 +1274,12 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 SELECT relname, relrowsecurity FROM pg_class
                 WHERE relnamespace = 'public'::regnamespace
                   AND relname IN ('audio_tag_perfis', 'audio_tags', 'portal_notificacoes',
-                                  'portfolio_envios', 'previa_tag_jobs', 'projeto_creditos')
+                                  'portfolio_envios', 'previa_tag_jobs', 'projeto_creditos',
+                                  'credito_lotes', 'credito_lancamentos', 'credito_contrato_itens')
                 ORDER BY relname
             """)).all()
-            self.assertEqual(rows, [('audio_tag_perfis', True), ('audio_tags', True), ('portal_notificacoes', True),
+            self.assertEqual(rows, [('audio_tag_perfis', True), ('audio_tags', True),
+                                    ('credito_contrato_itens', True), ('credito_lancamentos', True), ('credito_lotes', True), ('portal_notificacoes', True),
                                     ('portfolio_envios', True), ('previa_tag_jobs', True), ('projeto_creditos', True)])
             for role in ('anon', 'authenticated'):
                 exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),
@@ -1287,6 +1291,108 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                     self.assertFalse(db.execute(text("""
                         SELECT has_sequence_privilege(:role, 'public.projeto_creditos_id_seq', 'USAGE')
                     """), {'role': role}).scalar_one())
+
+    @patch("core.config.settings.COMMERCIAL_PIPELINE_V2_ENABLED", True)
+    def test_service_credits_postgresql17_concurrency_immutability_and_ownership(self):
+        from models import (
+            CobrancaModel,
+            CreditoContratoItemModel,
+            CreditoLancamentoModel,
+            CreditoLoteModel,
+            OrcamentoModel,
+            ProducaoModel,
+            PropostaModel,
+            ServicoModel,
+        )
+        from schemas.proposta import PropostaUpdate
+        from services import (
+            financial_service,
+            producao_liberacao_service,
+            proposta_service,
+            proposta_snapshot_service,
+        )
+        from sqlalchemy.exc import DBAPIError
+
+        with self.SessionLocal() as db:
+            catalog = db.scalar(select(ServicoModel).order_by(ServicoModel.id))
+            catalog.credito_servico = {"unidade": "canal", "quantidade": "10"}
+            budget = OrcamentoModel(nome_cliente="Sintetico creditos", email="synthetic@example.invalid",
+                                    servico="Mix", cliente_id=self.ids["client_a_id"])
+            db.add(budget)
+            db.commit()
+            budget_id = budget.id
+            proposal = proposta_service.criar_por_orcamento(db, budget_id)
+            proposta_service.atualizar(db, proposal.id, PropostaUpdate(finalidade="creditos", politica_pagamento="integral",
+                itens=[{"descricao": "Creditos sinteticos", "quantidade": 2, "valor_unitario": "500", "servico_id": catalog.id}]))
+            model = db.get(PropostaModel, proposal.id)
+            proposta_snapshot_service.congelar(db, model, origem="envio", estrito=True)
+            model.status, model.enviada_em = "aceita", datetime.now(timezone.utc)
+            budget.status = "aprovado"
+            charge = financial_service.criar_para_proposta(db, model, cliente_id=self.ids["client_a_id"])
+            financial_service.registrar_pagamento(db, charge.id, tipo="integral", valor="1000", status="aprovado")
+            charge_id = charge.id
+            db.commit()
+
+        barrier = Barrier(2)
+
+        def grant():
+            with self.SessionLocal() as db:
+                db.execute(text("SET LOCAL lock_timeout='5s'"))
+                db.execute(text("SET LOCAL statement_timeout='10s'"))
+                barrier.wait(timeout=10)
+                producao_liberacao_service.avaliar_liberacao_producao(db, charge_id)
+                db.commit()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first, second = pool.submit(grant), pool.submit(grant)
+            first.result(timeout=20)
+            second.result(timeout=20)
+        with self.SessionLocal() as db:
+            lots = db.scalars(select(CreditoLoteModel).where(CreditoLoteModel.cobranca_id == charge_id)).all()
+            self.assertEqual(len(lots), 1)
+            lot_id = lots[0].id
+            self.assertEqual(lots[0].quantidade, Decimal(20))
+            self.assertEqual(len(db.scalars(select(CreditoLancamentoModel)).all()), 1)
+            self.assertIsNone(db.scalar(select(ProducaoModel).where(ProducaoModel.orcamento_id == budget_id)))
+            self.assertEqual(len(db.get(CobrancaModel, charge_id).pagamentos), 1)
+            source_id = db.scalar(select(CreditoContratoItemModel.id))
+            service_id = lots[0].servico_id
+        admin = self._login("e2e-admin")
+        self.assertEqual(self.http.delete(f"/servicos/{service_id}", headers=admin).status_code, 409)
+        for statement in (
+            "UPDATE credito_contrato_itens SET quantidade=21 WHERE id=:id",
+            "DELETE FROM credito_contrato_itens WHERE id=:id",
+        ):
+            with self.assertRaises(DBAPIError) as error, self.engine.begin() as connection:
+                connection.execute(text(statement), {"id": source_id})
+            self.assertEqual(error.exception.orig.pgcode, "P0001")
+        for statement in (
+            "UPDATE credito_lotes SET quantidade=21 WHERE id=:id",
+            "DELETE FROM credito_lotes WHERE id=:id",
+            "UPDATE credito_lancamentos SET quantidade=21 WHERE lote_id=:id",
+            "DELETE FROM credito_lancamentos WHERE lote_id=:id",
+        ):
+            with self.assertRaises(DBAPIError) as error, self.engine.begin() as connection:
+                connection.execute(text(statement), {"id": lot_id})
+            self.assertEqual(error.exception.orig.pgcode, "P0001")
+        client = self._login("e2e-client-a")
+        response = self.http.get("/portal/cliente/creditos", headers=client)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["saldos"][0]["disponivel"], "20.000")
+        self.assertEqual(self.http.get(f"/clientes/{self.ids['client_a_id']}/creditos", headers=admin).json(), response.json())
+        other = self._login("e2e-client-b")
+        self.assertEqual(self.http.get("/portal/cliente/creditos", headers=other).json()["lotes"], [])
+        producer = self._login("e2e-producer-a")
+        self.assertEqual(self.http.get("/portal/cliente/creditos", headers=producer).status_code, 403)
+        self.assertEqual(self.http.get(f"/clientes/{self.ids['client_a_id']}/creditos", headers=other).status_code, 403)
+        root = Path(__file__).resolve().parents[2]
+        result = subprocess.run(
+            [os.getenv("NODE_BINARY", "node"), str(root / "frontend/tests/service_credits.cjs")],
+            cwd=root, env={**os.environ, "MIRAI_CREDITS_REAL_BACKEND": REQUIRED_ACK, "E2E_PASSWORD": self.ids["password"]},
+            capture_output=True, text=True, timeout=120, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("CREDITS_POSTGRES_BROWSER_PASS", result.stdout)
 
     def test_audio_tags_postgresql17_worker_claim_and_private_original(self):
         import io

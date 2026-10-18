@@ -19,6 +19,7 @@ from models.enums.proposta import PoliticaPagamento, PropostaStatus
 class PropostaModel(Base):
     __tablename__ = "propostas"
     __table_args__ = (
+        CheckConstraint("finalidade IN ('producao','creditos')", name="ck_propostas_finalidade"),
         CheckConstraint(
             "politica_pagamento IN ('integral', 'entrada_50_50')",
             name="ck_propostas_politica_pagamento_valida",
@@ -59,6 +60,9 @@ class PropostaModel(Base):
         ForeignKey("usuarios.id"),
         nullable=True,
     )
+
+    finalidade = Column(String(12), nullable=False, default="producao", server_default="producao")
+    contrato_creditos = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
 
     cliente_snapshot = Column(
         JSON,

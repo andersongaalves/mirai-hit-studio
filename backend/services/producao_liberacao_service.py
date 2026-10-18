@@ -117,6 +117,13 @@ def avaliar_cobranca_bloqueada(
             "Cobranca sem proposta requer conciliacao."
         )
     proposta = cobranca.proposta
+    from services import carteira_creditos_service
+
+    if carteira_creditos_service.finalidade_creditos(proposta):
+        if not pipeline_v2_habilitada():
+            raise financial_service.FinanceiroConflito("Concessao de creditos indisponivel sem a pipeline V2.")
+        carteira_creditos_service.creditar_cobranca_bloqueada(db, cobranca, actor=actor, request_id=request_id)
+        return None
     existente = crud_producao.buscar_por_orcamento(db, proposta.orcamento_id)
     if existente is not None:
         return existente

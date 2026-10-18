@@ -53,7 +53,9 @@ with Session(engine) as db:
         'itens', 'totais', 'politica_pagamento', 'condicoes',
         'documento_disponivel', 'situacao_comercial', 'cobranca_status',
         'enviada_em', 'aprovada_em', 'created_at', 'updated_at',
+        'finalidade', 'contrato_creditos',
     }
+    assert listed[0]['finalidade'] == 'producao' and listed[0]['contrato_creditos'] is None
     assert listed[0]['status'] == 'enviada'
     assert listed[0]['situacao_comercial'] == 'aguardando_aceite'
     assert 'pdf_path' not in listed[0] and 'pagamentos' not in listed[0]

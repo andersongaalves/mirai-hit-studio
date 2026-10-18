@@ -296,9 +296,19 @@ def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
 def congelar(db: Session, model, *, origem: str, estrito: bool) -> bool:
     """Freezes the snapshot once. Returns False when it already existed (never rewritten)."""
     if model.snapshot_economico:
+        if getattr(model, "finalidade", "producao") == "creditos" and not model.contrato_creditos:
+            raise service.PropostaConflito("Snapshot de creditos incompleto; revise o rascunho.")
         return False
     snapshot = construir(db, model, origem=origem, estrito=estrito)
+    from services import carteira_creditos_service
+
+    contrato = carteira_creditos_service.construir_contrato(db, model, snapshot)
+    if contrato is not None:
+        model.contrato_creditos = contrato
+        model.pdf_path, model.pdf_sha256, model.gerada_em = None, None, None
     model.snapshot_economico = snapshot
     model.snapshot_congelado_em = datetime.fromisoformat(snapshot["congelado_em"])
+    if contrato is not None:
+        carteira_creditos_service.registrar_contrato(db, model)
     db.flush()
     return True

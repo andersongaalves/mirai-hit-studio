@@ -14,6 +14,7 @@
         <link rel="stylesheet" href="css/components/file-quotas.css" />
         <link rel="stylesheet" href="css/components/policies.css" />
         <link rel="stylesheet" href="css/components/portfolio-submissions.css" />
+        <link rel="stylesheet" href="css/components/service-credits.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -323,6 +324,18 @@
                                         class="admin-list-container"
                                     ></div>
 
+                                    <section class="servico-etapas" aria-labelledby="servico-creditos-title">
+                                        <h4 id="servico-creditos-title">Créditos de serviço</h4>
+                                        <label for="srv_credito_unidade">Unidade por item contratado</label>
+                                        <select id="srv_credito_unidade">
+                                            <option value="">Não ofertar créditos</option>
+                                            <option value="faixa">Faixas</option>
+                                            <option value="canal">Canais</option>
+                                            <option value="hora">Horas</option>
+                                        </select>
+                                        <label for="srv_credito_quantidade">Quantidade por item contratado</label>
+                                        <input id="srv_credito_quantidade" type="number" min="0.001" max="1000000" step="0.001" value="1" disabled />
+                                    </section>
                                     <section id="servico-etapas" class="servico-etapas" aria-labelledby="servico-etapas-title">
                                         <div class="servico-etapas__header">
                                             <h4 id="servico-etapas-title">Etapas e pesos</h4>
@@ -1528,6 +1541,11 @@
                             </label>
                         </section>
 
+                        <section id="cliente-creditos-block" class="cliente-detail-block hidden">
+                            <h3>Créditos de serviços</h3>
+                            <button id="cliente-creditos-load" type="button" class="btn-outline">Consultar créditos</button>
+                            <div id="cliente-creditos-content" class="service-credit-wallet" aria-live="polite"></div>
+                        </section>
                         <section id="cliente-history-block" class="cliente-detail-block hidden">
                             <h3>Histórico comercial</h3>
                             <div id="cliente-historico"></div>

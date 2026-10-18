@@ -1,9 +1,12 @@
 import { closeAdminModal, openAdminModal } from "../admin_modal.js";
 import { formatarData } from "./clientes_utils.js";
+import { buscarCreditosCliente } from "./clientes_api.js";
+import { renderServiceCredits } from "../../modules/service_credits.js";
 
 
 let current = null;
 let onSave = null;
+let creditRevision = 0;
 
 
 function field(id) {
@@ -50,6 +53,7 @@ function payload() {
 
 
 export function openClienteModal(cliente = null, handlers = {}) {
+    const revision = ++creditRevision;
     current = cliente;
     onSave = handlers.onSave || null;
     field("cliente-modal-title").textContent = cliente ? "Cliente" : "Novo cliente";
@@ -60,6 +64,27 @@ export function openClienteModal(cliente = null, handlers = {}) {
     field("cliente-ativo").checked = cliente?.ativo ?? true;
     field("cliente-history-block").classList.toggle("hidden", !cliente);
     renderHistory(cliente?.historico || []);
+    field("cliente-creditos-block")?.classList.toggle("hidden", !cliente);
+    const creditRoot = field("cliente-creditos-content"), loadCredits = field("cliente-creditos-load");
+    creditRoot?.replaceChildren();
+    if (loadCredits) {
+        loadCredits.disabled = false;
+        loadCredits.onclick = async () => {
+            if (!current?.id || loadCredits.disabled || !creditRoot) return;
+            const id = current.id;
+            loadCredits.disabled = true;
+            creditRoot.textContent = "Carregando créditos...";
+            try {
+                const data = await buscarCreditosCliente(id);
+                if (creditRevision !== revision || current?.id !== id) return;
+                renderServiceCredits(creditRoot, data, { emptyText: "Nenhum crédito registrado." });
+            } catch (error) {
+                if (creditRevision === revision) creditRoot.textContent = error.message;
+            } finally {
+                if (creditRevision === revision) loadCredits.disabled = false;
+            }
+        };
+    }
 
     const save = field("cliente-save");
     save.onclick = async () => {
@@ -79,6 +104,8 @@ export function openClienteModal(cliente = null, handlers = {}) {
 
 
 export function closeClienteModal() {
+    ++creditRevision;
+    field("cliente-creditos-content")?.replaceChildren();
     current = null;
     onSave = null;
     closeAdminModal("modal-cliente");

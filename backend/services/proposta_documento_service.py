@@ -14,14 +14,24 @@ def _carregar(db, proposta_id, bloquear=False):
     return model
 
 
-def _html(model, final=False):
+def _html(model, final=False, contrato_creditos=None):
     proposta = proposta_service._resposta(model)
+    if contrato_creditos is not None:
+        from schemas.credito_servico import ContratoCreditos
+
+        proposta.contrato_creditos = ContratoCreditos.model_validate(contrato_creditos)
     produtor = model.produtor.username if model.produtor else "Nao definido"
     return pdf_service.renderizar_html(proposta, produtor, final=final)
 
 
 def preview(db, proposta_id):
-    return _html(_carregar(db, proposta_id))
+    model = _carregar(db, proposta_id)
+    if getattr(model, "finalidade", "producao") == "creditos" and not model.contrato_creditos:
+        from services import carteira_creditos_service, proposta_snapshot_service
+
+        economic = proposta_snapshot_service.construir(db, model, origem="envio", estrito=True)
+        return _html(model, contrato_creditos=carteira_creditos_service.construir_contrato(db, model, economic))
+    return _html(model)
 
 
 def gerar_documento(db, proposta_id):
@@ -43,6 +53,10 @@ def gerar_documento(db, proposta_id):
 def gerar_sem_commit(db, model):
     if model.enviada_em and model.pdf_path and model.pdf_sha256:
         return _ler_validado(model)
+    if getattr(model, "finalidade", "producao") == "creditos":
+        from services import proposta_snapshot_service
+
+        proposta_snapshot_service.congelar(db, model, origem="envio", estrito=True)
     data = pdf_service.gerar_pdf(_html(model, final=True))
     return persistir_bytes_sem_commit(db, model, data)
 

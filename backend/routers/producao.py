@@ -20,6 +20,7 @@ from schemas.producao import (
 from crud import crud_producao
 from models.orcamento import OrcamentoModel
 from models.producao import ProducaoModel
+from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
 from services import audit_service
 
@@ -39,6 +40,10 @@ def criar_producao(
         raise HTTPException(status_code=422, detail="Produtor não encontrado")
     if dados.orcamento_id and not db.get(OrcamentoModel, dados.orcamento_id):
         raise HTTPException(status_code=422, detail="Orçamento não encontrado")
+    if dados.orcamento_id:
+        proposta = db.query(PropostaModel).filter(PropostaModel.orcamento_id == dados.orcamento_id).first()
+        if proposta is not None and proposta.finalidade == "creditos":
+            raise HTTPException(409, "A compra de creditos nao e uma producao. Utilize a alocacao de creditos.")
     if dados.orcamento_id and crud_producao.buscar_por_orcamento(
         db, dados.orcamento_id
     ):

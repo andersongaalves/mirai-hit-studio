@@ -72,6 +72,8 @@ class ProducaoArquivoClienteResponse(BaseModel):
 
 
 class PropostaClienteResponse(BaseModel):
+    finalidade: str = "producao"
+    contrato_creditos: dict | None = None
     id: int
     numero: str
     versao: int

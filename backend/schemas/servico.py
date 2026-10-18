@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from schemas.servico_estrutura import validar_estrutura
 from schemas.promocao import PrecoCatalogo, Promocao, validar_preco
+from schemas.credito_servico import CreditoServico
 
 
 class ServicoBase(BaseModel):
@@ -12,6 +13,7 @@ class ServicoBase(BaseModel):
     aplica_desconto: bool
     parametros: str
     estrutura_servico: str
+    credito_servico: CreditoServico | None = None
 
 
 class ServicoCreate(ServicoBase):

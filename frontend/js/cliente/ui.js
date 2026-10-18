@@ -9,6 +9,7 @@ import {
     statusInfo,
     summarize,
 } from "./utils.js";
+import { creditQuantity, renderServiceCredits } from "../modules/service_credits.js";
 
 const element = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -477,6 +478,20 @@ export function renderProposalDetail(proposal, handlers) {
     items.append(table);
 
     const actions = element("div", "client-proposal-actions");
+    if (proposal.finalidade === "creditos") {
+        const rights = element("section", "producer-files");
+        rights.append(element("h2", "", "Créditos contratados"));
+        (proposal.contrato_creditos?.itens || []).forEach(item => {
+            rights.append(element("p", "", `${item.servico_nome}: ${creditQuantity(item.quantidade, item.unidade)}`));
+        });
+        items.append(rights);
+        if (proposal.cobranca_status === "paga") {
+            const wallet = element("a", "btn-cta", "Ver meus créditos");
+            wallet.href = "/cliente/creditos";
+            wallet.dataset.route = "credits";
+            actions.append(wallet);
+        }
+    }
     if (proposal.documento_disponivel) {
         const download = element("button", "btn-outline", "Baixar PDF");
         download.type = "button";
@@ -507,4 +522,8 @@ export function setAlert(message = "", error = false) {
     alert.textContent = message;
     alert.classList.toggle("hidden", !message);
     alert.classList.toggle("producer-message--error", error);
+}
+
+export function renderWallet(data) {
+    renderServiceCredits(document.getElementById("client-credits-content"), data);
 }

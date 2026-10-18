@@ -146,6 +146,8 @@ def atualizar(db: Session, proposta_id: int, dados: PropostaUpdate):
         alteracoes["totais_json"] = calcular_totais(itens).model_dump(mode="json")
         alteracoes = {campo: valor for campo, valor in alteracoes.items() if getattr(proposta, campo) != valor}
         if alteracoes:
+            if getattr(proposta, "finalidade", "producao") == "creditos" or alteracoes.get("finalidade") == "creditos":
+                alteracoes.update(snapshot_economico=None, snapshot_congelado_em=None, contrato_creditos=None)
             alteracoes.update(
                 versao=proposta.versao + 1,
                 pdf_path=None,

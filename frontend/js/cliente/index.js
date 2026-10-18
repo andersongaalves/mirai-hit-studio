@@ -12,6 +12,7 @@ import {
     renderProposalDetail,
     renderProposalList,
     renderProposalSummary,
+    renderWallet,
     setAlert,
     showView,
     updateProcessedPreviews,
@@ -44,6 +45,7 @@ function watchTaggedPreviews(production, files, failures = 0) {
 }
 
 function route() {
+    if (/^\/cliente\/creditos\/?$/.test(location.pathname)) return { view: "credits" };
     const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
     if (proposal) return { view: "proposal-detail", id: Number(proposal[1]) };
     if (/^\/cliente\/propostas\/?$/.test(location.pathname)) return { view: "proposals" };
@@ -193,6 +195,10 @@ async function openDetail(id) {
 
 function renderRoute() {
     const current = route();
+    if (current.view === "credits") {
+        loadWallet();
+        return;
+    }
     if (current.view === "proposal-detail") {
         openProposalDetail(current.id);
         return;
@@ -214,6 +220,30 @@ function renderRoute() {
     renderDashboard(productions, finances);
     renderProposalSummary(proposals, id => navigate(`/cliente/propostas/${id}`));
     showView("dashboard");
+}
+
+let walletRequest = 0;
+async function loadWallet() {
+    const request = ++walletRequest;
+    const owner = getCurrentUser()?.id;
+    setAlert();
+    showView("credits");
+    document.getElementById("client-credits-content").textContent = "Carregando créditos...";
+    try {
+        const data = await api.obterCreditos();
+        if (request !== walletRequest || route().view !== "credits" || getCurrentUser()?.id !== owner) return;
+        renderWallet(data);
+    } catch (error) {
+        if (request !== walletRequest || route().view !== "credits" || getCurrentUser()?.id !== owner) return;
+        document.getElementById("client-credits-content").textContent = "";
+        setAlert(error.message, true);
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "btn-outline";
+        retry.textContent = "Tentar novamente";
+        retry.onclick = loadWallet;
+        document.getElementById("client-credits-content").append(retry);
+    }
 }
 
 function saveBlob({ blob, filename }) {

@@ -61,6 +61,7 @@ export function abrirFormularioServico(servico = null) {
     setValue("srv_valor", servico.valor_base);
     setValue("srv_aplica_desconto", String(!!servico.aplica_desconto));
     carregarPromocao(servico.promocao);
+    carregarCreditos(servico.credito_servico);
 
     Builder.carregarBuilder(servico.estrutura_servico);
 
@@ -82,6 +83,7 @@ export function limparFormularioServico() {
     setValue("srv_valor", 0);
     setValue("srv_aplica_desconto", "false");
     carregarPromocao();
+    carregarCreditos();
 
     Builder.resetBuilder();
     BuilderUI.initBuilder();
@@ -97,7 +99,20 @@ export function getServicoFormPayload(parametros = []) {
             aplica_desconto: getValue("srv_aplica_desconto") === "true",
             parametros: parametros.join(","),
             estrutura_servico: Builder.gerarJSON(),
+            credito_servico: getValue("srv_credito_unidade") ? {
+                unidade: getValue("srv_credito_unidade"), quantidade: getValue("srv_credito_quantidade"),
+            } : null,
             ...(promotion ? { promocao: promotion.read() } : {}),
         },
     };
+}
+
+function carregarCreditos(value = null) {
+    setValue("srv_credito_unidade", value?.unidade || "");
+    setValue("srv_credito_quantidade", value?.quantidade || "1");
+    const unit = $("srv_credito_unidade"), quantity = $("srv_credito_quantidade");
+    if (!unit || !quantity) return;
+    const sync = () => { quantity.disabled = !unit.value; quantity.step = unit.value === "hora" ? "0.001" : "1"; };
+    unit.onchange = sync;
+    sync();
 }
