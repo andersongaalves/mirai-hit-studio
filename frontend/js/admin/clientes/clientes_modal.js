@@ -1,7 +1,8 @@
 import { closeAdminModal, openAdminModal } from "../admin_modal.js";
 import { formatarData } from "./clientes_utils.js";
-import { buscarCreditosCliente } from "./clientes_api.js";
+import { buscarCreditosCliente, criarProducaoCreditos, produtoresParaCreditos } from "./clientes_api.js";
 import { renderServiceCredits } from "../../modules/service_credits.js";
+import { creditProductionForm } from "../../modules/credit_production.js";
 
 
 let current = null;
@@ -78,6 +79,20 @@ export function openClienteModal(cliente = null, handlers = {}) {
                 const data = await buscarCreditosCliente(id);
                 if (creditRevision !== revision || current?.id !== id) return;
                 renderServiceCredits(creditRoot, data, { emptyText: "Nenhum crédito registrado." });
+                if (current.ativo) {
+                    const creation = creditProductionForm(data.lotes || [], {
+                        loadProducers: produtoresParaCreditos,
+                        onCreate: payload => criarProducaoCreditos(id, payload),
+                        onCreated: async result => {
+                            if (creditRevision !== revision || current?.id !== id) return;
+                            closeClienteModal();
+                            window.mostrarSecao?.("section-producoes");
+                            const { visualizarProducao } = await import("../producoes/producoes.js");
+                            await visualizarProducao(result.producao_id);
+                        },
+                    });
+                    if (creation) creditRoot.append(creation);
+                }
             } catch (error) {
                 if (creditRevision === revision) creditRoot.textContent = error.message;
             } finally {

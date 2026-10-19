@@ -33,6 +33,16 @@ export async function buscarCreditosCliente(id) {
     return responseData(await authFetch(`/clientes/${id}/creditos`), "Não foi possível consultar os créditos.");
 }
 
+export async function produtoresParaCreditos() {
+    return responseData(await authFetch("/usuarios/produtores"), "Não foi possível carregar os produtores.");
+}
+
+export async function criarProducaoCreditos(id, payload) {
+    return responseData(await authFetch(`/producoes/creditos/cliente/${id}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    }), "Não foi possível confirmar a produção com créditos.");
+}
+
 
 export async function criarCliente(payload) {
     return responseData(

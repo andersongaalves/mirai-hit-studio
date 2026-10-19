@@ -6,6 +6,22 @@ export async function reprocessarTag(arquivoId) {
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
+export async function contextoCreditos(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/creditos/contexto`), "Créditos indisponíveis.");
+}
+
+export async function reservarCreditos(id, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/creditos`, {
+        method: "POST", headers: jsonHeaders, body: JSON.stringify(payload),
+    }), "Não foi possível reservar créditos.");
+}
+
+export async function movimentarCreditos(id, allocation, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/creditos/${allocation}/movimentos`, {
+        method: "POST", headers: jsonHeaders, body: JSON.stringify(payload),
+    }), "Não foi possível confirmar a movimentação.");
+}
+
 async function handleResponse(response, fallback) {
     const text = await response.text();
     let data = null;

@@ -4,6 +4,7 @@ import { messagesPanel } from "../../modules/production_messages.js";
 import { stagesPanel } from "../../modules/production_stages.js";
 import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
 import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
+import { creditAllocationsPanel } from "../../modules/credit_allocations.js";
 
 let productionId = null;
 let files = [];
@@ -384,9 +385,32 @@ async function carregarMensagens(id, revision) {
     }));
 }
 
+async function carregarCreditos(id, revision) {
+    const slot = byId("prod_creditos");
+    if (!slot) return;
+    slot.textContent = "Carregando créditos...";
+    try {
+        const data = await API.contextoCreditos(id);
+        if (revision !== loadRevision || productionId !== id) return;
+        slot.replaceChildren(creditAllocationsPanel(data, {
+            onReserve: payload => API.reservarCreditos(id, payload),
+            onMove: (allocation, payload) => API.movimentarCreditos(id, allocation, payload),
+            onReload: () => revision === loadRevision && productionId === id ? carregarCreditos(id, revision) : undefined,
+        }));
+    } catch (error) {
+        if (revision !== loadRevision || productionId !== id) return;
+        slot.textContent = error.message || "Créditos indisponíveis.";
+        const retry = node("button", "btn-small", "Tentar novamente");
+        retry.type = "button";
+        retry.onclick = () => carregarCreditos(id, revision);
+        slot.append(retry);
+    }
+}
+
 export async function carregarOperacao(id) {
     const revision = ++loadRevision;
     productionId = id;
+    carregarCreditos(id, revision);
     if (!byId("prod_arquivos") || !byId("prod_repasse_resumo")) return;
     byId("prod_arquivos").textContent = "Carregando arquivos...";
     byId("prod_repasse_resumo").textContent = "Carregando repasse...";
@@ -418,4 +442,5 @@ export function limparOperacao() {
     byId("prod_etapas_contratuais")?.replaceChildren();
     byId("prod_cotas")?.replaceChildren();
     byId("prod_politicas")?.replaceChildren();
+    byId("prod_creditos")?.replaceChildren();
 }

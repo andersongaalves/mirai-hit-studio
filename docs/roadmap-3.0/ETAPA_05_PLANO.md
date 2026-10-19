@@ -737,6 +737,77 @@ producao. A fundacao pode ser integrada apos CI; o release comercial deve ser
 conjunto, schema-first e sem downgrade destrutivo. Producao permanece no marco
 5.20/5.21 ate o novo release autorizado e validado.
 
+Marco 5.11: PR #73 integrada por merge commit na main
+`9a2159281e2dd3bd1eb6c793e5542813541274a7`. No SHA da feature
+`94f18d08c5e4252a27a8dc8986056b1ac526ae00`, Storage CI `39157201363` e Portals
+E2E PostgreSQL 17 `39157209397`: PASS. Na main, Portals `39177419527` e Client
+access migration `39177419514`: PASS. Storage `39177419511` encontrou uma corrida
+preexistente no teste do portfolio, corrigida isoladamente na PR #74 (navegacao pelo
+menu apos o dashboard iniciar, com latencia fake que reproduz o problema). A PR #74
+passou em `39178038624` e foi integrada na main
+`e7647f1461f479b5c3b9b22f0bad5097ef7e870a`. Nenhuma dessas integracoes publicou
+codigo ou aplicou migrations em producao.
+
+## 5.12 - Reserva e consumo de creditos
+
+Implementacao em validacao, nao publicada. Cliente ve disponiveis, reservados,
+utilizados e unidades em conciliacao; nao calcula saldo financeiro no navegador.
+O Admin cria uma producao com creditos no cadastro do cliente, escolhendo lote,
+quantidade, titulo, produtor ativo e motivo. Orcamento operacional, producao e
+reserva sao uma unica transacao, sem proposta comercial nova nem outra cobranca.
+Repeticoes com o mesmo payload e chave retornam a mesma producao; payload diferente
+com a mesma chave e bloqueado. Clientes e produtores nao podem movimentar a carteira.
+
+O painel da producao permite reservar outras unidades antes de iniciar o trabalho,
+confirmar uso com producao em andamento, devolver uma reserva antes da execucao ou
+estornar uso quando a producao foi devolvida a aguardando inicio e nao ha trabalho
+executado. Previa/entrega ou etapa iniciada impede devolucao/estorno administrativo
+simples e exige conciliacao. Cada movimentacao exige motivo, autor, referencia de
+repeticao e auditoria. Nao existe ajuste livre que crie unidades sem origem paga.
+
+Cada reserva pode ser menor que o lote; seus movimentos abrangem essa reserva inteira.
+Para uso ou devolucao fracionados, criam-se reservas menores. Estados sao append-only:
+reserva -> consumo -> estorno, ou reserva -> devolucao. Nenhum evento anterior e
+editado. A aquisicao continua no ledger 5.11; o ledger operacional referencia os mesmos
+lotes, sem contar outra receita. Unidades e centavos reservados/consumidos nunca
+ultrapassam o lote; a ultima fracao recebe os centavos restantes. Devolver/estornar
+restaura os mesmos centavos, sem criar valor por arredondamento.
+
+Locks: orcamento operacional alvo -> cobranca de origem -> lote -> producao. A criacao
+atomica trava primeiro a origem; seu orcamento alvo ainda e privado a essa transacao,
+sem inverter locks sobre alvos existentes. A proposta comercial trava o mesmo
+orcamento e rejeita historico de creditos; repasse legado trava a producao e tambem
+rejeita creditos. Isso impede dois financiamentos ou duas obrigacoes para o trabalho.
+Reservas em producoes comerciais ou com trabalho/repasse existente sao bloqueadas,
+sem reclassificar contratos historicos. A entrega final revalida financiamento,
+titularidade e consumo; depois de haver historico de creditos nunca ha fallback para
+a liberacao historica sem cobranca. Reembolso/conciliacao bloqueia sem apagar o ledger.
+
+Migration aditiva `a1c3e5f7b902`, pai `f9b1d3e5a780`, ainda nao aplicada em producao:
+`credito_alocacoes` e `credito_movimentos`, RLS, grants anon/authenticated revogados,
+FKs RESTRICT, unicidade de repeticao e triggers de imutabilidade. Cada alocacao guarda
+o servico, as etapas, cotas e politicas do snapshot contratado, nunca o catalogo atual.
+Nao ha backfill, transferencia de dinheiro ou alteracao de pagamentos existentes.
+
+Testes locais: sete casos de conservacao, repeticao, isolamento, V2 OFF, reembolso,
+rollback, centavos fracionados e criacao atomica; oito casos de aquisicao da 5.11
+e quatro casos de propostas do cliente. Playwright cobre reservas, devolucoes,
+consumo, estorno, motivo obrigatorio, repeticao segura apos falha e criacao de producao;
+carteira e painel de producoes preservam regressao. O PostgreSQL 17 do CI valida
+disputa pelo mesmo saldo, consumo duplicado, imutabilidade SQL e permissoes reais.
+Resultados remotos sao registrados somente apos a execucao.
+
+Antes do release conjunto: concluir a derivacao operacional das etapas/cotas/politicas
+para a producao financiada por creditos e a elegibilidade por etapa da 5.13. Nenhuma
+carteira deve ser oferecida em producao antes desses controles e do gate completo.
+Rollback de codigo preserva dados; nao fazer downgrade destrutivo em producao.
+Depois de haver operacoes com creditos, o destino de rollback deve suportar essa
+origem financeira. Backends anteriores tratam producao sem cobranca como historica
+e nao podem ser usados depois dessas operacoes sem bloquear previamente o acesso
+ou a liberacao de entregas, em procedimento separado e autorizado. A versao antiga
+so e alternativa simples antes de existirem operacoes de creditos. O release deve
+registrar e testar uma versao minima compativel; isso permanece um gate de publicacao.
+
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
   enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes

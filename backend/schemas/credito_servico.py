@@ -39,6 +39,8 @@ class CreditoSaldo(BaseModel):
     unidade: Literal["faixa", "canal", "hora"]
     disponivel: Decimal = Field(ge=0, allow_inf_nan=False)
     bloqueado: Decimal = Field(ge=0, allow_inf_nan=False)
+    reservado: Decimal = Field(default=0, ge=0, allow_inf_nan=False)
+    consumido: Decimal = Field(default=0, ge=0, allow_inf_nan=False)
 
 
 class CreditoLoteResponse(BaseModel):
@@ -47,6 +49,7 @@ class CreditoLoteResponse(BaseModel):
     servico_nome: str
     unidade: Literal["faixa", "canal", "hora"]
     quantidade: Decimal = Field(gt=0, allow_inf_nan=False)
+    disponivel: Decimal = Field(default=0, ge=0, allow_inf_nan=False)
     estado: Literal["disponivel", "bloqueado"]
     created_at: datetime
 

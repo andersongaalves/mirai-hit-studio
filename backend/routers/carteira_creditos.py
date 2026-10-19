@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from models import ClienteModel
 from schemas.credito_servico import CarteiraCreditosResponse
 from services import carteira_creditos_service as service
+from services import credito_alocacao_service, financial_service
 from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Creditos de servicos"])
@@ -14,13 +15,20 @@ Client = Annotated[object, Depends(require_client)]
 Admin = Annotated[object, Depends(require_admin)]
 
 
+def _consultar(db, cliente_id):
+    try:
+        return service.carteira(db, cliente_id)
+    except (credito_alocacao_service.AlocacaoConflito, financial_service.FinanceiroConflito):
+        raise HTTPException(409, "Carteira requer conciliacao; nenhum saldo disponibilizado.") from None
+
+
 @router.get("/portal/cliente/creditos", response_model=CarteiraCreditosResponse)
 def meus_creditos(response: Response, db: Db, user: Client):
     response.headers["Cache-Control"] = "private, no-store"
     cliente = db.get(ClienteModel, user.cliente_id)
     if cliente is None or not cliente.ativo:
         raise HTTPException(403, "Acesso do cliente indisponivel.")
-    return service.carteira(db, user.cliente_id)
+    return _consultar(db, user.cliente_id)
 
 
 @router.get("/clientes/{cliente_id}/creditos", response_model=CarteiraCreditosResponse)
@@ -28,4 +36,4 @@ def creditos_cliente(cliente_id: int, response: Response, db: Db, user: Admin):
     response.headers["Cache-Control"] = "private, no-store"
     if db.get(ClienteModel, cliente_id) is None:
         raise HTTPException(404, "Cliente nao encontrado.")
-    return service.carteira(db, cliente_id)
+    return _consultar(db, cliente_id)

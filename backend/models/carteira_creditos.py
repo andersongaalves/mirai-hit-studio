@@ -84,7 +84,7 @@ def _immutable(mapper, connection, target):
     raise ValueError("credit_record_is_immutable")
 
 
-for model in (CreditoContratoItemModel, CreditoLoteModel, CreditoLancamentoModel):
+def proteger_registro(model):
     event.listen(model, "before_update", _immutable)
     event.listen(model, "before_delete", _immutable)
     table = model.__table__
@@ -103,3 +103,7 @@ for model in (CreditoContratoItemModel, CreditoLoteModel, CreditoLancamentoModel
         CREATE TRIGGER credito_registro_imutavel BEFORE UPDATE OR DELETE ON %(fullname)s
         FOR EACH ROW EXECUTE FUNCTION public.creditos_registro_imutavel();
     """).execute_if(dialect="postgresql"))
+
+
+for model in (CreditoContratoItemModel, CreditoLoteModel, CreditoLancamentoModel):
+    proteger_registro(model)

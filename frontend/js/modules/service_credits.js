@@ -28,6 +28,8 @@ export function renderServiceCredits(root, data, { emptyText = "Você ainda não
         item.append(element("h2", "", saldo.servico_nome),
             element("p", "", `Disponíveis: ${creditQuantity(saldo.disponivel, saldo.unidade)}`));
         if (Number(saldo.bloqueado) > 0) item.append(element("p", "producer-help", `Em conciliação: ${creditQuantity(saldo.bloqueado, saldo.unidade)}`));
+        if (Number(saldo.reservado) > 0) item.append(element("p", "", `Reservados: ${creditQuantity(saldo.reservado, saldo.unidade)}`));
+        if (Number(saldo.consumido) > 0) item.append(element("p", "producer-help", `Utilizados: ${creditQuantity(saldo.consumido, saldo.unidade)}`));
         list.append(item);
     });
     root.append(list, element("h2", "", "Aquisições"));

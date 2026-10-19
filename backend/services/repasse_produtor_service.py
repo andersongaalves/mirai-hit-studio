@@ -96,9 +96,13 @@ def _audit_amount(db, actor, repasse, old_amount, request_id):
 
 
 def define(db, *, production_id, amount: Decimal, actor, request_id=None):
-    production = db.get(ProducaoModel, production_id)
+    from models import CreditoAlocacaoModel
+
+    production = db.query(ProducaoModel).filter(ProducaoModel.id == production_id).with_for_update().populate_existing().first()
     if production is None:
         raise RepasseNotFound("Producao nao encontrada.")
+    if db.query(CreditoAlocacaoModel.id).filter(CreditoAlocacaoModel.producao_id == production_id).first():
+        raise RepasseConflict("Producao financiada por creditos exige repasse por etapa; nao duplique a obrigacao.")
     producer = db.get(UsuarioModel, production.produtor_id) if production.produtor_id else None
     if producer is None or producer.role != "produtor":
         raise RepasseConflict("A producao precisa de um produtor valido.")

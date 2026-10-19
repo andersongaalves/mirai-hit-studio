@@ -92,6 +92,14 @@ def buscar_financeiro(db: Session, producao_id: int, cliente_id: int):
 
 def entrega_bloqueada(db: Session, producao) -> bool:
     """Re-evaluate settlement on every read; only a reasoned production exception bypasses it."""
+    from services import credito_alocacao_service
+
+    try:
+        credit_block = credito_alocacao_service.entrega_bloqueada(db, producao)
+    except (credito_alocacao_service.AlocacaoConflito, financial_service.FinanceiroConflito):
+        return True
+    if credit_block is not None:
+        return credit_block
     politicas = politica_service.detalhar(db, producao.id)
     if (
         politicas["vigentes"]["entrega_final"] == "liberada"

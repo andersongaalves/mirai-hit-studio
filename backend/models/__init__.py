@@ -26,3 +26,4 @@ from .portal_notificacao import PortalNotificacaoModel
 from .portfolio_envio import PortfolioEnvioModel
 from .audio_tag import AudioTagModel, AudioTagPerfilModel, PreviaTagJobModel
 from .carteira_creditos import CreditoContratoItemModel, CreditoLancamentoModel, CreditoLoteModel
+from .credito_alocacao import CreditoAlocacaoModel, CreditoMovimentoModel
