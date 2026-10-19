@@ -1413,52 +1413,22 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         from uuid import uuid4
 
         from models import (
-            OrcamentoModel,
             PagamentoModel,
-            ProducaoModel,
             RepasseEtapaModel,
             RepasseEtapaPagamentoModel,
             ServicoEtapaModel,
             ServicoModel,
-            UsuarioModel,
-        )
-        from schemas.proposta import PropostaUpdate
-        from services import (
-            financial_service,
-            producao_etapa_service,
-            producao_liberacao_service,
-            proposta_service,
-            proposta_snapshot_service,
         )
         from sqlalchemy import func
         from sqlalchemy.exc import DBAPIError
+        from test_repasse_etapas import preparar_repasse_sintetico
 
         with self.SessionLocal() as db:
-            actor = db.get(UsuarioModel, self.ids["admin_id"])
             catalog = db.scalar(select(ServicoModel).order_by(ServicoModel.id))
             db.add(ServicoEtapaModel(servico_id=catalog.id, ordem=1, nome="Mixagem", peso_percentual=100))
-            budget = OrcamentoModel(nome_cliente="Sintetico repasse", email="synthetic@example.invalid", servico="Mix",
-                                    cliente_id=self.ids["client_a_id"])
-            db.add(budget)
             db.commit()
-            proposal = proposta_service.criar_por_orcamento(db, budget.id)
-            proposta_service.atualizar(db, proposal.id, PropostaUpdate(politica_pagamento="integral",
-                produtor_id=self.ids["producer_a_id"], itens=[{"descricao": "Mix", "quantidade": 1,
-                    "valor_unitario": "50000000.00", "servico_id": catalog.id}]))
-            proposta_snapshot_service.congelar(db, proposal, origem="envio", estrito=True)
-            proposal.status = "aceita"
-            db.flush()
-            charge = financial_service.criar_para_proposta(db, proposal, cliente_id=self.ids["client_a_id"])
-            financial_service.registrar_pagamento(db, charge.id, tipo="integral", valor="50000000.00", status="aprovado")
-            producao_liberacao_service.avaliar_liberacao_producao(db, charge.id)
-            db.commit()
-            production = db.scalar(select(ProducaoModel).where(ProducaoModel.orcamento_id == budget.id))
-            production_id, charge_id = production.id, charge.id
-            stage = producao_etapa_service._etapas(db, production_id)[0]
-            for status in ("em_andamento", "concluida"):
-                producao_etapa_service.atualizar(db, production, stage.id, papel="admin", usuario=actor, status=status)
-            production.status = "finalizado"
-            db.commit()
+            production_id, _, charge_id = preparar_repasse_sintetico(db, producer_id=self.ids["producer_a_id"],
+                client_id=self.ids["client_a_id"], service_id=catalog.id, actor_id=self.ids["admin_id"])
         admin = self._login("e2e-admin")
         producer = self._login("e2e-producer-a")
         other = self._login("e2e-producer-b")
@@ -1484,8 +1454,14 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         self.assertEqual(own.json()[0]["id"], record["id"])
         self.assertEqual(own.headers["cache-control"], "private, no-store")
         self.assertEqual(self.http.get(f'/portal/produtor/repasses-etapas/{record["id"]}/comprovante', headers=other).status_code, 404)
+        receipt_contents = b"%PDF-synthetic-stage-receipt"
+        receipt = self.http.post(f"/producoes/{production_id}/arquivos", headers=admin,
+            data={"tipo": "comprovante", "visivel_produtor": "false", "visivel_cliente": "false"},
+            files={"arquivo": ("receipt.pdf", receipt_contents, "application/pdf")})
+        self.assertEqual(receipt.status_code, 201, receipt.text)
         barrier = Barrier(2)
-        payment = {"referencia": "TRANSFERENCIA-SINTETICA", "idempotency_key": str(uuid4())}
+        payment = {"referencia": "TRANSFERENCIA-SINTETICA", "idempotency_key": str(uuid4()),
+                   "comprovante_arquivo_id": receipt.json()["id"]}
 
         def register_payment():
             barrier.wait(timeout=10)
@@ -1496,6 +1472,13 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             paid = [task.result(timeout=25) for task in tasks]
         self.assertEqual([response.status_code for response in paid], [200, 200])
         self.assertEqual(paid[0].json()[0]["estado"], "pago")
+        proof_endpoint = f'/portal/produtor/repasses-etapas/{record["id"]}/comprovante'
+        proof = self.http.get(proof_endpoint, headers=producer)
+        self.assertEqual(proof.status_code, 200)
+        self.assertEqual(proof.content, receipt_contents)
+        self.assertEqual(proof.headers["cache-control"], "private, no-store")
+        self.assertEqual(self.http.get(proof_endpoint, headers=other).status_code, 404)
+        self.assertEqual(self.http.get(proof_endpoint, headers=client).status_code, 403)
         with self.SessionLocal() as db:
             self.assertEqual(db.scalar(select(func.count()).select_from(RepasseEtapaModel)), 1)
             self.assertEqual(db.scalar(select(func.count()).select_from(RepasseEtapaPagamentoModel)), 1)

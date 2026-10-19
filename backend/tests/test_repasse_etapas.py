@@ -1,4 +1,5 @@
 """Stage payouts in a disposable database; no live payment or transfer."""
+import inspect
 import textwrap
 import unittest
 
@@ -7,7 +8,49 @@ from test_carteira_creditos import EXTRA
 from test_credito_alocacao import ALLOC
 from test_proposta_snapshot import SETUP
 
-PAYOUTS = '''
+
+def preparar_repasse_sintetico(db, *, producer_id, client_id, service_id, actor_id):
+    from datetime import datetime, timezone
+
+    from models import OrcamentoModel, ProducaoModel, PropostaModel, UsuarioModel
+    from schemas.proposta import PropostaUpdate
+    from services import (
+        financial_service,
+        producao_etapa_service,
+        producao_liberacao_service,
+        proposta_service,
+        proposta_snapshot_service,
+    )
+    from sqlalchemy import select
+
+    budget = OrcamentoModel(nome_cliente="Sintetico repasse", email="synthetic@example.invalid", servico="Mix", cliente_id=client_id)
+    db.add(budget)
+    db.commit()
+    response = proposta_service.criar_por_orcamento(db, budget.id)
+    proposta_service.atualizar(db, response.id, PropostaUpdate(politica_pagamento="integral", produtor_id=producer_id,
+        itens=[{"descricao": "Mix", "quantidade": 1, "valor_unitario": "50000000.00", "servico_id": service_id}]))
+    model = db.get(PropostaModel, response.id)
+    proposta_snapshot_service.congelar(db, model, origem="envio", estrito=True)
+    model.status = "aceita"
+    model.enviada_em = model.aprovada_em = datetime.now(timezone.utc)
+    budget.status = "aprovado"
+    db.flush()
+    charge = financial_service.criar_para_proposta(db, model, cliente_id=client_id)
+    financial_service.registrar_pagamento(db, charge.id, tipo="integral", valor="50000000.00", status="aprovado")
+    producao_liberacao_service.avaliar_liberacao_producao(db, charge.id)
+    db.commit()
+    production = db.scalar(select(ProducaoModel).where(ProducaoModel.orcamento_id == budget.id))
+    production.status = "em_producao"
+    db.commit()
+    stage = producao_etapa_service._etapas(db, production.id)[0]
+    for status in ("em_andamento", "concluida"):
+        producao_etapa_service.atualizar(db, production, stage.id, papel="admin", usuario=db.get(UsuarioModel, actor_id), status=status)
+    production.status = "finalizado"
+    db.commit()
+    return production.id, stage.id, charge.id
+
+
+PAYOUTS = inspect.getsource(preparar_repasse_sintetico) + '''
 from models import (ProducaoEtapaModel,RepasseEtapaModel,RepasseEtapaPagamentoModel,RepasseProdutorModel)
 from schemas.repasse_etapa import RepasseEtapaPagamento
 from services import repasse_etapa_service as payouts, producao_etapa_service as stages, repasse_produtor_service as legacy
@@ -80,6 +123,21 @@ class RepasseEtapasTests(unittest.TestCase):
                     assert str(error)=='stage_payout_history_prevents_downgrade'
                 else: raise AssertionError('issued payout history removed by downgrade')
                 assert db.scalar(select(func.count()).select_from(RepasseEtapaModel))==3
+        ''')
+
+    def test_postgresql_scenario_arrangement_is_also_executed_locally(self):
+        self.run_case('''
+            with Session(engine) as db:
+                owner=producer(db)
+                seed_service(db,2,weights=(('Execucao','100',False),))
+                production_id,stage_id,charge_id=preparar_repasse_sintetico(db,
+                    producer_id=owner.id,client_id=1,service_id=2,actor_id=1)
+                result=payouts.emitir(db,production_id,actor=db.get(UsuarioModel,1))
+                assert len(result)==1
+                row=result[0]
+                assert row['etapa_id']==stage_id
+                assert (row['bruto_centavos'],row['produtor_centavos'],row['mirai_centavos'])==(5000000000,4000000000,1000000000)
+                assert db.scalar(select(func.count()).select_from(PagamentoModel).where(PagamentoModel.cobranca_id==charge_id))==1
         ''')
 
     def test_payment_registration_is_immutable_idempotent_and_held_after_refund(self):
