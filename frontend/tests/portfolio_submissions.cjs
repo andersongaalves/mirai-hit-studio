@@ -7,6 +7,7 @@ const os = require("node:os");
 const root = path.resolve(__dirname, "..");
 const items = [];
 const posts = [];
+const imagePosts = [];
 const errors = [];
 const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
 
@@ -42,6 +43,21 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
                     items.push(item);
                     return route.fulfill({ status: 201, json: item });
                 }
+                if (url.pathname === "/portal/produtor/portfolio/com-capa" && req.method() === "POST") {
+                    assert.match(req.headers()["content-type"], /^multipart\/form-data; boundary=/);
+                    assert.equal(req.headers().authorization, "Bearer synthetic-session");
+                    const multipart = await new Response(req.postDataBuffer(), {
+                        headers: { "content-type": req.headers()["content-type"] },
+                    }).formData();
+                    const data = JSON.parse(multipart.get("dados"));
+                    const file = multipart.get("imagem");
+                    imagePosts.push({ data, name: file.name, type: file.type, contents: Buffer.from(await file.arrayBuffer()) });
+                    if (imagePosts.length === 1) return route.fulfill({ status: 503, json: { detail: "Falha temporária sintética." } });
+                    const item = { id: items.length + 1, produtor_id: 2,
+                        dados: { ...data, link_capa: "https://example.test/uploaded.png" }, status: "pendente", versao: 1 };
+                    items.push(item);
+                    return route.fulfill({ status: 201, json: item });
+                }
                 if (["/portal/produtor/portfolio", "/projetos/envios/admin"].includes(url.pathname)) return route.fulfill({ json: items });
                 if (/^\/projetos\/envios\/\d+\/revisao$/.test(url.pathname)) {
                     const data = req.postDataJSON();
@@ -72,6 +88,7 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         await page.locator("#portfolio-submit-artista").fill("Artista sintético");
         await page.locator("#portfolio-submit-categoria").fill("Mixagem");
         await page.locator("#portfolio-submit-link_audio").fill("https://example.test/audio");
+        await page.locator("#portfolio-submit-capa_origem").selectOption("link");
         await page.locator("#portfolio-submit-link_capa").fill("https://example.test/cover.png");
         await form.locator("button[type=submit]").click();
         assert.equal(posts.length, 0, "Consent is mandatory before submission");
@@ -98,6 +115,47 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         assert.equal(posts.length, 2);
         assert.deepEqual(posts[1], { versao: 1, decisao: "aprovar", motivo: null });
         await admin.page.screenshot({ path: path.join(screenDir, "admin-desktop.png"), fullPage: true });
+        const upload = await setup("produtor", 1280);
+        const imageForm = upload.page.locator(".portfolio-submission-form");
+        await upload.page.locator("#portfolio-submit-titulo").fill("Nova faixa com capa");
+        await upload.page.locator("#portfolio-submit-artista").fill("Artista sintético");
+        await upload.page.locator("#portfolio-submit-categoria").fill("Mixagem");
+        await upload.page.locator("#portfolio-submit-link_audio").fill("https://example.test/audio");
+        await upload.page.locator("#portfolio-submit-autorizacao_artista").check();
+        const picker = upload.page.locator("#portfolio-submit-imagem");
+        await picker.setInputFiles({ name: "not-a-cover.svg", mimeType: "image/svg+xml", buffer: Buffer.from("<svg/>") });
+        await imageForm.locator("button[type=submit]").click();
+        assert.equal(imagePosts.length, 0, "Invalid file type must not be uploaded");
+        assert.ok(await picker.evaluate(el => el.validationMessage.length > 0));
+        const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=", "base64");
+        await picker.setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: png });
+        const preview = upload.page.locator(".portfolio-cover-preview");
+        await preview.waitFor({ state: "visible" });
+        await upload.page.waitForFunction(() => document.querySelector(".portfolio-cover-preview")?.naturalWidth > 0);
+        await upload.page.locator("#portfolio-submit-capa_origem").selectOption("link");
+        assert.equal(await picker.isDisabled(), true);
+        assert.equal(await preview.isVisible(), false);
+        await upload.page.locator("#portfolio-submit-capa_origem").selectOption("arquivo");
+        assert.equal(await preview.isVisible(), true);
+        await upload.page.evaluate(() => scrollTo(0, 0));
+        await upload.page.screenshot({ path: path.join(screenDir, "producer-image-desktop.png"), fullPage: true });
+        await upload.page.setViewportSize({ width: 390, height: 844 });
+        assert.ok(await upload.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await upload.page.screenshot({ path: path.join(screenDir, "producer-image-mobile.png"), fullPage: true });
+        await imageForm.locator("button[type=submit]").click();
+        await upload.page.getByText("Falha temporária sintética.", { exact: true }).waitFor();
+        assert.equal(imagePosts.length, 1);
+        await imageForm.locator("button[type=submit]").click();
+        await upload.page.getByText("Projeto enviado para revisão do estúdio.", { exact: true }).waitFor();
+        assert.equal(imagePosts.length, 2);
+        assert.deepEqual(imagePosts[0], imagePosts[1], "Retry keeps the UUID, metadata and exact image bytes");
+        assert.deepEqual(imagePosts[1].contents, png);
+        assert.equal(imagePosts[1].type, "image/png");
+        assert.equal(imagePosts[1].name, "cover.png");
+        assert.equal(imagePosts[1].data.autorizacao_artista, true);
+        for (const field of ["link_capa", "capa_origem", "imagem"]) assert.equal(field in imagePosts[1].data, false);
+        assert.equal(items.length, 2);
+        await upload.context.close();
         assert.deepEqual(errors, []);
         console.log("portfolio_submissions=passed; screenshots=" + screenDir);
     } finally {

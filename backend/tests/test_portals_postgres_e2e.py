@@ -1736,6 +1736,68 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         self.assertEqual(result.content, b'synthetic tagged mp3')
         self.assertEqual(self.http.get(f'/portal/produtor/arquivos/{file_id}/conteudo', headers=producer).content, original)
 
+    def test_portfolio_cover_postgresql17_concurrent_upload_and_review(self):
+        from base64 import b64decode
+
+        from models import PortfolioEnvioModel, ProjetoModel
+        from services import portfolio_envio_service
+        from services.storage.contracts import StorageScope
+        from services.storage.memory import InMemoryStorage
+
+        producer = self._login("e2e-producer-a")
+        other = self._login("e2e-producer-b")
+        client = self._login("e2e-client-a")
+        admin = self._login("e2e-admin")
+        production_id = self._create_flow_production(admin)
+        payload = {"request_id": str(uuid.uuid4()), "producao_id": production_id,
+            "titulo": "Capa sintetica", "artista": "Artista sintetico", "categoria": "Mixagem",
+            "link_audio": "https://example.test/song.mp3", "vertical": "artists", "case_type": "demo",
+            "autorizacao_artista": True}
+        path = "/portal/produtor/portfolio/com-capa"
+        contents = b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=")
+        storage = InMemoryStorage(StorageScope.PUBLIC_IMAGE)
+        gate = Barrier(2)
+
+        def submit():
+            gate.wait(timeout=10)
+            return self.http.post(path, headers=producer, data={"dados": json.dumps(payload)},
+                files={"imagem": ("cover.png", contents, "image/png")}, timeout=20)
+
+        with patch.object(portfolio_envio_service, "storage_for", return_value=storage), \
+             patch.object(storage, "save", wraps=storage.save) as save:
+            for actor, expected in ((other, 404), (client, 403)):
+                denied = self.http.post(path, headers=actor, data={"dados": json.dumps(payload)},
+                    files={"imagem": ("cover.png", contents, "image/png")})
+                self.assertEqual(denied.status_code, expected, denied.text)
+            save.assert_not_called()
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = [task.result(timeout=25) for task in [pool.submit(submit), pool.submit(submit)]]
+            self.assertEqual([result.status_code for result in results], [201, 201], [r.text for r in results])
+            item = results[0].json()
+            self.assertEqual(results[1].json()["id"], item["id"])
+            self.assertEqual(save.call_count, 1)
+            self.assertEqual(len(storage.objects), 1)
+            self.assertEqual(storage.deleted, [])
+            self.assertNotIn("_capa_sha256", item["dados"])
+            self.assertEqual(self.http.get("/portal/produtor/portfolio", headers=other).json(), [])
+            with self.SessionLocal() as db:
+                self.assertEqual(db.query(PortfolioEnvioModel).count(), 1)
+                self.assertIsNone(db.get(PortfolioEnvioModel, item["id"]).projeto_id)
+            changed = self.http.post(path, headers=producer, data={"dados": json.dumps(payload)},
+                files={"imagem": ("cover.png", contents + b"changed", "image/png")})
+            self.assertEqual(changed.status_code, 409)
+            self.assertEqual(save.call_count, 1)
+            reviewed = self.http.post(f"/projetos/envios/{item['id']}/revisao", headers=admin,
+                json={"versao": 1, "decisao": "aprovar"})
+            self.assertEqual(reviewed.status_code, 200, reviewed.text)
+            with self.SessionLocal() as db:
+                project = db.get(ProjetoModel, reviewed.json()["projeto_id"])
+                self.assertEqual(project.link_capa, item["dados"]["link_capa"])
+                self.assertEqual(project.creditos[0].usuario_id, self.ids["producer_a_id"])
+                db.delete(db.get(PortfolioEnvioModel, item["id"]))
+                db.delete(project)
+                db.commit()
+
     def test_portfolio_submission_postgresql17_concurrent_review(self):
         from models import PortfolioEnvioModel, ProjetoModel, UsuarioModel
         from schemas.portfolio_envio import PortfolioEnvioRevisao

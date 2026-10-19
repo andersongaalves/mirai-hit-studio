@@ -2,13 +2,20 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from schemas.projeto import FuncaoCredito, ProjetoCaseType, ProjetoVertical
 from schemas.validation import http_url
 
 
-class PortfolioEnvioCreate(BaseModel):
+class PortfolioEnvioDados(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     request_id: UUID
@@ -18,14 +25,13 @@ class PortfolioEnvioCreate(BaseModel):
     categoria: str = Field(min_length=1, max_length=100)
     descricao: str = Field(default="", max_length=20000)
     link_audio: str = Field(min_length=8, max_length=500)
-    link_capa: str = Field(min_length=8, max_length=500)
     vertical: ProjetoVertical
     case_type: ProjetoCaseType
     funcao: FuncaoCredito = "producao"
     funcao_outra: str | None = Field(default=None, min_length=1, max_length=60)
     autorizacao_artista: Literal[True]
 
-    _urls = field_validator("link_audio", "link_capa")(http_url)
+    _audio_url = field_validator("link_audio")(http_url)
 
     @field_validator("autorizacao_artista", mode="before")
     @classmethod
@@ -53,6 +59,12 @@ class PortfolioEnvioCreate(BaseModel):
         return value
 
 
+class PortfolioEnvioCreate(PortfolioEnvioDados):
+    link_capa: str = Field(min_length=8, max_length=500)
+
+    _cover_url = field_validator("link_capa")(http_url)
+
+
 class PortfolioEnvioResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,6 +79,10 @@ class PortfolioEnvioResponse(BaseModel):
     revisado_em: datetime | None
     projeto_id: int | None
     motivo: str | None
+
+    @field_serializer("dados")
+    def public_data(self, value):
+        return {key: item for key, item in value.items() if not key.startswith("_")}
 
 
 class PortfolioEnvioRevisao(BaseModel):
