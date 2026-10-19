@@ -841,6 +841,61 @@ Publicacao continua condicionada a 5.13 e a uma versao de rollback compativel co
 creditos e etapas inativas. Nao retornar a backends anteriores depois de operar
 creditos. Producao permanece no release 5.20/5.21, sem alteracao de V2 ou dados.
 
+Marco operacional 5.12: PR #76 integrada por merge commit
+`5bc44bd7638c9eecb4c1d271b483877af1bcf2c2`. Na feature
+`952d1ac1b48790f736c3f62dedf46660d60c88c2`, Storage `39211507213` e Portals
+`39211520035`: PASS. Na main, Storage `39212256201`, Portals PostgreSQL 17
+`39212256208` e Client Access migration `39212256207`: PASS. As nove verificacoes
+operacionais, navegador e concorrencia real passaram; nenhuma migration/deploy de
+creditos foi executada em producao.
+
+## 5.13 - Remuneracao 80/20 por etapa
+
+Implementacao em validacao, nao publicada. O Admin consulta previsto, bloqueado,
+a receber e pago por etapa. Compra ou consumo de creditos nao dispara transferencia.
+Somente etapas concluidas com executor identificado, producao finalizada e quitacao
+integral sem conciliacao pendente podem gerar obrigacoes. Compra de creditos usa a
+mesma origem paga, nunca outra cobranca; a reserva precisa estar consumida.
+
+Valores vem do snapshot negociado ou da parcela congelada da reserva. O pool de
+80% e calculado uma vez na origem economica e distribuido em centavos; ao reservar
+creditos, cada parcela congela seu pool, e devolucao restaura exatamente esse valor.
+Dividir um mesmo lote entre varias producoes nao aumenta a remuneracao. A diferenca
+entre bruto e parcela do produtor e a participacao bruta da Mirai, nao uma estimativa
+de tributos, taxa do Mercado Pago ou lucro liquido. Nao ha deducao presumida de taxas.
+
+Obrigacoes e comprovacoes de transferencia sao append-only, com unicidade por etapa
+e por pagamento, autoria e auditoria. A referencia da transferencia e obrigatoria;
+comprovante e opcional e deve pertencer a mesma producao. Registro repetido com o
+mesmo conteudo nao duplica a obrigacao/pagamento; conteudo divergente bloqueia.
+O Produtor ve apenas suas parcelas e baixa seu comprovante por endpoint privado.
+Previsto/bloqueado nao entra no total a receber do painel. Reembolso posterior
+bloqueia novas operacoes sem apagar uma transferencia ja registrada.
+
+O fluxo legado continua para producoes sem etapas e para repasses preexistentes.
+Nao pode criar um repasse global novo numa producao com etapas, nem um repasse por
+etapa quando ha obrigacao legada. Nenhum repasse historico e recalculado ou convertido.
+Etapa com obrigacao emitida nao pode ser reaberta para alterar seu executor/base:
+correcoes exigem conciliacao auditada separada, sem sobrescrever o registro financeiro.
+Contrato incompleto, origem divergente, valor nao coberto por etapas ou reserva
+historica sem pool congelado falha fechado, sem backfill financeiro automatico.
+
+Migration aditiva `c4e6a8b0d125`, pai `b3d5f7a9c014`, ainda nao aplicada em producao:
+pool opcional para reservas futuras e tabelas privadas `repasse_etapas` e
+`repasse_etapa_pagamentos`, RLS, grants anon/authenticated revogados, FKs RESTRICT e
+triggers de imutabilidade. Downgrade recusa obrigacoes, transferencias ou pools
+existentes. Nenhum banco externo e consultado, e nenhuma transferencia e executada.
+
+Testes locais: conservacao 80/20 em 2000 origens, fracionamento de centavos,
+quitacao parcial, executor, concorrencia/idempotencia preparada para PostgreSQL 17,
+reembolso, isolamento, imutabilidade, legado e rollback seguro. Navegador cobre
+campos obrigatorios, comprovantes, repeticao segura, texto nao executavel e layout
+desktop/mobile. Registrar CI remoto somente depois do PASS no SHA exato.
+
+Proximo gate: CI integrado PostgreSQL 17/FastAPI/Playwright e validacao do rollback
+compativel antes do release conjunto 5.11-5.13. Catalogo de beats (5.22) permanece
+pendente. V2 continua no estado atual; nenhuma configuracao de producao e alterada.
+
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
   enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes

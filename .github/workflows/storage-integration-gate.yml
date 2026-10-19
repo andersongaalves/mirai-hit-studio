@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["b3d5f7a9c014"], heads
+                  assert heads == ["c4e6a8b0d125"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -191,6 +191,8 @@ jobs:
                     test_carteira_creditos.py \
                     test_credito_alocacao.py \
                     test_credito_producao.py \
+                    test_repasse_base.py \
+                    test_repasse_etapas.py \
                     test_producao_etapas.py \
                     test_combos.py \
                     test_cotas_arquivo.py \
@@ -227,6 +229,7 @@ jobs:
                   node frontend/tests/audio_tags.cjs
                   node frontend/tests/service_credits.cjs
                   node frontend/tests/credit_allocations.cjs
+                  node frontend/tests/stage_payouts.cjs
                   node frontend/tests/portfolio_public.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
@@ -307,6 +310,13 @@ jobs:
                   PY
                   )
                   ruff check --select E4,E7,E9,F \
+                    backend/services/repasse_base_service.py \
+                    backend/services/repasse_etapa_service.py \
+                    backend/models/repasse_etapa.py \
+                    backend/routers/repasse_etapa.py \
+                    backend/schemas/repasse_etapa.py \
+                    backend/tests/test_repasse_base.py \
+                    backend/tests/test_repasse_etapas.py \
                     backend/services/storage \
                     backend/services/producao_arquivo_storage.py \
                     backend/services/producao_arquivo_service.py \
@@ -338,6 +348,8 @@ jobs:
                   node --check frontend/js/pix.js
                   node --check frontend/js/checkout.js
                   node --check frontend/tests/checkout.cjs
+                  node --check frontend/js/modules/stage_payouts.js
+                  node --check frontend/tests/stage_payouts.cjs
                   git diff --check origin/main...HEAD
 
             - name: Verify disposable data cleanup
@@ -360,6 +372,8 @@ jobs:
                       (SELECT count(*) FROM credito_alocacoes) +
                       (SELECT count(*) FROM credito_movimentos) +
                       (SELECT count(*) FROM credito_etapas) +
+                      (SELECT count(*) FROM repasse_etapas) +
+                      (SELECT count(*) FROM repasse_etapa_pagamentos) +
                       (SELECT count(*) FROM portal_notificacoes) +
                       (SELECT count(*) FROM repasses_produtor);
                   " 2>/dev/null | tr -d '[:space:]')"
@@ -376,7 +390,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic b3d5f7a9c014: passed"
+                    echo "- PostgreSQL 17 and Alembic c4e6a8b0d125: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

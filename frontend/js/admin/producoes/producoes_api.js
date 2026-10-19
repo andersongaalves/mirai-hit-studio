@@ -129,6 +129,20 @@ export async function buscarRepasse(id) {
     return handleResponse(await authFetch(`/producoes/${id}/repasse`), "Erro ao buscar repasse.");
 }
 
+export async function buscarRepassesEtapas(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasses-etapas`), "Repasses por etapa indisponiveis.");
+}
+
+export async function emitirRepassesEtapas(id) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasses-etapas`, { method: "POST" }), "Nao foi possivel registrar os repasses.");
+}
+
+export async function pagarRepasseEtapa(id, repasse, payload) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasses-etapas/${repasse}/pagamento`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    }), "Nao foi possivel registrar o pagamento.");
+}
+
 export async function definirRepasse(id, valor) {
     return handleResponse(await authFetch(`/producoes/${id}/repasse`, {
         method: "PUT",

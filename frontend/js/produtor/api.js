@@ -61,6 +61,14 @@ export async function listarRepasses() {
     );
 }
 
+export async function listarRepassesEtapas() {
+    return responseData(await authFetch("/portal/produtor/repasses-etapas"), "Repasses por etapa indisponiveis.");
+}
+
+export function baixarComprovanteEtapa(id) {
+    return baixar(`/portal/produtor/repasses-etapas/${id}/comprovante`, "Nao foi possivel baixar o comprovante.");
+}
+
 async function baixar(url, fallback) {
     const response = await authFetch(url);
     if (!response.ok) {

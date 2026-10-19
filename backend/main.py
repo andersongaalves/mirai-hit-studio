@@ -36,6 +36,7 @@ from routers.audio_tags import router as audio_tags_router
 from routers.carteira_creditos import router as carteira_creditos_router
 from routers.credito_alocacao import router as credito_alocacao_router
 from routers.propostas import router as propostas_router
+from routers.repasse_etapa import router as repasse_etapa_router
 from routers.servicos import router as servicos_router
 from routers.usuarios import router as usuarios_router
 from routers.webhooks import router as webhooks_router
@@ -105,6 +106,7 @@ app.include_router(portal_operacao_admin_router)
 app.include_router(portal_config_router)
 app.include_router(producao_mensagens_router)
 app.include_router(producao_etapas_router)
+app.include_router(repasse_etapa_router)
 app.include_router(cotas_arquivo_router)
 app.include_router(politicas_router)
 app.include_router(combos_router)

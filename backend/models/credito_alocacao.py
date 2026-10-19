@@ -20,6 +20,8 @@ class CreditoAlocacaoModel(Base):
     __table_args__ = (
         CheckConstraint("quantidade > 0 AND quantidade <= 1000000", name="ck_credito_alocacao_quantidade"),
         CheckConstraint("valor_centavos >= 0", name="ck_credito_alocacao_valor"),
+        CheckConstraint("produtor_centavos IS NULL OR (produtor_centavos >= 0 AND produtor_centavos <= valor_centavos)",
+                        name="ck_credito_alocacao_produtor"),
         CheckConstraint("length(motivo) >= 5", name="ck_credito_alocacao_motivo"),
     )
     id = Column(Integer, primary_key=True)
@@ -28,6 +30,7 @@ class CreditoAlocacaoModel(Base):
     cliente_id = Column(Integer, ForeignKey("clientes.id", ondelete="RESTRICT"), nullable=False)
     quantidade = Column(Numeric(12, 3), nullable=False)
     valor_centavos = Column(Integer, nullable=False)
+    produtor_centavos = Column(Integer, nullable=True)  # NULL historical origins require reconciliation, never a backfill.
     snapshot_servico = Column(JSON, nullable=False)
     autor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
     motivo = Column(String(500), nullable=False)

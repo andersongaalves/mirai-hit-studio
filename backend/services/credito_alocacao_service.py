@@ -183,6 +183,27 @@ def _snapshot(lote, proposta):
                      "cotas_arquivos": parte.get("cotas_arquivos", [])})
 
 
+def _parcela_produtor(db, lote, proposta):
+    from services.repasse_base_service import parcelas_produtor
+
+    rights = wallet._contrato(proposta).itens
+    pools = parcelas_produtor([item.valor_centavos for item in rights])
+    source = next((pool for item, pool in zip(rights, pools)
+                   if (item.linha, item.componente) == (lote.linha, lote.componente)), None)
+    if source is None:
+        raise AlocacaoConflito("Base do repasse sem origem contratual.")
+    used = 0
+    for item in db.scalars(select(CreditoAlocacaoModel).where(CreditoAlocacaoModel.lote_id == lote.id)):
+        if _estado(db, item) not in ("reservada", "consumida"):
+            continue
+        if item.produtor_centavos is None:
+            raise AlocacaoConflito("Reserva historica sem base de repasse exige conciliacao.")
+        used += item.produtor_centavos
+    if used > source:
+        raise AlocacaoConflito("Saldo do repasse dos creditos requer conciliacao.")
+    return source - used
+
+
 def _autor(actor):
     if not actor or not actor.ativo or not (actor.is_admin or actor.role == "admin"):
         raise AlocacaoConflito("Somente um administrador ativo pode movimentar creditos.")
@@ -230,9 +251,14 @@ def reservar(db, producao_id, dados, *, actor, request_id=None, _request_digest=
             raise AlocacaoInvalida("Faixas e canais exigem unidades inteiras.")
         ticks, saldo_ticks = int(dados.quantidade * 1000), int(restante * 1000)
         # Last units carry the remaining cents, so repeated small reservations cannot mint value.
-        cents = valor * ticks // saldo_ticks
+        from services.repasse_base_service import reservar_parcela
+
+        cents, producer_cents = reservar_parcela(bruto_restante=valor,
+            produtor_restante=_parcela_produtor(db, lote, charge.proposta),
+            unidades_restantes=saldo_ticks, unidades=ticks)
         item = CreditoAlocacaoModel(lote_id=lote.id, producao_id=production.id, cliente_id=lote.cliente_id,
-            quantidade=dados.quantidade, valor_centavos=cents, snapshot_servico=_snapshot(lote, charge.proposta),
+            quantidade=dados.quantidade, valor_centavos=cents, produtor_centavos=producer_cents,
+            snapshot_servico=_snapshot(lote, charge.proposta),
             autor_id=actor.id, motivo=dados.motivo, idempotency_key=key, request_sha256=digest)
         db.add(item)
         db.flush()
@@ -316,6 +342,8 @@ def movimentar(db, producao_id, alocacao_id, dados, *, actor, request_id=None):
         estado = _estado(db, item)
         if dados.tipo == "consumo":
             _validar_financiamento(db, lote, charge)
+            if item.produtor_centavos is None:
+                raise AlocacaoConflito("Reserva historica sem base de repasse exige conciliacao antes do consumo.")
             if estado != "reservada" or production.status not in ("em_producao", "revisao"):
                 raise AlocacaoConflito("Consumo exige reserva ativa e producao em andamento.")
         else:

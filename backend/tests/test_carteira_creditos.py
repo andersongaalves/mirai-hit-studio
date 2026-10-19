@@ -187,7 +187,7 @@ class CarteiraCreditosTests(unittest.TestCase):
                 assert connection.execute(text('SELECT nome FROM servicos')).scalar_one() == 'Plano Start'
             command.upgrade(migration_config(),'head')
             with engine.connect() as connection:
-                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == 'b3d5f7a9c014'
+                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == 'c4e6a8b0d125'
             with Session(engine) as db:
                 old = db.get(PropostaModel,proposal.id)
                 assert old.finalidade == 'producao' and old.contrato_creditos is None

@@ -28,3 +28,4 @@ from .audio_tag import AudioTagModel, AudioTagPerfilModel, PreviaTagJobModel
 from .carteira_creditos import CreditoContratoItemModel, CreditoLancamentoModel, CreditoLoteModel
 from .credito_alocacao import CreditoAlocacaoModel, CreditoMovimentoModel
 from .credito_etapa import CreditoEtapaModel
+from .repasse_etapa import RepasseEtapaModel, RepasseEtapaPagamentoModel

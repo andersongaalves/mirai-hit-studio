@@ -150,6 +150,9 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/produtor/producoes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
+        if (url.pathname === '/portal/produtor/repasses-etapas' && request.method() === 'GET') {
+            return route.fulfill({ json: [] });
+        }
         if (url.pathname === '/portal/produtor/repasses' && request.method() === 'GET') {
             if (failPayouts) return route.fulfill({ status: 503, json: { detail: 'Repasses indisponíveis.' } });
             return route.fulfill({ json: payouts });

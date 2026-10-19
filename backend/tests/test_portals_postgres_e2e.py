@@ -205,7 +205,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
         with cls.SessionLocal.begin() as db:
             # Only this loopback PostgreSQL-17 fixture may reset append-only synthetic records.
-            db.execute(text("TRUNCATE TABLE credito_etapas, credito_movimentos, credito_alocacoes, credito_lancamentos, credito_lotes, credito_contrato_itens RESTART IDENTITY"))
+            db.execute(text("TRUNCATE TABLE repasse_etapa_pagamentos, repasse_etapas, credito_etapas, credito_movimentos, credito_alocacoes, credito_lancamentos, credito_lotes, credito_contrato_itens RESTART IDENTITY"))
             for model in (
                 AuditLogModel,
                 AuthRateLimitModel,
@@ -1284,13 +1284,15 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                   AND relname IN ('audio_tag_perfis', 'audio_tags', 'portal_notificacoes',
                                   'portfolio_envios', 'previa_tag_jobs', 'projeto_creditos',
                                   'credito_lotes', 'credito_lancamentos', 'credito_contrato_itens',
-                                  'credito_alocacoes', 'credito_movimentos', 'credito_etapas')
+                                  'credito_alocacoes', 'credito_movimentos', 'credito_etapas',
+                                  'repasse_etapas', 'repasse_etapa_pagamentos')
                 ORDER BY relname
             """)).all()
             self.assertEqual(rows, [('audio_tag_perfis', True), ('audio_tags', True),
                                     ('credito_alocacoes', True), ('credito_contrato_itens', True),
                                     ('credito_etapas', True), ('credito_lancamentos', True), ('credito_lotes', True), ('credito_movimentos', True), ('portal_notificacoes', True),
-                                    ('portfolio_envios', True), ('previa_tag_jobs', True), ('projeto_creditos', True)])
+                                    ('portfolio_envios', True), ('previa_tag_jobs', True), ('projeto_creditos', True),
+                                    ('repasse_etapa_pagamentos', True), ('repasse_etapas', True)])
             for role in ('anon', 'authenticated'):
                 exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),
                                     {'role': role}).scalar_one()
@@ -1405,6 +1407,104 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("CREDITS_POSTGRES_BROWSER_PASS", result.stdout)
+
+    @patch("core.config.settings.COMMERCIAL_PIPELINE_V2_ENABLED", True)
+    def test_stage_payout_postgresql17_concurrency_receipts_immutability_and_ownership(self):
+        from uuid import uuid4
+
+        from models import (
+            OrcamentoModel,
+            PagamentoModel,
+            ProducaoModel,
+            RepasseEtapaModel,
+            RepasseEtapaPagamentoModel,
+            ServicoEtapaModel,
+            ServicoModel,
+            UsuarioModel,
+        )
+        from schemas.proposta import PropostaUpdate
+        from services import (
+            financial_service,
+            producao_etapa_service,
+            producao_liberacao_service,
+            proposta_service,
+            proposta_snapshot_service,
+        )
+        from sqlalchemy import func
+        from sqlalchemy.exc import DBAPIError
+
+        with self.SessionLocal() as db:
+            actor = db.get(UsuarioModel, self.ids["admin_id"])
+            catalog = db.scalar(select(ServicoModel).order_by(ServicoModel.id))
+            db.add(ServicoEtapaModel(servico_id=catalog.id, ordem=1, nome="Mixagem", peso_percentual=100))
+            budget = OrcamentoModel(nome_cliente="Sintetico repasse", email="synthetic@example.invalid", servico="Mix",
+                                    cliente_id=self.ids["client_a_id"])
+            db.add(budget)
+            db.commit()
+            proposal = proposta_service.criar_por_orcamento(db, budget.id)
+            proposta_service.atualizar(db, proposal.id, PropostaUpdate(politica_pagamento="integral",
+                produtor_id=self.ids["producer_a_id"], itens=[{"descricao": "Mix", "quantidade": 1,
+                    "valor_unitario": "1000.00", "servico_id": catalog.id}]))
+            proposta_snapshot_service.congelar(db, proposal, origem="envio")
+            proposal.status = "aceita"
+            db.flush()
+            charge = financial_service.criar_para_proposta(db, proposal, cliente_id=self.ids["client_a_id"])
+            financial_service.registrar_pagamento(db, charge.id, tipo="integral", valor="1000.00", status="aprovado")
+            producao_liberacao_service.avaliar_liberacao_producao(db, charge.id)
+            db.commit()
+            production = db.scalar(select(ProducaoModel).where(ProducaoModel.orcamento_id == budget.id))
+            production_id, charge_id = production.id, charge.id
+            stage = producao_etapa_service._etapas(db, production_id)[0]
+            for status in ("em_andamento", "concluida"):
+                producao_etapa_service.atualizar(db, production, stage.id, papel="admin", usuario=actor, status=status)
+            production.status = "finalizado"
+            db.commit()
+        admin = self._login("e2e-admin")
+        producer = self._login("e2e-producer-a")
+        other = self._login("e2e-producer-b")
+        client = self._login("e2e-client-a")
+        endpoint = f"/producoes/{production_id}/repasses-etapas"
+        for denied in (producer, client):
+            self.assertEqual(self.http.post(endpoint, headers=denied).status_code, 403)
+        barrier = Barrier(2)
+
+        def issue():
+            barrier.wait(timeout=10)
+            return self.http.post(endpoint, headers=admin, timeout=20)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            tasks = [pool.submit(issue) for _ in range(2)]
+            issued = [task.result(timeout=25) for task in tasks]
+        self.assertEqual([response.status_code for response in issued], [200, 200])
+        record = issued[0].json()[0]
+        self.assertEqual((record["bruto_centavos"], record["produtor_centavos"], record["mirai_centavos"]), (100000, 80000, 20000))
+        self.assertEqual(self.http.get("/portal/produtor/repasses-etapas", headers=other).json(), [])
+        own = self.http.get("/portal/produtor/repasses-etapas", headers=producer)
+        self.assertEqual(own.status_code, 200)
+        self.assertEqual(own.json()[0]["id"], record["id"])
+        self.assertEqual(own.headers["cache-control"], "private, no-store")
+        self.assertEqual(self.http.get(f'/portal/produtor/repasses-etapas/{record["id"]}/comprovante', headers=other).status_code, 404)
+        barrier = Barrier(2)
+        payment = {"referencia": "TRANSFERENCIA-SINTETICA", "idempotency_key": str(uuid4())}
+
+        def register_payment():
+            barrier.wait(timeout=10)
+            return self.http.post(f'{endpoint}/{record["id"]}/pagamento', headers=admin, json=payment, timeout=20)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            tasks = [pool.submit(register_payment) for _ in range(2)]
+            paid = [task.result(timeout=25) for task in tasks]
+        self.assertEqual([response.status_code for response in paid], [200, 200])
+        self.assertEqual(paid[0].json()[0]["estado"], "pago")
+        with self.SessionLocal() as db:
+            self.assertEqual(db.scalar(select(func.count()).select_from(RepasseEtapaModel)), 1)
+            self.assertEqual(db.scalar(select(func.count()).select_from(RepasseEtapaPagamentoModel)), 1)
+            self.assertEqual(db.scalar(select(func.count()).select_from(PagamentoModel).where(PagamentoModel.cobranca_id == charge_id)), 1)
+        for statement in ("UPDATE repasse_etapas SET produtor_centavos=1", "DELETE FROM repasse_etapas",
+                          "UPDATE repasse_etapa_pagamentos SET referencia='alterada'", "DELETE FROM repasse_etapa_pagamentos"):
+            with self.assertRaises(DBAPIError) as error, self.engine.begin() as connection:
+                connection.execute(text(statement))
+            self.assertEqual(error.exception.orig.pgcode, "P0001")
 
     @patch("core.config.settings.COMMERCIAL_PIPELINE_V2_ENABLED", True)
     def test_credit_allocation_postgresql17_conservation_and_duplicate_consumption(self):
