@@ -1431,7 +1431,9 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                                     cliente_id=self.ids["client_a_id"])
             target = OrcamentoModel(nome_cliente="Sintetico", email="synthetic@example.invalid", servico="Mix",
                                     cliente_id=self.ids["client_a_id"])
-            db.add_all([source, target])
+            other_target = OrcamentoModel(nome_cliente="Sintetico", email="synthetic@example.invalid", servico="Mix",
+                                          cliente_id=self.ids["client_a_id"])
+            db.add_all([source, target, other_target])
             db.commit()
             proposal = proposta_service.criar_por_orcamento(db, source.id)
             proposta_service.atualizar(db, proposal.id, PropostaUpdate(finalidade="creditos", politica_pagamento="integral",
@@ -1445,13 +1447,17 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             production = ProducaoModel(titulo="Uso sintetico", cliente="Sintetico", servico="Mix", orcamento_id=target.id,
                                        status="aguardando_inicio")
             db.add(production)
+            other_production = ProducaoModel(titulo="Outro uso sintetico", cliente="Sintetico", servico="Mix",
+                                             orcamento_id=other_target.id, status="aguardando_inicio")
+            db.add(other_production)
             db.commit()
             production_id = production.id
+            other_production_id = other_production.id
             lot_id = db.scalar(select(CreditoLoteModel.id))
 
         barrier = Barrier(2)
 
-        def reserve():
+        def reserve(target_id):
             with self.SessionLocal() as db:
                 db.execute(text("SET LOCAL lock_timeout='5s'"))
                 db.execute(text("SET LOCAL statement_timeout='10s'"))
@@ -1459,15 +1465,16 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 data = ReservaCreditos(lote_id=lot_id, quantidade="15", motivo="Reserva sintetica", idempotency_key=uuid4())
                 barrier.wait(timeout=10)
                 try:
-                    return credito_alocacao_service.reservar(db, production_id, data, actor=actor)["id"]
+                    result = credito_alocacao_service.reservar(db, target_id, data, actor=actor)
+                    return result["id"], target_id
                 except credito_alocacao_service.AlocacaoConflito:
                     return None
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            first, second = pool.submit(reserve), pool.submit(reserve)
+            first, second = pool.submit(reserve, production_id), pool.submit(reserve, other_production_id)
             results = [first.result(timeout=20), second.result(timeout=20)]
         self.assertEqual(sum(item is not None for item in results), 1)
-        allocation_id = next(item for item in results if item is not None)
+        allocation_id, production_id = next(item for item in results if item is not None)
         with self.SessionLocal() as db:
             balance = carteira_creditos_service.carteira(db, self.ids["client_a_id"])["saldos"][0]
             self.assertEqual(Decimal(balance["disponivel"]), Decimal(5))

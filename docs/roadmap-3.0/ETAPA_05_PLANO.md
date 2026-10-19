@@ -801,6 +801,12 @@ Antes do release conjunto: concluir a derivacao operacional das etapas/cotas/pol
 para a producao financiada por creditos e a elegibilidade por etapa da 5.13. Nenhuma
 carteira deve ser oferecida em producao antes desses controles e do gate completo.
 Rollback de codigo preserva dados; nao fazer downgrade destrutivo em producao.
+Depois de haver operacoes com creditos, o destino de rollback deve suportar essa
+origem financeira. Backends anteriores tratam producao sem cobranca como historica
+e nao podem ser usados depois dessas operacoes sem bloquear previamente o acesso
+ou a liberacao de entregas, em procedimento separado e autorizado. A versao antiga
+so e alternativa simples antes de existirem operacoes de creditos. O release deve
+registrar e testar uma versao minima compativel; isso permanece um gate de publicacao.
 
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
