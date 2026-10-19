@@ -1756,6 +1756,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         path = "/portal/produtor/portfolio/com-capa"
         contents = b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=")
         storage = InMemoryStorage(StorageScope.PUBLIC_IMAGE)
+        original_save = storage.save
         gate = Barrier(2)
 
         def submit():
@@ -1797,6 +1798,36 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 db.delete(db.get(PortfolioEnvioModel, item["id"]))
                 db.delete(project)
                 db.commit()
+            payload["request_id"] = str(uuid.uuid4())
+            entered, release = Event(), Event()
+
+            def slow_save(*args, **kwargs):
+                entered.set()
+                if not release.wait(timeout=15):
+                    raise RuntimeError("synthetic image upload timeout")
+                return original_save(*args, **kwargs)
+
+            save.side_effect = slow_save
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                upload = pool.submit(self.http.post, path, headers=producer, data={"dados": json.dumps(payload)},
+                    files={"imagem": ("cover.png", contents, "image/png")}, timeout=25)
+                try:
+                    self.assertTrue(entered.wait(timeout=8))
+                    linked = pool.submit(self.http.post, "/portal/produtor/portfolio", headers=producer,
+                        json={**payload, "link_capa": "https://example.test/link-cover.png"}, timeout=12)
+                    # The URL submission must finish while the image still holds its owner lock.
+                    linked_result = linked.result(timeout=10)
+                    self.assertEqual(linked_result.status_code, 201, linked_result.text)
+                finally:
+                    release.set()
+                uploaded = upload.result(timeout=20)
+            self.assertEqual(uploaded.status_code, 409, uploaded.text)
+            self.assertEqual(len(storage.objects), 1)
+            self.assertEqual(len(storage.deleted), 1)
+            with self.SessionLocal() as db:
+                self.assertEqual(db.query(PortfolioEnvioModel).count(), 1)
+                self.assertEqual(db.get(PortfolioEnvioModel, linked_result.json()["id"]).dados["link_capa"],
+                    "https://example.test/link-cover.png")
 
     def test_portfolio_submission_postgresql17_concurrent_review(self):
         from models import PortfolioEnvioModel, ProjetoModel, UsuarioModel

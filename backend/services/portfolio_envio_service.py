@@ -78,9 +78,9 @@ def enviar_com_capa(db, actor, payload, contents, content_type):
         raise HTTPException(422, str(error)) from None
     request_id, producao_id, data = _dados(db, actor, payload)
     data["_capa_sha256"] = hashlib.sha256(contents).hexdigest()
-    # Serialize retries before writing the image, including requests with the same UUID.
+    # NO KEY UPDATE serializes uploads without blocking FK references from the URL flow.
     current = db.scalar(select(UsuarioModel).where(UsuarioModel.id == actor.id)
-                        .with_for_update().execution_options(populate_existing=True))
+                        .with_for_update(key_share=True).execution_options(populate_existing=True))
     if current is None or not current.ativo or current.role != "produtor" or current.is_admin:
         raise HTTPException(403, "Acesso restrito ao produtor ativo.")
     existing = _existente(db, actor, request_id)
