@@ -417,10 +417,13 @@ async function carregarRepassesEtapas(id, revision) {
     try {
         const rows = await API.buscarRepassesEtapas(id);
         if (revision !== loadRevision || productionId !== id) return;
+        const current = () => {
+            if (revision !== loadRevision || productionId !== id) throw new Error("Reabra a producao antes de registrar o repasse.");
+        };
         slot.replaceChildren(stagePayoutsPanel(rows, {
             files,
-            onIssue: () => API.emitirRepassesEtapas(id),
-            onPay: (record, payload) => API.pagarRepasseEtapa(id, record, payload),
+            onIssue: () => { current(); return API.emitirRepassesEtapas(id); },
+            onPay: (record, payload) => { current(); return API.pagarRepasseEtapa(id, record, payload); },
             onReload: () => revision === loadRevision && productionId === id ? carregarOperacao(id) : undefined,
         }));
         if (legacy) legacy.hidden = rows.length > 0 && !payout;
@@ -433,6 +436,8 @@ async function carregarRepassesEtapas(id, revision) {
 export async function carregarOperacao(id) {
     const revision = ++loadRevision;
     productionId = id;
+    const stagePayouts = byId("prod_repasses_etapas");
+    if (stagePayouts) stagePayouts.textContent = "Carregando repasses...";
     carregarCreditos(id, revision);
     if (!byId("prod_arquivos") || !byId("prod_repasse_resumo")) return;
     byId("prod_arquivos").textContent = "Carregando arquivos...";

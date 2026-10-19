@@ -230,6 +230,7 @@ jobs:
                   node frontend/tests/service_credits.cjs
                   node frontend/tests/credit_allocations.cjs
                   node frontend/tests/stage_payouts.cjs
+                  node frontend/tests/producoes.cjs
                   node frontend/tests/portfolio_public.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
