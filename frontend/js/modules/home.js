@@ -7,9 +7,9 @@ export async function initHome() {
         return;
     }
 
-    await initMixComparison();
     try {
         await UI.renderizarPortfolio();
+        await initMixComparison();
     } catch {
         document.querySelectorAll("[data-carousel-direction]").forEach(button => { button.hidden = true; });
         const notice = document.createElement("p");
