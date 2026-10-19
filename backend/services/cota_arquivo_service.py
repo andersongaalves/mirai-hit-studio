@@ -232,6 +232,12 @@ def verificar(db: Session, producao_id: int, *, tipo: str, mime_type: str, taman
     nova_versao is None for a new logical file, or the version number being created.
     The production row must already be locked (travar_producao).
     """
+    from services import credito_alocacao_service, credito_producao_service
+
+    try:
+        credito_producao_service.validar_upload(db, producao_id, tipo)
+    except credito_alocacao_service.AlocacaoConflito as error:
+        raise CotaExcedida(str(error)) from None
     cota = db.scalar(select(ProducaoCotaArquivoModel).where(
         ProducaoCotaArquivoModel.producao_id == producao_id, ProducaoCotaArquivoModel.tipo == tipo,
     ))

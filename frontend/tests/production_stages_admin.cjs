@@ -193,6 +193,12 @@ const STAGES = {
         assert.equal(await producerStages.nth(1).locator('button, select').count(), 0);
 
         // 5.07: a stage-only producer has no overall status action in the production detail.
+        await page.evaluate(data => window.render({ ...data, etapas: [{ ...data.etapas[0],
+            status: 'pendente', acoes: [], bloqueio_creditos: 'Créditos reservados <img src=x>: confirme o uso.' }] }), STAGES);
+        assert.match(await page.locator('.production-stage').textContent(), /Créditos reservados <img src=x>/);
+        assert.equal(await page.locator('.production-stage img').count(), 0);
+        assert.equal(await page.getByRole('button', { name: 'Iniciar', exact: true }).count(), 0);
+
         const production = { id: 7, titulo: 'Faixa', cliente: 'Cliente', servico: 'Mix', status: 'aguardando_inicio', etapas: '[]',
             prazo_entrega: null, created_at: '2026-10-14T12:00:00Z', updated_at: '2026-10-14T12:00:00Z' };
         await page.evaluate(item => window.renderProducerDetail(item), { ...production, coordenador: false });

@@ -11,7 +11,6 @@ from models import (
     CreditoMovimentoModel,
     OrcamentoModel,
     ProducaoArquivoModel,
-    ProducaoEtapaModel,
     ProducaoModel,
     PropostaModel,
     RepasseProdutorModel,
@@ -72,6 +71,8 @@ def listar(db, producao_id):
 
 
 def contexto(db, producao_id):
+    from services import credito_producao_service
+
     production = db.get(ProducaoModel, producao_id)
     if production is None:
         raise AlocacaoNaoEncontrada("Producao nao encontrada.")
@@ -88,7 +89,7 @@ def contexto(db, producao_id):
     elif production.status != "aguardando_inicio":
         mensagem = "Novas reservas ficam disponiveis antes do inicio da producao."
     elif (db.scalar(select(ProducaoArquivoModel.id).where(ProducaoArquivoModel.producao_id == production.id)) is not None
-          or db.scalar(select(ProducaoEtapaModel.id).where(ProducaoEtapaModel.producao_id == production.id)) is not None
+          or credito_producao_service.tem_trabalho_previo(db, production)
           or db.scalar(select(RepasseProdutorModel.id).where(RepasseProdutorModel.producao_id == production.id)) is not None):
         mensagem = "Producao com trabalho ou repasse existente requer conciliacao antes de novas reservas."
     options = []
@@ -175,6 +176,7 @@ def _snapshot(lote, proposta):
     return deepcopy({"servico_id": lote.servico_id, "servico_nome": lote.servico_nome,
                      "contrato_sha256": lote.contrato_sha256, "proposta_id": proposta.id,
                      "linha": lote.linha, "componente": lote.componente, "unidade": lote.unidade,
+                     "quantidade_creditos_lote": str(lote.quantidade), "quantidade_planos_lote": linha["quantidade"],
                      "etapas": [e for e in linha.get("etapas", [])
                                 if not linha.get("componentes") or e.get("componente_indice") == lote.componente],
                      "politicas": parte.get("politicas"),
@@ -200,6 +202,8 @@ def _movimento(db, item, tipo, actor, motivo, key, digest, request_id):
 
 def reservar(db, producao_id, dados, *, actor, request_id=None, _request_digest=None):
     try:
+        from services import credito_producao_service
+
         _autor(actor)
         key = str(dados.idempotency_key)
         digest = _request_digest or _fingerprint("reserva", producao_id, actor.id, dados)
@@ -213,7 +217,7 @@ def reservar(db, producao_id, dados, *, actor, request_id=None, _request_digest=
         if production.status != "aguardando_inicio":
             raise AlocacaoConflito("Reserve creditos antes de iniciar a producao.")
         if (db.scalar(select(ProducaoArquivoModel.id).where(ProducaoArquivoModel.producao_id == production.id)) is not None
-                or db.scalar(select(ProducaoEtapaModel.id).where(ProducaoEtapaModel.producao_id == production.id)) is not None):
+                or credito_producao_service.tem_trabalho_previo(db, production)):
             raise AlocacaoConflito("Producao com trabalho existente requer conciliacao; nao substitua sua origem financeira.")
         uso = uso_lote(db, lote.id)
         restante = lote.quantidade - uso["reservado"] - uso["consumido"]
@@ -233,6 +237,7 @@ def reservar(db, producao_id, dados, *, actor, request_id=None, _request_digest=
         db.add(item)
         db.flush()
         _movimento(db, item, "reserva", actor, dados.motivo, key, digest, request_id)
+        credito_producao_service.sincronizar(db, production, item)
         result = _response(db, item)
         db.commit()
         return result
@@ -294,6 +299,8 @@ def criar_producao(db, cliente_id, dados, *, actor, request_id=None):
 
 def movimentar(db, producao_id, alocacao_id, dados, *, actor, request_id=None):
     try:
+        from services import credito_producao_service
+
         _autor(actor)
         item = db.get(CreditoAlocacaoModel, alocacao_id)
         if item is None or item.producao_id != producao_id:
@@ -315,12 +322,11 @@ def movimentar(db, producao_id, alocacao_id, dados, *, actor, request_id=None):
             expected = "reservada" if dados.tipo == "devolucao" else "consumida"
             if estado != expected or production.status != "aguardando_inicio":
                 raise AlocacaoConflito("Devolucao ou estorno exige estado compativel e producao sem execucao.")
-            if (db.scalar(select(ProducaoArquivoModel.id).where(ProducaoArquivoModel.producao_id == production.id,
-                    ProducaoArquivoModel.tipo.in_(["previa", "entrega"]))) is not None
-                    or db.scalar(select(ProducaoEtapaModel.id).where(ProducaoEtapaModel.producao_id == production.id,
-                         ProducaoEtapaModel.iniciada_em.is_not(None))) is not None):
+            if (db.scalar(select(ProducaoArquivoModel.id).where(ProducaoArquivoModel.producao_id == production.id)) is not None
+                    or credito_producao_service.tem_trabalho_previo(db, production)):
                 raise AlocacaoConflito("Trabalho executado exige conciliacao; nenhum credito foi devolvido.")
         _movimento(db, item, dados.tipo, actor, dados.motivo, key, digest, request_id)
+        credito_producao_service.sincronizar(db, production, item)
         result = _response(db, item)
         db.commit()
         return result

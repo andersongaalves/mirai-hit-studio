@@ -118,6 +118,7 @@ export function stagesPanel({
         );
         if (stage.administrativa) head.append(element("span", "production-stage__tag", "Administrativa"));
         item.append(head);
+        if (stage.bloqueio_creditos) item.append(element("p", "production-stage__meta", stage.bloqueio_creditos));
 
         const meta = [];
         // 5.10: the contract may hide stage deadlines from the client; say nothing then.

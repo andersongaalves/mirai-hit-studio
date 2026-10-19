@@ -808,6 +808,39 @@ ou a liberacao de entregas, em procedimento separado e autorizado. A versao anti
 so e alternativa simples antes de existirem operacoes de creditos. O release deve
 registrar e testar uma versao minima compativel; isso permanece um gate de publicacao.
 
+### Complemento operacional da 5.12
+
+A fundacao de reservas foi integrada pela PR #75 na main
+`ca3011965da42263c31fd6590ba39b614c0c4ae9`: Storage `39208124078`, Portals
+PostgreSQL 17 `39208124028` e Client Access migration `39208124057`: PASS.
+Nenhuma migration de creditos foi aplicada em producao.
+
+Complemento em validacao: cada reserva instancia etapas a partir do snapshot
+comprado, com os centavos exatos da parcela utilizada. Cotas e politicas derivam
+das unidades contratadas, agrupadas antes do arredondamento por producao, sem
+consultar o catalogo atual. Excecoes administrativas justificadas sao preservadas.
+Etapas reservadas nao podem executar; previas e entregas exigem consumo confirmado.
+Materiais podem chegar com reserva valida. Falta de financiamento ou devolucao
+integral bloqueia uploads, sem fallback para producao historica ilimitada.
+
+A nova tabela privada e imutavel `credito_etapas` vincula etapas a sua origem.
+Migration aditiva `b3d5f7a9c014`, pai `a1c3e5f7b902`, sem backfill, com RLS,
+revogacao anon/authenticated e FKs RESTRICT. Downgrade recusa historico existente.
+Devolucao preserva etapas e atribuicoes, mas retira etapas inativas dos portais,
+progresso, autorizacao por etapa e novas notificacoes. O coordenador conserva seu
+acesso proprio. Iniciar trabalho e estornar disputam o lock da mesma producao:
+apenas uma transicao pode vencer, sem apagar trabalho nem duplicar direitos.
+
+Contrato de creditos sem etapas nao pode ser vendido; propostas comuns continuam
+aceitando servicos sem etapas. Testes cobrem origem congelada, centavos, cotas,
+politicas, acesso, notificacoes, integridade, rollback atomico e downgrade seguro.
+O CI PostgreSQL 17 cobre tambem inicio versus estorno e mutacao SQL proibida.
+Nao presumir PASS remoto antes da execucao no SHA desta alteracao.
+
+Publicacao continua condicionada a 5.13 e a uma versao de rollback compativel com
+creditos e etapas inativas. Nao retornar a backends anteriores depois de operar
+creditos. Producao permanece no release 5.20/5.21, sem alteracao de V2 ou dados.
+
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
   enviam beats para revisao; aprovados, aparecem num catalogo visivel apenas para clientes

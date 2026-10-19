@@ -98,8 +98,11 @@ def buscar(db: Session, producao_id: int):
 def acesso_produtor(produtor_id: int):
     """Roadmap 5.07: a producer reaches a production as its coordinator (produtor_id)
     or as the responsible for at least one of its contract stages."""
+    from models.credito_etapa import etapa_ativa
+
     etapas = select(ProducaoEtapaModel.producao_id).where(
-        ProducaoEtapaModel.responsavel_usuario_id == produtor_id
+        ProducaoEtapaModel.responsavel_usuario_id == produtor_id,
+        etapa_ativa(ProducaoEtapaModel.id),
     )
     return or_(ProducaoModel.produtor_id == produtor_id, ProducaoModel.id.in_(etapas))
 
