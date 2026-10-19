@@ -88,6 +88,13 @@ def upgrade():
 
 
 def downgrade():
+    for table in ("credito_lancamentos", "credito_lotes", "credito_contrato_itens"):
+        if op.get_bind().execute(sa.text(f"SELECT 1 FROM {table} LIMIT 1")).first():
+            raise RuntimeError("credit_acquisition_history_prevents_downgrade")
+    if op.get_bind().execute(sa.text(
+        "SELECT 1 FROM propostas WHERE finalidade = 'creditos' OR contrato_creditos IS NOT NULL LIMIT 1"
+    )).first():
+        raise RuntimeError("credit_contract_history_prevents_downgrade")
     op.drop_table("credito_lancamentos")
     op.drop_index("ix_credito_lotes_cliente_id", table_name="credito_lotes")
     op.drop_table("credito_lotes")

@@ -36,6 +36,29 @@ class CreditoAlocacaoTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + EXTRA + ALLOC + textwrap.dedent(source))
 
+    def test_downgrade_preserves_returned_reservations_and_movements(self):
+        self.run_case('''
+            import importlib
+            migration=importlib.import_module('migrations.versions.a1c3e5f7b902_credito_alocacao')
+            with Session(engine) as db:
+                proposal,charge=contract(db)
+                pay(db,charge)
+                production=operation(db)
+                first=reserve(db,production,db.scalar(select(CreditoLoteModel)))
+                move(db,production,first,'devolucao')
+            with engine.connect() as connection, patch.object(migration.op,'get_bind',return_value=connection), \\
+                 patch.object(migration.op,'drop_table',side_effect=AssertionError('destructive DDL reached')):
+                try: migration.downgrade()
+                except RuntimeError as error:
+                    assert str(error)=='credit_allocation_history_prevents_downgrade'
+                else: raise AssertionError('returned allocation history removed')
+            with Session(engine) as db:
+                assert db.scalar(select(func.count()).select_from(CreditoAlocacaoModel))==1
+                assert db.scalar(select(func.count()).select_from(CreditoMovimentoModel))==2
+                assert db.scalar(select(func.count()).select_from(PagamentoModel))==1
+                assert Decimal(wallet.carteira(db,1)['saldos'][0]['disponivel'])==20
+        ''')
+
     def test_reserve_consume_and_return_preserve_units_and_history(self):
         self.run_case('''
             with Session(engine) as db:

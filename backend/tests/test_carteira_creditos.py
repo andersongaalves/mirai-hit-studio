@@ -45,6 +45,45 @@ class CarteiraCreditosTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + EXTRA + textwrap.dedent(source))
 
+    def test_downgrade_preserves_unpaid_credit_proposal_without_ledger(self):
+        self.run_case('''
+            import importlib
+            migration=importlib.import_module('migrations.versions.f9b1d3e5a780_carteira_creditos')
+            with Session(engine) as db:
+                proposal=service.criar_por_orcamento(db,1)
+                service.atualizar(db,proposal.id,PropostaUpdate(finalidade='creditos'))
+            with engine.connect() as connection, patch.object(migration.op,'get_bind',return_value=connection), \\
+                 patch.object(migration.op,'drop_table',side_effect=AssertionError('destructive DDL reached')):
+                try: migration.downgrade()
+                except RuntimeError as error:
+                    assert str(error)=='credit_contract_history_prevents_downgrade'
+                else: raise AssertionError('unpaid credit proposal removed')
+            with Session(engine) as db:
+                assert db.get(PropostaModel,proposal.id).finalidade=='creditos'
+                assert db.scalar(select(func.count()).select_from(CreditoLoteModel))==0
+                assert db.scalar(select(func.count()).select_from(PagamentoModel))==0
+        ''')
+
+    def test_downgrade_preserves_settled_credit_acquisition(self):
+        self.run_case('''
+            import importlib
+            migration=importlib.import_module('migrations.versions.f9b1d3e5a780_carteira_creditos')
+            with Session(engine) as db:
+                proposal,charge=contract(db)
+                pay(db,charge)
+            with engine.connect() as connection, patch.object(migration.op,'get_bind',return_value=connection), \\
+                 patch.object(migration.op,'drop_table',side_effect=AssertionError('destructive DDL reached')):
+                try: migration.downgrade()
+                except RuntimeError as error:
+                    assert str(error)=='credit_acquisition_history_prevents_downgrade'
+                else: raise AssertionError('acquisition ledger removed')
+            with Session(engine) as db:
+                assert db.scalar(select(func.count()).select_from(CreditoLoteModel))==1
+                assert db.scalar(select(func.count()).select_from(CreditoLancamentoModel))==1
+                assert db.scalar(select(func.count()).select_from(PagamentoModel))==1
+                assert wallet.carteira(db,1)['saldos'][0]['disponivel']=='20.000'
+        ''')
+
     def test_settled_acquisition_replays_and_catalog_changes(self):
         self.run_case('''
             with Session(engine) as db:

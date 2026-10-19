@@ -55,6 +55,9 @@ def upgrade():
 
 
 def downgrade():
+    for table in ("credito_movimentos", "credito_alocacoes"):
+        if op.get_bind().execute(sa.text(f"SELECT 1 FROM {table} LIMIT 1")).first():
+            raise RuntimeError("credit_allocation_history_prevents_downgrade")
     op.drop_table("credito_movimentos")
     op.drop_index("ix_credito_alocacoes_producao_id", table_name="credito_alocacoes")
     op.drop_index("ix_credito_alocacoes_lote_id", table_name="credito_alocacoes")

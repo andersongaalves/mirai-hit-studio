@@ -905,3 +905,24 @@ pendente. V2 continua no estado atual; nenhuma configuracao de producao e altera
   vezes enquanto o beat nao for vendido como exclusivo.
 - Compra pelo fluxo atual: o beat vira item de proposta, como um servico, com promocoes
   (5.17) e regras de pagamento existentes.
+
+## Recuperacao do release conjunto 5.11-5.13
+
+A PR #77 foi integrada na main `7f49d1cd13b9636b768a30960d3237047ec2c167`.
+Na feature `287e4213be92a7abee32d03811c9ccdcca042f54`, Storage `39256654773`
+e Portals PostgreSQL 17 `39256671149`: PASS, incluindo 18 testes PG17,
+concorrencia de repasses, comprovante privado, IDOR e imutabilidade SQL.
+O SHA da main exige sua propria validacao; nenhuma migration/deploy resulta do merge.
+
+Esta e a primeira arvore com aquisicao, consumo, etapas inativas e repasses por etapa
+em conjunto. Depois de operar creditos ou repasses, rollback de codigo so pode usar
+uma arvore que preserve esses controles. Antes de haver qualquer operacao nova,
+o release anterior ainda pode servir como retorno, mantendo o schema aditivo.
+Depois disso, usar versao compativel ou correcao progressiva; nao voltar a backends
+pre-creditos nem executar downgrade destrutivo.
+
+As migrations `f9b1d3e5a780` e `a1c3e5f7b902` tambem devem recusar downgrade
+quando houver propostas de creditos, aquisicoes, reservas ou movimentos, inclusive
+reservas ja devolvidas. As verificacoes ocorrem antes de qualquer DROP; nao mudam
+o upgrade nem reescrevem registros. Bancos descartaveis sem historico ainda permitem
+o ciclo downgrade/upgrade. Nenhuma revision nova e criada por essa protecao.
