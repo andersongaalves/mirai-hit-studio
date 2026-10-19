@@ -1491,6 +1491,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
     @patch("core.config.settings.COMMERCIAL_PIPELINE_V2_ENABLED", True)
     def test_credit_allocation_postgresql17_conservation_and_duplicate_consumption(self):
+        import importlib
         from uuid import uuid4
 
         from models import (
@@ -1657,6 +1658,25 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         self.assertEqual(first.status_code, 200, first.text)
         self.assertEqual(second.status_code, 200, second.text)
         self.assertEqual(first.json()["producao_id"], second.json()["producao_id"])
+        with self.engine.connect() as connection:
+            before = connection.execute(text("SELECT (SELECT count(*) FROM credito_lotes), "
+                "(SELECT count(*) FROM credito_alocacoes), (SELECT count(*) FROM credito_movimentos), "
+                "(SELECT count(*) FROM pagamentos)")).one()
+            for module, message in (
+                ("f9b1d3e5a780_carteira_creditos", "credit_acquisition_history_prevents_downgrade"),
+                ("a1c3e5f7b902_credito_alocacao", "credit_allocation_history_prevents_downgrade"),
+            ):
+                migration = importlib.import_module(f"migrations.versions.{module}")
+                with (
+                    patch.object(migration.op, "get_bind", return_value=connection),
+                    patch.object(migration.op, "drop_table", side_effect=AssertionError("destructive DDL reached")),
+                    self.assertRaisesRegex(RuntimeError, message),
+                ):
+                    migration.downgrade()
+            after = connection.execute(text("SELECT (SELECT count(*) FROM credito_lotes), "
+                "(SELECT count(*) FROM credito_alocacoes), (SELECT count(*) FROM credito_movimentos), "
+                "(SELECT count(*) FROM pagamentos)")).one()
+            self.assertEqual(before, after)
 
     def test_audio_tags_postgresql17_worker_claim_and_private_original(self):
         import io
