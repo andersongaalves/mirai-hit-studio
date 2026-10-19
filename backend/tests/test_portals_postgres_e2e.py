@@ -1444,12 +1444,12 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             proposal = proposta_service.criar_por_orcamento(db, budget.id)
             proposta_service.atualizar(db, proposal.id, PropostaUpdate(politica_pagamento="integral",
                 produtor_id=self.ids["producer_a_id"], itens=[{"descricao": "Mix", "quantidade": 1,
-                    "valor_unitario": "1000.00", "servico_id": catalog.id}]))
+                    "valor_unitario": "50000000.00", "servico_id": catalog.id}]))
             proposta_snapshot_service.congelar(db, proposal, origem="envio")
             proposal.status = "aceita"
             db.flush()
             charge = financial_service.criar_para_proposta(db, proposal, cliente_id=self.ids["client_a_id"])
-            financial_service.registrar_pagamento(db, charge.id, tipo="integral", valor="1000.00", status="aprovado")
+            financial_service.registrar_pagamento(db, charge.id, tipo="integral", valor="50000000.00", status="aprovado")
             producao_liberacao_service.avaliar_liberacao_producao(db, charge.id)
             db.commit()
             production = db.scalar(select(ProducaoModel).where(ProducaoModel.orcamento_id == budget.id))
@@ -1477,7 +1477,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             issued = [task.result(timeout=25) for task in tasks]
         self.assertEqual([response.status_code for response in issued], [200, 200])
         record = issued[0].json()[0]
-        self.assertEqual((record["bruto_centavos"], record["produtor_centavos"], record["mirai_centavos"]), (100000, 80000, 20000))
+        self.assertEqual((record["bruto_centavos"], record["produtor_centavos"], record["mirai_centavos"]), (5000000000, 4000000000, 1000000000))
         self.assertEqual(self.http.get("/portal/produtor/repasses-etapas", headers=other).json(), [])
         own = self.http.get("/portal/produtor/repasses-etapas", headers=producer)
         self.assertEqual(own.status_code, 200)

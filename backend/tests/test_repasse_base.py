@@ -13,6 +13,10 @@ class RepasseBaseTests(unittest.TestCase):
 
     def test_negotiated_price_and_stage_totals(self):
         self.run_case('''
+            from sqlalchemy import BigInteger
+            from models import RepasseEtapaModel
+            assert isinstance(RepasseEtapaModel.__table__.c.bruto_centavos.type,BigInteger)
+            assert isinstance(RepasseEtapaModel.__table__.c.produtor_centavos.type,BigInteger)
             assert parcelas_produtor([16000, 40000, 24000]) == [12800, 32000, 19200]
             assert parcelas_produtor([0, 20000, 50000, 30000]) == [0, 16000, 40000, 24000]
         ''')

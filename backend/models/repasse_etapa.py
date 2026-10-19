@@ -1,5 +1,6 @@
 from database import Base
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     Column,
     DateTime,
@@ -22,9 +23,9 @@ class RepasseEtapaModel(Base):
     etapa_id = Column(Integer, ForeignKey("producao_etapas.id", ondelete="RESTRICT"), nullable=False, unique=True)
     producao_id = Column(Integer, ForeignKey("producoes.id", ondelete="RESTRICT"), nullable=False, index=True)
     produtor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False, index=True)
-    bruto_centavos = Column(Integer, nullable=False)
-    produtor_centavos = Column(Integer, nullable=False)
-    mirai_centavos = Column(Integer, nullable=False)
+    bruto_centavos = Column(BigInteger, nullable=False)
+    produtor_centavos = Column(BigInteger, nullable=False)
+    mirai_centavos = Column(BigInteger, nullable=False)
     origem_sha256 = Column(String(64), nullable=False)
     autor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
