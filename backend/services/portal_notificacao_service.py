@@ -58,8 +58,10 @@ def _clientes(db, orcamento):
 def emitir_producao(db, producao, tipo, chave, *, clientes=True, produtores=False, arquivo_id=None, actor_id=None):
     usuarios = _clientes(db, db.get(OrcamentoModel, producao.orcamento_id)) if clientes else []
     if produtores:
+        from models.credito_etapa import etapa_ativa
+
         ids = set(db.scalars(select(ProducaoEtapaModel.responsavel_usuario_id).where(
-            ProducaoEtapaModel.producao_id == producao.id)))
+            ProducaoEtapaModel.producao_id == producao.id, etapa_ativa(ProducaoEtapaModel.id))))
         ids.add(producao.produtor_id)
         ids.discard(None)
         usuarios += list(db.scalars(select(UsuarioModel).where(

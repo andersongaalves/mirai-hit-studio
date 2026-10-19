@@ -91,11 +91,18 @@ def producao_para(db: Session, papel: str, producao_id: int, usuario) -> Produca
 
 
 def _etapas(db: Session, producao_id: int, *, bloquear=False):
+    from models.credito_etapa import etapa_ativa
+    from services import credito_producao_service
+
     query = select(ProducaoEtapaModel).where(ProducaoEtapaModel.producao_id == producao_id)
+    query = query.where(etapa_ativa(ProducaoEtapaModel.id))
     query = query.order_by(ProducaoEtapaModel.ordem)
     if bloquear:
         query = query.with_for_update().execution_options(populate_existing=True)
-    return list(db.scalars(query))
+    etapas = list(db.scalars(query))
+    for item in etapas:
+        item._credito_bloqueio = credito_producao_service.bloqueio_etapa(db, item)
+    return etapas
 
 
 def instanciar(db: Session, producao: ProducaoModel, proposta: PropostaModel, *, inicio=None) -> list:
@@ -233,6 +240,8 @@ def _revisao_bloqueada(etapa, papel, politicas) -> bool:
 
 
 def _acoes(etapas, etapa, papel, usuario=None, politicas=None):
+    if getattr(etapa, "_credito_bloqueio", None):
+        return []
     if papel == "admin":
         possiveis = TRANSICOES[etapa.status]
     elif papel == "produtor":
@@ -284,6 +293,7 @@ def _serializar(etapas, etapa, papel, usuario=None, nomes=None, politicas=None):
     }
     if papel in ("admin", "produtor"):
         dados.update(
+            bloqueio_creditos=getattr(etapa, "_credito_bloqueio", None),
             unidade=etapa.unidade,
             revisoes_incluidas=etapa.revisoes_incluidas,
             revisoes_usadas=etapa.revisoes_usadas or 0,
@@ -346,6 +356,9 @@ def listar(db: Session, producao: ProducaoModel, *, papel: str, usuario=None):
 def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str, usuario,
               status=None, status_atual=None, prazo=None, alterar_prazo=False, request_id=None):
     try:
+        # Serialize a work start with credit reversal before locking its stages.
+        db.scalar(select(ProducaoModel).where(ProducaoModel.id == producao.id).with_for_update()
+                  .execution_options(populate_existing=True))
         etapas = _etapas(db, producao.id, bloquear=True)
         etapa = next((item for item in etapas if item.id == etapa_id), None)
         if etapa is None:
@@ -358,6 +371,8 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
             if status_atual is not None and status_atual != etapa.status:
                 raise EtapaConflito("A etapa foi atualizada por outra pessoa. Recarregue antes de continuar.")
             if status != etapa.status:
+                if getattr(etapa, "_credito_bloqueio", None):
+                    raise EtapaConflito(etapa._credito_bloqueio)
                 permitidas = TRANSICOES if papel == "admin" else TRANSICOES_PRODUTOR
                 if status not in permitidas.get(etapa.status, set()):
                     raise EtapaInvalida(

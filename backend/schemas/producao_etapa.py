@@ -27,6 +27,7 @@ class EtapaProducaoResponse(BaseModel):
     revisoes_usadas: int | None = None  # 5.10
     prazo_dias: int | None = None
     acoes: list[StatusEtapa] | None = None
+    bloqueio_creditos: str | None = None
     # Admin-only contract economics.
     servico_id: int | None = None
     peso_percentual: Decimal | None = None

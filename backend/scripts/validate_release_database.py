@@ -26,6 +26,7 @@ CRITICAL_TABLES = {
 }
 RESTORE_DATA_TABLES = {"usuarios", "clientes", "propostas", "cobrancas", "pagamentos"}
 RLS_TABLES = {
+    "credito_etapas",
     "credito_alocacoes",
     "credito_movimentos",
     "credito_contrato_itens",

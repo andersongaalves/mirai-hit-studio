@@ -190,7 +190,11 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             PortfolioEnvioModel,
             PreviaTagJobModel,
             ProducaoArquivoModel,
+            ProducaoCotaArquivoModel,
+            ProducaoEtapaAtribuicaoModel,
+            ProducaoEtapaModel,
             ProducaoModel,
+            ProducaoPoliticaModel,
             ProjetoModel,
             PropostaModel,
             ProviderWebhookEventModel,
@@ -201,7 +205,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
         with cls.SessionLocal.begin() as db:
             # Only this loopback PostgreSQL-17 fixture may reset append-only synthetic records.
-            db.execute(text("TRUNCATE TABLE credito_movimentos, credito_alocacoes, credito_lancamentos, credito_lotes, credito_contrato_itens RESTART IDENTITY"))
+            db.execute(text("TRUNCATE TABLE credito_etapas, credito_movimentos, credito_alocacoes, credito_lancamentos, credito_lotes, credito_contrato_itens RESTART IDENTITY"))
             for model in (
                 AuditLogModel,
                 AuthRateLimitModel,
@@ -217,6 +221,10 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 ProviderWebhookEventModel,
                 PagamentoModel,
                 CobrancaModel,
+                ProducaoEtapaAtribuicaoModel,
+                ProducaoEtapaModel,
+                ProducaoCotaArquivoModel,
+                ProducaoPoliticaModel,
                 ProducaoModel,
                 PropostaModel,
                 OrcamentoModel,
@@ -1276,12 +1284,12 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                   AND relname IN ('audio_tag_perfis', 'audio_tags', 'portal_notificacoes',
                                   'portfolio_envios', 'previa_tag_jobs', 'projeto_creditos',
                                   'credito_lotes', 'credito_lancamentos', 'credito_contrato_itens',
-                                  'credito_alocacoes', 'credito_movimentos')
+                                  'credito_alocacoes', 'credito_movimentos', 'credito_etapas')
                 ORDER BY relname
             """)).all()
             self.assertEqual(rows, [('audio_tag_perfis', True), ('audio_tags', True),
                                     ('credito_alocacoes', True), ('credito_contrato_itens', True),
-                                    ('credito_lancamentos', True), ('credito_lotes', True), ('credito_movimentos', True), ('portal_notificacoes', True),
+                                    ('credito_etapas', True), ('credito_lancamentos', True), ('credito_lotes', True), ('credito_movimentos', True), ('portal_notificacoes', True),
                                     ('portfolio_envios', True), ('previa_tag_jobs', True), ('projeto_creditos', True)])
             for role in ('anon', 'authenticated'):
                 exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),
@@ -1304,6 +1312,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             OrcamentoModel,
             ProducaoModel,
             PropostaModel,
+            ServicoEtapaModel,
             ServicoModel,
         )
         from schemas.proposta import PropostaUpdate
@@ -1318,6 +1327,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         with self.SessionLocal() as db:
             catalog = db.scalar(select(ServicoModel).order_by(ServicoModel.id))
             catalog.credito_servico = {"unidade": "canal", "quantidade": "10"}
+            db.add(ServicoEtapaModel(servico_id=catalog.id, ordem=1, nome="Execucao", peso_percentual=100))
             budget = OrcamentoModel(nome_cliente="Sintetico creditos", email="synthetic@example.invalid",
                                     servico="Mix", cliente_id=self.ids["client_a_id"])
             db.add(budget)
@@ -1402,11 +1412,14 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
 
         from models import (
             CreditoAlocacaoModel,
+            CreditoEtapaModel,
             CreditoLoteModel,
             CreditoMovimentoModel,
             OrcamentoModel,
+            ProducaoEtapaModel,
             ProducaoModel,
             PropostaModel,
+            ServicoEtapaModel,
             ServicoModel,
             UsuarioModel,
         )
@@ -1416,6 +1429,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             carteira_creditos_service,
             credito_alocacao_service,
             financial_service,
+            producao_etapa_service,
             producao_liberacao_service,
             proposta_service,
             proposta_snapshot_service,
@@ -1427,6 +1441,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             actor_id = actor.id
             catalog = db.scalar(select(ServicoModel).order_by(ServicoModel.id))
             catalog.credito_servico = {"unidade": "canal", "quantidade": "20"}
+            db.add(ServicoEtapaModel(servico_id=catalog.id, ordem=1, nome="Execucao", peso_percentual=100))
             source = OrcamentoModel(nome_cliente="Sintetico", email="synthetic@example.invalid", servico="Mix",
                                     cliente_id=self.ids["client_a_id"])
             target = OrcamentoModel(nome_cliente="Sintetico", email="synthetic@example.invalid", servico="Mix",
@@ -1500,17 +1515,56 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             self.assertEqual(len(db.scalars(select(CreditoMovimentoModel)).all()), 2)
             balance = carteira_creditos_service.carteira(db, self.ids["client_a_id"])["saldos"][0]
             self.assertEqual(Decimal(balance["consumido"]), Decimal(15))
+            stage_id = db.scalar(select(CreditoEtapaModel.etapa_id).where(CreditoEtapaModel.alocacao_id == allocation_id))
+            self.assertIsNotNone(stage_id)
+            self.assertEqual(db.get(ProducaoEtapaModel, stage_id).valor, Decimal(750))
+            db.get(ProducaoModel, production_id).status = "aguardando_inicio"
+            db.commit()
+        barrier = Barrier(2)
+
+        def start_or_reverse(start):
+            with self.SessionLocal() as db:
+                db.execute(text("SET LOCAL lock_timeout='5s'"))
+                db.execute(text("SET LOCAL statement_timeout='10s'"))
+                actor = db.get(UsuarioModel, actor_id)
+                production = db.get(ProducaoModel, production_id)
+                barrier.wait(timeout=10)
+                try:
+                    if start:
+                        producao_etapa_service.atualizar(db, production, stage_id, papel="admin", usuario=actor,
+                            status="em_andamento", status_atual="pendente")
+                    else:
+                        credito_alocacao_service.movimentar(db, production_id, allocation_id,
+                            MovimentoCreditos(tipo="estorno", motivo="Estorno sintetico", idempotency_key=uuid4()), actor=actor)
+                    return True
+                except (credito_alocacao_service.AlocacaoConflito, producao_etapa_service.EtapaConflito,
+                        producao_etapa_service.EtapaNaoEncontrada):
+                    return False
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            start, reverse = pool.submit(start_or_reverse, True), pool.submit(start_or_reverse, False)
+            started, reversed_ = start.result(timeout=20), reverse.result(timeout=20)
+        self.assertEqual(int(started) + int(reversed_), 1)
+        expected_state = "consumida" if started else "estornada"
+        with self.SessionLocal() as db:
+            balance = carteira_creditos_service.carteira(db, self.ids["client_a_id"])["saldos"][0]
+            self.assertEqual(Decimal(balance["disponivel"]), Decimal(5) if started else Decimal(20))
+            self.assertEqual(credito_alocacao_service.listar(db, production_id)[0]["estado"], expected_state)
         for table in ("credito_alocacoes", "credito_movimentos"):
             for statement in (f"UPDATE {table} SET motivo='adulterado'", f"DELETE FROM {table}"):
                 with self.assertRaises(DBAPIError) as error, self.engine.begin() as connection:
                     connection.execute(text(statement))
                 self.assertEqual(error.exception.orig.pgcode, "P0001")
+        for statement in ("UPDATE credito_etapas SET ordem_no_item=99", "DELETE FROM credito_etapas"):
+            with self.assertRaises(DBAPIError) as error, self.engine.begin() as connection:
+                connection.execute(text(statement))
+            self.assertEqual(error.exception.orig.pgcode, "P0001")
         producer = self._login("e2e-producer-a")
         self.assertEqual(self.http.get(f"/producoes/{production_id}/creditos", headers=producer).status_code, 403)
         admin = self._login("e2e-admin")
         response = self.http.get(f"/producoes/{production_id}/creditos", headers=admin)
         self.assertEqual(response.status_code, 200, response.text)
-        self.assertEqual(response.json()[0]["estado"], "consumida")
+        self.assertEqual(response.json()[0]["estado"], expected_state)
         creation = {"lote_id": lot_id, "quantidade": "3", "motivo": "Producao sintetica",
                     "titulo": "Faixa sintetica", "produtor_id": self.ids["producer_a_id"], "idempotency_key": str(uuid4())}
         endpoint = f"/producoes/creditos/cliente/{self.ids['client_a_id']}"

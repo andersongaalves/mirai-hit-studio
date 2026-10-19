@@ -40,6 +40,10 @@ def construir_contrato(db, proposta, economico):
             if not linha["catalogo_disponivel"]:
                 raise ValueError()
             for parte in partes:
+                etapas = [e for e in linha.get("etapas", [])
+                          if not linha.get("componentes") or e.get("componente_indice") == parte["indice"]]
+                if not etapas:
+                    raise ValueError()
                 servico = db.get(ServicoModel, parte["servico_id"]) if parte["servico_id"] else None
                 if servico is None or not servico.credito_servico:
                     raise ValueError()
@@ -60,7 +64,7 @@ def construir_contrato(db, proposta, economico):
         return contrato.model_dump(mode="json")
     except (ValidationError, ValueError, TypeError, KeyError):
         raise proposta_service.PropostaInvalida(
-            "Defina unidades de credito validas para todos os servicos e um total contratado positivo."
+            "Defina unidades e etapas de credito validas para todos os servicos e um total contratado positivo."
         ) from None
 
 
