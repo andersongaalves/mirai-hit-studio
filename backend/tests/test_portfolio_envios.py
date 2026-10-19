@@ -6,10 +6,141 @@ import unittest
 import test_bootstrap_database as isolated
 from test_portfolio_creditos import SETUP
 
+COVERS = '''
+import base64, json
+from uuid import uuid4
+from models import PortfolioEnvioModel
+from services import portfolio_envio_service as submissions
+from services.storage.contracts import StorageScope, StorageUnavailable
+from services.storage.memory import InMemoryStorage
+image=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')
+storage=InMemoryStorage(StorageScope.PUBLIC_IMAGE)
+producer={'Authorization':'Bearer '+create_access_token({'sub':'beatmaker','av':0})}
+data={k:v for k,v in PAYLOAD.items() if k not in ('segmentos_json','destaque','link_capa')}
+data.update(request_id=str(uuid4()),autorizacao_artista=True,funcao='mixagem')
+path='/portal/produtor/portfolio/com-capa'
+async def send(client, payload=None, content=None, mime='image/png', auth=None):
+    return await client.post(path, headers=auth or producer,
+        data={'dados':json.dumps(data if payload is None else payload)},
+        files={'imagem':('cover.png',image if content is None else content,mime)})
+'''
+
 
 class PortfolioEnviosTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + textwrap.dedent(source))
+
+    def test_cover_upload_consent_ownership_validation_replay_and_publication(self):
+        self.run_case(COVERS + '''
+async def check():
+    with patch.object(submissions,'storage_for',return_value=storage) as factory:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app),base_url='http://test') as client:
+            assert (await client.post(path,data={'dados':json.dumps(data)},files={'imagem':('cover.png',image,'image/png')})).status_code==401
+            inactive={'Authorization':'Bearer '+create_access_token({'sub':'antigo','av':0})}
+            assert (await send(client,auth=inactive)).status_code in (401,403)
+            assert (await send(client,payload={**data,'autorizacao_artista':False})).status_code==422
+            assert (await send(client,payload={**data,'producao_id':999})).status_code==404
+            assert (await send(client,content=b'<svg/>',mime='image/svg+xml')).status_code==422
+            assert (await send(client,content=b'not a png')).status_code==422
+            assert (await send(client,content=b'x'*(10*1024*1024+1))).status_code==413
+            factory.assert_not_called()
+            created=await send(client)
+            assert created.status_code==201,created.text
+            item=created.json()
+            assert item['status']=='pendente' and item['projeto_id'] is None
+            assert item['dados']['link_capa'].startswith('https://storage.example.invalid/')
+            assert '_capa_sha256' not in item['dados']
+            assert len(storage.objects)==1 and storage.deleted==[]
+            assert (await client.get('/projetos')).json()==[]
+            repeated=await send(client)
+            assert repeated.status_code==201 and repeated.json()['id']==item['id']
+            assert factory.call_count==1
+            assert (await send(client,payload={**data,'titulo':'Outro titulo'})).status_code==409
+            assert (await send(client,content=image+b'different')).status_code==409
+            assert factory.call_count==1 and len(storage.objects)==1
+            json_reuse=await client.post('/portal/produtor/portfolio',headers=producer,
+                json={**data,'link_capa':item['dados']['link_capa']})
+            assert json_reuse.status_code==409
+            other={'Authorization':'Bearer '+create_access_token({'sub':'other','av':0})}
+            with Session(engine) as db:
+                db.add(UsuarioModel(id=4,username='other',role='produtor',ativo=True,is_admin=False,password_hash='unused'))
+                db.commit()
+            assert (await client.get('/portal/produtor/portfolio',headers=other)).json()==[]
+            decision={'versao':1,'decisao':'aprovar'}
+            review=f"/projetos/envios/{item['id']}/revisao"
+            assert (await client.post(review,json=decision,headers=producer)).status_code==403
+            approved=await client.post(review,json=decision,headers=headers)
+            assert approved.status_code==200,approved.text
+            public=(await client.get('/projetos')).json()
+            assert len(public)==1 and public[0]['link_capa']==item['dados']['link_capa']
+            assert '_capa_sha256' not in public[0]
+            assert len(storage.objects)==1 and storage.deleted==[]
+asyncio.run(check())
+        ''')
+
+    def test_cover_provider_failure_and_compensation_only_remove_new_object(self):
+        self.run_case(COVERS + '''
+old=storage.save(image,'image/png')
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app),base_url='http://test') as client:
+        with patch.object(submissions,'storage_for',return_value=storage), \\
+             patch.object(storage,'save',side_effect=StorageUnavailable('sanitized failure')):
+            failed=await send(client)
+            assert failed.status_code==503 and 'sanitized failure' not in failed.text
+        assert len(storage.objects)==1 and storage.deleted==[]
+        with patch.object(submissions,'storage_for',return_value=storage), \\
+             patch.object(submissions.audit_service,'record',side_effect=RuntimeError('private failure details')):
+            failed=await send(client)
+            assert failed.status_code==503 and 'private failure details' not in failed.text
+        assert len(storage.objects)==1 and len(storage.deleted)==1
+        assert old.reference.key in storage.objects and old.reference.key not in storage.deleted
+        with Session(engine) as db:
+            assert db.query(PortfolioEnvioModel).count()==0 and db.query(ProjetoModel).count()==0
+asyncio.run(check())
+        ''')
+
+    def test_cover_commit_acknowledgement_failure_preserves_durable_submission(self):
+        self.run_case(COVERS + '''
+commit=Session.commit
+def acknowledged_late(db):
+    commit(db)
+    raise RuntimeError('acknowledgement lost')
+async def check():
+    with patch.object(submissions,'storage_for',return_value=storage) as factory:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app),base_url='http://test') as client:
+            with patch.object(Session,'commit',acknowledged_late):
+                created=await send(client)
+            assert created.status_code==201,created.text
+            assert len(storage.objects)==1 and storage.deleted==[]
+            repeated=await send(client)
+            assert repeated.json()['id']==created.json()['id'] and factory.call_count==1
+            with Session(engine) as db:
+                assert db.query(PortfolioEnvioModel).count()==1
+asyncio.run(check())
+        ''')
+
+    def test_cover_unknown_commit_outcome_does_not_delete_potentially_linked_image(self):
+        self.run_case(COVERS + '''
+from sqlalchemy.exc import SQLAlchemyError
+commit=Session.commit
+def acknowledged_late(db):
+    commit(db)
+    raise RuntimeError('acknowledgement lost')
+async def check():
+    with patch.object(submissions,'storage_for',return_value=storage) as factory:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app),base_url='http://test') as client:
+            with patch.object(Session,'commit',acknowledged_late), \\
+                 patch.object(submissions,'_existente',side_effect=[None,SQLAlchemyError('database unavailable')]):
+                unknown=await send(client)
+            assert unknown.status_code==503,unknown.text
+            assert 'database unavailable' not in unknown.text
+            assert len(storage.objects)==1 and storage.deleted==[]
+            repeated=await send(client)
+            assert repeated.status_code==201 and factory.call_count==1
+            with Session(engine) as db:
+                assert db.query(PortfolioEnvioModel).count()==1
+asyncio.run(check())
+        ''')
 
     def test_private_submission_review_and_replay(self):
         self.run_case('''

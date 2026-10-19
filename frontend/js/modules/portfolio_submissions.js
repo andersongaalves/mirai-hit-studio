@@ -8,7 +8,9 @@ const node = (tag, text, className) => {
     return el;
 };
 async function request(path, payload) {
-    const response = await authFetch(path, payload ? { method: "POST", body: JSON.stringify(payload) } : {});
+    const response = await authFetch(path, payload ? {
+        method: "POST", body: payload instanceof FormData ? payload : JSON.stringify(payload),
+    } : {});
     const data = await response.json().catch(() => null);
     if (!response.ok) throw new Error(typeof data?.detail === "string" ? data.detail : "Não foi possível salvar o envio.");
     return data;
@@ -56,7 +58,48 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
             field(form, "artista", "Artista", { maxLength: 100 });
             field(form, "categoria", "Serviço realizado", { maxLength: 100 });
             field(form, "link_audio", "Link público da música", { type: "url", maxLength: 500 });
-            field(form, "link_capa", "Link público da capa", { type: "url", maxLength: 500 });
+            const coverMode = field(form, "capa_origem", "Capa", {
+                options: [["arquivo", "Enviar imagem"], ["link", "Usar link"]],
+            });
+            const coverFile = field(form, "imagem", "Imagem da capa", { type: "file" });
+            coverFile.accept = "image/jpeg,image/png,image/webp,image/avif";
+            const coverUrl = field(form, "link_capa", "Link público da capa", { type: "url", maxLength: 500 });
+            const coverPreview = node("img", "", "portfolio-cover-preview");
+            coverPreview.alt = "Prévia da capa selecionada";
+            coverPreview.hidden = true;
+            coverFile.closest("label").append(coverPreview);
+            const updateCoverMode = () => {
+                const useFile = coverMode.value === "arquivo";
+                coverFile.disabled = !useFile;
+                coverFile.required = useFile;
+                coverFile.closest("label").hidden = !useFile;
+                coverUrl.disabled = useFile;
+                coverUrl.required = !useFile;
+                coverUrl.closest("label").hidden = useFile;
+                coverPreview.hidden = !useFile || !coverPreview.hasAttribute("src");
+            };
+            coverMode.addEventListener("change", updateCoverMode);
+            coverFile.addEventListener("change", () => {
+                coverFile.setCustomValidity("");
+                coverPreview.removeAttribute("src");
+                coverPreview.hidden = true;
+                const file = coverFile.files[0];
+                if (!file) return;
+                if (!["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type)
+                    || !file.size || file.size > 10 * 1024 * 1024) {
+                    coverFile.setCustomValidity("Envie uma imagem JPG, PNG, WebP ou AVIF de até 10 MB.");
+                    coverFile.reportValidity();
+                    return;
+                }
+                const reader = new FileReader();
+                reader.addEventListener("load", () => {
+                    if (coverFile.files[0] !== file) return;
+                    coverPreview.src = reader.result;
+                    coverPreview.hidden = coverMode.value !== "arquivo";
+                });
+                reader.readAsDataURL(file);
+            });
+            updateCoverMode();
             field(form, "vertical", "Área", { options: [["artists", "Artistas"], ["creators", "Criadores"], ["media_games", "Media & Games"]] });
             field(form, "case_type", "Classificação", { options: [["client_case", "Caso de cliente"], ["demo", "Demo"], ["concept_project", "Projeto conceitual"], ["study", "Estudo"]] });
             field(form, "funcao", "Minha participação", { options: [["producao", "Produção"], ["mixagem", "Mixagem"], ["masterizacao", "Masterização"], ["composicao", "Composição"], ["gravacao", "Gravação"], ["beat", "Beat"]] });
@@ -72,11 +115,21 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                 submit.disabled = true;
                 message.textContent = "";
                 const data = Object.fromEntries(new FormData(form));
+                delete data.capa_origem;
+                delete data.imagem;
                 data.request_id = requestId;
                 data.producao_id = data.producao_id ? Number(data.producao_id) : null;
                 data.autorizacao_artista = consent.checked;
                 try {
-                    await request("/portal/produtor/portfolio", data);
+                    if (coverMode.value === "arquivo") {
+                        const multipart = new FormData();
+                        multipart.append("dados", JSON.stringify(data));
+                        multipart.append("imagem", coverFile.files[0]);
+                        await request("/portal/produtor/portfolio/com-capa", multipart);
+                    } else {
+                        await request("/portal/produtor/portfolio", data);
+                    }
+                    if (root.dataset.serial !== serial) return;
                     requestId = crypto.randomUUID();
                     await loadPortfolioSubmissions(root, { productions });
                     root.querySelector('[role="status"]').textContent = "Projeto enviado para revisão do estúdio.";
