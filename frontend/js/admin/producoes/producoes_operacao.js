@@ -5,6 +5,7 @@ import { stagesPanel } from "../../modules/production_stages.js";
 import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
 import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
 import { creditAllocationsPanel } from "../../modules/credit_allocations.js";
+import { stagePayoutsPanel } from "../../modules/stage_payouts.js";
 
 let productionId = null;
 let files = [];
@@ -407,9 +408,36 @@ async function carregarCreditos(id, revision) {
     }
 }
 
+async function carregarRepassesEtapas(id, revision) {
+    const slot = byId("prod_repasses_etapas");
+    if (!slot) return;
+    slot.textContent = "Carregando repasses...";
+    const legacy = byId("prod_repasse_legado");
+    if (legacy) legacy.hidden = false;
+    try {
+        const rows = await API.buscarRepassesEtapas(id);
+        if (revision !== loadRevision || productionId !== id) return;
+        const current = () => {
+            if (revision !== loadRevision || productionId !== id) throw new Error("Reabra a producao antes de registrar o repasse.");
+        };
+        slot.replaceChildren(stagePayoutsPanel(rows, {
+            files,
+            onIssue: () => { current(); return API.emitirRepassesEtapas(id); },
+            onPay: (record, payload) => { current(); return API.pagarRepasseEtapa(id, record, payload); },
+            onReload: () => revision === loadRevision && productionId === id ? carregarOperacao(id) : undefined,
+        }));
+        if (legacy) legacy.hidden = rows.length > 0 && !payout;
+    } catch (error) {
+        if (revision !== loadRevision || productionId !== id) return;
+        slot.textContent = error.message || "Repasses por etapa indisponiveis.";
+    }
+}
+
 export async function carregarOperacao(id) {
     const revision = ++loadRevision;
     productionId = id;
+    const stagePayouts = byId("prod_repasses_etapas");
+    if (stagePayouts) stagePayouts.textContent = "Carregando repasses...";
     carregarCreditos(id, revision);
     if (!byId("prod_arquivos") || !byId("prod_repasse_resumo")) return;
     byId("prod_arquivos").textContent = "Carregando arquivos...";
@@ -421,6 +449,7 @@ export async function carregarOperacao(id) {
         renderFiles();
         renderPayout();
         bindActions();
+        carregarRepassesEtapas(id, revision);
         carregarEtapas(id, revision);
         carregarCotas(id, revision);
         carregarPoliticas(id, revision);
@@ -443,4 +472,7 @@ export function limparOperacao() {
     byId("prod_cotas")?.replaceChildren();
     byId("prod_politicas")?.replaceChildren();
     byId("prod_creditos")?.replaceChildren();
+    byId("prod_repasses_etapas")?.replaceChildren();
+    const legacy = byId("prod_repasse_legado");
+    if (legacy) legacy.hidden = false;
 }

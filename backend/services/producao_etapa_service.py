@@ -16,9 +16,6 @@ only start or conclude after that one is concluded. Production status stays inde
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from crud import crud_producao
 from models import (
     OrcamentoModel,
@@ -26,9 +23,12 @@ from models import (
     ProducaoEtapaModel,
     ProducaoModel,
     PropostaModel,
+    RepasseEtapaModel,
     UsuarioModel,
 )
 from services import audit_service, politica_service
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 TRANSICOES = {
     "pendente": {"em_andamento"},
@@ -102,6 +102,7 @@ def _etapas(db: Session, producao_id: int, *, bloquear=False):
     etapas = list(db.scalars(query))
     for item in etapas:
         item._credito_bloqueio = credito_producao_service.bloqueio_etapa(db, item)
+        item._repasse_registrado = db.scalar(select(RepasseEtapaModel.id).where(RepasseEtapaModel.etapa_id == item.id)) is not None
     return etapas
 
 
@@ -240,7 +241,7 @@ def _revisao_bloqueada(etapa, papel, politicas) -> bool:
 
 
 def _acoes(etapas, etapa, papel, usuario=None, politicas=None):
-    if getattr(etapa, "_credito_bloqueio", None):
+    if getattr(etapa, "_credito_bloqueio", None) or getattr(etapa, "_repasse_registrado", False):
         return []
     if papel == "admin":
         possiveis = TRANSICOES[etapa.status]
@@ -371,6 +372,8 @@ def atualizar(db: Session, producao: ProducaoModel, etapa_id: int, *, papel: str
             if status_atual is not None and status_atual != etapa.status:
                 raise EtapaConflito("A etapa foi atualizada por outra pessoa. Recarregue antes de continuar.")
             if status != etapa.status:
+                if getattr(etapa, "_repasse_registrado", False):
+                    raise EtapaConflito("Etapa com obrigacao de repasse registrada exige conciliacao antes de reabrir.")
                 if getattr(etapa, "_credito_bloqueio", None):
                     raise EtapaConflito(etapa._credito_bloqueio)
                 permitidas = TRANSICOES if papel == "admin" else TRANSICOES_PRODUTOR
@@ -444,6 +447,8 @@ def atribuir(db: Session, producao: ProducaoModel, etapa_id: int, *, novo_usuari
     Concluded stages keep who executed them and cannot be reassigned until reopened.
     """
     try:
+        db.scalar(select(ProducaoModel).where(ProducaoModel.id == producao.id).with_for_update()
+                  .execution_options(populate_existing=True))
         etapas = _etapas(db, producao.id, bloquear=True)
         etapa = next((item for item in etapas if item.id == etapa_id), None)
         if etapa is None:

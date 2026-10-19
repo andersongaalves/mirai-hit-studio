@@ -96,7 +96,7 @@ def _audit_amount(db, actor, repasse, old_amount, request_id):
 
 
 def define(db, *, production_id, amount: Decimal, actor, request_id=None):
-    from models import CreditoAlocacaoModel
+    from models import CreditoAlocacaoModel, ProducaoEtapaModel
 
     production = db.query(ProducaoModel).filter(ProducaoModel.id == production_id).with_for_update().populate_existing().first()
     if production is None:
@@ -113,6 +113,8 @@ def define(db, *, production_id, amount: Decimal, actor, request_id=None):
         .first()
     )
     if repasse is None:
+        if db.query(ProducaoEtapaModel.id).filter(ProducaoEtapaModel.producao_id == production_id).first():
+            raise RepasseConflict("Producao com etapas contratuais exige repasse 80/20 por etapa.")
         repasse = RepasseProdutorModel(
             producao_id=production_id,
             produtor_id=producer.id,

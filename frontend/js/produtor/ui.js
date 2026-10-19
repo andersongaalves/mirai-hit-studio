@@ -80,7 +80,7 @@ export function renderDashboard(productions, payouts = []) {
     const metrics = document.getElementById("producer-metrics");
     metrics.replaceChildren();
     const summary = summarize(productions);
-    const receivable = payouts.filter(item => item.status !== "pago")
+    const receivable = payouts.filter(item => item.por_etapa ? item.status === "a_receber" : item.status !== "pago")
         .reduce((total, item) => total + Number(item.valor_combinado), 0);
     const paid = payouts.filter(item => item.status === "pago")
         .reduce((total, item) => total + Number(item.valor_combinado), 0);
@@ -298,13 +298,15 @@ export function renderPayouts(payouts, onReceipt) {
         card.append(
             element("h2", "", payout.producao_titulo || `Produção #${payout.producao_id}`),
             element("strong", "producer-payout__value", currency(payout.valor_combinado)),
-            element("span", `badge badge-${payout.status === "pago" ? "success" : "warning"}`, payout.status),
-            element("p", "", payout.pago_em ? `Pago em ${formatDate(payout.pago_em, true)}` : "Pagamento manual via Pix"),
+            element("span", `badge badge-${payout.status === "pago" ? "success" : "warning"}`,
+                ({ previsto: "Previsto", bloqueado: "Bloqueado", a_receber: "A receber", pago: "Pago" })[payout.status] || payout.status),
+            element("p", "", payout.pago_em ? `Pago em ${formatDate(payout.pago_em, true)}` : payout.bloqueio || "Pagamento manual via Pix"),
         );
+        if (payout.por_etapa) card.append(element("p", "", payout.etapa_nome));
         if (payout.comprovante_arquivo_id) {
             const button = element("button", "btn-outline", "Baixar comprovante");
             button.type = "button";
-            button.addEventListener("click", () => onReceipt(payout.id, button));
+            button.addEventListener("click", () => onReceipt(payout.id, button, Boolean(payout.por_etapa)));
             card.append(button);
         }
         root.append(card);

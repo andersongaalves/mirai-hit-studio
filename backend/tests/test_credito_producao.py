@@ -246,17 +246,18 @@ class CreditoProducaoTests(unittest.TestCase):
 
     def test_downgrade_refuses_to_remove_existing_credit_stage_history(self):
         self.run_case('''
-            from alembic import command
-            from scripts.bootstrap_database import migration_config
+            import importlib
             with Session(engine) as db:
                 proposal,charge=contract(db)
                 pay(db,charge)
                 production=operation(db)
                 reserve(db,production,db.scalar(select(CreditoLoteModel)))
-            try: command.downgrade(migration_config(),'a1c3e5f7b902')
-            except RuntimeError as error:
-                assert str(error)=='credit_stage_records_prevent_downgrade'
-            else: raise AssertionError('credit stage history was removed by downgrade')
+            migration=importlib.import_module('migrations.versions.b3d5f7a9c014_credito_etapas')
+            with engine.connect() as connection, patch.object(migration.op,'get_bind',return_value=connection):
+                try: migration.downgrade()
+                except RuntimeError as error:
+                    assert str(error)=='credit_stage_records_prevent_downgrade'
+                else: raise AssertionError('credit stage history was removed by downgrade')
             with Session(engine) as db:
                 assert db.scalar(select(func.count()).select_from(CreditoEtapaModel))==4
                 assert db.scalar(select(func.count()).select_from(CreditoAlocacaoModel))==1

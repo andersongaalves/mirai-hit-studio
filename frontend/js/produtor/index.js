@@ -188,10 +188,10 @@ async function downloadFile(id, button) {
     }
 }
 
-async function downloadReceipt(id, button) {
+async function downloadReceipt(id, button, byStage = false) {
     button.disabled = true;
     try {
-        saveBlob(await api.baixarComprovante(id));
+        saveBlob(await (byStage ? api.baixarComprovanteEtapa(id) : api.baixarComprovante(id)));
     } catch (error) {
         setAlert(error.message, true);
     } finally {
@@ -239,14 +239,17 @@ async function enterPortal() {
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));
     try {
         // Payouts are secondary: a failure there must not block production work.
-        const [loadedProductions, payoutResult, loadedSettings] = await Promise.all([
+        const [loadedProductions, payoutResult, loadedSettings, stageResult] = await Promise.all([
             api.listarProducoes(),
             api.listarRepasses().then(value => ({ ok: true, value }), () => ({ ok: false, value: [] })),
             // Settings are secondary: built-in defaults apply when they cannot be loaded.
             api.obterConfiguracao().then(data => data?.config || null).catch(() => null),
+            api.listarRepassesEtapas().then(value => ({ ok: true, value }), () => ({ ok: false, value: [] })),
         ]);
         productions = loadedProductions;
-        payouts = payoutResult.value;
+        payouts = [...payoutResult.value, ...stageResult.value.filter(row => row.bruto_centavos > 0).map(row => ({
+            ...row, valor_combinado: row.produtor_centavos / 100, status: row.estado, por_etapa: true,
+        }))];
         applySettings(loadedSettings);
         if (loadedSettings?.filtros && !filtersInitialized) {
             filters.status = loadedSettings.filtros.status_padrao;
@@ -256,7 +259,7 @@ async function enterPortal() {
         }
         filtersInitialized = true;
         renderRoute();
-        if (!payoutResult.ok) {
+        if (!payoutResult.ok || !stageResult.ok) {
             setAlert("Não foi possível carregar os repasses agora. As produções continuam disponíveis.", true);
         }
     } catch (error) {

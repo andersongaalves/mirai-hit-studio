@@ -1,0 +1,20 @@
+.stage-payout-row {
+    padding-block: var(--space-4);
+    border-top: var(--border-subtle);
+}
+
+.stage-payout-row h4 {
+    margin: 0 0 var(--space-2);
+    font-size: 16px;
+}
+
+.stage-payout-row p {
+    margin-block: var(--space-2);
+    overflow-wrap: anywhere;
+}
+
+.stage-payout-row input,
+.stage-payout-row select {
+    min-width: 0;
+    width: 100%;
+}

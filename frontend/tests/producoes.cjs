@@ -45,6 +45,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         origens: Object.fromEntries(Object.keys(contract).map(key => [key, 'contrato'])) };
     const policyCalls = [];
     let failStatus = false;
+    let holdFiles = false;
     const now = Date.now();
     const productions = [
         { id: 1, titulo: '<img src=x onerror=alert(1)>', cliente: '<script>cliente</script>', cliente_email: 'cliente@example.com', servico: 'Mixagem', status: 'aguardando_inicio', produtor_id: 1, produtor_nome: 'Ana', orcamento_id: 10, proposta_id: 20, proposta_numero: 'PROP-20', observacoes: '<b>nota</b>', etapas: '[]', prazo_entrega: new Date(now - 2 * 86400000).toISOString(), created_at: new Date(now - 10 * 86400000).toISOString(), updated_at: new Date().toISOString() },
@@ -97,7 +98,14 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
             return route.fulfill({ json: { producao_id: 1, cotas: quotas, formatos_disponiveis: ['audio/mpeg', 'audio/wav'] } });
         }
         const filesMatch = url.pathname.match(/^\/producoes\/(\d+)\/arquivos$/);
-        if (filesMatch && route.request().method() === 'GET') return route.fulfill({ json: files });
+        if (filesMatch && route.request().method() === 'GET') {
+            while (holdFiles && filesMatch[1] === '2') await new Promise(resolve => setTimeout(resolve, 10));
+            return route.fulfill({ json: files });
+        }
+        const stagePayoutMatch = url.pathname.match(/^\/producoes\/(\d+)\/repasses-etapas$/);
+        if (stagePayoutMatch) return route.fulfill({ json: [{ id: null, etapa_id: 89,
+            etapa_nome: `Mix ${stagePayoutMatch[1]}`, bruto_centavos: 50000, produtor_centavos: 40000,
+            mirai_centavos: 10000, estado: 'a_receber', bloqueio: null }] });
         const payoutMatch = url.pathname.match(/^\/producoes\/(\d+)\/repasse$/);
         if (payoutMatch && route.request().method() === 'GET') return route.fulfill({ json: payout });
         if (payoutMatch && route.request().method() === 'PUT') {
@@ -267,6 +275,26 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
             };
         });
         assert.deepEqual(deadline, { late: 'atrasado', lateHour: 'atrasado', near: 'proximo', done: 'finalizado' });
+
+        // A detached financial form must never mutate the production that was just left.
+        await page.evaluate(async () => {
+            const slot = document.createElement('div');
+            slot.id = 'prod_repasses_etapas';
+            document.querySelector('.producao-modal-content').append(slot);
+            window.operationModule = await import('/js/admin/producoes/producoes_operacao.js');
+            await operationModule.carregarOperacao(1);
+        });
+        await page.locator('#prod_repasses_etapas').getByText('Mix 1', { exact: true }).waitFor();
+        await page.evaluate(() => { window.oldIssue = document.querySelector('#prod_repasses_etapas button'); });
+        holdFiles = true;
+        await page.evaluate(() => { window.switchOperation = operationModule.carregarOperacao(2); });
+        assert.equal(await page.locator('#prod_repasses_etapas button').count(), 0);
+        await page.evaluate(() => oldIssue.click());
+        await page.waitForFunction(() => !oldIssue.disabled);
+        assert.equal(calls.filter(call => call === 'POST /producoes/1/repasses-etapas').length, 0);
+        holdFiles = false;
+        await page.evaluate(() => switchOperation);
+        await page.locator('#prod_repasses_etapas').getByText('Mix 2', { exact: true }).waitFor();
 
         failList = true;
         await page.evaluate(() => window.productionModule.carregarProducoes());
