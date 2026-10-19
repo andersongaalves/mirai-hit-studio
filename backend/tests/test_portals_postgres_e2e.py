@@ -1445,7 +1445,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             proposta_service.atualizar(db, proposal.id, PropostaUpdate(politica_pagamento="integral",
                 produtor_id=self.ids["producer_a_id"], itens=[{"descricao": "Mix", "quantidade": 1,
                     "valor_unitario": "50000000.00", "servico_id": catalog.id}]))
-            proposta_snapshot_service.congelar(db, proposal, origem="envio")
+            proposta_snapshot_service.congelar(db, proposal, origem="envio", estrito=True)
             proposal.status = "aceita"
             db.flush()
             charge = financial_service.criar_para_proposta(db, proposal, cliente_id=self.ids["client_a_id"])
