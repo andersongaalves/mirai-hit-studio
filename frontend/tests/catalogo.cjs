@@ -22,8 +22,8 @@ const PAGE = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 </div></fieldset>
 <textarea id="builder-destaques"></textarea>
 <div id="builder-preview-render"></div>
-<section id="categoria-avulso" hidden><div id="render-avulsos"></div></section>
-<section id="categoria-combo" hidden><div id="render-combos"></div></section>
+<section id="categoria-avulso" hidden><div id="render-avulsos" class="service-selector"></div></section>
+<section id="categoria-combo" hidden><div id="render-combos" class="service-selector"></div></section>
 </main>
 <script type="module">
 import * as Builder from '/js/admin/builder/builder.js';
@@ -37,6 +37,7 @@ window.readStructure = readStructure;
 window.limitLines = limitLines;
 window.renderCards = items => {
     state.configGlobal = { desconto: 10, mult_desconto: 0.9 };
+    window.catalogFixture = items;
     renderizarBotoes(items);
 };
 window.ready = true;
@@ -97,10 +98,11 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
         await page.evaluate(([legacy, comboData]) => window.renderCards([
             { id: 5, nome: 'Mixagem', subtitulo: '', valor_base: 60, aplica_desconto: false, categoria: 'avulso',
               prazo_estimado_dias: 7, estrutura_servico: legacy, cotas_arquivos: [{ max_arquivos: 999 }], politicas: { segredo: 'nao-expor' } },
+            { id: 6, nome: 'Masterização', subtitulo: '', valor_base: 50, aplica_desconto: false, categoria: 'avulso', estrutura_servico: legacy },
             { id: 3, nome: 'Launch antigo', subtitulo: '', valor_base: 220, aplica_desconto: true, categoria: 'combo', estrutura_servico: legacy },
             { id: 'c1', tipo: 'combo', nome: 'Launch', subtitulo: 'Tudo pronto', valor_base: 220, aplica_desconto: true, parametros: 'duracao', combo: comboData },
         ]), [LEGACY, combo]);
-        assert.equal(await page.locator('#render-avulsos .radio-card').count(), 1);
+        assert.equal(await page.locator('#render-avulsos .radio-card').count(), 2);
         assert.equal(await page.locator('#render-combos .radio-card').count(), 1);
         assert.equal(await page.locator('#categoria-combo').isHidden(), false);
         assert.equal(await page.locator('text=Launch antigo').count(), 0);
@@ -110,23 +112,55 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
         assert.match(await comboCard.textContent(), /R\$\s198,00.*-10% OFF/s);
         assert.equal(await comboCard.locator('i, b').count(), 0);
         assert.match(await page.locator('#render-avulsos').textContent(), /Até 5 faixas.*Atendimento/s);
-        const singleCard = page.locator('#render-avulsos .catalog-card');
+        const singleCard = page.locator('#render-avulsos .catalog-card').first();
+        const otherCard = page.locator('#render-avulsos .catalog-card').nth(1);
         assert.equal(await singleCard.locator('.service-price').isVisible(), true);
         assert.equal(await comboCard.locator('.service-price').isVisible(), true);
-        assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+        assert.equal(await singleCard.locator('.service-details').isVisible(), false);
+        assert.equal(await comboCard.locator('.service-details').isVisible(), false);
         assert.match(await singleCard.textContent(), /Prazo estimado: 7 dias/);
         assert.match(await comboCard.textContent(), /Prazo a combinar na proposta/);
         assert.doesNotMatch(await page.locator('#render-avulsos').textContent(), /999|nao-expor|peso_percentual/);
         await singleCard.locator('label').click();
         assert.equal(await singleCard.locator('input').isChecked(), true);
         assert.equal(await singleCard.locator('.service-selected').isVisible(), true);
+        assert.equal(await singleCard.locator('.service-details').isVisible(), true);
         await singleCard.locator('input').press('ArrowRight');
+        assert.equal(await otherCard.locator('input').isChecked(), true);
+        assert.equal(await singleCard.locator('.service-details').isVisible(), false);
+        assert.equal(await otherCard.locator('.service-details').isVisible(), true);
+        await otherCard.locator('input').press('ArrowRight');
         assert.equal(await comboCard.locator('input').isChecked(), true);
         assert.equal(await singleCard.locator('.service-selected').isVisible(), false);
-        assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+        assert.equal(await singleCard.locator('.service-details').isVisible(), false);
+        assert.equal(await otherCard.locator('.service-details').isVisible(), false);
+        assert.equal(await comboCard.locator('.service-details').isVisible(), true);
 
         for (const width of [390, 1280]) {
             await page.setViewportSize({ width, height: 900 });
+            await page.evaluate(() => window.renderCards(window.catalogFixture));
+            assert.equal(await page.locator('.catalog-card input:checked').count(), 0);
+            assert.equal(await page.locator('.service-details:visible').count(), 0);
+            const compactHeight = (await singleCard.boundingBox()).height;
+            const otherHeight = (await otherCard.boundingBox()).height;
+            if (process.env.VISUAL_OUTPUT) await page.locator('#categoria-avulso').screenshot({
+                path: path.join(process.env.VISUAL_OUTPUT, `cards-compact-${width}.png`), animations: 'disabled',
+            });
+            await singleCard.locator('label').click();
+            assert.equal(await singleCard.locator('input').isChecked(), true);
+            assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+            assert.ok((await singleCard.boundingBox()).height > compactHeight);
+            assert.equal((await otherCard.boundingBox()).height, otherHeight, 'unselected card must stay compact');
+            if (process.env.VISUAL_OUTPUT) await page.locator('#categoria-avulso').screenshot({
+                path: path.join(process.env.VISUAL_OUTPUT, `cards-expanded-${width}.png`), animations: 'disabled',
+            });
+            await otherCard.locator('label').click();
+            assert.equal(await singleCard.locator('.service-details').isVisible(), false);
+            assert.equal((await singleCard.boundingBox()).height, compactHeight);
+            assert.equal(await otherCard.locator('.service-details').isVisible(), true);
+            await comboCard.locator('label').click();
+            assert.equal(await otherCard.locator('.service-details').isVisible(), false);
+            assert.equal(await comboCard.locator('.service-details').isVisible(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false,
                 `catalog layout overflows at ${width}`);
             if (process.env.VISUAL_OUTPUT) await page.screenshot({
@@ -134,7 +168,7 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             });
         }
         assert.deepEqual(errors, []);
-        console.log('PASS: typed limits (legacy conversion, editor state, preview) and public cards for services and combos.');
+        console.log('PASS: catalog, prices and compact cards expanding on selection (mouse/keyboard, desktop/mobile).');
     } finally {
         await browser.close();
     }

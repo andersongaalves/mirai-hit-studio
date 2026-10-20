@@ -108,7 +108,7 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-4);
-    align-items: stretch;
+    align-items: start;
 }
 
 .radio-card { position: relative; min-width: 0; display: flex; }
@@ -143,12 +143,13 @@
 
 .service-title { color: var(--color-text-primary); font-family: var(--font-subtitulos); font-size: 1.15rem; font-weight: 700; }
 .service-subtitle { margin-top: var(--space-2); color: var(--color-text-secondary); }
-.service-details { display: block; width: 100%; margin-top: var(--space-4); }
+.service-details { display: none; width: 100%; margin-top: var(--space-4); }
+.radio-card input:checked + label .service-details { display: block; }
 .service-description { color: var(--color-text-secondary); }
 .service-price { margin: var(--space-4) 0; padding: var(--space-3) 0; border-block: var(--border-subtle); }
 .service-price strong { display: block; color: var(--color-accent); font-family: var(--font-valores); font-size: 1.5rem; }
-.service-selected { margin-top: auto; padding-top: var(--space-4); color: var(--color-success); font-weight: 700; visibility: hidden; }
-.radio-card input:checked + label .service-selected { visibility: visible; }
+.service-selected { display: none; margin-top: auto; padding-top: var(--space-4); color: var(--color-success); font-weight: 700; }
+.radio-card input:checked + label .service-selected { display: block; }
 .catalog-card__kind { color: var(--color-accent); font-size: var(--font-size-small); margin-bottom: var(--space-2); }
 .catalog-card__includes { color: var(--color-text-primary); }
 .catalog-card__deadline { margin: 0; color: var(--color-text-secondary); }

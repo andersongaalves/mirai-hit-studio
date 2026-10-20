@@ -94,7 +94,7 @@ export function obterCapaInteligente(linkAudio, linkCapa) {
     const match = safeURL(linkAudio).match(ytRegex);
     if (match && match[1])
         return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
-    return "img/logo-principal.png";
+    return new URL("../img/logo-principal.webp", import.meta.url).href;
 }
 
 // Renderiza o Carrossel da Home Page
@@ -117,30 +117,19 @@ export async function renderizarPortfolio() {
     }
     controls.forEach(button => { button.hidden = false; });
 
-    let htmlLote = `<div class="carousel-lote" style="display: flex; gap: 20px; flex-shrink: 0;">`;
-
-    listaHits.forEach((p) => {
+    track.innerHTML = listaHits.map((p) => {
         const capa = obterCapaInteligente(p.link_audio, p.link_capa);
-        htmlLote += `
-            <a href="${escapeHtml(safeURL(p.link_audio))}" target="_blank" rel="noopener noreferrer" class="scrolling-card glass-card" data-analytics-listen data-project-id="${escapeHtml(p.id)}">
-                <img src="${escapeHtml(capa)}" alt="Capa de ${escapeHtml(p.titulo)}" width="300" height="180" loading="lazy" decoding="async" style="background-color: #0b0f19;">
-                <div class="scrolling-info">
-                    <span class="tag" style="background: var(--cor-roxo); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">${escapeHtml(p.categoria)}</span>
-                    <h3 style="color: var(--cor-ciano); margin: 10px 0 5px 0;">${escapeHtml(p.titulo)}</h3>
-                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 15px;">${escapeHtml(p.artista)}</p>
-                    <p style="color: #fff; text-decoration: none; font-weight: bold;">▶ Ouvir Faixa</p>
-                </div>
-            </a>`;
-    });
-    htmlLote += `</div>`;
-
-    // Duplica o HTML para criar o efeito de carrossel infinito
-    track.innerHTML = htmlLote + htmlLote + htmlLote;
-
-    setTimeout(() => {
-        if (track.children[0])
-            track.scrollLeft = track.children[0].offsetWidth + 20;
-    }, 100);
+        const url = safeURL(p.link_audio);
+        return `<article class="scrolling-card home-hit" data-project-id="${escapeHtml(p.id)}">
+            <img class="home-hit__cover" src="${escapeHtml(capa)}" alt="Capa de ${escapeHtml(p.titulo)}" width="640" height="360" loading="lazy" decoding="async">
+            <div class="home-hit__body">
+                ${p.categoria ? `<span class="home-hit__category">${escapeHtml(p.categoria)}</span>` : ""}
+                <h3>${escapeHtml(p.titulo)}</h3>
+                <p class="home-hit__artist">${escapeHtml(p.artista)}</p>
+                ${url ? `<a class="home-hit__release" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" data-analytics-listen data-project-id="${escapeHtml(p.id)}">Ouvir lançamento <span aria-hidden="true">↗</span></a>` : ""}
+            </div>
+        </article>`;
+    }).join("");
 }
 
 export function initHeroParallax() {

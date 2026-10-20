@@ -232,6 +232,8 @@ jobs:
                   node frontend/tests/stage_payouts.cjs
                   node frontend/tests/producoes.cjs
                   node frontend/tests/portfolio_public.cjs
+                  node frontend/tests/home_artists.cjs
+                  node frontend/tests/home_mix_comparison.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
                   node frontend/tests/checkout.cjs

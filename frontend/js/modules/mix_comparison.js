@@ -1,225 +1,220 @@
 import { getMixComparisons } from "../api.js";
 import { safeURL } from "../utils/security.js";
 
-const VERSION_LABELS = {
-    before: "Antes",
-    after: "Depois",
-};
+const VERSION_LABELS = { before: "Antes", after: "Depois" };
+let disposePlayers = () => {};
 
 function formatTime(value) {
     if (!Number.isFinite(value) || value < 0) return "0:00";
-    const minutes = Math.floor(value / 60);
-    const seconds = Math.floor(value % 60).toString().padStart(2, "0");
-    return `${minutes}:${seconds}`;
+    return `${Math.floor(value / 60)}:${Math.floor(value % 60).toString().padStart(2, "0")}`;
 }
 
 function validProject(project) {
-    return project
-        && safeURL(project.audio_before_url)
-        && safeURL(project.audio_after_url);
+    return project && Number.isInteger(Number(project.id)) && Number(project.id) > 0
+        && safeURL(project.audio_before_url) && safeURL(project.audio_after_url);
 }
 
-export async function initMixComparison() {
-    const section = document.getElementById("mix-comparison");
-    if (!section) return;
-
-    let projects;
-    try {
-        projects = (await getMixComparisons()).filter(validProject).slice(0, 4);
-    } catch (error) {
-        console.warn("Não foi possível carregar as comparações de mixagem.", error);
-        return;
+function mountPlayer(card, project, activate, ownsPlayback) {
+    const root = document.createElement("div");
+    root.className = "hit-mix";
+    root.setAttribute("role", "group");
+    root.setAttribute("aria-label", `Comparar mixagem de ${project.titulo}`);
+    root.innerHTML = `
+        <div class="hit-mix__versions" role="group" aria-label="Versão da mixagem">
+            <button type="button" data-mix-version="before" aria-pressed="true">Antes</button>
+            <button type="button" data-mix-version="after" aria-pressed="false">Depois</button>
+        </div>
+        <div class="hit-mix__wave">
+            <div class="hit-mix__bars" aria-hidden="true"></div>
+            <input type="range" data-mix-progress min="0" max="0" step="0.01" value="0" aria-label="Posição da reprodução">
+        </div>
+        <div class="hit-mix__controls">
+            <button type="button" class="hit-mix__play" data-mix-play aria-label="Reproduzir versão Antes" title="Reproduzir versão Antes"></button>
+            <div class="hit-mix__times" aria-hidden="true"><span data-mix-current>0:00</span><span>/</span><span data-mix-duration>0:00</span></div>
+            <div class="hit-mix__volume">
+                <button type="button" data-mix-mute aria-label="Silenciar áudio" aria-pressed="false" title="Silenciar áudio"></button>
+                <input type="range" data-mix-volume min="0" max="1" step="0.05" value="1" aria-label="Volume">
+            </div>
+        </div>
+        <p class="hit-mix__status sr-only" data-mix-status aria-live="polite"></p>
+        <audio data-mix-audio="before" preload="metadata"></audio>
+        <audio data-mix-audio="after" preload="metadata"></audio>`;
+    card.append(root);
+    const before = root.querySelector('[data-mix-audio="before"]');
+    const after = root.querySelector('[data-mix-audio="after"]');
+    const play = root.querySelector("[data-mix-play]");
+    const progress = root.querySelector("[data-mix-progress]");
+    const status = root.querySelector("[data-mix-status]");
+    const volume = root.querySelector("[data-mix-volume]");
+    const mute = root.querySelector("[data-mix-mute]");
+    const versions = root.querySelectorAll("[data-mix-version]");
+    const bars = root.querySelector(".hit-mix__bars");
+    // A stylized transport indicator, not a decoded amplitude waveform.
+    const heights = [24, 56, 92, 42, 70, 100, 52, 78, 36, 64, 94, 46];
+    for (let index = 0; index < 36; index += 1) {
+        const bar = document.createElement("span");
+        bar.style.height = `${heights[index % heights.length]}%`;
+        bars.append(bar);
     }
+    let version = "before";
+    let requestId = 0;
+    let wantsPlayback = false;
+    let previousVolume = 1;
+    const activeAudio = () => version === "before" ? before : after;
+    const inactiveAudio = () => version === "before" ? after : before;
 
-    if (!projects.length) return;
-
-    const elements = {
-        title: document.getElementById("mix-title"),
-        artist: document.getElementById("mix-artist"),
-        position: document.getElementById("mix-position"),
-        coverWrap: document.getElementById("mix-cover-wrap"),
-        cover: document.getElementById("mix-cover"),
-        externalLink: document.getElementById("mix-external-link"),
-        selector: document.getElementById("mix-project-selector"),
-        play: document.getElementById("mix-play"),
-        progress: document.getElementById("mix-progress"),
-        currentTime: document.getElementById("mix-current-time"),
-        duration: document.getElementById("mix-duration"),
-        status: document.getElementById("mix-status"),
-        heroLink: document.getElementById("mix-hero-link"),
-        before: document.getElementById("mix-audio-before"),
-        after: document.getElementById("mix-audio-after"),
-        versionButtons: [...section.querySelectorAll("[data-mix-version]")],
-    };
-
-    let selectedIndex = 0;
-    let activeVersion = "before";
-    let playRequest = 0;
-
-    const activeAudio = () => elements[activeVersion];
-    const inactiveAudio = () => elements[activeVersion === "before" ? "after" : "before"];
-
-    function setTime(audio, value) {
-        try {
-            audio.currentTime = value;
-            delete audio.dataset.pendingTime;
-        } catch {
-            audio.dataset.pendingTime = String(value);
-        }
+    function seek(audio, value) {
+        const time = Math.max(0, Math.min(value, Number.isFinite(audio.duration) ? audio.duration : value));
+        if (audio.readyState < 1) audio.dataset.pendingTime = String(time);
+        try { audio.currentTime = time; }
+        catch { audio.dataset.pendingTime = String(time); }
     }
 
     function updateTimeline() {
         const audio = activeAudio();
         const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
         const current = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
-        elements.progress.max = String(duration);
-        elements.progress.value = String(Math.min(current, duration || current));
-        elements.currentTime.textContent = formatTime(current);
-        elements.duration.textContent = formatTime(duration);
+        progress.max = String(duration);
+        progress.value = String(Math.min(current, duration || current));
+        root.querySelector("[data-mix-current]").textContent = formatTime(current);
+        root.querySelector("[data-mix-duration]").textContent = formatTime(duration);
+        [...bars.children].forEach((bar, index) => bar.classList.toggle("is-played", duration > 0 && index / 36 < current / duration));
     }
 
     function updatePlayButton() {
-        const isPlaying = !activeAudio().paused && !activeAudio().ended;
-        elements.play.querySelector("span").textContent = isPlaying ? "Ⅱ" : "▶";
-        elements.play.setAttribute(
-            "aria-label",
-            `${isPlaying ? "Pausar" : "Reproduzir"} versão ${VERSION_LABELS[activeVersion]}`,
-        );
+        root.classList.toggle("is-playing", wantsPlayback);
+        const label = `${wantsPlayback ? "Pausar" : "Reproduzir"} versão ${VERSION_LABELS[version]}`;
+        play.setAttribute("aria-label", label);
+        play.title = label;
     }
 
-    function announce(message) {
-        elements.status.textContent = message;
+    function pause() {
+        requestId += 1;
+        wantsPlayback = false;
+        before.pause();
+        after.pause();
+        updatePlayButton();
     }
 
+    const controller = { pause };
     async function playActive() {
-        const request = ++playRequest;
+        const request = ++requestId;
         const audio = activeAudio();
+        wantsPlayback = true;
+        status.textContent = "";
+        activate(controller);
         inactiveAudio().pause();
+        updatePlayButton();
         try {
             await audio.play();
-            if (request !== playRequest || audio !== activeAudio()) audio.pause();
+            if (audio !== activeAudio() || !wantsPlayback || !ownsPlayback(controller)) audio.pause();
         } catch {
-            announce("Não foi possível reproduzir este áudio.");
+            if (request === requestId) {
+                wantsPlayback = false;
+                status.textContent = "Não foi possível reproduzir este áudio.";
+            }
         }
         updatePlayButton();
     }
 
-    function pauseAll() {
-        playRequest += 1;
-        elements.before.pause();
-        elements.after.pause();
-        updatePlayButton();
-    }
-
-    function setVersion(version) {
-        if (version === activeVersion) return;
-        const previous = activeAudio();
-        const wasPlaying = !previous.paused && !previous.ended;
-        const time = previous.currentTime || 0;
-        playRequest += 1;
-        previous.pause();
-        activeVersion = version;
-        setTime(activeAudio(), time);
-        elements.versionButtons.forEach(button => {
-            button.setAttribute("aria-pressed", String(button.dataset.mixVersion === version));
-        });
+    versions.forEach(button => button.addEventListener("click", () => {
+        if (button.dataset.mixVersion === version) return;
+        const resume = wantsPlayback;
+        const time = activeAudio().currentTime || 0;
+        requestId += 1;
+        activeAudio().pause();
+        version = button.dataset.mixVersion;
+        seek(activeAudio(), time);
+        versions.forEach(item => item.setAttribute("aria-pressed", String(item.dataset.mixVersion === version)));
         updateTimeline();
         updatePlayButton();
-        announce(`Versão ${VERSION_LABELS[version]} selecionada.`);
-        if (wasPlaying) void playActive();
-    }
-
-    function renderSelector() {
-        elements.selector.replaceChildren();
-        projects.forEach((project, index) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.dataset.projectIndex = String(index);
-            button.setAttribute("aria-pressed", String(index === selectedIndex));
-            const number = document.createElement("span");
-            number.textContent = String(index + 1).padStart(2, "0");
-            const name = document.createElement("strong");
-            name.textContent = project.titulo;
-            button.append(number, name);
-            button.addEventListener("click", () => selectProject(index));
-            elements.selector.append(button);
-        });
-        elements.selector.hidden = projects.length < 2;
-    }
-
-    function selectProject(index) {
-        pauseAll();
-        selectedIndex = index;
-        activeVersion = "before";
-        const project = projects[index];
-        elements.before.src = safeURL(project.audio_before_url);
-        elements.after.src = safeURL(project.audio_after_url);
-        elements.before.load();
-        elements.after.load();
-        elements.title.textContent = project.titulo;
-        elements.artist.textContent = project.artista;
-        elements.position.textContent = `Comparação ${String(index + 1).padStart(2, "0")}`;
-
-        const coverURL = safeURL(project.link_capa);
-        elements.coverWrap.hidden = !coverURL;
-        if (coverURL) elements.cover.src = coverURL;
-        else elements.cover.removeAttribute("src");
-        elements.cover.alt = coverURL ? `Capa de ${project.titulo}` : "";
-
-        const externalURL = safeURL(project.link_audio);
-        elements.externalLink.hidden = !externalURL;
-        if (externalURL) elements.externalLink.href = externalURL;
-        else elements.externalLink.removeAttribute("href");
-
-        elements.versionButtons.forEach(button => {
-            button.setAttribute("aria-pressed", String(button.dataset.mixVersion === "before"));
-        });
-        elements.selector.querySelectorAll("button").forEach((button, buttonIndex) => {
-            button.setAttribute("aria-pressed", String(buttonIndex === index));
-        });
-        updateTimeline();
-        updatePlayButton();
-        announce(`${project.titulo}, versão Antes selecionada.`);
-    }
-
-    elements.versionButtons.forEach(button => {
-        button.addEventListener("click", () => setVersion(button.dataset.mixVersion));
+        status.textContent = `Versão ${VERSION_LABELS[version]} selecionada.`;
+        if (resume) void playActive();
+    }));
+    play.addEventListener("click", () => {
+        if (wantsPlayback) pause();
+        else void playActive();
     });
-    elements.play.addEventListener("click", () => {
-        if (activeAudio().paused || activeAudio().ended) void playActive();
-        else pauseAll();
-    });
-    elements.progress.addEventListener("input", () => {
-        const time = Number(elements.progress.value) || 0;
-        setTime(elements.before, time);
-        setTime(elements.after, time);
+    progress.addEventListener("input", () => {
+        const time = Number(progress.value) || 0;
+        seek(before, time);
+        seek(after, time);
         updateTimeline();
     });
-    elements.cover.addEventListener("error", () => {
-        elements.coverWrap.hidden = true;
-    });
-
-    [elements.before, elements.after].forEach(audio => {
+    function setVolume(value) {
+        if (value > 0) previousVolume = value;
+        [before, after].forEach(audio => { audio.volume = value; audio.muted = value === 0; });
+        volume.value = String(value);
+        mute.setAttribute("aria-pressed", String(value === 0));
+        mute.setAttribute("aria-label", value === 0 ? "Ativar áudio" : "Silenciar áudio");
+        mute.title = mute.getAttribute("aria-label");
+    }
+    volume.addEventListener("input", () => setVolume(Number(volume.value)));
+    mute.addEventListener("click", () => setVolume(before.muted ? previousVolume : 0));
+    [before, after].forEach(audio => {
         audio.addEventListener("loadedmetadata", () => {
-            if (audio.dataset.pendingTime) setTime(audio, Number(audio.dataset.pendingTime));
+            const pending = audio.dataset.pendingTime;
+            delete audio.dataset.pendingTime;
+            if (pending !== undefined) seek(audio, Number(pending));
             if (audio === activeAudio()) updateTimeline();
         });
         audio.addEventListener("timeupdate", () => {
             if (audio === activeAudio()) updateTimeline();
         });
         audio.addEventListener("play", () => {
-            if (audio !== activeAudio()) audio.pause();
-            else {
-                inactiveAudio().pause();
-                updatePlayButton();
+            if (audio !== activeAudio() || !wantsPlayback || !ownsPlayback(controller)) audio.pause();
+            updatePlayButton();
+        });
+        audio.addEventListener("ended", () => {
+            if (audio === activeAudio()) { wantsPlayback = false; updatePlayButton(); }
+        });
+        audio.addEventListener("error", () => {
+            if (audio === activeAudio()) {
+                pause();
+                status.textContent = "Não foi possível reproduzir este áudio.";
             }
         });
-        audio.addEventListener("pause", updatePlayButton);
-        audio.addEventListener("ended", updatePlayButton);
     });
+    before.src = safeURL(project.audio_before_url);
+    after.src = safeURL(project.audio_after_url);
+    before.load();
+    after.load();
+    return controller;
+}
 
-    renderSelector();
-    selectProject(0);
-    section.hidden = false;
-    elements.heroLink.hidden = false;
+export async function initMixComparison() {
+    const track = document.getElementById("home-portfolio-track");
+    if (!track) return;
+    disposePlayers();
+    // Keep existing links to /#mix-comparison, now pointing to the hits themselves.
+    document.querySelector(".mix-showcase#mix-comparison")?.remove();
+    const section = track.closest(".home-portfolio");
+    if (section) {
+        section.id = "mix-comparison";
+        if (location.hash === "#mix-comparison") section.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+    const heroLink = document.getElementById("mix-hero-link");
+    if (heroLink) heroLink.hidden = true;
+    track.querySelectorAll(".hit-mix").forEach(player => player.remove());
+    let comparisons;
+    try {
+        const result = await getMixComparisons();
+        comparisons = new Map((Array.isArray(result) ? result : []).filter(validProject).map(p => [String(p.id), p]));
+    } catch {
+        return; // Hits still work if comparison audio is unavailable.
+    }
+    const controllers = [];
+    let owner = null;
+    const activate = current => {
+        owner = current;
+        controllers.forEach(controller => { if (controller !== current) controller.pause(); });
+    };
+    track.querySelectorAll(".home-hit[data-project-id]").forEach(card => {
+        const project = comparisons.get(card.dataset.projectId);
+        if (project) controllers.push(mountPlayer(card, project, activate, current => owner === current));
+    });
+    const pauseAll = () => controllers.forEach(controller => controller.pause());
+    window.addEventListener("pagehide", pauseAll);
+    disposePlayers = () => { pauseAll(); window.removeEventListener("pagehide", pauseAll); };
+    if (heroLink) heroLink.hidden = controllers.length === 0;
 }
