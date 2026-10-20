@@ -60,7 +60,7 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             assert.ok(file.startsWith(root + path.sep));
             try {
                 return route.fulfill({ body: await fs.readFile(file), contentType:
-                    { '.js': 'text/javascript', '.css': 'text/css' }[path.extname(file)] || 'application/octet-stream' });
+                    { '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream' });
             } catch { return route.fulfill({ status: 404, body: '' }); }
         });
         await page.goto('http://localhost:4173/__catalogo.html');
@@ -141,6 +141,15 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             await page.evaluate(() => window.renderCards(window.catalogFixture));
             assert.equal(await page.locator('.catalog-card input:checked').count(), 0);
             assert.equal(await page.locator('.service-details:visible').count(), 0);
+            const arrow = singleCard.locator('.service-expand');
+            assert.equal(await arrow.isVisible(), true);
+            assert.equal(await arrow.evaluate(el => getComputedStyle(el).transform), 'none');
+            const mask = await arrow.evaluate(el => getComputedStyle(el).maskImage);
+            assert.match(mask, /lucide-chevron-down\.svg/);
+            assert.equal(await page.evaluate(async () => {
+                const response = await fetch('/assets/lucide-chevron-down.svg');
+                return response.ok && (await response.text()).includes('m6 9 6 6 6-6');
+            }), true);
             const compactHeight = (await singleCard.boundingBox()).height;
             const otherHeight = (await otherCard.boundingBox()).height;
             if (process.env.VISUAL_OUTPUT) await page.locator('#categoria-avulso').screenshot({
@@ -149,6 +158,10 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             await singleCard.locator('label').click();
             assert.equal(await singleCard.locator('input').isChecked(), true);
             assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+            await page.waitForFunction(() => {
+                const el = document.querySelector('#render-avulsos .service-expand');
+                return getComputedStyle(el).transform === 'matrix(-1, 0, 0, -1, 0, 0)';
+            });
             assert.ok((await singleCard.boundingBox()).height > compactHeight);
             assert.equal((await otherCard.boundingBox()).height, otherHeight, 'unselected card must stay compact');
             if (process.env.VISUAL_OUTPUT) await page.locator('#categoria-avulso').screenshot({
@@ -156,6 +169,10 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             });
             await otherCard.locator('label').click();
             assert.equal(await singleCard.locator('.service-details').isVisible(), false);
+            await page.waitForFunction(() => {
+                const el = document.querySelector('#render-avulsos .service-expand');
+                return getComputedStyle(el).transform === 'none';
+            });
             assert.equal((await singleCard.boundingBox()).height, compactHeight);
             assert.equal(await otherCard.locator('.service-details').isVisible(), true);
             await comboCard.locator('label').click();

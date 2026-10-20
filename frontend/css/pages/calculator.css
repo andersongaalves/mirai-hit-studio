@@ -141,7 +141,20 @@
 .radio-card input:focus-visible + label { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 .radio-card input:checked + label { border-color: var(--color-accent); background: var(--color-surface-elevated); }
 
-.service-title { color: var(--color-text-primary); font-family: var(--font-subtitulos); font-size: 1.15rem; font-weight: 700; }
+.service-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; }
+.service-title { min-width: 0; color: var(--color-text-primary); font-family: var(--font-subtitulos); font-size: 1.15rem; font-weight: 700; }
+.service-expand {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    background: var(--color-accent);
+    mask: url("../../assets/lucide-chevron-down.svg") center / contain no-repeat;
+    transition: transform 160ms ease;
+}
+.radio-card input:checked + label .service-expand { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+    .service-expand { transition: none; }
+}
 .service-subtitle { margin-top: var(--space-2); color: var(--color-text-secondary); }
 .service-details { display: none; width: 100%; margin-top: var(--space-4); }
 .radio-card input:checked + label .service-details { display: block; }

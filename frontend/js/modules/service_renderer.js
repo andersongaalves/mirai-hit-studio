@@ -62,7 +62,10 @@ export function renderizarCardServico(servico, config = {}) {
         <input type="radio" name="servico" id="srv_${escapeHtml(servico.id)}" value="${escapeHtml(servico.id)}">
         <label for="srv_${escapeHtml(servico.id)}">
             <span class="catalog-card__kind">${servico.tipo === "combo" ? "Combo" : "Serviço avulso"}</span>
-            <span class="service-title">${escapeHtml(servico.nome)}</span>
+            <span class="service-heading">
+                <span class="service-title">${escapeHtml(servico.nome)}</span>
+                <span class="service-expand" title="Detalhes do serviço" aria-hidden="true"></span>
+            </span>
             ${servico.subtitulo ? `<span class="service-subtitle">${escapeHtml(servico.subtitulo)}</span>` : ""}
             <div class="service-price">A partir de <strong>${money(preco)}</strong>
                 ${desconto > 0 ? `<s>${money(servico.valor_base)}</s>` : ""}
