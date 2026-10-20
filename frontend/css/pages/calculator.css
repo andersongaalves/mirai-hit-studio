@@ -141,8 +141,24 @@
 .radio-card input:focus-visible + label { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 .radio-card input:checked + label { border-color: var(--color-accent); background: var(--color-surface-elevated); }
 
-.service-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; }
+.service-heading { display: flex; align-items: center; width: 100%; padding-right: 36px; }
 .service-title { min-width: 0; color: var(--color-text-primary); font-family: var(--font-subtitulos); font-size: 1.15rem; font-weight: 700; }
+.service-toggle {
+    position: absolute;
+    top: calc(var(--space-5) + var(--font-size-small) * 1.5 + var(--space-2) - 8px);
+    right: calc(var(--space-5) - 10px);
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+}
+.service-toggle:hover { background: rgba(0, 212, 255, 0.1); }
+.service-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .service-expand {
     flex: 0 0 24px;
     width: 24px;
@@ -151,13 +167,13 @@
     mask: url("../../assets/lucide-chevron-down.svg") center / contain no-repeat;
     transition: transform 160ms ease;
 }
-.radio-card input:checked + label .service-expand { transform: rotate(180deg); }
+.service-toggle[aria-expanded="true"] .service-expand { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
     .service-expand { transition: none; }
 }
 .service-subtitle { margin-top: var(--space-2); color: var(--color-text-secondary); }
 .service-details { display: none; width: 100%; margin-top: var(--space-4); }
-.radio-card input:checked + label .service-details { display: block; }
+.radio-card:not(.is-collapsed) input:checked + label .service-details { display: block; }
 .service-description { color: var(--color-text-secondary); }
 .service-price { margin: var(--space-4) 0; padding: var(--space-3) 0; border-block: var(--border-subtle); }
 .service-price strong { display: block; color: var(--color-accent); font-family: var(--font-valores); font-size: 1.5rem; }

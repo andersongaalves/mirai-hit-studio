@@ -64,7 +64,6 @@ export function renderizarCardServico(servico, config = {}) {
             <span class="catalog-card__kind">${servico.tipo === "combo" ? "Combo" : "Serviço avulso"}</span>
             <span class="service-heading">
                 <span class="service-title">${escapeHtml(servico.nome)}</span>
-                <span class="service-expand" title="Detalhes do serviço" aria-hidden="true"></span>
             </span>
             ${servico.subtitulo ? `<span class="service-subtitle">${escapeHtml(servico.subtitulo)}</span>` : ""}
             <div class="service-price">A partir de <strong>${money(preco)}</strong>
@@ -73,13 +72,45 @@ export function renderizarCardServico(servico, config = {}) {
                 ${desconto > 0 ? `<span class="service-discount">-${escapeHtml(desconto)}% OFF</span>` : ""}
             </div>
             <p class="catalog-card__deadline">${prazo}</p>
-            <div class="service-details"><strong class="catalog-card__includes">O que inclui</strong>
+            <div class="service-details" id="srv_details_${escapeHtml(servico.id)}"><strong class="catalog-card__includes">O que inclui</strong>
                 <div class="service-description">${conteudo || "Escopo definido na proposta."}</div>
             </div>
             <span class="service-selected" aria-hidden="true">Selecionado</span>
         </label>
+        <button type="button" class="service-toggle" aria-expanded="false"
+            aria-controls="srv_details_${escapeHtml(servico.id)}" aria-label="Ver detalhes de ${escapeHtml(servico.nome)}"
+            data-service-name="${escapeHtml(servico.nome)}" title="Ver detalhes">
+            <span class="service-expand" aria-hidden="true"></span>
+        </button>
     </div>`;
 }
+
+function updateCardDisclosure(card, expanded) {
+    card.classList.toggle("is-collapsed", !expanded);
+    const button = card.querySelector(".service-toggle");
+    button.setAttribute("aria-expanded", String(expanded));
+    button.setAttribute("aria-label", `${expanded ? "Recolher" : "Ver"} detalhes de ${button.dataset.serviceName}`);
+    button.title = expanded ? "Recolher detalhes" : "Ver detalhes";
+}
+
+document.addEventListener("change", event => {
+    if (!event.target.matches('.catalog-card input[name="servico"]')) return;
+    document.querySelectorAll('.catalog-card input[name="servico"]').forEach(input => {
+        updateCardDisclosure(input.closest(".catalog-card"), input.checked);
+    });
+});
+
+document.addEventListener("click", event => {
+    const card = event.target.closest(".catalog-card");
+    if (!card || !event.target.closest("label, .service-toggle")) return;
+    const input = card.querySelector('input[name="servico"]');
+    if (!input.checked) {
+        if (event.target.closest(".service-toggle")) input.click();
+        return;
+    }
+    event.preventDefault();
+    updateCardDisclosure(card, card.classList.contains("is-collapsed"));
+});
 
 // ===========================
 // ACCORDION

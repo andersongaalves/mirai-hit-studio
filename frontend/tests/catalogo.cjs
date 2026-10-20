@@ -136,11 +136,20 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
         assert.equal(await otherCard.locator('.service-details').isVisible(), false);
         assert.equal(await comboCard.locator('.service-details').isVisible(), true);
 
+        await page.evaluate(() => {
+            document.addEventListener('input', event => {
+                if (event.target.name === 'servico') window.serviceInputEvents++;
+            });
+        });
         for (const width of [390, 1280]) {
             await page.setViewportSize({ width, height: 900 });
             await page.evaluate(() => window.renderCards(window.catalogFixture));
             assert.equal(await page.locator('.catalog-card input:checked').count(), 0);
             assert.equal(await page.locator('.service-details:visible').count(), 0);
+            await page.evaluate(() => { window.serviceInputEvents = 0; });
+            const toggle = singleCard.locator('.service-toggle');
+            assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+            assert.equal(await toggle.getAttribute('aria-controls'), await singleCard.locator('.service-details').getAttribute('id'));
             const arrow = singleCard.locator('.service-expand');
             assert.equal(await arrow.isVisible(), true);
             assert.equal(await arrow.evaluate(el => getComputedStyle(el).transform), 'none');
@@ -158,6 +167,7 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             await singleCard.locator('label').click();
             assert.equal(await singleCard.locator('input').isChecked(), true);
             assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+            assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
             await page.waitForFunction(() => {
                 const el = document.querySelector('#render-avulsos .service-expand');
                 return getComputedStyle(el).transform === 'matrix(-1, 0, 0, -1, 0, 0)';
@@ -167,6 +177,21 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             if (process.env.VISUAL_OUTPUT) await page.locator('#categoria-avulso').screenshot({
                 path: path.join(process.env.VISUAL_OUTPUT, `cards-expanded-${width}.png`), animations: 'disabled',
             });
+            const price = await singleCard.locator('.service-price').textContent();
+            await singleCard.locator('label').click();
+            assert.equal(await singleCard.locator('.service-details').isVisible(), false);
+            assert.equal(await singleCard.locator('input').isChecked(), true);
+            assert.equal(await singleCard.locator('.service-selected').isVisible(), true);
+            assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+            await toggle.click();
+            assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+            await toggle.press('Enter');
+            assert.equal(await singleCard.locator('.service-details').isVisible(), false);
+            await toggle.press('Space');
+            assert.equal(await singleCard.locator('.service-details').isVisible(), true);
+            assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+            assert.equal(await singleCard.locator('.service-price').textContent(), price);
+            assert.equal(await page.evaluate(() => window.serviceInputEvents), 1, 'disclosure must not reselect or recalculate the service');
             await otherCard.locator('label').click();
             assert.equal(await singleCard.locator('.service-details').isVisible(), false);
             await page.waitForFunction(() => {
@@ -175,9 +200,14 @@ const LEGACY = JSON.stringify({ intro: 'Mix <b>limpo</b>', sections: [{ icon: ''
             });
             assert.equal((await singleCard.boundingBox()).height, compactHeight);
             assert.equal(await otherCard.locator('.service-details').isVisible(), true);
-            await comboCard.locator('label').click();
+            assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+            await comboCard.locator('.service-toggle').click();
             assert.equal(await otherCard.locator('.service-details').isVisible(), false);
             assert.equal(await comboCard.locator('.service-details').isVisible(), true);
+            assert.equal(await comboCard.locator('input').isChecked(), true);
+            await comboCard.locator('.service-toggle').click();
+            assert.equal(await comboCard.locator('.service-details').isVisible(), false);
+            assert.equal(await comboCard.locator('input').isChecked(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false,
                 `catalog layout overflows at ${width}`);
             if (process.env.VISUAL_OUTPUT) await page.screenshot({
