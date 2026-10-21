@@ -236,9 +236,9 @@ async function staticResponse(route) {
         await page.waitForSelector('#client-beats-list .producer-card');
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
-        await page.getByRole('button', { name: /Lease/ }).click();
+        await page.getByRole('button', { name: /MP3 lease/ }).click();
         await page.waitForFunction(() => document.getElementById('client-alert')?.textContent.includes('Solicitação criada'));
-        assert.equal(await page.getByRole('button', { name: /Lease/ }).isDisabled(), true);
+        assert.equal(await page.getByRole('button', { name: /MP3 lease/ }).isDisabled(), true);
         assert.equal(await page.getByRole('button', { name: /Exclusivo/ }).count(), 1);
         await page.getByRole('link', { name: 'Dashboard' }).click();
         assert.equal(await page.locator('#client-proposal-summary').isVisible(), true);

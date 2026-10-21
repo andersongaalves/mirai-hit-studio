@@ -11,6 +11,7 @@ MAX_FILE_SIZE = 50 * 1024 * 1024
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "application/zip",
+    "application/vnd.rar",
     "audio/flac",
     "audio/mpeg",
     "audio/mp4",
@@ -201,7 +202,11 @@ class ProductionFileStorage:
             raise ProducaoArquivoStorageError(str(exc)) from None
 
     def _resolve(self, value):
-        from services.storage.contracts import ObjectReference, StorageError, StorageInvalidReference
+        from services.storage.contracts import (
+            ObjectReference,
+            StorageError,
+            StorageInvalidReference,
+        )
 
         if "://" not in value:
             legacy = self._legacy_adapter()

@@ -152,6 +152,11 @@ async function staticResponse(route) {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'POST') {
+            const body = request.postDataBuffer().toString('latin1');
+            for (const field of ['titulo', 'mp3', 'capa', 'preco_lease']) {
+                assert.match(body, new RegExp(`name="${field}"`));
+            }
+            assert.doesNotMatch(body, /name="(?:wav|multitrack)"/);
             beatUploads++;
             return route.fulfill({ status: 201, json: { id: 72, status: 'revisao' } });
         }
@@ -211,8 +216,9 @@ async function staticResponse(route) {
         assert.match(await page.locator('#producer-beats-list').textContent(), /<Beat seguro>/);
         assert.equal(await page.locator('#producer-beats-list script, #producer-beats-list img').count(), 0);
         await page.getByLabel('Título').fill('Novo beat');
-        await page.getByLabel('Preço lease').fill('120');
-        await page.getByLabel('Áudio').setInputFiles({ name: 'beat.wav', mimeType: 'audio/wav', buffer: Buffer.from('synthetic') });
+        await page.locator('#producer-beat-form [name="preco_lease"]').fill('120');
+        await page.locator('#producer-beat-form [name="mp3"]').setInputFiles({ name: 'beat.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('ID3synthetic') });
+        await page.locator('#producer-beat-form [name="capa"]').setInputFiles({ name: 'capa.png', mimeType: 'image/png', buffer: Buffer.from('synthetic-cover') });
         await page.getByRole('button', { name: 'Enviar para revisão' }).click();
         await page.waitForFunction(() => !document.querySelector('#producer-beat-form button[type=submit]')?.disabled);
         assert.equal(beatUploads, 1);

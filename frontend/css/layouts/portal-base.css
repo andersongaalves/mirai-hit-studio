@@ -376,6 +376,17 @@
     padding: var(--space-4);
 }
 
+.beat-form { grid-template-columns: minmax(0, 1fr); max-width: 900px; }
+.beat-form label { display: grid; gap: var(--space-2); min-width: 0; }
+.beat-form__full { grid-column: 1 / -1; }
+.beat-form__format { display: grid; grid-template-columns: minmax(0, 2fr) minmax(130px, 1fr); align-items: end; gap: var(--space-3); }
+.beat-form__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.beat-form :where(input, textarea) { box-sizing: border-box; width: 100%; min-width: 0; }
+.beat-form textarea { min-height: 80px; padding: var(--space-2); color: var(--color-text-primary); background: var(--color-background); border: var(--border-subtle); font: inherit; }
+.beat-form > button { justify-self: start; }
+.beat-cover { display: block; width: 100%; max-height: 260px; aspect-ratio: 1; object-fit: cover; border-radius: 4px; margin-bottom: var(--space-3); }
+@media (max-width: 600px) { .beat-form__format, .beat-form__pair { grid-template-columns: minmax(0, 1fr); } .beat-form > button { width: 100%; } }
+
 .producer-upload__note {
     grid-column: 1 / -1;
     min-width: 0;

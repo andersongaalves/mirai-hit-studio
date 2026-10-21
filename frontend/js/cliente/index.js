@@ -235,15 +235,16 @@ async function loadBeats() {
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article"); card.className = "producer-card";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
+            if (beat.capa_url) { const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; card.append(cover); }
             const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
             const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
             audio.addEventListener("play", async () => { if (audio.src) return; audio.src = URL.createObjectURL(await api.ouvirBeat(beat.id)); await audio.play(); }, { once: true });
             const actions = document.createElement("div"); actions.className = "producer-card__footer";
-            for (const [kind, price] of [["lease", beat.preco_lease], ["exclusivo", beat.preco_exclusivo]]) {
+            for (const [kind, label, price] of [[beat.formato_novo ? "lease_mp3" : "lease", "MP3 lease", beat.preco_lease], ["lease_wav", "WAV lease", beat.preco_wav], ["multitrack", "Multitrack", beat.preco_multitrack], ["exclusivo", "Exclusivo", beat.preco_exclusivo]]) {
                 if (!price) continue;
                 const button = document.createElement("button"); button.className = "btn-outline"; button.type = "button";
                 const idempotencyKey = crypto.randomUUID();
-                button.textContent = `${kind === "lease" ? "Lease" : "Exclusivo"} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price)}`;
+                button.textContent = `${label} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price)}`;
                 button.onclick = async () => {
                     button.disabled = true;
                     try { await api.solicitarBeat(beat.id, kind, idempotencyKey); setAlert("Solicitação criada. A Mirai preparará sua proposta."); }

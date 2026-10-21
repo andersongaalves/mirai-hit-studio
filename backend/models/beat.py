@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -21,6 +22,10 @@ from sqlalchemy.orm import relationship
 class BeatModel(Base):
     __tablename__ = "beats"
     __table_args__ = (
+        Index("uq_beats_mp3_ref", "mp3_ref", unique=True),
+        Index("uq_beats_wav_ref", "wav_ref", unique=True),
+        Index("uq_beats_multitrack_ref", "multitrack_ref", unique=True),
+        Index("uq_beats_capa_ref", "capa_ref", unique=True),
         CheckConstraint(
             "status IN ('revisao','aprovado','rejeitado','vendido')",
             name="ck_beats_status",
@@ -32,8 +37,10 @@ class BeatModel(Base):
             "preco_exclusivo IS NULL OR preco_exclusivo > 0",
             name="ck_beats_preco_exclusivo",
         ),
+        CheckConstraint("preco_wav IS NULL OR preco_wav > 0", name="ck_beats_preco_wav"),
+        CheckConstraint("preco_multitrack IS NULL OR preco_multitrack > 0", name="ck_beats_preco_multitrack"),
         CheckConstraint(
-            "preco_lease IS NOT NULL OR preco_exclusivo IS NOT NULL",
+            "preco_lease IS NOT NULL OR preco_wav IS NOT NULL OR preco_multitrack IS NOT NULL OR preco_exclusivo IS NOT NULL",
             name="ck_beats_algum_preco",
         ),
         CheckConstraint(
@@ -54,6 +61,8 @@ class BeatModel(Base):
     tonalidade = Column(String(24), nullable=True)
     generos = Column(String(240), nullable=False, default="", server_default="")
     preco_lease = Column(Numeric(12, 2), nullable=True)
+    preco_wav = Column(Numeric(12, 2), nullable=True)
+    preco_multitrack = Column(Numeric(12, 2), nullable=True)
     preco_exclusivo = Column(Numeric(12, 2), nullable=True)
     status = Column(
         String(16),
@@ -70,6 +79,15 @@ class BeatModel(Base):
     original_sha256 = Column(String(64), nullable=False)
     preview_ref = Column(String(180), nullable=False, unique=True)
     preview_sha256 = Column(String(64), nullable=False)
+    mp3_ref = Column(String(180), nullable=True)
+    wav_ref = Column(String(180), nullable=True)
+    wav_sha256 = Column(String(64), nullable=True)
+    multitrack_ref = Column(String(180), nullable=True)
+    multitrack_sha256 = Column(String(64), nullable=True)
+    multitrack_mime = Column(String(100), nullable=True)
+    capa_ref = Column(String(180), nullable=True)
+    capa_url = Column(String(1000), nullable=True)
+    capa_sha256 = Column(String(64), nullable=True)
     tamanho_bytes = Column(BigInteger, nullable=False)
     mime_type = Column(String(100), nullable=False)
     revisado_por_id = Column(
@@ -95,7 +113,7 @@ class BeatLicencaModel(Base):
         UniqueConstraint(
             "proposta_id", "beat_id", "tipo", name="uq_beat_licenca_proposta_beat_tipo"
         ),
-        CheckConstraint("tipo IN ('lease','exclusivo')", name="ck_beat_licencas_tipo"),
+        CheckConstraint("tipo IN ('lease','lease_mp3','lease_wav','multitrack','exclusivo')", name="ck_beat_licencas_tipo"),
         CheckConstraint(
             "status IN ('reservada','adquirida','cancelada')",
             name="ck_beat_licencas_status",

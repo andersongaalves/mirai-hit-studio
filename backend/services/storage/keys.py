@@ -6,7 +6,6 @@ from uuid import uuid4
 
 from .contracts import StorageScope, StorageValidationError, validate_object_key
 
-
 _PREFIXES = {
     StorageScope.PUBLIC_IMAGE: "public-images",
     StorageScope.PORTFOLIO_AUDIO: "portfolio-audio",
@@ -28,6 +27,7 @@ _EXTENSIONS = {
     "audio/x-wav": ".wav",
     "video/mp4": ".mp4",
     "application/zip": ".zip",
+    "application/vnd.rar": ".rar",
     "application/pdf": ".pdf",
 }
 

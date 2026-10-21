@@ -155,8 +155,9 @@ async function loadBeats() {
             const card = document.createElement("article");
             card.className = "producer-card";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
+            if (beat.capa_url) { const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; card.append(cover); }
             const meta = document.createElement("p"); meta.textContent = `${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
-            const prices = document.createElement("p"); prices.textContent = [beat.preco_lease && `Lease: R$ ${Number(beat.preco_lease).toFixed(2)}`, beat.preco_exclusivo && `Exclusivo: R$ ${Number(beat.preco_exclusivo).toFixed(2)}`].filter(Boolean).join(" · ");
+            const prices = document.createElement("p"); prices.textContent = [["MP3 lease", beat.preco_lease], ["WAV lease", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
             const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
             audio.addEventListener("play", async () => {
                 if (audio.src) return;
@@ -310,7 +311,16 @@ document.getElementById("producer-logout").addEventListener("click", logout);
 document.getElementById("producer-beat-form").addEventListener("submit", async event => {
     event.preventDefault();
     const button = event.currentTarget.querySelector("button[type=submit]"); button.disabled = true;
-    try { await api.enviarBeat(new FormData(event.currentTarget)); event.currentTarget.reset(); setAlert("Beat enviado para revisão."); await loadBeats(); }
+    try {
+        const body = new FormData(event.currentTarget);
+        for (const name of ["wav", "multitrack"]) {
+            if (!body.get(name)?.size) body.delete(name);
+        }
+        await api.enviarBeat(body);
+        event.currentTarget.reset();
+        setAlert("Beat enviado para revisão.");
+        await loadBeats();
+    }
     catch (error) { setAlert(error.message, true); }
     finally { button.disabled = false; }
 });

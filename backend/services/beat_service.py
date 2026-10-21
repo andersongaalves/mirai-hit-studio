@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
@@ -13,18 +14,58 @@ from services.producao_arquivo_storage import (
     ProducaoArquivoStorageError,
     new_production_file_storage,
 )
+from services.storage.contracts import (
+    StorageError,
+    StorageScope,
+    StorageValidationError,
+)
+from services.storage.policies import DEFAULT_POLICIES
+from services.storage.registry import storage_for
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 MAX_BEAT_BYTES = 50 * 1024 * 1024
-BEAT_MIMES = {"audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac"}
+ARCHIVE_MIMES = {"application/zip", "application/vnd.rar"}
+logger = logging.getLogger(__name__)
+
+
+def _validate_files(payload, mp3, wav, archive, cover=None, *, has_wav=False, has_archive=False):
+    policy = DEFAULT_POLICIES[StorageScope.PRODUCTION_TEMP]
+    for item, allowed in ((mp3, {"audio/mpeg"}), (wav, {"audio/wav", "audio/x-wav"}), (archive, ARCHIVE_MIMES)):
+        if item is None:
+            continue
+        data, mime = item
+        if mime not in allowed or len(data) > MAX_BEAT_BYTES:
+            raise HTTPException(422, "Formato ou tamanho de arquivo invalido.")
+        try:
+            policy.validate(data, mime)
+        except StorageValidationError:
+            raise HTTPException(422, "Conteudo do arquivo invalido.") from None
+    if payload.preco_wav is not None and wav is None and not has_wav:
+        raise HTTPException(422, "Envie o WAV para definir o preco WAV.")
+    if payload.preco_multitrack is not None and archive is None and not has_archive:
+        raise HTTPException(422, "Envie o multitrack para definir seu preco.")
+    if mp3 is not None:
+        audio_tag_service.duracao(mp3[0], limite=1800)
+    if cover is not None:
+        try:
+            DEFAULT_POLICIES[StorageScope.PUBLIC_IMAGE].validate(*cover)
+        except StorageValidationError:
+            raise HTTPException(422, "Conteudo da capa invalido.") from None
 
 
 def price_details(db, model, kind):
     from services import promocao_service
 
-    base = model.preco_exclusivo if kind == "exclusivo" else model.preco_lease
+    bases = {
+        "lease": model.preco_lease if model.mp3_ref is None else None,
+        "lease_mp3": model.preco_lease if model.mp3_ref else None,
+        "lease_wav": model.preco_wav if model.wav_ref else None,
+        "multitrack": model.preco_multitrack if model.multitrack_ref else None,
+        "exclusivo": model.preco_exclusivo,
+    }
+    base = bases.get(kind)
     if base is None:
         return None
     target = SimpleNamespace(
@@ -38,8 +79,8 @@ def price(db, model, kind):
     return details["preco_vigente"] if details else None
 
 
-def _response(db, model, *, exclusive_available=True):
-    return {
+def _response(db, model, *, exclusive_available=True, include_base=False):
+    result = {
         "id": model.id,
         "produtor_id": model.produtor_id,
         "produtor": model.produtor.nome_exibicao or model.produtor.username,
@@ -48,7 +89,9 @@ def _response(db, model, *, exclusive_available=True):
         "bpm": model.bpm,
         "tonalidade": model.tonalidade,
         "generos": model.generos,
-        "preco_lease": price(db, model, "lease"),
+        "preco_lease": price(db, model, "lease_mp3" if model.mp3_ref else "lease"),
+        "preco_wav": price(db, model, "lease_wav"),
+        "preco_multitrack": price(db, model, "multitrack"),
         "preco_exclusivo": price(db, model, "exclusivo")
         if exclusive_available
         else None,
@@ -56,7 +99,19 @@ def _response(db, model, *, exclusive_available=True):
         "ativo": model.ativo,
         "motivo_rejeicao": model.motivo_rejeicao,
         "created_at": model.created_at,
+        "formato_novo": bool(model.mp3_ref),
+        "tem_wav": bool(model.wav_ref),
+        "tem_multitrack": bool(model.multitrack_ref),
+        "capa_url": model.capa_url,
     }
+    if include_base:
+        result.update({
+            "preco_lease_base": model.preco_lease,
+            "preco_wav_base": model.preco_wav,
+            "preco_multitrack_base": model.preco_multitrack,
+            "preco_exclusivo_base": model.preco_exclusivo,
+        })
+    return result
 
 
 def _tag(db, producer_id):
@@ -65,37 +120,54 @@ def _tag(db, producer_id):
     profile = own if own and own.tag_id else studio
     tag = db.get(AudioTagModel, profile.tag_id) if profile and profile.tag_id else None
     if tag is None:
-        raise HTTPException(
-            409, "Cadastre uma tag pessoal ou a tag padrao antes de enviar beats."
-        )
-    return tag, studio or profile
+        raise HTTPException(409, "Cadastre uma tag pessoal ou a tag padrao antes de enviar beats.")
+    return tag, profile
 
 
-def create(db: Session, *, actor, payload: BeatCreate, data: bytes, mime_type: str):
+def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, archive=None):
     if not actor.painel_beats:
         raise HTTPException(403, "Painel de beats nao habilitado para esta conta.")
-    if mime_type not in BEAT_MIMES or not data or len(data) > MAX_BEAT_BYTES:
-        raise HTTPException(422, "Envie um audio valido de ate 50 MB.")
-    audio_tag_service.duracao(data, limite=1800)
+    _validate_files(payload, mp3, wav, archive, cover)
     tag, profile = _tag(db, actor.id)
-    preview = audio_tag_service.mixar(
-        data, tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
+    tagged_mp3 = audio_tag_service.mixar(
+        mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
     )
     storage = new_production_file_storage("previa")
-    original_ref = preview_ref = None
+    image_storage = storage_for(StorageScope.PUBLIC_IMAGE)
+    saved = []
+    saved_cover = None
     try:
-        original_ref = storage.save(data, mime_type)
-        preview_ref = storage.save(preview, "audio/mpeg")
+        saved_cover = image_storage.save(*cover)
+        cover_url = saved_cover.public_url or image_storage.get_public_url(saved_cover.reference)
+        original_ref = storage.save(*mp3)
+        saved.append(original_ref)
+        mp3_ref = storage.save(tagged_mp3, "audio/mpeg")
+        saved.append(mp3_ref)
+        wav_ref = storage.save(*wav) if wav else None
+        if wav_ref:
+            saved.append(wav_ref)
+        archive_ref = storage.save(*archive) if archive else None
+        if archive_ref:
+            saved.append(archive_ref)
         model = BeatModel(
             produtor_id=actor.id,
             **payload.model_dump(),
             status="revisao",
             original_ref=original_ref,
-            original_sha256=hashlib.sha256(data).hexdigest(),
-            preview_ref=preview_ref,
-            preview_sha256=hashlib.sha256(preview).hexdigest(),
-            tamanho_bytes=len(data),
-            mime_type=mime_type,
+            original_sha256=hashlib.sha256(mp3[0]).hexdigest(),
+            preview_ref=mp3_ref,
+            preview_sha256=hashlib.sha256(tagged_mp3).hexdigest(),
+            mp3_ref=mp3_ref,
+            wav_ref=wav_ref,
+            wav_sha256=hashlib.sha256(wav[0]).hexdigest() if wav else None,
+            multitrack_ref=archive_ref,
+            multitrack_sha256=hashlib.sha256(archive[0]).hexdigest() if archive else None,
+            multitrack_mime=archive[1] if archive else None,
+            capa_ref=str(saved_cover.reference),
+            capa_url=cover_url,
+            capa_sha256=hashlib.sha256(cover[0]).hexdigest(),
+            tamanho_bytes=len(mp3[0]),
+            mime_type="audio/mpeg",
         )
         db.add(model)
         db.flush()
@@ -108,15 +180,19 @@ def create(db: Session, *, actor, payload: BeatCreate, data: bytes, mime_type: s
         )
         db.commit()
         db.refresh(model)
-        return _response(db, model)
+        return _response(db, model, include_base=True)
     except Exception:
         db.rollback()
-        for reference in (preview_ref, original_ref):
-            if reference:
-                try:
-                    storage.delete(reference)
-                except ProducaoArquivoStorageError:
-                    pass
+        for reference in saved:
+            try:
+                storage.delete(reference)
+            except ProducaoArquivoStorageError:
+                pass
+        if saved_cover is not None:
+            try:
+                image_storage.delete(saved_cover.reference)
+            except StorageError:
+                logger.warning("beat_cover_compensation_failed")
         raise
 
 
@@ -124,7 +200,7 @@ def producer_list(db, actor):
     if not actor.painel_beats:
         raise HTTPException(403, "Painel de beats nao habilitado para esta conta.")
     return [
-        _response(db, row)
+        _response(db, row, include_base=True)
         for row in db.scalars(
             select(BeatModel)
             .where(BeatModel.produtor_id == actor.id)
@@ -135,7 +211,7 @@ def producer_list(db, actor):
 
 def admin_list(db):
     return [
-        _response(db, row)
+        _response(db, row, include_base=True)
         for row in db.scalars(
             select(BeatModel).order_by(BeatModel.created_at.desc())
         ).all()
@@ -190,6 +266,95 @@ def review(db, beat_id, payload, actor):
     return _response(db, model)
 
 
+def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover=None):
+    model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
+    if model is None:
+        raise HTTPException(404, "Beat nao encontrado.")
+    if model.status == "vendido" or db.scalar(select(BeatLicencaModel.id).where(
+        BeatLicencaModel.beat_id == beat_id, BeatLicencaModel.status.in_(("reservada", "adquirida"))
+    )):
+        raise HTTPException(409, "Beat com licenca ativa nao pode ser alterado.")
+    _validate_files(payload, mp3, wav, archive, cover, has_wav=bool(model.wav_ref),
+                    has_archive=bool(model.multitrack_ref))
+    tagged_mp3 = None
+    if mp3 is not None:
+        tag, profile = _tag(db, model.produtor_id)
+        tagged_mp3 = audio_tag_service.mixar(
+            mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
+        )
+    storage = new_production_file_storage("previa")
+    image_storage = storage_for(StorageScope.PUBLIC_IMAGE) if cover else None
+    saved_cover = None
+    old_cover = None
+    saved, old = [], []
+    try:
+        if cover is not None:
+            saved_cover = image_storage.save(*cover)
+            old_cover = model.capa_ref
+            model.capa_ref = str(saved_cover.reference)
+            model.capa_url = saved_cover.public_url or image_storage.get_public_url(saved_cover.reference)
+            model.capa_sha256 = hashlib.sha256(cover[0]).hexdigest()
+        if mp3 is not None:
+            original_ref = storage.save(*mp3)
+            saved.append(original_ref)
+            old.append(model.original_ref)
+            model.original_ref = original_ref
+            model.original_sha256 = hashlib.sha256(mp3[0]).hexdigest()
+        for item, reference, digest, mime in (
+            ((tagged_mp3, "audio/mpeg") if tagged_mp3 is not None else None, "mp3_ref", "preview_sha256", "audio/mpeg"),
+            (wav, "wav_ref", "wav_sha256", "audio/wav"),
+            (archive, "multitrack_ref", "multitrack_sha256", None),
+        ):
+            if item is None:
+                continue
+            new_ref = storage.save(*item)
+            saved.append(new_ref)
+            if getattr(model, reference):
+                old.append(getattr(model, reference))
+            elif reference == "mp3_ref":
+                old.append(model.preview_ref)
+            setattr(model, reference, new_ref)
+            setattr(model, digest, hashlib.sha256(item[0]).hexdigest())
+            if reference == "mp3_ref":
+                model.preview_ref = new_ref
+                model.tamanho_bytes = len(mp3[0])
+            elif reference == "multitrack_ref":
+                model.multitrack_mime = item[1]
+        for key, value in payload.model_dump().items():
+            setattr(model, key, value)
+        model.status = "revisao"
+        model.motivo_rejeicao = None
+        model.revisado_por_id = None
+        model.revisado_em = None
+        audit_service.record(db, actor=actor, action="beat.edited", entity_type="beat", entity_id=beat_id)
+        db.commit()
+        db.refresh(model)
+    except Exception:
+        db.rollback()
+        for reference in saved:
+            try:
+                storage.delete(reference)
+            except ProducaoArquivoStorageError:
+                pass
+        if saved_cover is not None:
+            try:
+                image_storage.delete(saved_cover.reference)
+            except StorageError:
+                logger.warning("beat_cover_compensation_failed")
+        raise
+    for reference in set(old) - set(saved):
+        try:
+            storage.delete(reference)
+        except ProducaoArquivoStorageError:
+            pass
+    if old_cover:
+        try:
+            image_storage.delete(old_cover)
+        except StorageError:
+            logger.warning("beat_cover_retirement_failed beat_id=%s", beat_id)
+    return _response(db, model, include_base=True)
+
+
 def preview(db, beat_id, actor):
     model = db.get(BeatModel, beat_id)
     if model is None:
@@ -221,7 +386,7 @@ def request_license(db, beat_id, kind, actor, idempotency_key):
         BeatLicencaModel.beat_id == beat.id,
         BeatLicencaModel.status == "reservada",
     )
-    if kind == "lease":
+    if kind != "exclusivo":
         active_query = active_query.where(BeatLicencaModel.tipo == "exclusivo")
     active = db.scalar(active_query)
     if active:
@@ -301,7 +466,7 @@ def reserve_for_proposal(db, proposta, cliente_id):
             BeatLicencaModel.beat_id == beat_id,
             BeatLicencaModel.status == "reservada",
         )
-        if kind == "lease":
+        if kind != "exclusivo":
             active = active.where(BeatLicencaModel.tipo == "exclusivo")
         conflict = db.scalar(active.with_for_update())
         if conflict:

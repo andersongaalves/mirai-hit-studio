@@ -4,9 +4,16 @@ from decimal import Decimal
 from typing import Annotated, Literal
 
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
-from schemas.credito_servico import ContratoCreditos
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
 
+from schemas.credito_servico import ContratoCreditos
 from schemas.promocao import SnapshotPrecoCatalogo
 from schemas.validation import http_url
 
@@ -23,11 +30,11 @@ class PropostaItem(Contract):
     descricao: str = Field(max_length=10000)
     quantidade: Quantity
     valor_unitario: Money  # Negotiated price; may differ from the catalog base price.
-    desconto: Money = Decimal("0")  # Absolute discount per line, as in the editor.
+    desconto: Money = Decimal(0)  # Absolute discount per line, as in the editor.
     servico_id: PositiveId | None = None  # Roadmap 3.0, 5.05: optional catalog origin.
     combo_id: PositiveId | None = None  # Roadmap 3.0, 5.08: or a catalog combo (never both).
     beat_id: PositiveId | None = None
-    licenca_beat: Literal["lease", "exclusivo"] | None = None
+    licenca_beat: Literal["lease", "lease_mp3", "lease_wav", "multitrack", "exclusivo"] | None = None
 
     @field_validator("combo_id")
     @classmethod
@@ -145,7 +152,7 @@ class SnapshotItem(Contract):
     preco_catalogo_vigente: SnapshotPrecoCatalogo | None = None  # 5.17: context, never rewrites negotiated values.
     beat_id: int | None = None
     beat_titulo: str | None = None
-    licenca_beat: Literal["lease", "exclusivo"] | None = None
+    licenca_beat: Literal["lease", "lease_mp3", "lease_wav", "multitrack", "exclusivo"] | None = None
 
 
 class SnapshotEconomico(Contract):
