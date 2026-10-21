@@ -17,6 +17,7 @@ import { initNewsletterAdmin } from "./newsletter/newsletter.js";
 import { initAuditoria } from "./auditoria/auditoria.js";
 import { initFinanceiro } from "./financeiro/financeiro.js";
 import { initInbox } from "./inbox/inbox.js";
+import { initBeats } from "./beats.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
@@ -36,6 +37,7 @@ const loaders = [
 
 const sectionLoaders = {
     "section-inbox": initInbox,
+    "section-beats": initBeats,
 };
 
 function focusHeading(container) {

@@ -15,7 +15,11 @@ export function buildPropostaPayload(proposta) {
         // 5.05: catalog origin travels only when the line is linked to a service.
         ...(Number.isInteger(item.servico_id) ? { servico_id: item.servico_id } : {}),
         // 5.08: or a catalog combo (the server refuses both on the same line).
-        ...(Number.isInteger(item.combo_id) && !Number.isInteger(item.servico_id) ? { combo_id: item.combo_id } : {})
+        ...(Number.isInteger(item.combo_id) && !Number.isInteger(item.servico_id) && !Number.isInteger(item.beat_id)
+            ? { combo_id: item.combo_id } : {}),
+        // 5.22: a beat line always carries its license; the server validates the pair.
+        ...(Number.isInteger(item.beat_id) && !Number.isInteger(item.servico_id) && !Number.isInteger(item.combo_id)
+            ? { beat_id: item.beat_id, licenca_beat: item.licenca_beat } : {})
     }));
     if (payload.pagamentos) payload.pagamentos = payload.pagamentos.map(item => ({
         tipo: item.tipo, titulo: item.titulo, url: item.url, habilitado: item.habilitado

@@ -29,6 +29,7 @@ function payload() {
             nome_exibicao: displayName(),
             password: field("usuario-password").value,
             role: field("usuario-role").value,
+            painel_beats: field("usuario-painel-beats").checked,
         };
     }
     return {
@@ -36,6 +37,7 @@ function payload() {
         nome_exibicao: displayName(),
         role: field("usuario-role").value,
         ativo: field("usuario-ativo").checked,
+        painel_beats: field("usuario-painel-beats").checked,
     };
 }
 
@@ -50,6 +52,7 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     field("usuario-nome-exibicao").value = usuario?.nome_exibicao || "";
     field("usuario-role").value = usuario?.role || "produtor";
     field("usuario-ativo").checked = usuario?.ativo ?? true;
+    field("usuario-painel-beats").checked = usuario?.painel_beats ?? false;
     field("usuario-password").value = "";
     field("usuario-new-password").value = "";
     field("usuario-username").disabled = self;
@@ -59,6 +62,13 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     field("usuario-create-password").classList.toggle("hidden", Boolean(usuario));
     field("usuario-reset-password").classList.toggle("hidden", !usuario);
     field("usuario-self-help").classList.toggle("hidden", !self);
+    const syncBeatPermission = () => {
+        const producer = field("usuario-role").value === "produtor";
+        field("usuario-beats-field").classList.toggle("hidden", !producer);
+        if (!producer) field("usuario-painel-beats").checked = false;
+    };
+    field("usuario-role").onchange = syncBeatPermission;
+    syncBeatPermission();
 
     const save = field("usuario-save");
     save.onclick = async () => {

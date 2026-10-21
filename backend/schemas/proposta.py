@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from schemas.credito_servico import ContratoCreditos
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 from schemas.promocao import SnapshotPrecoCatalogo
 from schemas.validation import http_url
@@ -26,6 +26,8 @@ class PropostaItem(Contract):
     desconto: Money = Decimal("0")  # Absolute discount per line, as in the editor.
     servico_id: PositiveId | None = None  # Roadmap 3.0, 5.05: optional catalog origin.
     combo_id: PositiveId | None = None  # Roadmap 3.0, 5.08: or a catalog combo (never both).
+    beat_id: PositiveId | None = None
+    licenca_beat: Literal["lease", "exclusivo"] | None = None
 
     @field_validator("combo_id")
     @classmethod
@@ -33,6 +35,17 @@ class PropostaItem(Contract):
         if value is not None and info.data.get("servico_id") is not None:
             raise ValueError("servico_ou_combo")
         return value
+
+    @model_validator(mode="after")
+    def origem_unica(self):
+        origins = sum(value is not None for value in (self.servico_id, self.combo_id, self.beat_id))
+        if origins > 1:
+            raise ValueError("catalog_origin_must_be_unique")
+        if (self.beat_id is None) != (self.licenca_beat is None):
+            raise ValueError("beat_license_required")
+        if self.beat_id is not None and self.quantidade != 1:
+            raise ValueError("beat_quantity_must_be_one")
+        return self
 
 
 class PropostaPagamento(Contract):
@@ -130,6 +143,9 @@ class SnapshotItem(Contract):
     cotas_arquivos: list[SnapshotCota] | None = None  # 5.09: absent before 5.09 and on free lines.
     politicas: SnapshotPoliticas | None = None  # 5.10: absent before 5.10 and on free lines.
     preco_catalogo_vigente: SnapshotPrecoCatalogo | None = None  # 5.17: context, never rewrites negotiated values.
+    beat_id: int | None = None
+    beat_titulo: str | None = None
+    licenca_beat: Literal["lease", "exclusivo"] | None = None
 
 
 class SnapshotEconomico(Contract):

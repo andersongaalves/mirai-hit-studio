@@ -893,8 +893,8 @@ campos obrigatorios, comprovantes, repeticao segura, texto nao executavel e layo
 desktop/mobile. Registrar CI remoto somente depois do PASS no SHA exato.
 
 Proximo gate: CI integrado PostgreSQL 17/FastAPI/Playwright e validacao do rollback
-compativel antes do release conjunto 5.11-5.13. Catalogo de beats (5.22) permanece
-pendente. V2 continua no estado atual; nenhuma configuracao de producao e alterada.
+compativel antes do release conjunto 5.11-5.13. V2 continua no estado atual;
+nenhuma configuracao de producao e alterada.
 
 ### 5.22 - Catalogo interno de beats
 - Produtores com permissao "painel de beats" (definida pelo Admin no cadastro do usuario)
@@ -905,6 +905,14 @@ pendente. V2 continua no estado atual; nenhuma configuracao de producao e altera
   vezes enquanto o beat nao for vendido como exclusivo.
 - Compra pelo fluxo atual: o beat vira item de proposta, como um servico, com promocoes
   (5.17) e regras de pagamento existentes.
+
+Implementado na branch `feat/internal-beat-catalog`: permissao administrativa,
+upload privado com preview tagueado, revisao, catalogo autenticado, precos Lease e
+Exclusivo, solicitacao idempotente de proposta e reserva concorrente. A aquisicao
+exclusiva retira o beat do catalogo apenas depois da quitacao integral. O gate inclui
+isolamento/IDOR, compensacao de Storage, navegador real e corrida no PostgreSQL 17.
+Pendente nesta etapa: PASS do CI no SHA da PR, merge e release protegido da migration
+`d7a2c4e6f810`; nenhuma configuracao ou dado de producao foi alterado.
 
 ## Recuperacao do release conjunto 5.11-5.13
 

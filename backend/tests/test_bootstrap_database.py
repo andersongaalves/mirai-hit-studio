@@ -47,13 +47,24 @@ def reject_ddl(connection, cursor, statement, parameters, context, many):
             from sqlalchemy.orm import configure_mappers
             head = bootstrap(engine)
             assert head == ScriptDirectory.from_config(migration_config()).get_current_head()
-            assert set(inspect(engine).get_table_names()) == {
+            actual_tables = set(inspect(engine).get_table_names())
+            expected_tables = {
                 'usuarios', 'servicos', 'clientes', 'orcamentos', 'propostas', 'producoes',
                 'projetos', 'configuracoes', 'newsletter', 'newsletter_campaigns',
                 'newsletter_deliveries', 'audit_logs', 'cobrancas', 'pagamentos',
                 'provider_webhook_events', 'ai_conversations', 'ai_messages', 'ai_email_threads',
                 'ai_briefings', 'ai_usage_events', 'producao_arquivos',
-                'repasses_produtor', 'cliente_acessos', 'auth_rate_limits', 'alembic_version'}
+                'repasses_produtor', 'cliente_acessos', 'auth_rate_limits', 'beats',
+                'beat_licencas', 'alembic_version', 'portal_notificacoes',
+                'producao_politicas', 'credito_lotes', 'politicas_globais', 'repasse_etapas',
+                'credito_contrato_itens', 'credito_alocacoes', 'servico_politicas',
+                'producao_mensagens', 'audio_tags', 'repasse_etapa_pagamentos',
+                'servico_etapas', 'servico_cotas_arquivo', 'projeto_creditos',
+                'previa_tag_jobs', 'audio_tag_perfis', 'combo_itens',
+                'producao_cotas_arquivo', 'credito_etapas', 'producao_etapa_atribuicoes',
+                'portfolio_envios', 'producao_etapas', 'credito_movimentos', 'combos',
+                'credito_lancamentos', 'portal_configuracoes'}
+            assert actual_tables == expected_tables, (actual_tables - expected_tables, expected_tables - actual_tables)
             with engine.connect() as connection:
                 assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').all() == [(head,)]
             configure_mappers()

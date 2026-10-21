@@ -61,9 +61,10 @@ async function staticResponse(route) {
         if (url.pathname === '/usuarios' && request.method() === 'POST') {
             if (duplicate) return route.fulfill({ status: 409, json: { detail: 'Nome de usuario ja cadastrado.' } });
             const payload = request.postDataJSON();
-            assert.deepEqual(Object.keys(payload).sort(), ['nome_exibicao', 'password', 'role', 'username']);
+            assert.deepEqual(Object.keys(payload).sort(), ['nome_exibicao', 'painel_beats', 'password', 'role', 'username']);
             createdDisplayNames.push(payload.nome_exibicao);
-            const created = { id: 4, username: payload.username, nome_exibicao: payload.nome_exibicao, role: payload.role, is_admin: payload.role === 'admin', ativo: true, created_at: now, updated_at: now };
+            const created = { id: 4, username: payload.username, nome_exibicao: payload.nome_exibicao, role: payload.role,
+                painel_beats: payload.painel_beats, is_admin: payload.role === 'admin', ativo: true, created_at: now, updated_at: now };
             users.push(created);
             return route.fulfill({ status: 201, json: created });
         }
@@ -120,9 +121,11 @@ async function staticResponse(route) {
         await page.locator('#usuario-username').fill('novo');
         await page.locator('#usuario-nome-exibicao').fill('  Novo   Produtor ');
         await page.locator('#usuario-password').fill('secure-password');
+        await page.locator('#usuario-painel-beats').check();
         await page.locator('#usuario-save').click();
         await page.waitForFunction(() => document.getElementById('modal-usuario').classList.contains('hidden'));
         assert.equal(users.length, 4);
+        assert.equal(users[3].painel_beats, true);
         // Display name is independent from the login and shown first in the list.
         assert.deepEqual(createdDisplayNames, ['Novo Produtor']);
         await page.waitForFunction(() => [...document.querySelectorAll('.usuarios-table tbody tr')]

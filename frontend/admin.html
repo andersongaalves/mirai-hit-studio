@@ -95,6 +95,7 @@
                             <button type="button" class="admin-nav__item" data-admin-target="section-portfolio">
                                 Portfólio
                             </button>
+                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-beats">Beats</button>
                             <button type="button" class="admin-nav__item" data-admin-target="section-custos">
                                 Configurações
                             </button>
@@ -821,6 +822,10 @@
                         </div>
                     </div>
 
+                    <div id="section-beats" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header"><div class="admin-page-header__content"><p class="admin-page-header__eyebrow">Catálogo interno</p><h1>Revisão de beats</h1><p>Aprove ou rejeite os envios dos produtores antes de disponibilizá-los aos clientes.</p></div></header>
+                        <div id="admin-beats-list" class="admin-list-container" aria-live="polite"></div>
+                    </div>
                     <div id="section-usuarios" class="admin-section hidden admin-access-hidden" data-admin-only>
                         <header class="admin-page-header">
                             <div class="admin-page-header__content">
@@ -1448,6 +1453,9 @@
                                 </label>
                                 <label id="usuario-active-field" class="usuario-active-field">
                                     <input id="usuario-ativo" type="checkbox" /> Usuário ativo
+                                </label>
+                                <label id="usuario-beats-field" class="usuario-active-field">
+                                    <input id="usuario-painel-beats" type="checkbox" /> Painel de beats
                                 </label>
                             </div>
                             <p id="usuario-self-help" class="admin-field-help hidden">Sua própria conta não pode ter acesso, papel ou nome de usuário alterados por esta tela; o nome de exibição pode.</p>

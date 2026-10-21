@@ -1,13 +1,30 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean, false
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-
 from database import Base
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    false,
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 
 class OrcamentoModel(Base):
 
     __tablename__ = "orcamentos"
+    __table_args__ = (
+        CheckConstraint(
+            "(beat_id IS NULL AND licenca_beat IS NULL) OR "
+            "(beat_id IS NOT NULL AND licenca_beat IN ('lease','exclusivo'))",
+            name="ck_orcamentos_beat_licenca",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -59,6 +76,8 @@ class OrcamentoModel(Base):
     )
 
     is_test = Column(Boolean, default=False, server_default=false(), nullable=False, index=True)
+    beat_id = Column(Integer, ForeignKey("beats.id", ondelete="RESTRICT"), nullable=True, index=True)
+    licenca_beat = Column(String(12), nullable=True)
 
     proposta = relationship(
         "PropostaModel",

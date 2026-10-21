@@ -72,6 +72,8 @@ class OrcamentoResponse(OrcamentoBase):
     is_test: bool = False
     id: int
     cliente_id: int | None
+    beat_id: int | None = None
+    licenca_beat: str | None = None
 
     # CRM
     status: OrcamentoStatus

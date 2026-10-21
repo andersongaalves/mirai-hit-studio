@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["c4e6a8b0d125"], heads
+                  assert heads == ["d7a2c4e6f810"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -188,6 +188,7 @@ jobs:
                     test_proposta_service.py \
                     test_proposta_comercial.py \
                     test_proposta_snapshot.py \
+                    test_beat_catalog.py \
                     test_carteira_creditos.py \
                     test_credito_alocacao.py \
                     test_credito_producao.py \
@@ -217,6 +218,7 @@ jobs:
               run: |
                   set -euo pipefail
                   python -m unittest discover -s tests -p 'test_commerce_policy_postgres.py' -v
+                  python -m unittest discover -s tests -p 'test_beat_catalog_postgres.py' -v
                   python -m unittest discover -s tests -p 'test_classificacao_postgres.py' -v
                   python -m unittest discover -s tests -p 'test_portals_postgres_e2e.py' -v
 
@@ -344,10 +346,21 @@ jobs:
                     backend/tests/test_storage_evidence.py \
                     backend/tests/test_storage_provider_smoke.py \
                     backend/tests/test_ci_postgres_workflows.py
+                  ruff check --select E4,E7,E9,F \
+                    backend/models/beat.py \
+                    backend/routers/beats.py \
+                    backend/schemas/beat.py \
+                    backend/services/beat_service.py \
+                    backend/tests/test_beat_catalog.py \
+                    backend/tests/test_beat_catalog_postgres.py \
+                    backend/migrations/versions/d7a2c4e6f810_catalogo_beats.py
                   node --check frontend/js/admin/projetos.js
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs
                   node --check frontend/tests/portal_cliente.cjs
+                  node --check frontend/js/admin/beats.js
+                  node --check frontend/js/admin/propostas/proposta_mapper.js
+                  node --check frontend/tests/proposta_catalogo.cjs
                   node --check frontend/js/pix.js
                   node --check frontend/js/checkout.js
                   node --check frontend/tests/checkout.cjs
@@ -393,7 +406,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic c4e6a8b0d125: passed"
+                    echo "- PostgreSQL 17 and Alembic d7a2c4e6f810: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

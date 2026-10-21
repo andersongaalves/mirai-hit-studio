@@ -8,33 +8,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from routers.ai_chat import router as ai_chat_router
 from routers.ai_inbox import router as ai_inbox_router
+from routers.audio_tags import router as audio_tags_router
 from routers.audit_logs import router as audit_logs_router
 from routers.auth import router as auth_router
+from routers.beats import router as beats_router
+from routers.carteira_creditos import router as carteira_creditos_router
 from routers.checkout import router as checkout_router
 from routers.client_access import router as client_access_router
 from routers.clientes import router as clientes_router
+from routers.combos import public_router as combos_public_router
+from routers.combos import router as combos_router
 from routers.config import router as config_router
+from routers.cotas_arquivo import router as cotas_arquivo_router
+from routers.credito_alocacao import router as credito_alocacao_router
 from routers.dashboard import router as dashboard_router
 from routers.financeiro import router as financeiro_router
 from routers.newsletter import router as newsletter_router
 from routers.orcamentos import router as orcamentos_router
+from routers.politicas import router as politicas_router
 from routers.portal_cliente import router as portal_cliente_router
 from routers.portal_config import router as portal_config_router
+from routers.portal_notificacoes import router as portal_notificacoes_router
 from routers.portal_operacao_admin import router as portal_operacao_admin_router
 from routers.portal_produtor import router as portal_produtor_router
-from routers.portal_notificacoes import router as portal_notificacoes_router
-from routers.producao import router as producao_router
-from routers.producao_mensagens import router as producao_mensagens_router
-from routers.producao_etapas import router as producao_etapas_router
-from routers.cotas_arquivo import router as cotas_arquivo_router
-from routers.politicas import router as politicas_router
-from routers.combos import public_router as combos_public_router
-from routers.combos import router as combos_router
-from routers.projetos import router as projetos_router
 from routers.portfolio_envios import router as portfolio_envios_router
-from routers.audio_tags import router as audio_tags_router
-from routers.carteira_creditos import router as carteira_creditos_router
-from routers.credito_alocacao import router as credito_alocacao_router
+from routers.producao import router as producao_router
+from routers.producao_etapas import router as producao_etapas_router
+from routers.producao_mensagens import router as producao_mensagens_router
+from routers.projetos import router as projetos_router
 from routers.propostas import router as propostas_router
 from routers.repasse_etapa import router as repasse_etapa_router
 from routers.servicos import router as servicos_router
@@ -111,6 +112,7 @@ app.include_router(cotas_arquivo_router)
 app.include_router(politicas_router)
 app.include_router(combos_router)
 app.include_router(combos_public_router)
+app.include_router(beats_router)
 
 
 @app.get("/")
@@ -131,6 +133,7 @@ async def startup():
     if not getattr(settings, "AUDIO_TAG_WORKER_ENABLED", True):
         return
     import asyncio
+
     from database import SessionLocal
     from services.audio_tag_service import processar_um
 

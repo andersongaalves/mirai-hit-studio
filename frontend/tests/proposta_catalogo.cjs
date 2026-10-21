@@ -20,6 +20,11 @@ const COMBOS = [
     { id: 6, nome: 'Combo antigo', descricao: '', preco_base: '900.00', ativo: false, soma_servicos: '1000.00', servicos: [] },
 ];
 
+const BEATS = [
+    { id: 9, titulo: 'Horizonte', status: 'aprovado', ativo: true, preco_lease: '150.00', preco_exclusivo: '900.00' },
+    { id: 10, titulo: 'Em revisão', status: 'revisao', ativo: true, preco_lease: '80.00', preco_exclusivo: null },
+];
+
 const COMBO_SNAPSHOT_ITEM = {
     indice: 3, descricao: 'Combo Mix+Master', servico_id: null, servico_nome: null, preco_catalogo: '1200.00',
     catalogo_disponivel: true, quantidade: '1', valor_unitario: '1000.00', bruto: '1000.00', desconto: '0.00',
@@ -87,6 +92,9 @@ const SNAPSHOT = {
                     if (failCatalog) return route.fulfill({ status: 503, json: { detail: 'indisponivel' } });
                     return route.fulfill({ json: SERVICES });
                 }
+                if (url.pathname === '/admin/beats' && req.method() === 'GET') {
+                    return route.fulfill({ json: BEATS });
+                }
                 if (url.pathname === '/propostas/orcamento/42') return route.fulfill({ json: proposal });
                 if (/^\/propostas\/\d+\/acesso-cliente$/.test(url.pathname)) {
                     return route.fulfill({ json: { estado: 'conta_ativa', cliente_id: 42, convite_disponivel: true,
@@ -141,10 +149,13 @@ const SNAPSHOT = {
         await boot();
         await open();
         await tab('Itens');
-        // Placeholder + 2 services + 1 active combo (the inactive one is never offered).
-        await page.waitForFunction(() => document.querySelectorAll('#proposta-catalogo-servico option').length === 4);
-        assert.deepEqual(await select.locator('optgroup').evaluateAll(groups => groups.map(group => group.label)), ['Serviços', 'Combos']);
+        // Placeholder + 2 services + 1 active combo + 2 licenses for the approved beat.
+        await page.waitForFunction(() => document.querySelectorAll('#proposta-catalogo-servico option').length === 6);
+        assert.deepEqual(await select.locator('optgroup').evaluateAll(groups => groups.map(group => group.label)), ['Serviços', 'Combos', 'Beats']);
         assert.deepEqual(await select.locator('optgroup[label="Combos"] option').allTextContents(), ['Combo <i>Mix</i>+Master — R$\u00a01.200,00']);
+        assert.deepEqual(await select.locator('optgroup[label="Beats"] option').allTextContents(), [
+            'Horizonte — Lease R$\u00a0150,00', 'Horizonte — Exclusivo R$\u00a0900,00',
+        ]);
         assert.equal(await page.locator('#proposta-catalogo-servico i').count(), 0);
         assert.equal(await select.isDisabled(), false);
         assert.equal(await page.locator('#btn-add-proposta-catalogo').isDisabled(), true);
@@ -179,7 +190,7 @@ const SNAPSHOT = {
 
         // 5.08: a combo line starts at the reference price and carries combo_id (never servico_id).
         await tab('Itens');
-        await page.waitForFunction(() => document.querySelectorAll('#proposta-catalogo-servico option').length === 4);
+        await page.waitForFunction(() => document.querySelectorAll('#proposta-catalogo-servico option').length === 6);
         await select.selectOption('c:5');
         await page.locator('#btn-add-proposta-catalogo').click();
         const comboRow = rows.nth(2);
@@ -196,9 +207,22 @@ const SNAPSHOT = {
         await save();
         assert.equal(Object.hasOwn(patches.at(-1).itens[2], 'combo_id'), false);
 
+        // A beat line carries the selected license structurally and starts at its current catalog price.
+        await tab('Itens');
+        await select.selectOption('b:9:exclusivo');
+        await page.locator('#btn-add-proposta-catalogo').click();
+        const beatRow = rows.nth(3);
+        assert.equal(await beatRow.locator('[data-campo="valor_unitario"]').inputValue(), '900');
+        assert.match(await beatRow.locator('[data-origem]').textContent(), /Beat: Horizonte · exclusivo · R\$\s900,00/);
+        await save();
+        assert.deepEqual(patches.at(-1).itens[3], {
+            descricao: 'Horizonte (Exclusivo)', quantidade: 1, valor_unitario: 900, desconto: 0,
+            beat_id: 9, licenca_beat: 'exclusivo',
+        });
+
         // Unlinking keeps the line as a free item.
         await tab('Itens');
-        await page.waitForFunction(() => document.querySelectorAll('.proposta-item-row [data-desvincular]').length === 1);
+        await page.waitForFunction(() => document.querySelectorAll('.proposta-item-row [data-desvincular]').length === 2);
         await rows.nth(1).getByRole('button', { name: 'Desvincular' }).click();
         assert.equal(await rows.nth(1).locator('[data-origem]').count(), 0);
         await save();
