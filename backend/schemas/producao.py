@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 StatusProducao = Literal[
     "aguardando_inicio",
@@ -72,11 +72,18 @@ class ProducaoDiretaCreate(BaseModel):
 
     request_id: UUID
     cliente_id: int = Field(gt=0)
-    servico_id: int = Field(gt=0)
+    servico_id: int | None = Field(default=None, gt=0)
+    combo_id: int | None = Field(default=None, gt=0)
     titulo: str = Field(min_length=1, max_length=150)
     produtor_id: int | None = Field(default=None, gt=0)
     prazo_entrega: datetime | None = None
     observacoes: str = Field(default="", max_length=20_000)
+
+    @model_validator(mode="after")
+    def selecionar_item(self):
+        if (self.servico_id is None) == (self.combo_id is None):
+            raise ValueError("Selecione um servico ou um combo.")
+        return self
 
 
 class ProducaoStatusUpdate(BaseModel):
