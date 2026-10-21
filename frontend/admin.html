@@ -685,6 +685,7 @@
                                 <h1>Produções</h1>
                                 <p>Acompanhe os serviços contratados em execução.</p>
                             </div>
+                            <button id="nova-producao" class="btn-primary" type="button">Nova produção</button>
                         </header>
 
                         <div class="admin-filter-bar producoes-toolbar" aria-label="Filtros de produções">
@@ -1591,6 +1592,23 @@
                             <div id="financeiro-payments" class="financeiro-payments"></div>
                         </section>
                     </div>
+                </div>
+
+                <div id="modal-nova-producao" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="nova-producao-titulo">
+                    <form id="nova-producao-form" class="modal-content admin-form">
+                        <h2 id="nova-producao-titulo">Nova produção</h2>
+                        <label class="admin-form-field">Cliente<select name="cliente_id" aria-label="Cliente" required><option value="">Selecione</option></select></label>
+                        <label class="admin-form-field">Título<input name="titulo" maxlength="150" required /></label>
+                        <label class="admin-form-field">Serviço<select name="servico_id" aria-label="Serviço" required><option value="">Selecione</option></select></label>
+                        <label class="admin-form-field">Produtor<select name="produtor_id" aria-label="Produtor"><option value="">Definir depois</option></select></label>
+                        <label class="admin-form-field">Prazo de entrega<input name="prazo_entrega" type="datetime-local" /></label>
+                        <label class="admin-form-field">Observações<textarea name="observacoes" maxlength="20000"></textarea></label>
+                        <p id="nova-producao-erro" role="alert"></p>
+                        <div class="admin-form-actions">
+                            <button type="button" id="nova-producao-cancelar" class="btn-secondary">Cancelar</button>
+                            <button type="submit" class="btn-primary">Criar produção</button>
+                        </div>
+                    </form>
                 </div>
 
                 <div

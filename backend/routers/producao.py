@@ -10,6 +10,7 @@ from core.dependencies import require_admin
 
 from schemas.producao import (
     ProducaoCreate,
+    ProducaoDiretaCreate,
     ProducaoResponse,
     ProducaoStatusUpdate,
     ProducaoEtapasUpdate,
@@ -22,9 +23,16 @@ from models.orcamento import OrcamentoModel
 from models.producao import ProducaoModel
 from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
-from services import audit_service
+from services import audit_service, producao_direta_service
 
 router = APIRouter(prefix="/producoes", tags=["Produções"])
+
+
+@router.post("/direta", response_model=ProducaoResponse, status_code=201)
+def criar_producao_direta(
+    dados: ProducaoDiretaCreate, db: Session = Depends(get_db), user=Depends(require_admin)
+):
+    return producao_direta_service.criar(db, dados, user)
 
 
 # ===========================

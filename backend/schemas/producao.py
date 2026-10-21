@@ -1,9 +1,9 @@
 import json
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 
 StatusProducao = Literal[
     "aguardando_inicio",
@@ -65,6 +65,18 @@ class ProducaoBase(BaseModel):
 class ProducaoCreate(ProducaoBase):
     produtor_id: int | None = Field(default=None, gt=0)
     orcamento_id: int | None = Field(default=None, gt=0)
+
+
+class ProducaoDiretaCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    request_id: UUID
+    cliente_id: int = Field(gt=0)
+    servico_id: int = Field(gt=0)
+    titulo: str = Field(min_length=1, max_length=150)
+    produtor_id: int | None = Field(default=None, gt=0)
+    prazo_entrega: datetime | None = None
+    observacoes: str = Field(default="", max_length=20_000)
 
 
 class ProducaoStatusUpdate(BaseModel):

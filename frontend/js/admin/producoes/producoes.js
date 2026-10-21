@@ -6,6 +6,7 @@ import { producoesState } from "./producoes_state.js";
 import * as ProducoesUI from "./producoes_ui.js";
 import { filtrarOrdenarProducoes } from "./producoes_utils.js";
 import { adicionarFiltroAmbiente } from "../classificacao.js";
+import { initCriarProducao } from "./producoes_create.js";
 document.addEventListener("classificacao:atualizada", carregarProducoes);
 
 document.addEventListener("proposta:comercial-atualizada", (event) => {
@@ -197,5 +198,9 @@ export function salvarObservacoes(id, observacoes) {
 
 export function initProducoes() {
     registrarEventos();
+    initCriarProducao(async (production) => {
+        producoesState.ambiente = production.is_test ? "teste" : "real";
+        await carregarProducoes();
+    });
     return carregarProducoes();
 }

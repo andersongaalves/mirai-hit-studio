@@ -81,7 +81,7 @@
                                 <h1 id="dashboard-title">Seus projetos</h1>
                                 <p id="client-dashboard-lead" class="producer-lead">Acompanhe o que está acontecendo e saiba quando precisa agir.</p>
                             </div>
-                            <a class="btn-cta" href="/cliente/projetos" data-route="projects">Ver projetos</a>
+                            <div><button class="btn-cta" type="button" data-new-production>Nova produção</button> <a class="btn-outline" href="/cliente/projetos" data-route="projects">Ver projetos</a></div>
                         </div>
                         <div id="client-metrics" class="producer-metrics" aria-label="Resumo dos projetos"></div>
                         <section id="client-proposal-summary" class="producer-section hidden" aria-labelledby="proposal-summary-title">
@@ -121,6 +121,7 @@
                                 <h1 id="projects-title">Meus projetos</h1>
                                 <p class="producer-lead">Projetos ativos e concluídos, organizados para consulta rápida.</p>
                             </div>
+                            <button class="btn-cta" type="button" data-new-production>Nova produção</button>
                         </div>
                         <div class="producer-filters client-filters">
                             <label for="client-status-filter">Situação</label>
@@ -163,6 +164,19 @@
             </div>
         </main>
 
+        <dialog id="client-request-dialog" class="client-request-dialog" aria-labelledby="client-request-title">
+            <form id="client-request-form">
+                <h2 id="client-request-title">Nova produção</h2>
+                <label>Título<input name="titulo" maxlength="150" required /></label>
+                <label>Serviço<select name="servico_id" required><option value="">Selecione</option></select></label>
+                <label>Conte sobre o projeto<textarea name="descricao" maxlength="10000" rows="5" required></textarea></label>
+                <p id="client-request-error" role="alert"></p>
+                <div class="producer-actions">
+                    <button id="client-request-close" class="btn-outline" type="button">Cancelar</button>
+                    <button class="btn-cta" type="submit">Enviar para análise</button>
+                </div>
+            </form>
+        </dialog>
         <script type="module" src="/js/cliente/index.js"></script>
         <script type="module" src="/js/integrado_portal.js"></script>
     </body>

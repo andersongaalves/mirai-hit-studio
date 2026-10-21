@@ -1,11 +1,26 @@
 from datetime import datetime
 from decimal import Decimal
+from uuid import UUID
 
 from models.enums.proposta import PoliticaPagamento, PropostaStatus
 from pydantic import BaseModel, ConfigDict, Field
 
 from schemas.producao_arquivo import TipoArquivoProducao
 from schemas.proposta import PropostaItem, PropostaTotais
+
+
+class ProducaoSolicitacaoCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    request_id: UUID
+    servico_id: int = Field(gt=0)
+    titulo: str = Field(min_length=1, max_length=150)
+    descricao: str = Field(min_length=1, max_length=10000)
+
+
+class ProducaoSolicitacaoResponse(BaseModel):
+    id: int
+    status: str
 
 
 class ProducaoClienteResponse(BaseModel):
