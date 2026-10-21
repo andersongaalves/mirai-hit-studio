@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -21,6 +22,10 @@ from sqlalchemy.orm import relationship
 class BeatModel(Base):
     __tablename__ = "beats"
     __table_args__ = (
+        Index("uq_beats_mp3_ref", "mp3_ref", unique=True),
+        Index("uq_beats_wav_ref", "wav_ref", unique=True),
+        Index("uq_beats_multitrack_ref", "multitrack_ref", unique=True),
+        Index("uq_beats_capa_ref", "capa_ref", unique=True),
         CheckConstraint(
             "status IN ('revisao','aprovado','rejeitado','vendido')",
             name="ck_beats_status",
@@ -74,13 +79,13 @@ class BeatModel(Base):
     original_sha256 = Column(String(64), nullable=False)
     preview_ref = Column(String(180), nullable=False, unique=True)
     preview_sha256 = Column(String(64), nullable=False)
-    mp3_ref = Column(String(180), nullable=True, unique=True)
-    wav_ref = Column(String(180), nullable=True, unique=True)
+    mp3_ref = Column(String(180), nullable=True)
+    wav_ref = Column(String(180), nullable=True)
     wav_sha256 = Column(String(64), nullable=True)
-    multitrack_ref = Column(String(180), nullable=True, unique=True)
+    multitrack_ref = Column(String(180), nullable=True)
     multitrack_sha256 = Column(String(64), nullable=True)
     multitrack_mime = Column(String(100), nullable=True)
-    capa_ref = Column(String(180), nullable=True, unique=True)
+    capa_ref = Column(String(180), nullable=True)
     capa_url = Column(String(1000), nullable=True)
     capa_sha256 = Column(String(64), nullable=True)
     tamanho_bytes = Column(BigInteger, nullable=False)
