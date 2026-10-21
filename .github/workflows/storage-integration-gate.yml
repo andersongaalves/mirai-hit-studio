@@ -253,6 +253,7 @@ jobs:
                   node frontend/tests/promocoes.cjs
                   node frontend/tests/portal_notifications.cjs
                   node frontend/tests/production_stages_admin.cjs
+                  node frontend/tests/image_crop.cjs
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend

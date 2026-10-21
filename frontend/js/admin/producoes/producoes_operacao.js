@@ -6,6 +6,7 @@ import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
 import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
 import { creditAllocationsPanel } from "../../modules/credit_allocations.js";
 import { stagePayoutsPanel } from "../../modules/stage_payouts.js";
+import { uploadBusy } from "../../modules/upload_feedback.js";
 
 let productionId = null;
 let files = [];
@@ -23,7 +24,8 @@ const money = value => new Intl.NumberFormat("pt-BR", { style: "currency", curre
 
 async function run(button, action, message) {
     const activeProductionId = productionId;
-    button.disabled = true;
+    if (button.disabled) return;
+    const finish = uploadBusy(button, "Processando...");
     try {
         await action();
         if (message) Notify.success(message);
@@ -31,7 +33,7 @@ async function run(button, action, message) {
     } catch (error) {
         Notify.error(error.message || "A operação não pôde ser concluída.");
     } finally {
-        button.disabled = false;
+        finish();
     }
 }
 

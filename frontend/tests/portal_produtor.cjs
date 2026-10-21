@@ -218,7 +218,13 @@ async function staticResponse(route) {
         await page.getByLabel('Título').fill('Novo beat');
         await page.locator('#producer-beat-form [name="preco_lease"]').fill('120');
         await page.locator('#producer-beat-form [name="mp3"]').setInputFiles({ name: 'beat.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('ID3synthetic') });
-        await page.locator('#producer-beat-form [name="capa"]').setInputFiles({ name: 'capa.png', mimeType: 'image/png', buffer: Buffer.from('synthetic-cover') });
+        await page.locator('#producer-beat-form [name="capa"]').setInputFiles({ name: 'capa.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64') });
+        await page.getByRole('dialog', { name: 'Ajustar imagem' }).getByRole('button', { name: 'Usar corte' }).click();
+        await page.waitForFunction(() => !document.querySelector('#producer-beat-form [name="capa"]').dataset.cropPending);
+        assert.deepEqual(await page.locator('#producer-beat-form [name="capa"]').evaluate(async input => {
+            const header = new DataView(await input.files[0].arrayBuffer());
+            return [header.getUint32(16), header.getUint32(20)];
+        }), [1024, 1024]);
         await page.getByRole('button', { name: 'Enviar para revisão' }).click();
         await page.waitForFunction(() => !document.querySelector('#producer-beat-form button[type=submit]')?.disabled);
         assert.equal(beatUploads, 1);

@@ -1,4 +1,6 @@
 import * as API from "../api.js";
+import { bindImageCrop } from "../modules/image_crop.js";
+import { uploadBusy } from "../modules/upload_feedback.js";
 
 import { authFetch } from "./auth.js";
 
@@ -222,6 +224,7 @@ function bindAudioControls() {
 
 function bindCoverControls() {
     const input = $("proj_capa_upload");
+    bindImageCrop(input);
     if (input.dataset.bound === "true") return;
     input.dataset.bound = "true";
     input.addEventListener("change", () => {
@@ -456,6 +459,10 @@ async function uploadImage(projectId, file) {
 }
 
 export async function salvarProjeto() {
+    if ($("proj_capa_upload").dataset.cropPending) return;
+    const button = document.querySelector('[onclick="salvarProjeto()"]');
+    if (button.disabled) return;
+    const finish = uploadBusy(button, "Salvando...");
     const originalId = $("proj_id").value;
     const originalProject = originalId
         ? projetos.find((item) => item.id === Number(originalId))
@@ -522,6 +529,8 @@ export async function salvarProjeto() {
         console.error(error);
 
         Notify.error(error.message);
+    } finally {
+        finish();
     }
 }
 
