@@ -29,10 +29,8 @@ def upgrade():
         )
         batch.create_check_constraint("ck_beats_preco_wav", "preco_wav IS NULL OR preco_wav > 0")
         batch.create_check_constraint("ck_beats_preco_multitrack", "preco_multitrack IS NULL OR preco_multitrack > 0")
-        batch.create_unique_constraint("uq_beats_mp3_ref", ["mp3_ref"])
-        batch.create_unique_constraint("uq_beats_wav_ref", ["wav_ref"])
-        batch.create_unique_constraint("uq_beats_multitrack_ref", ["multitrack_ref"])
-        batch.create_unique_constraint("uq_beats_capa_ref", ["capa_ref"])
+    for column in ("mp3_ref", "wav_ref", "multitrack_ref", "capa_ref"):
+        op.create_index(f"uq_beats_{column}", "beats", [column], unique=True)
     with op.batch_alter_table("orcamentos") as batch:
         batch.drop_constraint("ck_orcamentos_beat_licenca", type_="check")
         batch.create_check_constraint(
@@ -48,6 +46,11 @@ def upgrade():
 
 
 def downgrade():
+    indexes = {item["name"] for item in sa.inspect(op.get_bind()).get_indexes("beats")}
+    for column in ("capa_ref", "multitrack_ref", "wav_ref", "mp3_ref"):
+        name = f"uq_beats_{column}"
+        if name in indexes:
+            op.drop_index(name, table_name="beats")
     with op.batch_alter_table("beat_licencas") as batch:
         batch.drop_constraint("ck_beat_licencas_tipo", type_="check")
         batch.create_check_constraint("ck_beat_licencas_tipo", "tipo IN ('lease','exclusivo')")
@@ -58,10 +61,6 @@ def downgrade():
             "(beat_id IS NULL AND licenca_beat IS NULL) OR (beat_id IS NOT NULL AND licenca_beat IN ('lease','exclusivo'))",
         )
     with op.batch_alter_table("beats") as batch:
-        batch.drop_constraint("uq_beats_mp3_ref", type_="unique")
-        batch.drop_constraint("uq_beats_wav_ref", type_="unique")
-        batch.drop_constraint("uq_beats_multitrack_ref", type_="unique")
-        batch.drop_constraint("uq_beats_capa_ref", type_="unique")
         batch.drop_constraint("ck_beats_preco_wav", type_="check")
         batch.drop_constraint("ck_beats_preco_multitrack", type_="check")
         batch.drop_constraint("ck_beats_algum_preco", type_="check")
