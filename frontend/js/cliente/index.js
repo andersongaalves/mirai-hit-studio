@@ -45,6 +45,7 @@ function watchTaggedPreviews(production, files, failures = 0) {
 }
 
 function route() {
+    if (/^\/cliente\/beats\/?$/.test(location.pathname)) return { view: "beats" };
     if (/^\/cliente\/creditos\/?$/.test(location.pathname)) return { view: "credits" };
     const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
     if (proposal) return { view: "proposal-detail", id: Number(proposal[1]) };
@@ -195,6 +196,10 @@ async function openDetail(id) {
 
 function renderRoute() {
     const current = route();
+    if (current.view === "beats") {
+        loadBeats();
+        return;
+    }
     if (current.view === "credits") {
         loadWallet();
         return;
@@ -220,6 +225,36 @@ function renderRoute() {
     renderDashboard(productions, finances);
     renderProposalSummary(proposals, id => navigate(`/cliente/propostas/${id}`));
     showView("dashboard");
+}
+
+async function loadBeats() {
+    showView("beats");
+    const list = document.getElementById("client-beats-list"); list.textContent = "Carregando catálogo...";
+    try {
+        const beats = await api.listarBeats();
+        list.replaceChildren(...beats.map(beat => {
+            const card = document.createElement("article"); card.className = "producer-card";
+            const title = document.createElement("h3"); title.textContent = beat.titulo;
+            const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
+            const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
+            audio.addEventListener("play", async () => { if (audio.src) return; audio.src = URL.createObjectURL(await api.ouvirBeat(beat.id)); await audio.play(); }, { once: true });
+            const actions = document.createElement("div"); actions.className = "producer-card__footer";
+            for (const [kind, price] of [["lease", beat.preco_lease], ["exclusivo", beat.preco_exclusivo]]) {
+                if (!price) continue;
+                const button = document.createElement("button"); button.className = "btn-outline"; button.type = "button";
+                const idempotencyKey = crypto.randomUUID();
+                button.textContent = `${kind === "lease" ? "Lease" : "Exclusivo"} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price)}`;
+                button.onclick = async () => {
+                    button.disabled = true;
+                    try { await api.solicitarBeat(beat.id, kind, idempotencyKey); setAlert("Solicitação criada. A Mirai preparará sua proposta."); }
+                    catch (error) { setAlert(error.message, true); button.disabled = false; }
+                };
+                actions.append(button);
+            }
+            card.append(title, author, audio, actions); return card;
+        }));
+        if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";
+    } catch (error) { setAlert(error.message, true); list.textContent = ""; }
 }
 
 let walletRequest = 0;

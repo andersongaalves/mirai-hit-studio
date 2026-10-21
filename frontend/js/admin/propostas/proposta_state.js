@@ -41,7 +41,9 @@ function normalizarItem(item = {}) {
         valor_unitario: toNumber(item.valor_unitario || 0),
         desconto: toNumber(item.desconto || 0),
         servico_id: Number.isInteger(item.servico_id) ? item.servico_id : null,
-        combo_id: Number.isInteger(item.combo_id) ? item.combo_id : null
+        combo_id: Number.isInteger(item.combo_id) ? item.combo_id : null,
+        beat_id: Number.isInteger(item.beat_id) ? item.beat_id : null,
+        licenca_beat: item.licenca_beat ?? null
     };
 }
 
@@ -136,7 +138,13 @@ export function adicionarItemCatalogo(entrada, tipo = "servico") {
     if (!podeEditar() || !Number.isInteger(entrada?.id)) return;
 
     propostaState.proposta.itens.push(
-        normalizarItem(tipo === "combo" ? {
+        normalizarItem(tipo === "beat" ? {
+            descricao: `${entrada.titulo} (${entrada.licenca_beat === "exclusivo" ? "Exclusivo" : "Lease"})`,
+            quantidade: 1,
+            valor_unitario: entrada.valor,
+            beat_id: entrada.id,
+            licenca_beat: entrada.licenca_beat
+        } : tipo === "combo" ? {
             descricao: entrada.nome,
             quantidade: 1,
             valor_unitario: entrada.preco_catalogo?.preco_vigente ?? entrada.preco_base,
@@ -158,6 +166,8 @@ export function desvincularItem(index) {
 
     propostaState.proposta.itens[index].servico_id = null;
     propostaState.proposta.itens[index].combo_id = null;
+    propostaState.proposta.itens[index].beat_id = null;
+    propostaState.proposta.itens[index].licenca_beat = null;
     marcarAlterado();
 }
 

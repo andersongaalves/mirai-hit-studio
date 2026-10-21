@@ -109,6 +109,11 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
         raise UsuarioConflito("Nao e permitido alterar o proprio nome de usuario.")
 
     proximo_role = payload.get("role", usuario.role)
+    proximo_painel_beats = payload.get("painel_beats", usuario.painel_beats)
+    if proximo_painel_beats and proximo_role != "produtor":
+        raise UsuarioInvalido("Painel de beats permitido apenas para produtores.")
+    if proximo_role != "produtor":
+        payload["painel_beats"] = False
     if usuario.is_test and (proximo_role == "admin" or payload.get("username", usuario.username).strip().lower() == "yonda"):
         raise UsuarioConflito("Conta de teste exige reversao validada antes de assumir identidade protegida.")
     proximo_ativo = payload.get("ativo", usuario.ativo)

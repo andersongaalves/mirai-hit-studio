@@ -61,6 +61,7 @@ class UsuarioCreate(BaseModel):
     password: str = Field(min_length=8, max_length=72)
     role: UsuarioRole = "produtor"
     cliente_id: int | None = Field(default=None, gt=0)
+    painel_beats: StrictBool = False
 
     @field_validator("username")
     @classmethod
@@ -83,6 +84,8 @@ class UsuarioCreate(BaseModel):
             raise ValueError("client_link_required")
         if self.role != "cliente" and self.cliente_id is not None:
             raise ValueError("client_link_forbidden")
+        if self.painel_beats and self.role != "produtor":
+            raise ValueError("beat_panel_requires_producer")
         return self
 
 
@@ -95,6 +98,7 @@ class UsuarioUpdate(BaseModel):
     role: UsuarioRole | None = None
     ativo: StrictBool | None = None
     cliente_id: int | None = Field(default=None, gt=0)
+    painel_beats: StrictBool | None = None
 
     @field_validator("nome_exibicao")
     @classmethod
@@ -136,6 +140,7 @@ class UsuarioResponse(BaseModel):
     is_admin: bool
     ativo: bool
     is_test: bool = False
+    painel_beats: bool = False
     cliente_id: int | None
     created_at: datetime
     updated_at: datetime

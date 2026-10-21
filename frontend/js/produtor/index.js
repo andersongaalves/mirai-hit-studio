@@ -20,6 +20,7 @@ function route() {
     if (/^\/produtor\/financeiro\/?$/.test(location.pathname)) return { view: "financeiro" };
     if (/^\/produtor\/portfolio\/?$/.test(location.pathname)) return { view: "portfolio" };
     if (/^\/produtor\/perfil\/?$/.test(location.pathname)) return { view: "perfil" };
+    if (/^\/produtor\/beats\/?$/.test(location.pathname)) return { view: "beats" };
     return { view: "dashboard" };
 }
 
@@ -112,6 +113,10 @@ async function openDetail(id) {
 
 function renderRoute() {
     const current = route();
+    if (current.view === "beats") {
+        loadBeats();
+        return;
+    }
     if (current.view === "perfil") {
         showView("perfil");
         loadAudioTag(document.getElementById("producer-audio-tag"));
@@ -138,6 +143,31 @@ function renderRoute() {
     }
     renderDashboard(productions, payouts);
     showView("dashboard");
+}
+
+async function loadBeats() {
+    showView("beats");
+    const list = document.getElementById("producer-beats-list");
+    list.textContent = "Carregando beats...";
+    try {
+        const beats = await api.listarBeats();
+        list.replaceChildren(...beats.map(beat => {
+            const card = document.createElement("article");
+            card.className = "producer-card";
+            const title = document.createElement("h3"); title.textContent = beat.titulo;
+            const meta = document.createElement("p"); meta.textContent = `${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
+            const prices = document.createElement("p"); prices.textContent = [beat.preco_lease && `Lease: R$ ${Number(beat.preco_lease).toFixed(2)}`, beat.preco_exclusivo && `Exclusivo: R$ ${Number(beat.preco_exclusivo).toFixed(2)}`].filter(Boolean).join(" · ");
+            const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
+            audio.addEventListener("play", async () => {
+                if (audio.src) return;
+                const result = await api.ouvirBeat(beat.id); audio.src = URL.createObjectURL(result.blob); await audio.play();
+            }, { once: true });
+            card.append(title, meta, prices, audio);
+            if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; card.append(reason); }
+            return card;
+        }));
+        if (!beats.length) list.textContent = "Nenhum beat enviado.";
+    } catch (error) { setAlert(error.message, true); list.textContent = ""; }
 }
 
 async function updateStatus(id, status, button) {
@@ -232,6 +262,8 @@ async function enterPortal() {
         return;
     }
     setCurrentUserId(user.id);
+    document.getElementById("producer-beats-link").classList.toggle("hidden", !user.painel_beats);
+    if (!user.painel_beats && route().view === "beats") history.replaceState({}, "", "/produtor");
     document.getElementById("producer-username").textContent = user.username;
     startPortalNotifications(user);
     document.getElementById("producer-greeting").textContent = user.username;
@@ -275,6 +307,13 @@ document.getElementById("producer-login-form").addEventListener("submit", async 
 });
 
 document.getElementById("producer-logout").addEventListener("click", logout);
+document.getElementById("producer-beat-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]"); button.disabled = true;
+    try { await api.enviarBeat(new FormData(event.currentTarget)); event.currentTarget.reset(); setAlert("Beat enviado para revisão."); await loadBeats(); }
+    catch (error) { setAlert(error.message, true); }
+    finally { button.disabled = false; }
+});
 document.getElementById("producer-detail-back").addEventListener("click", () => navigate("/produtor/producoes"));
 document.getElementById("producer-status-filter").addEventListener("change", event => {
     filters.status = event.target.value;

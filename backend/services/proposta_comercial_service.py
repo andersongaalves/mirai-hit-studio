@@ -5,6 +5,7 @@ from io import BytesIO
 
 from core.enums import OrcamentoStatus
 from crud import crud_producao, crud_proposta
+from fastapi import HTTPException
 from models.enums.proposta import PropostaStatus as Status
 from pydantic import EmailStr, TypeAdapter, ValidationError
 from pypdf import PdfReader
@@ -189,6 +190,11 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
         raise service.PropostaInvalida(str(error)) from None
     except financial_service.FinanceiroConflito as error:
         raise service.PropostaConflito(str(error)) from None
+    from services import beat_service
+    try:
+        beat_service.reserve_for_proposal(db, model, budget.cliente_id)
+    except HTTPException as error:
+        raise service.PropostaConflito(str(error.detail)) from None
     model.status = Status.ACEITA.value
     model.aprovada_em = datetime.now(timezone.utc)
     budget.status = OrcamentoStatus.APROVADO.value

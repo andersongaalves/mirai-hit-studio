@@ -21,6 +21,24 @@ export async function obterCreditos() {
     return responseData(await authFetch("/portal/cliente/creditos"), "Não foi possível carregar seus créditos.");
 }
 
+export async function listarBeats() {
+    return responseData(await authFetch("/portal/cliente/beats"), "Não foi possível carregar o catálogo de beats.");
+}
+
+export async function ouvirBeat(id) {
+    const response = await authFetch(`/beats/${id}/preview`);
+    if (!response.ok) throw new Error("Não foi possível ouvir o beat.");
+    return response.blob();
+}
+
+export async function solicitarBeat(id, licenca, idempotencyKey) {
+    return responseData(await authFetch(`/portal/cliente/beats/${id}/solicitar`, {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ licenca }),
+    }), "Não foi possível solicitar esta licença.");
+}
+
 export async function obterProposta(id) {
     return responseData(
         await authFetch(`/portal/cliente/propostas/${id}`),

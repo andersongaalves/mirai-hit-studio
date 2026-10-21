@@ -96,6 +96,18 @@ export async function obterConfiguracao() {
     );
 }
 
+export async function listarBeats() {
+    return responseData(await authFetch("/portal/produtor/beats"), "Não foi possível carregar seus beats.");
+}
+
+export async function enviarBeat(form) {
+    return responseData(await authFetch("/portal/produtor/beats", { method: "POST", body: form }), "Não foi possível enviar o beat.");
+}
+
+export function ouvirBeat(id) {
+    return baixar(`/beats/${id}/preview`, "Não foi possível ouvir o beat.");
+}
+
 export async function listarMensagens(producaoId) {
     return responseData(
         await authFetch(`/portal/produtor/producoes/${producaoId}/mensagens`),

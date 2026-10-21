@@ -46,6 +46,7 @@ class UsuarioModel(Base):
 
     ativo = Column(Boolean, default=True, server_default=true(), nullable=False)
     is_test = Column(Boolean, default=False, server_default=false(), nullable=False)
+    painel_beats = Column(Boolean, default=False, server_default=false(), nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

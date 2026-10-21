@@ -59,7 +59,9 @@ def carregar_servicos(db: Session, ids) -> dict[int, ServicoModel]:
 
 
 def carregar_combos(db: Session, ids) -> dict:
-    from services import combo_service  # Local import: combo_service imports schemas only.
+    from services import (
+        combo_service,  # Local import: combo_service imports schemas only.
+    )
 
     ids = {identifier for identifier in ids if identifier is not None}
     return {combo.id: combo for combo in combo_service.carregar(db, ids)} if ids else {}
@@ -74,6 +76,19 @@ def validar_servicos(db: Session, itens: list[PropostaItem]) -> None:
     combos = carregar_combos(db, combo_ids)
     if combo_ids - {combo_id for combo_id, combo in combos.items() if combo.ativo}:
         raise service.PropostaInvalida("Combo do catalogo nao encontrado ou inativo.")
+    from models import BeatModel
+    beat_ids = {item.beat_id for item in itens if item.beat_id is not None}
+    beats = {beat.id: beat for beat in db.scalars(select(BeatModel).where(BeatModel.id.in_(beat_ids)))} if beat_ids else {}
+    for item in itens:
+        if item.beat_id is None:
+            continue
+        beat = beats.get(item.beat_id)
+        from services import beat_service
+        price = beat_service.price(db, beat, item.licenca_beat) if beat else None
+        if beat is None or beat.status != "aprovado" or not beat.ativo or price is None:
+            raise service.PropostaInvalida("Beat indisponivel para esta licenca.")
+        if item.valor_unitario != Decimal(str(price)) or item.quantidade != 1:
+            raise service.PropostaInvalida("Preco do beat divergente do catalogo.")
 
 
 def _linha(item: PropostaItem):
@@ -187,7 +202,9 @@ def _linha_combo(indice, item, combo, bruto, desconto, valor, *, estrito: bool) 
 
 def _congelar_cotas(db: Session, linhas: list[dict]) -> None:
     """5.09: freeze the file quotas of every contracted catalog service (single or in a combo)."""
-    from services import cota_arquivo_service  # Local import keeps the module graph acyclic.
+    from services import (
+        cota_arquivo_service,  # Local import keeps the module graph acyclic.
+    )
 
     servicos = [linha["servico_id"] for linha in linhas if linha.get("servico_id") and linha["catalogo_disponivel"]]
     servicos += [componente["servico_id"] for linha in linhas for componente in linha.get("componentes") or []]
@@ -202,7 +219,9 @@ def _congelar_cotas(db: Session, linhas: list[dict]) -> None:
 
 def _congelar_politicas(db: Session, linhas: list[dict]) -> None:
     """5.10: freeze the resolved portal policies of every contracted catalog service."""
-    from services import politica_service  # Local import keeps the module graph acyclic.
+    from services import (
+        politica_service,  # Local import keeps the module graph acyclic.
+    )
 
     servicos = [linha["servico_id"] for linha in linhas if linha.get("servico_id") and linha["catalogo_disponivel"]]
     servicos += [componente["servico_id"] for linha in linhas for componente in linha.get("componentes") or []]
@@ -225,9 +244,31 @@ def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
     itens = [PropostaItem.model_validate(item) for item in model.itens_json]
     servicos = carregar_servicos(db, [item.servico_id for item in itens])
     combos = carregar_combos(db, [item.combo_id for item in itens])
+    from models import BeatModel
+    beat_ids = {item.beat_id for item in itens if item.beat_id is not None}
+    beats = {beat.id: beat for beat in db.scalars(select(BeatModel).where(BeatModel.id.in_(beat_ids)))} if beat_ids else {}
     linhas = []
     for indice, item in enumerate(itens, start=1):
         bruto, desconto, valor = _linha(item)
+        if item.beat_id is not None:
+            beat = beats.get(item.beat_id)
+            from services import beat_service
+            price_details = beat_service.price_details(db, beat, item.licenca_beat) if beat else None
+            price = price_details["preco_vigente"] if price_details else None
+            available = beat is not None and beat.status == "aprovado" and beat.ativo and price is not None
+            if estrito and (not available or Decimal(str(price)) != item.valor_unitario):
+                raise service.PropostaConflito(f"O beat do item {indice} nao esta mais disponivel; revise a proposta.")
+            linhas.append({
+                "indice": indice, "descricao": item.descricao, "servico_id": None,
+                "servico_nome": None, "preco_catalogo": str(price) if price is not None else None,
+                "catalogo_disponivel": available, "quantidade": str(item.quantidade),
+                "valor_unitario": str(item.valor_unitario), "bruto": str(bruto),
+                "desconto": str(desconto), "valor_contratado": str(valor), "etapas": [],
+                "beat_id": item.beat_id, "beat_titulo": beat.titulo if beat else None,
+                "licenca_beat": item.licenca_beat,
+                "preco_catalogo_vigente": {**price_details, "promocao": None} if price_details else None,
+            })
+            continue
         if item.combo_id is not None:
             linhas.append(_linha_combo(indice, item, combos.get(item.combo_id), bruto, desconto, valor,
                                        estrito=estrito))

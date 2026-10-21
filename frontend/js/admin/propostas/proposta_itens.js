@@ -19,7 +19,7 @@ import {
 
 // Roadmap 3.0, 5.05/5.08: catalog services and combos are loaded once per page; failures keep
 // manual items. Combos are optional: if they fail, services still work.
-const catalogo = { servicos: null, combos: [], erro: false, pedido: null };
+const catalogo = { servicos: null, combos: [], beats: [], erro: false, pedido: null };
 
 async function listar(path) {
     const response = await authFetch(path);
@@ -30,10 +30,11 @@ async function listar(path) {
 
 function carregarCatalogo() {
     if (catalogo.servicos || catalogo.pedido) return catalogo.pedido ?? Promise.resolve(catalogo.servicos);
-    catalogo.pedido = Promise.all([listar("/servicos"), listar("/combos").catch(() => [])])
-        .then(([servicos, combos]) => {
+    catalogo.pedido = Promise.all([listar("/servicos"), listar("/combos").catch(() => []), listar("/admin/beats").catch(() => [])])
+        .then(([servicos, combos, beats]) => {
             catalogo.servicos = servicos.filter(servico => Number.isInteger(servico?.id) && servico.nome);
             catalogo.combos = combos.filter(combo => Number.isInteger(combo?.id) && combo.nome);
+            catalogo.beats = beats.filter(beat => Number.isInteger(beat?.id) && beat.status === "aprovado" && beat.ativo);
             catalogo.erro = false;
             return catalogo.servicos;
         })
@@ -55,6 +56,10 @@ function comboPorId(id) {
 
 // Reference price of the line's catalog origin (service base price or combo reference price).
 function precoReferencia(item) {
+    if (Number.isInteger(item.beat_id)) {
+        const beat = catalogo.beats.find(row => row.id === item.beat_id);
+        return beat ? Number(item.licenca_beat === "exclusivo" ? beat.preco_exclusivo : beat.preco_lease) : null;
+    }
     if (Number.isInteger(item.combo_id)) {
         const combo = comboPorId(item.combo_id);
         return combo ? Number(combo.preco_catalogo?.preco_vigente ?? combo.preco_base) : null;
@@ -64,6 +69,10 @@ function precoReferencia(item) {
 }
 
 function origemCatalogo(item) {
+    if (Number.isInteger(item.beat_id)) {
+        const beat = catalogo.beats.find(row => row.id === item.beat_id);
+        return `<p class="proposta-item-origem" data-origem><span>Beat: <strong>${escapeHtml(beat?.titulo ?? `#${item.beat_id}`)}</strong> · ${escapeHtml(item.licenca_beat ?? "")}${precoReferencia(item) !== null ? ` · ${money(precoReferencia(item))}` : ""}</span><button class="btn-small" type="button" data-desvincular>Desvincular</button></p>`;
+    }
     const ehCombo = Number.isInteger(item.combo_id);
     if (!ehCombo && !Number.isInteger(item.servico_id)) return "";
     const entrada = ehCombo ? comboPorId(item.combo_id) : servicoPorId(item.servico_id);
@@ -92,7 +101,7 @@ function preencherSeletor(select, button, aviso) {
     }
     const servicos = catalogo.servicos ?? [];
     const combos = catalogo.combos.filter(combo => combo.ativo !== false);
-    const vazio = !servicos.length && !combos.length;
+    const vazio = !servicos.length && !combos.length && !catalogo.beats.length;
     select.replaceChildren(new Option(vazio ? "Nenhum serviço no catálogo" : "Escolha um serviço ou combo do catálogo", ""));
     const grupoServicos = document.createElement("optgroup");
     grupoServicos.label = "Serviços";
@@ -108,6 +117,14 @@ function preencherSeletor(select, button, aviso) {
             new Option(`${combo.nome} — ${money(combo.preco_catalogo?.preco_vigente ?? combo.preco_base)}`, `c:${combo.id}`)
         ));
         select.append(grupoCombos);
+    }
+    if (catalogo.beats.length) {
+        const group = document.createElement("optgroup"); group.label = "Beats";
+        catalogo.beats.forEach(beat => {
+            if (beat.preco_lease) group.append(new Option(`${beat.titulo} — Lease ${money(beat.preco_lease)}`, `b:${beat.id}:lease`));
+            if (beat.preco_exclusivo) group.append(new Option(`${beat.titulo} — Exclusivo ${money(beat.preco_exclusivo)}`, `b:${beat.id}:exclusivo`));
+        });
+        select.append(group);
     }
     const editavel = podeEditar();
     select.disabled = !editavel || vazio;
@@ -298,15 +315,15 @@ export function renderizarItens(proposta, onRefresh = () => {}, onChange = () =>
     const button = $("btn-add-proposta-catalogo");
     const aviso = $("proposta-catalogo-aviso");
     button.onclick = () => {
-        const [tipo, id] = String(select.value).split(":");
-        const entrada = tipo === "c" ? comboPorId(Number(id)) : servicoPorId(Number(id));
+        const [tipo, id, licenca] = String(select.value).split(":");
+        const entrada = tipo === "b" ? catalogo.beats.find(beat => beat.id === Number(id)) : tipo === "c" ? comboPorId(Number(id)) : servicoPorId(Number(id));
         if (!entrada) return;
-        adicionarItemCatalogo(entrada, tipo === "c" ? "combo" : "servico");
+        adicionarItemCatalogo(tipo === "b" ? { ...entrada, licenca_beat: licenca, valor: licenca === "exclusivo" ? entrada.preco_exclusivo : entrada.preco_lease } : entrada, tipo === "b" ? "beat" : tipo === "c" ? "combo" : "servico");
         onRefresh();
         onChange();
     };
     const precisaRecarregarOrigem = !catalogo.servicos
-        && itens.some(item => Number.isInteger(item.servico_id) || Number.isInteger(item.combo_id));
+        && itens.some(item => Number.isInteger(item.servico_id) || Number.isInteger(item.combo_id) || Number.isInteger(item.beat_id));
     carregarCatalogo().then(() => {
         if (!document.body.contains(select)) return;
         // Origin labels need the catalog names; redraw once when they first arrive.

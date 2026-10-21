@@ -167,6 +167,14 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/cliente/configuracao') {
             return route.fulfill(portalSettings ? { json: { portal: 'cliente', versao: 4, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
         }
+        if (url.pathname === '/portal/cliente/beats') {
+            return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
+        }
+        if (url.pathname === '/portal/cliente/beats/71/solicitar' && request.method() === 'POST') {
+            assert.equal(request.postDataJSON().licenca, 'lease');
+            assert.match(request.headers()['idempotency-key'], /^[0-9a-f-]{36}$/);
+            return route.fulfill({ status: 201, json: { id: 91, status: 'rascunho' } });
+        }
         if (url.pathname === '/portal/cliente/producoes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
         }
@@ -223,6 +231,16 @@ async function staticResponse(route) {
         assert.match(metrics, /Projetos em andamento1/);
         assert.match(metrics, /Projetos concluídos1/);
         assert.match(metrics, /Pagamentos pendentes1/);
+        await page.getByRole('link', { name: 'Beats' }).click();
+        await page.waitForURL('**/cliente/beats');
+        await page.waitForSelector('#client-beats-list .producer-card');
+        assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
+        assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
+        await page.getByRole('button', { name: /Lease/ }).click();
+        await page.waitForFunction(() => document.getElementById('client-alert')?.textContent.includes('Solicitação criada'));
+        assert.equal(await page.getByRole('button', { name: /Lease/ }).isDisabled(), true);
+        assert.equal(await page.getByRole('button', { name: /Exclusivo/ }).count(), 1);
+        await page.getByRole('link', { name: 'Dashboard' }).click();
         assert.equal(await page.locator('#client-proposal-summary').isVisible(), true);
         await page.getByRole('link', { name: 'Propostas', exact: true }).click();
         await page.waitForURL('**/cliente/propostas');

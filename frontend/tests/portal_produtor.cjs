@@ -12,6 +12,7 @@ let lastUploadBody = '';
 let portalSettings = null;
 const threadPosts = [];
 let threadFails = true;
+let beatUploads = 0;
 // Roadmap 5.06: contract stages of production 1 (server-decided actions, no values).
 const PRODUCER_ACTIONS = { pendente: ['em_andamento'], em_andamento: ['em_revisao'], em_revisao: ['em_andamento'], concluida: [] };
 const stagePatches = [];
@@ -116,7 +117,7 @@ async function staticResponse(route) {
         if (url.origin === 'http://localhost:4173') return staticResponse(route);
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 200, body: '' });
 
-        const user = { id: 2, username: 'producer-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true };
+        const user = { id: 2, username: 'producer-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true, painel_beats: true };
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'synthetic-producer-token', user } });
         if (url.pathname === '/auth/me') return route.fulfill({ json: user });
         const stageList = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)\/etapas$/);
@@ -146,6 +147,13 @@ async function staticResponse(route) {
         }
         if (url.pathname === '/portal/produtor/configuracao') {
             return route.fulfill(portalSettings ? { json: { portal: 'produtor', versao: 2, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
+        }
+        if (url.pathname === '/portal/produtor/beats' && request.method() === 'GET') {
+            return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
+        }
+        if (url.pathname === '/portal/produtor/beats' && request.method() === 'POST') {
+            beatUploads++;
+            return route.fulfill({ status: 201, json: { id: 72, status: 'revisao' } });
         }
         if (url.pathname === '/portal/produtor/producoes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
@@ -197,6 +205,18 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.producer-metric').count(), 5);
         assert.match(await page.locator('#producer-metrics').textContent(), /Produções ativas2/);
         assert.match(await page.locator('#producer-metrics').textContent(), /Em revisão1/);
+        await page.getByRole('link', { name: 'Beats' }).click();
+        await page.waitForURL('**/produtor/beats');
+        await page.waitForSelector('#producer-beats-list .producer-card');
+        assert.match(await page.locator('#producer-beats-list').textContent(), /<Beat seguro>/);
+        assert.equal(await page.locator('#producer-beats-list script, #producer-beats-list img').count(), 0);
+        await page.getByLabel('Título').fill('Novo beat');
+        await page.getByLabel('Preço lease').fill('120');
+        await page.getByLabel('Áudio').setInputFiles({ name: 'beat.wav', mimeType: 'audio/wav', buffer: Buffer.from('synthetic') });
+        await page.getByRole('button', { name: 'Enviar para revisão' }).click();
+        await page.waitForFunction(() => !document.querySelector('#producer-beat-form button[type=submit]')?.disabled);
+        assert.equal(beatUploads, 1);
+        await page.getByRole('link', { name: 'Dashboard' }).click();
         await page.setViewportSize({ width: 390, height: 900 });
         const producerMenu = page.locator('.integrado-portal__menu-toggle');
         await producerMenu.click();
