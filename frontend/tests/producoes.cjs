@@ -67,6 +67,18 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 404 });
 
         calls.push(`${route.request().method()} ${url.pathname}`);
+        if (url.pathname === '/clientes') return route.fulfill({ json: [{ id: 9, nome: 'Cliente direto', email: 'direto@example.invalid' }] });
+        if (url.pathname === '/servicos') return route.fulfill({ json: [{ id: 5, nome: 'Mixagem' }] });
+        if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [{ id: 3, username: 'Produtor direto' }] });
+        if (url.pathname === '/producoes/direta') {
+            const payload = route.request().postDataJSON();
+            assert.equal(payload.cliente_id, 9);
+            assert.equal(payload.servico_id, 5);
+            assert.equal(payload.produtor_id, 3);
+            assert.equal(payload.titulo, 'Single direto');
+            assert.match(payload.request_id, /^[0-9a-f-]{36}$/);
+            return route.fulfill({ status: 201, json: { ...productions[0], id: 15 } });
+        }
         if (url.pathname === '/producoes' && route.request().method() === 'GET') {
             return route.fulfill(failList
                 ? { status: 500, json: { detail: 'Falha sintética' } }
@@ -304,6 +316,24 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         assert.ok(calls.includes('GET /producoes/1'));
         assert.ok(calls.includes('PATCH /producoes/1/etapas'));
         assert.ok(calls.includes('PATCH /producoes/1/observacoes'));
+        await page.evaluate(async (html) => {
+            const modal = await import('/js/admin/admin_modal.js');
+            modal.closeAdminModal('modal-producao');
+            const source = new DOMParser().parseFromString(html, 'text/html');
+            document.body.append(source.getElementById('nova-producao'), source.getElementById('modal-nova-producao'));
+            const { initCriarProducao } = await import('/js/admin/producoes/producoes_create.js');
+            initCriarProducao(() => { window.creationDone = true; });
+        }, await fs.readFile(path.join(root, 'admin.html'), 'utf8'));
+        await page.getByRole('button', { name: 'Nova produção', exact: true }).click();
+        const creation = page.getByRole('dialog', { name: 'Nova produção' });
+        await creation.getByLabel('Cliente', { exact: true }).selectOption('9');
+        await creation.getByLabel('Título', { exact: true }).fill('Single direto');
+        await creation.getByLabel('Serviço', { exact: true }).selectOption('5');
+        await creation.getByLabel('Produtor', { exact: true }).selectOption('3');
+        await creation.getByRole('button', { name: 'Criar produção' }).click();
+        await page.waitForFunction(() => window.creationDone === true);
+        assert.equal(await creation.isVisible(), false);
+        assert.equal(errors.length, 0, errors.join('\n'));
         console.log('PASS: production rendering, urgency, filters, detail, updates, errors and XSS safety.');
     } finally {
         await browser.close();

@@ -120,6 +120,15 @@ async function staticResponse(route) {
         const user = { id: 4, username: 'client-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true, cliente_id: loginRole === 'cliente' ? 1 : null };
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'synthetic-client-token', user } });
         if (url.pathname === '/auth/me') return route.fulfill({ json: user });
+        if (url.pathname === '/servicos') return route.fulfill({ json: [{ id: 5, nome: 'Mixagem' }] });
+        if (url.pathname === '/portal/cliente/solicitacoes' && request.method() === 'POST') {
+            const payload = request.postDataJSON();
+            assert.deepEqual(Object.keys(payload).sort(), ['descricao', 'request_id', 'servico_id', 'titulo']);
+            assert.equal(payload.servico_id, 5);
+            assert.equal(payload.titulo, 'Novo single');
+            assert.match(payload.request_id, /^[0-9a-f-]{36}$/);
+            return route.fulfill({ status: 201, json: { id: 82, status: 'novo' } });
+        }
         if (url.pathname === '/portal/cliente/propostas' && request.method() === 'GET') {
             return route.fulfill({ json: proposals });
         }
@@ -231,6 +240,15 @@ async function staticResponse(route) {
         assert.match(metrics, /Projetos em andamento1/);
         assert.match(metrics, /Projetos concluídos1/);
         assert.match(metrics, /Pagamentos pendentes1/);
+        await page.locator('#client-dashboard [data-new-production]').click();
+        const requestDialog = page.getByRole('dialog', { name: 'Nova produção' });
+        await requestDialog.getByLabel('Título').fill('Novo single');
+        await requestDialog.getByLabel('Serviço').selectOption('5');
+        await requestDialog.getByLabel('Conte sobre o projeto').fill('Preciso de uma mixagem.');
+        await requestDialog.getByRole('button', { name: 'Enviar para análise' }).click();
+        await page.waitForFunction(() => document.getElementById('client-alert')?.textContent.includes('Solicitação #82 enviada'));
+        assert.equal(await requestDialog.isVisible(), false);
+        assert.equal(new URL(page.url()).pathname, '/cliente');
         await page.getByRole('link', { name: 'Beats' }).click();
         await page.waitForURL('**/cliente/beats');
         await page.waitForSelector('#client-beats-list .producer-card');
