@@ -55,7 +55,14 @@ async function waitForActivationUrl() {
         await page.locator('#admin-area').waitFor({ state: 'visible' });
         await page.locator('#client-loading').waitFor({ state: 'hidden' });
         await page.getByText('Você ainda não possui projetos vinculados.').first().waitFor();
-        assert.equal(await page.getByRole('link', { name: 'Começar um projeto' }).first().getAttribute('href'), '/orcamento');
+        await page.getByRole('button', { name: 'Começar um projeto' }).first().click();
+        const requestDialog = page.getByRole('dialog', { name: 'Nova produção' });
+        await requestDialog.waitFor({ state: 'visible' });
+        assert.equal(new URL(page.url()).pathname, '/cliente');
+        assert.equal(await requestDialog.getByLabel('Título').isVisible(), true);
+        assert.equal(await requestDialog.getByLabel('Serviço').isVisible(), true);
+        await requestDialog.getByRole('button', { name: 'Cancelar' }).click();
+        await requestDialog.waitFor({ state: 'hidden' });
 
         for (const width of [320, 375, 390, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 850 });
