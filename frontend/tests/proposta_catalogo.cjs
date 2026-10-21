@@ -154,7 +154,7 @@ const SNAPSHOT = {
         assert.deepEqual(await select.locator('optgroup').evaluateAll(groups => groups.map(group => group.label)), ['Serviços', 'Combos', 'Beats']);
         assert.deepEqual(await select.locator('optgroup[label="Combos"] option').allTextContents(), ['Combo <i>Mix</i>+Master — R$\u00a01.200,00']);
         assert.deepEqual(await select.locator('optgroup[label="Beats"] option').allTextContents(), [
-            'Horizonte — Lease R$\u00a0150,00', 'Horizonte — Exclusivo R$\u00a0900,00',
+            'Horizonte — MP3 lease R$\u00a0150,00', 'Horizonte — Exclusivo R$\u00a0900,00',
         ]);
         assert.equal(await page.locator('#proposta-catalogo-servico i').count(), 0);
         assert.equal(await select.isDisabled(), false);
