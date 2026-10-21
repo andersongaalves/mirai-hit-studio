@@ -54,6 +54,50 @@ class ProducaoTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + source)
 
+    def test_direct_creation_ownership_idempotency_and_admin_only(self):
+        self.run_case('''
+from models.cliente import ClienteModel
+from models.servico import ServicoModel
+from services import portal_cliente_service
+with Session(engine) as db:
+    db.add_all([
+        ClienteModel(id=50, nome='Cliente direto', email='direto@example.invalid', is_test=True),
+        ClienteModel(id=51, nome='Outro cliente', email='outro@example.invalid'),
+        ServicoModel(id=50, nome='Mix direta', valor_base=100),
+    ])
+    db.commit()
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        payload = {'request_id':'8c29dbcd-7cc3-4c23-854e-b5083b77fce1', 'cliente_id':50,
+                   'servico_id':50, 'titulo':'Single direto', 'produtor_id':1}
+        response = await client.post('/producoes/direta', json=payload)
+        assert response.status_code == 201, response.text
+        item = response.json()
+        assert item['cliente'] == 'Cliente direto' and item['proposta_id'] is None
+        repeated = await client.post('/producoes/direta', json=payload)
+        assert repeated.status_code == 201 and repeated.json()['id'] == item['id']
+        assert (await client.post('/producoes/direta', json={**payload, 'titulo':'Outro'})).status_code == 409
+        with Session(engine) as db:
+            production = portal_cliente_service.buscar_producao(db, item['id'], 50)
+            assert production.produtor_id == 1
+            assert db.get(OrcamentoModel, production.orcamento_id).is_test
+            try:
+                portal_cliente_service.buscar_producao(db, item['id'], 51)
+                raise AssertionError('cross-client access')
+            except portal_cliente_service.ProducaoClienteNaoEncontrada:
+                pass
+            assert db.query(ProducaoModel).count() == 2
+            assert db.query(PropostaModel).count() == 1
+        new = {**payload, 'request_id':'83da9c3d-c106-420c-a827-26ed3aff8120'}
+        assert (await client.post('/producoes/direta', json={**new, 'cliente_id':999})).status_code == 422
+        assert (await client.post('/producoes/direta', json={**new, 'produtor_id':99})).status_code == 422
+        assert (await client.post('/producoes/direta', json={**new, 'servico_id':999})).status_code == 422
+        app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(
+            id=1, username='produtor', role='produtor', is_admin=False, ativo=True)
+        assert (await client.post('/producoes/direta', json=new)).status_code == 403
+asyncio.run(check())
+''')
+
     def test_list_detail_and_updates(self):
         self.run_case('''
 async def check():
