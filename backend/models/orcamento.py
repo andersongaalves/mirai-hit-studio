@@ -21,7 +21,7 @@ class OrcamentoModel(Base):
     __table_args__ = (
         CheckConstraint(
             "(beat_id IS NULL AND licenca_beat IS NULL) OR "
-            "(beat_id IS NOT NULL AND licenca_beat IN ('lease','exclusivo'))",
+            "(beat_id IS NOT NULL AND licenca_beat IN ('lease','lease_mp3','lease_wav','multitrack','exclusivo'))",
             name="ck_orcamentos_beat_licenca",
         ),
     )

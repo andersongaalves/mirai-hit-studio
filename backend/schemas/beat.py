@@ -15,13 +15,15 @@ class BeatCreate(BaseModel):
     preco_lease: Decimal | None = Field(
         default=None, gt=0, max_digits=12, decimal_places=2
     )
+    preco_wav: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=2)
+    preco_multitrack: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=2)
     preco_exclusivo: Decimal | None = Field(
         default=None, gt=0, max_digits=12, decimal_places=2
     )
 
     @model_validator(mode="after")
     def algum_preco(self):
-        if self.preco_lease is None and self.preco_exclusivo is None:
+        if all(value is None for value in (self.preco_lease, self.preco_wav, self.preco_multitrack, self.preco_exclusivo)):
             raise ValueError("beat_price_required")
         return self
 
@@ -34,7 +36,7 @@ class BeatReview(BaseModel):
 
 class BeatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    licenca: Literal["lease", "exclusivo"]
+    licenca: Literal["lease", "lease_mp3", "lease_wav", "multitrack", "exclusivo"]
 
 
 class BeatResponse(BaseModel):

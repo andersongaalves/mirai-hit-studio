@@ -139,7 +139,7 @@ export function adicionarItemCatalogo(entrada, tipo = "servico") {
 
     propostaState.proposta.itens.push(
         normalizarItem(tipo === "beat" ? {
-            descricao: `${entrada.titulo} (${entrada.licenca_beat === "exclusivo" ? "Exclusivo" : "Lease"})`,
+            descricao: `${entrada.titulo} (${{ lease: "MP3 lease", lease_mp3: "MP3 lease", lease_wav: "WAV lease", multitrack: "Multitrack", exclusivo: "Exclusivo" }[entrada.licenca_beat] || "Lease"})`,
             quantidade: 1,
             valor_unitario: entrada.valor,
             beat_id: entrada.id,

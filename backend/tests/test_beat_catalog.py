@@ -24,6 +24,8 @@ def wav(seconds=0.2):
         sound.writeframes(b''.join(struct.pack('<h', int(2000 * math.sin(2 * math.pi * 440 * n / 22050))) for n in range(int(seconds * 22050))))
     return output.getvalue()
 
+def mp3(): return b'ID3' + b'\0' * 32
+
 class MemoryStorage:
     def __init__(self): self.objects, self.deleted = {}, []
     def save(self, data, mime):
@@ -49,29 +51,36 @@ class BeatCatalogTests(unittest.TestCase):
     def test_role_review_private_preview_and_exclusive_sale(self):
         self.run_case(r"""
 async def check():
-    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service.audio_tag_service, 'mixar', return_value=b'tagged-preview'):
+    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service.audio_tag_service, 'duracao', return_value=.2), patch.object(beat_service.audio_tag_service, 'mixar', return_value=mp3()+b'tag'):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
-            denied = await api.post('/portal/produtor/beats', headers=bearer('producer-b'), data={'titulo':'Nope','preco_lease':'50'}, files={'arquivo':('beat.wav',wav(),'audio/wav')})
+            denied = await api.post('/portal/produtor/beats', headers=bearer('producer-b'), data={'titulo':'Nope','preco_lease':'50'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg')})
             assert denied.status_code == 403
-            created = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Horizonte','bpm':'140','generos':'Trap','preco_lease':'100','preco_exclusivo':'500'}, files={'arquivo':('beat.wav',wav(),'audio/wav')})
+            created = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Horizonte','bpm':'140','generos':'Trap','preco_lease':'100','preco_wav':'200','preco_multitrack':'300','preco_exclusivo':'500'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg'),'wav':('beat.wav',wav(),'audio/wav'),'multitrack':('beat.zip',b'PK\x03\x04more','application/zip')})
             assert created.status_code == 201, created.text
             beat_id = created.json()['id']
-            assert created.json()['status'] == 'revisao' and len(storage.objects) == 2
+            assert created.json()['status'] == 'revisao' and len(storage.objects) == 4
+            assert created.json()['preco_wav_base'] == 200 and created.json()['preco_multitrack_base'] == 300
             assert (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json() == []
             assert (await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))).status_code == 404
+            changed = await api.put(f'/admin/beats/{beat_id}', headers=bearer('admin'), data={'titulo':'Horizonte revisado','descricao':'Nova descricao','bpm':'142','tonalidade':'Am','generos':'Trap','preco_lease':'110','preco_wav':'220','preco_multitrack':'330','preco_exclusivo':'550'})
+            assert changed.status_code == 200, changed.text
+            assert changed.json()['titulo'] == 'Horizonte revisado' and changed.json()['preco_lease_base'] == 110
             approved = await api.patch(f'/admin/beats/{beat_id}', headers=bearer('admin'), json={'decisao':'aprovar','motivo':''})
             assert approved.status_code == 200
             catalog = (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json()
             assert [item['id'] for item in catalog] == [beat_id]
+            assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330
             preview = await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))
-            assert preview.content == b'tagged-preview' and preview.headers['cache-control'] == 'private, no-store'
+            assert preview.content == mp3()+b'tag' and preview.headers['cache-control'] == 'private, no-store'
             assert (await api.get(f'/beats/{beat_id}/preview', headers=bearer('producer-b'))).status_code == 404
             key = '11111111-1111-4111-8111-111111111111'
-            requested = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease'})
+            requested = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease_wav'})
             assert requested.status_code == 201, requested.text
-            assert requested.json()['itens'][0]['beat_id'] == beat_id and requested.json()['itens'][0]['licenca_beat'] == 'lease'
-            replay = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease'})
+            assert requested.json()['itens'][0]['beat_id'] == beat_id and requested.json()['itens'][0]['licenca_beat'] == 'lease_wav'
+            replay = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease_wav'})
             assert replay.status_code == 201 and replay.json()['id'] == requested.json()['id']
+            blocked_edit = await api.put(f'/admin/beats/{beat_id}', headers=bearer('client-a'), data={'titulo':'Again','preco_lease':'110'})
+            assert blocked_edit.status_code == 403
     with Session(engine) as db:
         beat = db.get(BeatModel, beat_id)
         proposal = type('Proposal', (), {'id': 90, 'itens_json':[{'beat_id':beat_id,'licenca_beat':'exclusivo','valor_unitario':'500.00'}]})()
@@ -85,11 +94,34 @@ asyncio.run(check())
 with Session(engine) as db:
     actor = db.get(UsuarioModel, 2)
     payload = BeatCreate(titulo='Falha', preco_lease='10')
-    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service.audio_tag_service, 'mixar', return_value=b'tagged'), patch.object(db, 'commit', side_effect=RuntimeError('db')):
-        try: beat_service.create(db, actor=actor, payload=payload, data=wav(), mime_type='audio/wav')
+    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service.audio_tag_service, 'duracao', return_value=.2), patch.object(beat_service.audio_tag_service, 'mixar', return_value=mp3()+b'tag'), patch.object(db, 'commit', side_effect=RuntimeError('db')):
+        try: beat_service.create(db, actor=actor, payload=payload, mp3=(mp3(),'audio/mpeg'), wav=(wav(),'audio/wav'))
         except RuntimeError: pass
         else: raise AssertionError('failure swallowed')
-    assert not storage.objects and len(storage.deleted) == 2
+    assert not storage.objects and len(storage.deleted) == 3
+""")
+
+    def test_admin_replaces_tagged_preview_and_missing_format_is_rejected(self):
+        self.run_case(r"""
+async def check():
+    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service.audio_tag_service, 'duracao', return_value=.2), patch.object(beat_service.audio_tag_service, 'mixar', side_effect=[mp3()+b'tag-a', mp3()+b'tag-b']):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
+            invalid = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Sem WAV','preco_wav':'200'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg')})
+            assert invalid.status_code == 422 and not storage.objects
+            created = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Troca','preco_lease':'100'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg')})
+            assert created.status_code == 201, created.text
+            beat_id = created.json()['id']
+            assert len(storage.objects) == 2
+            before = set(storage.objects)
+            changed = await api.put(f'/admin/beats/{beat_id}', headers=bearer('admin'), data={'titulo':'Troca revisada','preco_lease':'120','preco_wav':'250'}, files={'mp3':('novo.mp3',mp3()+b'new','audio/mpeg'),'wav':('beat.wav',wav(),'audio/wav')})
+            assert changed.status_code == 200, changed.text
+            assert changed.json()['status'] == 'revisao' and changed.json()['tem_wav']
+            assert len(storage.objects) == 3 and not (before & set(storage.objects))
+            assert before.issubset(set(storage.deleted))
+            assert (await api.patch(f'/admin/beats/{beat_id}', headers=bearer('admin'), json={'decisao':'aprovar'})).status_code == 200
+            preview = await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))
+            assert preview.content == mp3()+b'tag-b'
+asyncio.run(check())
 """)
 
     def test_proposal_item_contract_rejects_incomplete_or_mixed_origin(self):

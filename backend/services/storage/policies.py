@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
-from typing import Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
 
 from .contracts import StorageScope, StorageValidationError
-
 
 PRODUCTION_MIME_TYPES = frozenset({
     "application/pdf",
     "application/zip",
+    "application/vnd.rar",
     "audio/flac",
     "audio/mpeg",
     "audio/mp4",
@@ -69,6 +69,8 @@ def _matches_signature(data: bytes, content_type: str) -> bool:
         return data.startswith(b"%PDF-")
     if content_type == "application/zip":
         return data.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
+    if content_type == "application/vnd.rar":
+        return data.startswith((b"Rar!\x1a\x07\x00", b"Rar!\x1a\x07\x01\x00"))
     if content_type in {"audio/mpeg", "audio/mp3"}:
         return data.startswith(b"ID3") or (len(data) > 1 and data[0] == 0xFF and data[1] & 0xE0 == 0xE0)
     if content_type in {"audio/wav", "audio/x-wav"}:

@@ -150,15 +150,15 @@
                     </section>
                     <section id="producer-beats" class="producer-view hidden" aria-labelledby="producer-beats-title">
                         <div class="producer-page-heading"><div><p class="producer-eyebrow">Catálogo interno</p><h1 id="producer-beats-title">Meus beats</h1><p class="producer-lead">Envie beats com sua tag para revisão da Mirai.</p></div></div>
-                        <form id="producer-beat-form" class="producer-upload">
-                            <label>Título<input name="titulo" maxlength="160" required /></label>
-                            <label>Áudio<input name="arquivo" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/flac" required /></label>
-                            <label>Preço lease<input name="preco_lease" type="number" min="0.01" step="0.01" /></label>
-                            <label>Preço exclusivo<input name="preco_exclusivo" type="number" min="0.01" step="0.01" /></label>
-                            <label>BPM<input name="bpm" type="number" min="30" max="300" /></label>
-                            <label>Tonalidade<input name="tonalidade" maxlength="24" /></label>
-                            <label>Gêneros<input name="generos" maxlength="240" /></label>
-                            <label>Descrição<textarea name="descricao" maxlength="5000"></textarea></label>
+                        <form id="producer-beat-form" class="producer-upload beat-form">
+                            <label class="beat-form__full">Título<input name="titulo" maxlength="160" required /></label>
+                            <div class="beat-form__format"><label>MP3 lease (com tag)<input name="mp3" type="file" accept=".mp3,audio/mpeg" required /></label><label>Preço<input name="preco_lease" type="number" min="0.01" step="0.01" /></label></div>
+                            <div class="beat-form__format"><label>WAV lease (sem tag)<input name="wav" type="file" accept=".wav,audio/wav" /></label><label>Preço<input name="preco_wav" type="number" min="0.01" step="0.01" /></label></div>
+                            <div class="beat-form__format"><label>Multitrack (ZIP ou RAR)<input name="multitrack" type="file" accept=".zip,.rar,application/zip,application/vnd.rar" /></label><label>Preço<input name="preco_multitrack" type="number" min="0.01" step="0.01" /></label></div>
+                            <div class="beat-form__pair"><label>BPM<input name="bpm" type="number" min="30" max="300" /></label><label>Key<input name="tonalidade" maxlength="24" /></label></div>
+                            <label class="beat-form__full">Gêneros<input name="generos" maxlength="240" /></label>
+                            <label class="beat-form__full">Descrição<textarea name="descricao" maxlength="5000"></textarea></label>
+                            <label class="beat-form__full">Preço (exclusivo)<input name="preco_exclusivo" type="number" min="0.01" step="0.01" /></label>
                             <button class="btn-cta" type="submit">Enviar para revisão</button>
                         </form>
                         <div id="producer-beats-list" class="producer-list"></div>

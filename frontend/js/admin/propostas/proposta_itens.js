@@ -58,7 +58,8 @@ function comboPorId(id) {
 function precoReferencia(item) {
     if (Number.isInteger(item.beat_id)) {
         const beat = catalogo.beats.find(row => row.id === item.beat_id);
-        return beat ? Number(item.licenca_beat === "exclusivo" ? beat.preco_exclusivo : beat.preco_lease) : null;
+        const field = { lease: "preco_lease", lease_mp3: "preco_lease", lease_wav: "preco_wav", multitrack: "preco_multitrack", exclusivo: "preco_exclusivo" }[item.licenca_beat];
+        return beat && field ? Number(beat[field]) : null;
     }
     if (Number.isInteger(item.combo_id)) {
         const combo = comboPorId(item.combo_id);
@@ -121,7 +122,9 @@ function preencherSeletor(select, button, aviso) {
     if (catalogo.beats.length) {
         const group = document.createElement("optgroup"); group.label = "Beats";
         catalogo.beats.forEach(beat => {
-            if (beat.preco_lease) group.append(new Option(`${beat.titulo} — Lease ${money(beat.preco_lease)}`, `b:${beat.id}:lease`));
+            if (beat.preco_lease) group.append(new Option(`${beat.titulo} — MP3 lease ${money(beat.preco_lease)}`, `b:${beat.id}:${beat.formato_novo ? "lease_mp3" : "lease"}`));
+            if (beat.preco_wav) group.append(new Option(`${beat.titulo} — WAV lease ${money(beat.preco_wav)}`, `b:${beat.id}:lease_wav`));
+            if (beat.preco_multitrack) group.append(new Option(`${beat.titulo} — Multitrack ${money(beat.preco_multitrack)}`, `b:${beat.id}:multitrack`));
             if (beat.preco_exclusivo) group.append(new Option(`${beat.titulo} — Exclusivo ${money(beat.preco_exclusivo)}`, `b:${beat.id}:exclusivo`));
         });
         select.append(group);
@@ -318,7 +321,8 @@ export function renderizarItens(proposta, onRefresh = () => {}, onChange = () =>
         const [tipo, id, licenca] = String(select.value).split(":");
         const entrada = tipo === "b" ? catalogo.beats.find(beat => beat.id === Number(id)) : tipo === "c" ? comboPorId(Number(id)) : servicoPorId(Number(id));
         if (!entrada) return;
-        adicionarItemCatalogo(tipo === "b" ? { ...entrada, licenca_beat: licenca, valor: licenca === "exclusivo" ? entrada.preco_exclusivo : entrada.preco_lease } : entrada, tipo === "b" ? "beat" : tipo === "c" ? "combo" : "servico");
+        const beatPrice = { lease: entrada.preco_lease, lease_mp3: entrada.preco_lease, lease_wav: entrada.preco_wav, multitrack: entrada.preco_multitrack, exclusivo: entrada.preco_exclusivo }[licenca];
+        adicionarItemCatalogo(tipo === "b" ? { ...entrada, licenca_beat: licenca, valor: beatPrice } : entrada, tipo === "b" ? "beat" : tipo === "c" ? "combo" : "servico");
         onRefresh();
         onChange();
     };
