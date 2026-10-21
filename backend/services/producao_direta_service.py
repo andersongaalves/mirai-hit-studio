@@ -3,6 +3,7 @@ import hashlib
 from crud import crud_producao
 from fastapi import HTTPException
 from models.cliente import ClienteModel
+from models.combo import ComboModel
 from models.orcamento import OrcamentoModel
 from models.servico import ServicoModel
 from models.usuario import UsuarioModel
@@ -33,9 +34,17 @@ def criar(db, dados, actor):
         raise HTTPException(422, "Cliente ativo nao encontrado.")
     if not client.email:
         raise HTTPException(422, "Complete o e-mail do cadastro do cliente antes de criar a producao.")
-    service = db.get(ServicoModel, dados.servico_id)
-    if service is None:
-        raise HTTPException(422, "Servico nao encontrado.")
+    combo = None
+    if dados.combo_id is not None:
+        combo = db.get(ComboModel, dados.combo_id)
+        if combo is None or not combo.ativo or len(combo.itens) < 2:
+            raise HTTPException(422, "Combo ativo nao encontrado ou incompleto.")
+        service_name = combo.nome
+    else:
+        service = db.get(ServicoModel, dados.servico_id)
+        if service is None:
+            raise HTTPException(422, "Servico nao encontrado.")
+        service_name = service.nome
     if dados.produtor_id is not None:
         producer = db.get(UsuarioModel, dados.produtor_id)
         if producer is None or not producer.ativo or producer.role != "produtor":
@@ -44,20 +53,24 @@ def criar(db, dados, actor):
         # Client ownership in all portals is resolved through the budget relation.
         budget = OrcamentoModel(
             nome_cliente=client.nome, email=client.email or "", whatsapp=client.telefone,
-            cliente_id=client.id, servico=service.nome, is_test=client.is_test,
+            cliente_id=client.id, servico=service_name, is_test=client.is_test,
             idempotency_key=key, request_hash=fingerprint,
-            detalhes="Producao criada diretamente pelo administrador.",
+            detalhes="Producao criada diretamente pelo administrador." + (
+                f"\nCombo #{combo.id}: {combo.nome}\nServicos: "
+                + ", ".join(item.servico.nome for item in combo.itens) if combo else ""
+            ),
         )
         db.add(budget)
         db.flush()
         production = crud_producao.criar_sem_commit(db, {
-            "titulo": dados.titulo, "cliente": client.nome, "servico": service.nome,
+            "titulo": dados.titulo, "cliente": client.nome, "servico": service_name,
             "orcamento_id": budget.id, "produtor_id": dados.produtor_id,
             "prazo_entrega": dados.prazo_entrega, "observacoes": dados.observacoes,
         })
         audit_service.record(db, actor=actor, action="production.created_directly",
                              entity_type="production", entity_id=production.id,
-                             metadata={"cliente_id": client.id, "orcamento_id": budget.id})
+                             metadata={"cliente_id": client.id, "orcamento_id": budget.id,
+                                       "servico_id": dados.servico_id, "combo_id": dados.combo_id})
         db.commit()
         return crud_producao.buscar(db, production.id)
     except IntegrityError:

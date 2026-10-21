@@ -69,11 +69,17 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         calls.push(`${route.request().method()} ${url.pathname}`);
         if (url.pathname === '/clientes') return route.fulfill({ json: [{ id: 9, nome: 'Cliente direto', email: 'direto@example.invalid' }] });
         if (url.pathname === '/servicos') return route.fulfill({ json: [{ id: 5, nome: 'Mixagem' }] });
+        if (url.pathname === '/catalogo/combos') return route.fulfill({ json: [{ id: 5, nome: 'Mix + Master', ativo: true }, { id: 6, nome: 'Inativo', ativo: false }] });
         if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [{ id: 3, username: 'Produtor direto' }] });
         if (url.pathname === '/producoes/direta') {
             const payload = route.request().postDataJSON();
             assert.equal(payload.cliente_id, 9);
-            assert.equal(payload.servico_id, 5);
+            if (payload.combo_id) {
+                assert.equal(payload.combo_id, 5);
+                assert.equal(payload.servico_id, undefined);
+            } else {
+                assert.equal(payload.servico_id, 5);
+            }
             assert.equal(payload.produtor_id, 3);
             assert.equal(payload.titulo, 'Single direto');
             assert.match(payload.request_id, /^[0-9a-f-]{36}$/);
@@ -333,6 +339,15 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         await creation.getByRole('button', { name: 'Criar produção' }).click();
         await page.waitForFunction(() => window.creationDone === true);
         assert.equal(await creation.isVisible(), false);
+        await page.getByRole('button', { name: 'Nova produção', exact: true }).click();
+        await creation.getByLabel('Cliente', { exact: true }).selectOption('9');
+        await creation.getByLabel('Título', { exact: true }).fill('Single direto');
+        assert.equal(await creation.locator('optgroup[label="Combos"] option').count(), 1);
+        await creation.getByLabel('Serviço', { exact: true }).selectOption('combo:5');
+        await creation.getByLabel('Produtor', { exact: true }).selectOption('3');
+        await creation.getByRole('button', { name: 'Criar produção' }).click();
+        await creation.waitFor({ state: 'hidden' });
+        assert.equal(calls.filter(call => call === 'POST /producoes/direta').length, 2);
         assert.equal(errors.length, 0, errors.join('\n'));
         console.log('PASS: production rendering, urgency, filters, detail, updates, errors and XSS safety.');
     } finally {

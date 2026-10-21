@@ -54,6 +54,39 @@ class ProducaoTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + source)
 
+    def test_direct_combo_selection_is_validated_and_keeps_components(self):
+        self.run_case('''
+from models.cliente import ClienteModel
+from models.combo import ComboItemModel, ComboModel
+from models.servico import ServicoModel
+with Session(engine) as db:
+    db.add(ClienteModel(id=50, nome='Cliente combo', email='combo@example.invalid'))
+    db.add_all([ServicoModel(id=50, nome='Mix', valor_base=100), ServicoModel(id=51, nome='Master', valor_base=50)])
+    db.add(ComboModel(id=50, nome='Mix + Master', preco_base=120, ativo=True))
+    db.add(ComboModel(id=51, nome='Inativo', preco_base=120, ativo=False))
+    db.flush()
+    db.add_all([ComboItemModel(combo_id=50, servico_id=50, ordem=1), ComboItemModel(combo_id=50, servico_id=51, ordem=2)])
+    db.commit()
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        payload = {'request_id':'d2258ffc-0925-4323-ab80-3b2dbef79669', 'cliente_id':50,
+                   'combo_id':50, 'titulo':'Single combo'}
+        for invalid in ({'combo_id':999}, {'combo_id':51}, {'servico_id':50}):
+            result = await client.post('/producoes/direta', json={**payload, **invalid})
+            assert result.status_code == 422, result.text
+        missing = {key:value for key,value in payload.items() if key != 'combo_id'}
+        assert (await client.post('/producoes/direta', json=missing)).status_code == 422
+        result = await client.post('/producoes/direta', json=payload)
+        assert result.status_code == 201, result.text
+        assert result.json()['servico'] == 'Mix + Master'
+        repeated = await client.post('/producoes/direta', json=payload)
+        assert repeated.json()['id'] == result.json()['id']
+        with Session(engine) as db:
+            budget = db.get(OrcamentoModel, result.json()['orcamento_id'])
+            assert 'Combo #50' in budget.detalhes and 'Mix, Master' in budget.detalhes
+asyncio.run(check())
+''')
+
     def test_direct_creation_ownership_idempotency_and_admin_only(self):
         self.run_case('''
 from models.cliente import ClienteModel

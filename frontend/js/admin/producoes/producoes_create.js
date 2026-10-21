@@ -14,6 +14,16 @@ function options(select, items, label) {
     items.forEach((item) => select.add(new Option(label(item), item.id)));
 }
 
+function catalogOptions(select, services, combos) {
+    select.length = 1;
+    for (const [label, items, prefix] of [["Avulsos", services, ""], ["Combos", combos.filter(item => item.ativo), "combo:"]]) {
+        const group = document.createElement("optgroup");
+        group.label = label;
+        items.forEach(item => group.append(new Option(item.nome, `${prefix}${item.id}`)));
+        if (items.length) select.append(group);
+    }
+}
+
 export function initCriarProducao(onCreated) {
     const opener = document.getElementById("nova-producao");
     const form = document.getElementById("nova-producao-form");
@@ -26,13 +36,13 @@ export function initCriarProducao(onCreated) {
     opener.onclick = async () => {
         opener.disabled = true;
         try {
-            const [clients, services, producers] = await Promise.all([
+            const [clients, services, producers, combos] = await Promise.all([
                 request("/clientes?ativo=true&ambiente=todos"),
-                request("/servicos"), request("/usuarios/produtores"),
+                request("/servicos"), request("/usuarios/produtores"), request("/catalogo/combos"),
             ]);
             form.reset();
             options(form.elements.cliente_id, clients, (item) => `${item.nome}${item.email ? ` · ${item.email}` : ""}${item.is_test ? " (teste)" : ""}`);
-            options(form.elements.servico_id, services, (item) => item.nome);
+            catalogOptions(form.elements.servico_id, services, combos);
             options(form.elements.produtor_id, producers, (item) => item.username);
             error.textContent = "";
             requestId = crypto.randomUUID();
@@ -48,7 +58,12 @@ export function initCriarProducao(onCreated) {
         if (submitting || !form.reportValidity()) return;
         const data = Object.fromEntries(new FormData(form));
         data.cliente_id = Number(data.cliente_id);
-        data.servico_id = Number(data.servico_id);
+        if (data.servico_id.startsWith("combo:")) {
+            data.combo_id = Number(data.servico_id.slice(6));
+            delete data.servico_id;
+        } else {
+            data.servico_id = Number(data.servico_id);
+        }
         data.produtor_id = data.produtor_id ? Number(data.produtor_id) : null;
         data.prazo_entrega = data.prazo_entrega ? new Date(data.prazo_entrega).toISOString() : null;
         data.request_id = requestId;
