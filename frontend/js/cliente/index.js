@@ -1,5 +1,6 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
+import { initProductionRequest } from "./request.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
@@ -553,4 +554,5 @@ document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshSummary();
 });
 
+initProductionRequest(setAlert);
 if (await restaurarSessao()) await enterPortal();

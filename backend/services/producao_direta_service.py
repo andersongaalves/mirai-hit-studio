@@ -31,6 +31,8 @@ def criar(db, dados, actor):
     client = db.get(ClienteModel, dados.cliente_id)
     if client is None or not client.ativo:
         raise HTTPException(422, "Cliente ativo nao encontrado.")
+    if not client.email:
+        raise HTTPException(422, "Complete o e-mail do cadastro do cliente antes de criar a producao.")
     service = db.get(ServicoModel, dados.servico_id)
     if service is None:
         raise HTTPException(422, "Servico nao encontrado.")

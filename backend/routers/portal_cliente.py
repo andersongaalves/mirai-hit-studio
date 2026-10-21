@@ -23,6 +23,8 @@ from schemas.portal_cliente import (
     FinanceiroClienteResponse,
     ProducaoArquivoClienteResponse,
     ProducaoClienteResponse,
+    ProducaoSolicitacaoCreate,
+    ProducaoSolicitacaoResponse,
     PropostaClienteAction,
     PropostaClienteResponse,
 )
@@ -32,6 +34,7 @@ from services import (
     portal_cliente_proposta_service,
     portal_cliente_service,
     producao_arquivo_service,
+    producao_solicitacao_service,
 )
 from services.producao_arquivo_storage import MAX_FILE_SIZE
 from sqlalchemy.orm import Session
@@ -48,6 +51,11 @@ _CHECKOUT_EXCEPTIONS = (
     financial_service.FinanceiroConflito,
     MercadoPagoError,
 )
+
+
+@router.post("/solicitacoes", response_model=ProducaoSolicitacaoResponse, status_code=201)
+def solicitar_producao(dados: ProducaoSolicitacaoCreate, db: Db, user: CurrentClient):
+    return producao_solicitacao_service.solicitar(db, dados, user)
 
 
 def _file_error(exc):

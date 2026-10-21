@@ -22,8 +22,9 @@ const empty = message => element("div", "producer-empty", message);
 
 function emptyProjects() {
     const state = empty("Você ainda não possui projetos vinculados.");
-    const action = element("a", "btn-cta", "Começar um projeto");
-    action.href = "/orcamento";
+    const action = element("button", "btn-cta", "Começar um projeto");
+    action.type = "button";
+    action.dataset.newProduction = "";
     state.append(action);
     return state;
 }

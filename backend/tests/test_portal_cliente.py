@@ -86,6 +86,41 @@ class PortalClienteTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + source)
 
+    def test_project_request_uses_authenticated_client_and_creates_no_charge(self):
+        self.run_case(r'''
+from models.servico import ServicoModel
+with Session(engine) as db:
+    db.add(ServicoModel(id=50, nome='Mixagem', valor_base=100))
+    db.commit()
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        payload = {'request_id':'9ff3ec67-8993-4b45-a232-3444bca213ed', 'servico_id':50,
+                   'titulo':'Meu single', 'descricao':'Preciso de uma mixagem para meu single.'}
+        assert (await client.post('/portal/cliente/solicitacoes', json=payload)).status_code == 401
+        assert (await client.post('/portal/cliente/solicitacoes', headers=bearer('producer'), json=payload)).status_code == 403
+        response = await client.post('/portal/cliente/solicitacoes', headers=bearer('client-a'), json=payload)
+        assert response.status_code == 201, response.text
+        assert response.json()['status'] == 'novo'
+        repeated = await client.post('/portal/cliente/solicitacoes', headers=bearer('client-a'), json=payload)
+        assert repeated.json() == response.json()
+        assert (await client.post('/portal/cliente/solicitacoes', headers=bearer('client-b'), json=payload)).status_code == 409
+        assert (await client.post('/portal/cliente/solicitacoes', headers=bearer('client-a'), json={**payload,'cliente_id':2})).status_code == 422
+        assert (await client.post('/portal/cliente/solicitacoes', headers=bearer('client-a'), json={**payload,'descricao':'Outra'})).status_code == 409
+        with Session(engine) as db:
+            budget = db.get(OrcamentoModel, response.json()['id'])
+            assert budget.cliente_id == 1 and budget.nome_cliente == 'Cliente A'
+            assert budget.valor_total is None and 'Meu single' in budget.detalhes
+            assert db.query(OrcamentoModel).count() == 4
+            assert db.query(ProducaoModel).count() == 3
+            assert db.query(PropostaModel).count() == 2
+            assert db.query(CobrancaModel).count() == 1
+            db.get(ClienteModel, 1).email = None
+            db.commit()
+        assert (await client.post('/portal/cliente/solicitacoes', headers=bearer('client-a'), json={
+            **payload, 'request_id':'8f318613-d34c-440e-9cbd-f216c7d50c65'})).status_code == 409
+asyncio.run(check())
+''')
+
     def test_auth_ownership_history_and_safe_financial_projection(self):
         self.run_case(r'''
 async def check():
