@@ -1,5 +1,7 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
+import { bindImageCrop } from "../modules/image_crop.js";
+import { uploadBusy } from "../modules/upload_feedback.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
@@ -9,6 +11,7 @@ import { loadAudioTag } from "../modules/audio_tags.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
+bindImageCrop(document.querySelector('#producer-beat-form [name="capa"]'), { ratio: 1, width: 1024 });
 let payouts = [];
 const filters = { status: "todos", order: "prazo" };
 let filtersInitialized = false;
@@ -231,7 +234,8 @@ async function downloadReceipt(id, button, byStage = false) {
 }
 
 async function uploadFile(production, file, type, replacesId, button, note = "") {
-    button.disabled = true;
+    if (button.disabled) return;
+    const finish = uploadBusy(button);
     setAlert();
     try {
         const sent = await api.enviarArquivo(production.id, file, type, replacesId, note);
@@ -246,6 +250,8 @@ async function uploadFile(production, file, type, replacesId, button, note = "")
     } catch (error) {
         setAlert(error.message, true);
         button.disabled = false;
+    } finally {
+        finish();
     }
 }
 
@@ -310,19 +316,22 @@ document.getElementById("producer-login-form").addEventListener("submit", async 
 document.getElementById("producer-logout").addEventListener("click", logout);
 document.getElementById("producer-beat-form").addEventListener("submit", async event => {
     event.preventDefault();
-    const button = event.currentTarget.querySelector("button[type=submit]"); button.disabled = true;
+    const form = event.currentTarget;
+    const button = form.querySelector("button[type=submit]");
+    if (button.disabled) return;
+    const finish = uploadBusy(button);
     try {
-        const body = new FormData(event.currentTarget);
+        const body = new FormData(form);
         for (const name of ["wav", "multitrack"]) {
             if (!body.get(name)?.size) body.delete(name);
         }
         await api.enviarBeat(body);
-        event.currentTarget.reset();
+        form.reset();
         setAlert("Beat enviado para revisão.");
         await loadBeats();
     }
     catch (error) { setAlert(error.message, true); }
-    finally { button.disabled = false; }
+    finally { finish(); }
 });
 document.getElementById("producer-detail-back").addEventListener("click", () => navigate("/produtor/producoes"));
 document.getElementById("producer-status-filter").addEventListener("change", event => {

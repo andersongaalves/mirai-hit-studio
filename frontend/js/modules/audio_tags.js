@@ -1,4 +1,5 @@
 import { authFetch } from "../admin/auth.js";
+import { uploadBusy } from "./upload_feedback.js";
 
 const roots = new Set();
 const node = (tag, text, className = "") => {
@@ -71,7 +72,7 @@ export async function loadAudioTag(root, { admin = false } = {}) {
             event.preventDefault();
             if (send.disabled || !file.files[0]) return;
             if (file.files[0].size > 2 * 1024 * 1024) { feedback.textContent = "A tag deve ter até 2 MB."; return; }
-            send.disabled = true;
+            const finish = uploadBusy(send);
             const form = new FormData();
             form.append("arquivo", file.files[0]);
             form.append("versao", String(current.versao));
@@ -79,6 +80,7 @@ export async function loadAudioTag(root, { admin = false } = {}) {
                 await data(await authFetch(endpoint, { method: "POST", body: form }));
                 if (root.dataset.serial === serial) await loadAudioTag(root, { admin });
             } catch (error) { feedback.textContent = error.message; send.disabled = false; }
+            finally { finish(); }
         };
         root.append(upload);
         if (admin) {

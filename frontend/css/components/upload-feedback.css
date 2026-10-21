@@ -1,0 +1,4 @@
+.upload-busy { display: inline-flex; align-items: center; justify-content: center; gap: 10px; cursor: progress; }
+.upload-busy::before { content: ""; display: inline-block; flex: 0 0 16px; width: 16px; height: 16px; box-sizing: border-box; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: upload-spin 0.8s linear infinite; }
+@keyframes upload-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .upload-busy::before { animation: none; border-style: dotted; } }

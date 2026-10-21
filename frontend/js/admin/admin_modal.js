@@ -50,6 +50,7 @@ function handleTab(event, modal) {
 }
 
 function handleKeydown(event) {
+    if (event.target.closest("dialog[open]")) return;
     const modal = topModal();
     if (!modal) return;
 

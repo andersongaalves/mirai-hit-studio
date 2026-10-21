@@ -1,0 +1,11 @@
+.image-crop { width: min(760px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; overflow: auto; box-sizing: border-box; padding: 20px; border: 1px solid var(--color-accent, #00cde8); border-radius: 8px; background: var(--color-background, #07121e); color: var(--color-text-primary, #f6f8fb); }
+.image-crop::backdrop { background: rgb(0 0 0 / 75%); }
+.image-crop h2 { font-size: 22px; margin: 0 0 16px; }
+.image-crop__stage { height: min(52dvh, 440px); min-height: 180px; width: 100%; overflow: hidden; background: #111; touch-action: none; }
+.image-crop__stage > img { display: block; max-width: 100%; max-height: 100%; }
+.image-crop__zoom { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; margin-top: 16px; }
+.image-crop__zoom input { width: 100%; padding: 0; accent-color: var(--color-accent, #00cde8); }
+.image-crop__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.image-crop [role="alert"] { color: var(--color-danger, #ff6868); }
+.image-crop .cropper-point { background: #00cde8; opacity: 1; width: 12px; height: 12px; }
+.image-crop .cropper-line { background: #00cde8; }

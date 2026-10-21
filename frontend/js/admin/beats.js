@@ -1,4 +1,6 @@
 import { authFetch } from "./auth.js";
+import { bindImageCrop } from "../modules/image_crop.js";
+import { uploadBusy } from "../modules/upload_feedback.js";
 
 async function data(response) {
     const payload = await response.json().catch(() => null);
@@ -61,7 +63,7 @@ function beatCard(beat) {
     const form = document.createElement("form");
     form.className = "beat-form admin-beat-form";
     field(form, "Título", "titulo", beat.titulo, { maxlength: 160 });
-    field(form, beat.capa_url ? "Substituir capa" : "Adicionar capa", "capa", "", { type: "file", accept: ".jpg,.jpeg,.png,.webp" });
+    bindImageCrop(field(form, beat.capa_url ? "Substituir capa" : "Adicionar capa", "capa", "", { type: "file", accept: ".jpg,.jpeg,.png,.webp" }), { ratio: 1, width: 1024 });
     formatRow(form, "MP3 lease (com tag)", "mp3", "preco_lease", beat.preco_lease_base, beat.formato_novo, ".mp3");
     formatRow(form, "WAV lease (sem tag)", "wav", "preco_wav", beat.preco_wav_base, beat.tem_wav, ".wav");
     formatRow(form, "Multitrack (ZIP ou RAR)", "multitrack", "preco_multitrack", beat.preco_multitrack_base, beat.tem_multitrack, ".zip,.rar");
@@ -77,11 +79,15 @@ function beatCard(beat) {
     save.disabled = beat.status === "vendido";
     actions.append(save);
     form.addEventListener("submit", async event => {
-        event.preventDefault(); save.disabled = true; message.textContent = "Salvando...";
+        event.preventDefault();
+        if (save.disabled) return;
+        const finish = uploadBusy(save, "Salvando...");
+        message.textContent = "Salvando...";
         const body = new FormData(form);
         for (const name of ["mp3", "wav", "multitrack", "capa"]) if (!body.get(name)?.size) body.delete(name);
         try { await data(await authFetch(`/admin/beats/${beat.id}`, { method: "PUT", body })); await initBeats(); }
         catch (error) { message.textContent = error.message; save.disabled = false; }
+        finally { finish(); }
     });
     for (const [label, decisao] of [["Aprovar", "aprovar"], ["Rejeitar", "rejeitar"]]) {
         const button = document.createElement("button"); button.type = "button";

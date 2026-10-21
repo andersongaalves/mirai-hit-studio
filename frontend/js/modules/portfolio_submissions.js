@@ -1,4 +1,6 @@
 import { authFetch } from "../admin/auth.js";
+import { bindImageCrop } from "./image_crop.js";
+import { uploadBusy } from "./upload_feedback.js";
 
 const labels = { pendente: "Aguardando revisão", aprovado: "Publicado", recusado: "Recusado" };
 const node = (tag, text, className) => {
@@ -63,6 +65,7 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
             });
             const coverFile = field(form, "imagem", "Imagem da capa", { type: "file" });
             coverFile.accept = "image/jpeg,image/png,image/webp,image/avif";
+            bindImageCrop(coverFile);
             const coverUrl = field(form, "link_capa", "Link público da capa", { type: "url", maxLength: 500 });
             const coverPreview = node("img", "", "portfolio-cover-preview");
             coverPreview.alt = "Prévia da capa selecionada";
@@ -112,7 +115,7 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
             form.addEventListener("submit", async event => {
                 event.preventDefault();
                 if (submit.disabled) return;
-                submit.disabled = true;
+                const finish = uploadBusy(submit);
                 message.textContent = "";
                 const data = Object.fromEntries(new FormData(form));
                 delete data.capa_origem;
@@ -135,7 +138,8 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                     root.querySelector('[role="status"]').textContent = "Projeto enviado para revisão do estúdio.";
                 } catch (error) {
                     message.textContent = error.message;
-                    submit.disabled = false;
+                } finally {
+                    finish();
                 }
             });
             root.append(form);

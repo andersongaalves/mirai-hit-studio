@@ -167,6 +167,7 @@ async function staticResponse(route) {
             mimeType: "image/png",
             buffer: coverPng,
         });
+        await page.getByRole("dialog", { name: "Ajustar imagem" }).getByRole("button", { name: "Usar corte" }).click();
         await page.waitForFunction(() => {
             const preview = document.getElementById("proj_capa_preview");
             return !preview.hidden && preview.complete && preview.naturalWidth > 0;

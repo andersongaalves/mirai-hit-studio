@@ -1,6 +1,7 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
 import { initProductionRequest } from "./request.js";
+import { uploadBusy } from "../modules/upload_feedback.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
@@ -411,6 +412,7 @@ async function refreshFiles(production, setFeedback) {
 async function uploadFile(production, file, type, replacesId, form, setFeedback, note = "") {
     if (form.dataset.busy === "true") return;
     form.dataset.busy = "true";
+    const finish = uploadBusy(form.querySelector('button[type="submit"]'));
     form.querySelectorAll("input, select, textarea, button").forEach(control => { control.disabled = true; });
     const submit = form.querySelector('button[type="submit"]');
     submit.textContent = "Enviando arquivo...";
@@ -429,6 +431,7 @@ async function uploadFile(production, file, type, replacesId, form, setFeedback,
         setFeedback("error", uploadFeedback.message);
     } finally {
         form.dataset.busy = "false";
+        finish();
         form.querySelectorAll("input, select, textarea, button").forEach(control => { control.disabled = false; });
         submit.textContent = "Enviar arquivo";
     }
