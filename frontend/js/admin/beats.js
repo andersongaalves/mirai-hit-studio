@@ -43,6 +43,8 @@ function beatCard(beat) {
     const card = document.createElement("article");
     card.className = "admin-list-item admin-beat-card";
     const title = document.createElement("h3"); title.textContent = beat.titulo;
+    const cover = beat.capa_url ? document.createElement("img") : null;
+    if (cover) { cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; }
     const meta = document.createElement("p"); meta.textContent = `${beat.produtor} · ${beat.status}`;
     const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
     const message = document.createElement("p"); message.className = "beat-review-message"; message.setAttribute("role", "status");
@@ -59,6 +61,7 @@ function beatCard(beat) {
     const form = document.createElement("form");
     form.className = "beat-form admin-beat-form";
     field(form, "Título", "titulo", beat.titulo, { maxlength: 160 });
+    field(form, beat.capa_url ? "Substituir capa" : "Adicionar capa", "capa", "", { type: "file", accept: ".jpg,.jpeg,.png,.webp" });
     formatRow(form, "MP3 lease (com tag)", "mp3", "preco_lease", beat.preco_lease_base, beat.formato_novo, ".mp3");
     formatRow(form, "WAV lease (sem tag)", "wav", "preco_wav", beat.preco_wav_base, beat.tem_wav, ".wav");
     formatRow(form, "Multitrack (ZIP ou RAR)", "multitrack", "preco_multitrack", beat.preco_multitrack_base, beat.tem_multitrack, ".zip,.rar");
@@ -76,7 +79,7 @@ function beatCard(beat) {
     form.addEventListener("submit", async event => {
         event.preventDefault(); save.disabled = true; message.textContent = "Salvando...";
         const body = new FormData(form);
-        for (const name of ["mp3", "wav", "multitrack"]) if (!body.get(name)?.size) body.delete(name);
+        for (const name of ["mp3", "wav", "multitrack", "capa"]) if (!body.get(name)?.size) body.delete(name);
         try { await data(await authFetch(`/admin/beats/${beat.id}`, { method: "PUT", body })); await initBeats(); }
         catch (error) { message.textContent = error.message; save.disabled = false; }
     });
@@ -96,6 +99,7 @@ function beatCard(beat) {
         actions.append(button);
     }
     form.append(actions, message);
+    if (cover) card.append(cover);
     card.append(title, meta, audio, form);
     if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; card.append(reason); }
     return card;

@@ -80,6 +80,9 @@ class BeatModel(Base):
     multitrack_ref = Column(String(180), nullable=True, unique=True)
     multitrack_sha256 = Column(String(64), nullable=True)
     multitrack_mime = Column(String(100), nullable=True)
+    capa_ref = Column(String(180), nullable=True, unique=True)
+    capa_url = Column(String(1000), nullable=True)
+    capa_sha256 = Column(String(64), nullable=True)
     tamanho_bytes = Column(BigInteger, nullable=False)
     mime_type = Column(String(100), nullable=False)
     revisado_por_id = Column(

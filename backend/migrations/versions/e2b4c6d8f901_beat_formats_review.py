@@ -19,6 +19,9 @@ def upgrade():
         batch.add_column(sa.Column("multitrack_ref", sa.String(180)))
         batch.add_column(sa.Column("multitrack_sha256", sa.String(64)))
         batch.add_column(sa.Column("multitrack_mime", sa.String(100)))
+        batch.add_column(sa.Column("capa_ref", sa.String(180)))
+        batch.add_column(sa.Column("capa_url", sa.String(1000)))
+        batch.add_column(sa.Column("capa_sha256", sa.String(64)))
         batch.drop_constraint("ck_beats_algum_preco", type_="check")
         batch.create_check_constraint(
             "ck_beats_algum_preco",
@@ -29,6 +32,7 @@ def upgrade():
         batch.create_unique_constraint("uq_beats_mp3_ref", ["mp3_ref"])
         batch.create_unique_constraint("uq_beats_wav_ref", ["wav_ref"])
         batch.create_unique_constraint("uq_beats_multitrack_ref", ["multitrack_ref"])
+        batch.create_unique_constraint("uq_beats_capa_ref", ["capa_ref"])
     with op.batch_alter_table("orcamentos") as batch:
         batch.drop_constraint("ck_orcamentos_beat_licenca", type_="check")
         batch.create_check_constraint(
@@ -57,9 +61,10 @@ def downgrade():
         batch.drop_constraint("uq_beats_mp3_ref", type_="unique")
         batch.drop_constraint("uq_beats_wav_ref", type_="unique")
         batch.drop_constraint("uq_beats_multitrack_ref", type_="unique")
+        batch.drop_constraint("uq_beats_capa_ref", type_="unique")
         batch.drop_constraint("ck_beats_preco_wav", type_="check")
         batch.drop_constraint("ck_beats_preco_multitrack", type_="check")
         batch.drop_constraint("ck_beats_algum_preco", type_="check")
         batch.create_check_constraint("ck_beats_algum_preco", "preco_lease IS NOT NULL OR preco_exclusivo IS NOT NULL")
-        for column in ("multitrack_mime", "multitrack_sha256", "multitrack_ref", "wav_sha256", "wav_ref", "mp3_ref", "preco_multitrack", "preco_wav"):
+        for column in ("capa_sha256", "capa_url", "capa_ref", "multitrack_mime", "multitrack_sha256", "multitrack_ref", "wav_sha256", "wav_ref", "mp3_ref", "preco_multitrack", "preco_wav"):
             batch.drop_column(column)

@@ -155,6 +155,7 @@ async function loadBeats() {
             const card = document.createElement("article");
             card.className = "producer-card";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
+            if (beat.capa_url) { const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; card.append(cover); }
             const meta = document.createElement("p"); meta.textContent = `${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
             const prices = document.createElement("p"); prices.textContent = [["MP3 lease", beat.preco_lease], ["WAV lease", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
             const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";

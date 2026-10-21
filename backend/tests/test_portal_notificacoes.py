@@ -212,7 +212,7 @@ assert notices()['itens'] == []
     def test_additive_migration_roundtrip_does_not_backfill(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
-assert bootstrap(engine) == 'd7a2c4e6f810'
+assert bootstrap(engine) == 'e2b4c6d8f901'
 assert 'portal_notificacoes' in inspect(engine).get_table_names()
 with engine.connect() as connection:
     assert connection.exec_driver_sql('SELECT count(*) FROM portal_notificacoes').scalar_one() == 0

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
@@ -13,17 +14,23 @@ from services.producao_arquivo_storage import (
     ProducaoArquivoStorageError,
     new_production_file_storage,
 )
-from services.storage.contracts import StorageScope, StorageValidationError
+from services.storage.contracts import (
+    StorageError,
+    StorageScope,
+    StorageValidationError,
+)
 from services.storage.policies import DEFAULT_POLICIES
+from services.storage.registry import storage_for
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 MAX_BEAT_BYTES = 50 * 1024 * 1024
 ARCHIVE_MIMES = {"application/zip", "application/vnd.rar"}
+logger = logging.getLogger(__name__)
 
 
-def _validate_files(payload, mp3, wav, archive, *, has_wav=False, has_archive=False):
+def _validate_files(payload, mp3, wav, archive, cover=None, *, has_wav=False, has_archive=False):
     policy = DEFAULT_POLICIES[StorageScope.PRODUCTION_TEMP]
     for item, allowed in ((mp3, {"audio/mpeg"}), (wav, {"audio/wav", "audio/x-wav"}), (archive, ARCHIVE_MIMES)):
         if item is None:
@@ -41,6 +48,11 @@ def _validate_files(payload, mp3, wav, archive, *, has_wav=False, has_archive=Fa
         raise HTTPException(422, "Envie o multitrack para definir seu preco.")
     if mp3 is not None:
         audio_tag_service.duracao(mp3[0], limite=1800)
+    if cover is not None:
+        try:
+            DEFAULT_POLICIES[StorageScope.PUBLIC_IMAGE].validate(*cover)
+        except StorageValidationError:
+            raise HTTPException(422, "Conteudo da capa invalido.") from None
 
 
 def price_details(db, model, kind):
@@ -90,6 +102,7 @@ def _response(db, model, *, exclusive_available=True, include_base=False):
         "formato_novo": bool(model.mp3_ref),
         "tem_wav": bool(model.wav_ref),
         "tem_multitrack": bool(model.multitrack_ref),
+        "capa_url": model.capa_url,
     }
     if include_base:
         result.update({
@@ -111,17 +124,21 @@ def _tag(db, producer_id):
     return tag, profile
 
 
-def create(db: Session, *, actor, payload: BeatCreate, mp3, wav=None, archive=None):
+def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, archive=None):
     if not actor.painel_beats:
         raise HTTPException(403, "Painel de beats nao habilitado para esta conta.")
-    _validate_files(payload, mp3, wav, archive)
+    _validate_files(payload, mp3, wav, archive, cover)
     tag, profile = _tag(db, actor.id)
     tagged_mp3 = audio_tag_service.mixar(
         mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
     )
     storage = new_production_file_storage("previa")
+    image_storage = storage_for(StorageScope.PUBLIC_IMAGE)
     saved = []
+    saved_cover = None
     try:
+        saved_cover = image_storage.save(*cover)
+        cover_url = saved_cover.public_url or image_storage.get_public_url(saved_cover.reference)
         original_ref = storage.save(*mp3)
         saved.append(original_ref)
         mp3_ref = storage.save(tagged_mp3, "audio/mpeg")
@@ -146,6 +163,9 @@ def create(db: Session, *, actor, payload: BeatCreate, mp3, wav=None, archive=No
             multitrack_ref=archive_ref,
             multitrack_sha256=hashlib.sha256(archive[0]).hexdigest() if archive else None,
             multitrack_mime=archive[1] if archive else None,
+            capa_ref=str(saved_cover.reference),
+            capa_url=cover_url,
+            capa_sha256=hashlib.sha256(cover[0]).hexdigest(),
             tamanho_bytes=len(mp3[0]),
             mime_type="audio/mpeg",
         )
@@ -168,6 +188,11 @@ def create(db: Session, *, actor, payload: BeatCreate, mp3, wav=None, archive=No
                 storage.delete(reference)
             except ProducaoArquivoStorageError:
                 pass
+        if saved_cover is not None:
+            try:
+                image_storage.delete(saved_cover.reference)
+            except StorageError:
+                logger.warning("beat_cover_compensation_failed")
         raise
 
 
@@ -241,7 +266,7 @@ def review(db, beat_id, payload, actor):
     return _response(db, model)
 
 
-def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None):
+def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover=None):
     model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
     if model is None:
         raise HTTPException(404, "Beat nao encontrado.")
@@ -249,7 +274,7 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None):
         BeatLicencaModel.beat_id == beat_id, BeatLicencaModel.status.in_(("reservada", "adquirida"))
     )):
         raise HTTPException(409, "Beat com licenca ativa nao pode ser alterado.")
-    _validate_files(payload, mp3, wav, archive, has_wav=bool(model.wav_ref),
+    _validate_files(payload, mp3, wav, archive, cover, has_wav=bool(model.wav_ref),
                     has_archive=bool(model.multitrack_ref))
     tagged_mp3 = None
     if mp3 is not None:
@@ -258,8 +283,17 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None):
             mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
         )
     storage = new_production_file_storage("previa")
+    image_storage = storage_for(StorageScope.PUBLIC_IMAGE) if cover else None
+    saved_cover = None
+    old_cover = None
     saved, old = [], []
     try:
+        if cover is not None:
+            saved_cover = image_storage.save(*cover)
+            old_cover = model.capa_ref
+            model.capa_ref = str(saved_cover.reference)
+            model.capa_url = saved_cover.public_url or image_storage.get_public_url(saved_cover.reference)
+            model.capa_sha256 = hashlib.sha256(cover[0]).hexdigest()
         if mp3 is not None:
             original_ref = storage.save(*mp3)
             saved.append(original_ref)
@@ -302,12 +336,22 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None):
                 storage.delete(reference)
             except ProducaoArquivoStorageError:
                 pass
+        if saved_cover is not None:
+            try:
+                image_storage.delete(saved_cover.reference)
+            except StorageError:
+                logger.warning("beat_cover_compensation_failed")
         raise
     for reference in set(old) - set(saved):
         try:
             storage.delete(reference)
         except ProducaoArquivoStorageError:
             pass
+    if old_cover:
+        try:
+            image_storage.delete(old_cover)
+        except StorageError:
+            logger.warning("beat_cover_retirement_failed beat_id=%s", beat_id)
     return _response(db, model, include_base=True)
 
 

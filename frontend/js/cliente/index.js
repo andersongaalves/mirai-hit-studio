@@ -235,6 +235,7 @@ async function loadBeats() {
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article"); card.className = "producer-card";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
+            if (beat.capa_url) { const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; card.append(cover); }
             const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
             const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
             audio.addEventListener("play", async () => { if (audio.src) return; audio.src = URL.createObjectURL(await api.ouvirBeat(beat.id)); await audio.play(); }, { once: true });

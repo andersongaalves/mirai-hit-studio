@@ -25,11 +25,13 @@ User = Annotated[object, Depends(get_current_user)]
 async def _file(upload, kind):
     if upload is None:
         return None
-    data = await upload.read(beat_service.MAX_BEAT_BYTES + 1)
+    limit = 10 * 1024 * 1024 if kind == "capa" else beat_service.MAX_BEAT_BYTES
+    data = await upload.read(limit + 1)
     await upload.close()
     extension = (upload.filename or "").lower().rsplit(".", 1)[-1]
     allowed = {"mp3": {"mp3": "audio/mpeg"}, "wav": {"wav": "audio/wav"},
-               "multitrack": {"zip": "application/zip", "rar": "application/vnd.rar"}}[kind]
+               "multitrack": {"zip": "application/zip", "rar": "application/vnd.rar"},
+               "capa": {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}}[kind]
     if extension not in allowed:
         raise HTTPException(422, "Extensao de arquivo invalida.")
     return data, allowed[extension]
@@ -52,6 +54,7 @@ async def submit_beat(
     db: Db,
     user: Producer,
     mp3: Annotated[UploadFile, File()],
+    capa: Annotated[UploadFile, File()],
     titulo: Annotated[str, Form()],
     wav: Annotated[UploadFile | None, File()] = None,
     multitrack: Annotated[UploadFile | None, File()] = None,
@@ -68,7 +71,7 @@ async def submit_beat(
                        preco_lease, preco_wav, preco_multitrack, preco_exclusivo)
     return beat_service.create(db, actor=user, payload=payload,
                                mp3=await _file(mp3, "mp3"), wav=await _file(wav, "wav"),
-                               archive=await _file(multitrack, "multitrack"))
+                               archive=await _file(multitrack, "multitrack"), cover=await _file(capa, "capa"))
 
 
 @router.get("/portal/cliente/beats")
@@ -114,12 +117,13 @@ async def edit_beat(
     mp3: Annotated[UploadFile | None, File()] = None,
     wav: Annotated[UploadFile | None, File()] = None,
     multitrack: Annotated[UploadFile | None, File()] = None,
+    capa: Annotated[UploadFile | None, File()] = None,
 ):
     payload = _payload(titulo, descricao, bpm, tonalidade, generos,
                        preco_lease, preco_wav, preco_multitrack, preco_exclusivo)
     return beat_service.edit(db, beat_id, payload, user,
                              mp3=await _file(mp3, "mp3"), wav=await _file(wav, "wav"),
-                             archive=await _file(multitrack, "multitrack"))
+                             archive=await _file(multitrack, "multitrack"), cover=await _file(capa, "capa"))
 
 
 @router.get("/beats/{beat_id}/preview")
