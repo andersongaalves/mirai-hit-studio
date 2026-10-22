@@ -22,7 +22,7 @@ def upgrade():
             _json_type(),
             nullable=False,
             server_default=sa.text(
-                "'{\"capa_mb\":10,\"mp3_mb\":50,\"wav_mb\":50,\"multitrack_mb\":50,\"multitrack_mode\":\"arquivo\"}'"
+                "'{\"capa_mb\": 10, \"mp3_mb\": 50, \"wav_mb\": 50, \"multitrack_mb\": 50, \"multitrack_mode\": \"arquivo\"}'"
             ),
         ),
     )

@@ -1,10 +1,9 @@
 from fastapi import HTTPException
-from pydantic import ValidationError
-from sqlalchemy import select
-
 from models import ConfigModel
+from pydantic import ValidationError
 from schemas.beat import BeatUploadLimits
 from services import audit_service
+from sqlalchemy import select
 
 DEFAULT_LIMITS = BeatUploadLimits()
 MB = 1024 * 1024

@@ -7,10 +7,6 @@ from types import SimpleNamespace
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from models import AudioTagModel, BeatLicencaModel, BeatModel
 from models.enums.financeiro import CobrancaStatus
 from schemas.beat import BeatCreate
@@ -26,6 +22,9 @@ from services.storage.contracts import (
 )
 from services.storage.policies import DEFAULT_POLICIES
 from services.storage.registry import storage_for
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 ARCHIVE_MIMES = {"application/zip", "application/vnd.rar"}
 logger = logging.getLogger(__name__)

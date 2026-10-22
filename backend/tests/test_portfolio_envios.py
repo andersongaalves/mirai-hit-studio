@@ -217,7 +217,7 @@ from alembic import command
 from sqlalchemy import create_mock_engine, inspect
 from database import Base
 from models import PortfolioEnvioModel
-assert bootstrap(engine) == 'e2b4c6d8f901'
+assert bootstrap(engine) == 'f3c5d7e9a102'
 assert 'portfolio_envios' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'b4d6f8a0c357')
 assert 'portfolio_envios' not in inspect(engine).get_table_names()

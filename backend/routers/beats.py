@@ -1,11 +1,6 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import Response
-from pydantic import ValidationError
-from sqlalchemy.orm import Session
-
 from core.dependencies import (
     get_current_user,
     require_admin,
@@ -13,6 +8,9 @@ from core.dependencies import (
     require_producer,
 )
 from database import get_db
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi.responses import Response
+from pydantic import ValidationError
 from schemas.beat import (
     BeatCreate,
     BeatRequest,
@@ -21,6 +19,7 @@ from schemas.beat import (
     BeatUploadLimits,
 )
 from services import beat_service, beat_upload_config_service
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Catalogo de beats"])
 Db = Annotated[Session, Depends(get_db)]
