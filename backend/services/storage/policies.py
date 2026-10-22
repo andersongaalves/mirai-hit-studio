@@ -48,7 +48,9 @@ DEFAULT_POLICIES: Mapping[StorageScope, StoragePolicy] = {
         frozenset({"audio/mpeg", "audio/mp3"}),
         30 * 1024 * 1024,
     ),
-    StorageScope.PRODUCTION_TEMP: StoragePolicy(PRODUCTION_MIME_TYPES, 50 * 1024 * 1024),
+    # Beat multitracks may be configured up to 150 MB. Other production upload
+    # routes keep enforcing their own 50 MB contract before reaching storage.
+    StorageScope.PRODUCTION_TEMP: StoragePolicy(PRODUCTION_MIME_TYPES, 150 * 1024 * 1024),
     StorageScope.PRODUCTION_FINAL: StoragePolicy(PRODUCTION_MIME_TYPES, 50 * 1024 * 1024),
     StorageScope.PROPOSAL_DOCUMENT: StoragePolicy(frozenset({"application/pdf"}), 20 * 1024 * 1024),
 }

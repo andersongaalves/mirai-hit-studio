@@ -1,4 +1,3 @@
-from database import Base
 from sqlalchemy import (
     DDL,
     BigInteger,
@@ -17,6 +16,8 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import relationship
+
+from database import Base
 
 
 class BeatModel(Base):
@@ -39,6 +40,10 @@ class BeatModel(Base):
         ),
         CheckConstraint("preco_wav IS NULL OR preco_wav > 0", name="ck_beats_preco_wav"),
         CheckConstraint("preco_multitrack IS NULL OR preco_multitrack > 0", name="ck_beats_preco_multitrack"),
+        CheckConstraint(
+            "multitrack_ref IS NULL OR multitrack_url IS NULL",
+            name="ck_beats_multitrack_origem_unica",
+        ),
         CheckConstraint(
             "preco_lease IS NOT NULL OR preco_wav IS NOT NULL OR preco_multitrack IS NOT NULL OR preco_exclusivo IS NOT NULL",
             name="ck_beats_algum_preco",
@@ -85,6 +90,7 @@ class BeatModel(Base):
     multitrack_ref = Column(String(180), nullable=True)
     multitrack_sha256 = Column(String(64), nullable=True)
     multitrack_mime = Column(String(100), nullable=True)
+    multitrack_url = Column(String(2000), nullable=True)
     capa_ref = Column(String(180), nullable=True)
     capa_url = Column(String(1000), nullable=True)
     capa_sha256 = Column(String(64), nullable=True)

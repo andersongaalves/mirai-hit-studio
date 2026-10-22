@@ -2,6 +2,7 @@ import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/au
 import * as api from "./api.js";
 import { bindImageCrop } from "../modules/image_crop.js";
 import { uploadBusy } from "../modules/upload_feedback.js";
+import { applyBeatUploadLimits, validateBeatUpload } from "../modules/beat_upload_validation.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
@@ -11,6 +12,7 @@ import { loadAudioTag } from "../modules/audio_tags.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
+let beatUploadConfig = null;
 bindImageCrop(document.querySelector('#producer-beat-form [name="capa"]'), { ratio: 1, width: 1024 });
 let payouts = [];
 const filters = { status: "todos", order: "prazo" };
@@ -153,7 +155,11 @@ async function loadBeats() {
     const list = document.getElementById("producer-beats-list");
     list.textContent = "Carregando beats...";
     try {
-        const beats = await api.listarBeats();
+        const [beats, config] = await Promise.all([api.listarBeats(), api.obterConfiguracaoBeats()]);
+        beatUploadConfig = config;
+        applyBeatUploadLimits(document.getElementById("producer-beat-form"), config.limits);
+        const uploadStatus = document.getElementById("producer-beat-upload-status");
+        if (uploadStatus) uploadStatus.textContent = config.ready ? "" : config.message;
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article");
             card.className = "producer-card";
@@ -319,20 +325,42 @@ document.getElementById("producer-beat-form").addEventListener("submit", async e
     const form = event.currentTarget;
     const button = form.querySelector("button[type=submit]");
     if (button.disabled) return;
+    const status = document.getElementById("producer-beat-upload-status");
+    const validation = validateBeatUpload(form, beatUploadConfig);
+    if (!validation.valid) {
+        if (status) textStatus(status, validation.message, true);
+        return;
+    }
     const finish = uploadBusy(button);
+    if (status) textStatus(status, "Enviando arquivos...", false);
     try {
         const body = new FormData(form);
+        if (beatUploadConfig.limits.multitrack_mode === "link") {
+            body.set("preco_multitrack", body.get("preco_multitrack_link") || "");
+            body.delete("preco_multitrack_link");
+            body.delete("multitrack");
+        } else {
+            body.delete("multitrack_url");
+            body.delete("preco_multitrack_link");
+        }
         for (const name of ["wav", "multitrack"]) {
             if (!body.get(name)?.size) body.delete(name);
         }
         await api.enviarBeat(body);
         form.reset();
+        applyBeatUploadLimits(form, beatUploadConfig.limits);
         setAlert("Beat enviado para revisão.");
+        if (status) textStatus(status, "Beat enviado para revisão.", false);
         await loadBeats();
     }
-    catch (error) { setAlert(error.message, true); }
+    catch (error) { setAlert(error.message, true); if (status) textStatus(status, error.message, true); }
     finally { finish(); }
 });
+
+function textStatus(node, message, error) {
+    node.textContent = message;
+    node.dataset.state = error ? "error" : "info";
+}
 document.getElementById("producer-detail-back").addEventListener("click", () => navigate("/produtor/producoes"));
 document.getElementById("producer-status-filter").addEventListener("change", event => {
     filters.status = event.target.value;

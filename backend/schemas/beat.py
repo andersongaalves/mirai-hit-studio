@@ -5,6 +5,27 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class BeatUploadLimits(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    capa_mb: int = Field(default=10, ge=1, le=10)
+    mp3_mb: int = Field(default=50, ge=1, le=50)
+    wav_mb: int = Field(default=50, ge=1, le=100)
+    multitrack_mb: int = Field(default=50, ge=1, le=150)
+    multitrack_mode: Literal["arquivo", "link"] = "arquivo"
+
+    @model_validator(mode="after")
+    def limite_total(self):
+        if self.capa_mb + self.mp3_mb + self.wav_mb + self.multitrack_mb > 260:
+            raise ValueError("beat_upload_total_limit")
+        return self
+
+
+class BeatUploadConfigResponse(BaseModel):
+    limits: BeatUploadLimits
+    ready: bool = True
+    message: str = ""
+
+
 class BeatCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     titulo: str = Field(min_length=1, max_length=160)

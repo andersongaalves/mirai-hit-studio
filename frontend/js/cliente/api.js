@@ -144,6 +144,19 @@ export async function obterConfiguracao() {
     );
 }
 
+export async function listarMultitracksAdquiridos() {
+    return responseData(await authFetch("/portal/cliente/beats/adquiridos"), "Não foi possível carregar seus multitracks.");
+}
+
+export async function acessarMultitrack(beatId) {
+    const response = await authFetch(`/portal/cliente/beats/${beatId}/multitrack`);
+    if (!response.ok) return responseData(response, "Não foi possível acessar o multitrack.");
+    if ((response.headers.get("content-type") || "").includes("application/json")) return response.json();
+    const disposition = response.headers.get("content-disposition") || "";
+    const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || "multitrack.zip";
+    return { type: "file", blob: await response.blob(), filename };
+}
+
 export async function listarMensagens(producaoId) {
     return responseData(
         await authFetch(`/portal/cliente/producoes/${producaoId}/mensagens`),
