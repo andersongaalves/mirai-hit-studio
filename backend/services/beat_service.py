@@ -4,12 +4,13 @@ import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
+from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 from models import AudioTagModel, BeatLicencaModel, BeatModel
 from models.enums.financeiro import CobrancaStatus
 from schemas.beat import BeatCreate
-from services import audio_tag_service, audit_service
+from services import audio_tag_service, audit_service, beat_upload_config_service
 from services.producao_arquivo_storage import (
     ProducaoArquivoStorageError,
     new_production_file_storage,
@@ -25,30 +26,61 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-MAX_BEAT_BYTES = 50 * 1024 * 1024
 ARCHIVE_MIMES = {"application/zip", "application/vnd.rar"}
 logger = logging.getLogger(__name__)
 
 
-def _validate_files(payload, mp3, wav, archive, cover=None, *, has_wav=False, has_archive=False):
+def _external_multitrack_url(value):
+    if not value:
+        return None
+    value = value.strip()
+    parsed = urlsplit(value)
+    if (
+        len(value) > 2000
+        or parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+    ):
+        raise HTTPException(422, "Informe um link HTTPS válido para o multitrack.")
+    return value
+
+
+def _validate_files(
+    db, payload, mp3, wav, archive, cover=None, *, multitrack_url=None,
+    has_wav=False, has_archive=False, has_external=False,
+):
     policy = DEFAULT_POLICIES[StorageScope.PRODUCTION_TEMP]
-    for item, allowed in ((mp3, {"audio/mpeg"}), (wav, {"audio/wav", "audio/x-wav"}), (archive, ARCHIVE_MIMES)):
+    limits = beat_upload_config_service.limits_bytes(db)
+    for kind, item, allowed in (
+        ("mp3", mp3, {"audio/mpeg"}),
+        ("wav", wav, {"audio/wav", "audio/x-wav"}),
+        ("multitrack", archive, ARCHIVE_MIMES),
+    ):
         if item is None:
             continue
         data, mime = item
-        if mime not in allowed or len(data) > MAX_BEAT_BYTES:
-            raise HTTPException(422, "Formato ou tamanho de arquivo invalido.")
+        if mime not in allowed:
+            raise HTTPException(422, f"Formato inválido no arquivo {kind}.")
+        if len(data) > limits[kind]:
+            raise HTTPException(413, f"O arquivo {kind} excede o limite configurado.")
         try:
             policy.validate(data, mime)
         except StorageValidationError:
             raise HTTPException(422, "Conteudo do arquivo invalido.") from None
     if payload.preco_wav is not None and wav is None and not has_wav:
         raise HTTPException(422, "Envie o WAV para definir o preco WAV.")
-    if payload.preco_multitrack is not None and archive is None and not has_archive:
+    external = _external_multitrack_url(multitrack_url)
+    if archive is not None and external:
+        raise HTTPException(422, "Escolha arquivo ou link para o multitrack, não ambos.")
+    if payload.preco_multitrack is not None and archive is None and not external and not has_archive and not has_external:
         raise HTTPException(422, "Envie o multitrack para definir seu preco.")
     if mp3 is not None:
         audio_tag_service.duracao(mp3[0], limite=1800)
     if cover is not None:
+        if len(cover[0]) > limits["capa"]:
+            raise HTTPException(413, "A capa excede o limite configurado.")
         try:
             DEFAULT_POLICIES[StorageScope.PUBLIC_IMAGE].validate(*cover)
         except StorageValidationError:
@@ -62,7 +94,7 @@ def price_details(db, model, kind):
         "lease": model.preco_lease if model.mp3_ref is None else None,
         "lease_mp3": model.preco_lease if model.mp3_ref else None,
         "lease_wav": model.preco_wav if model.wav_ref else None,
-        "multitrack": model.preco_multitrack if model.multitrack_ref else None,
+        "multitrack": model.preco_multitrack if (model.multitrack_ref or model.multitrack_url) else None,
         "exclusivo": model.preco_exclusivo,
     }
     base = bases.get(kind)
@@ -101,7 +133,8 @@ def _response(db, model, *, exclusive_available=True, include_base=False):
         "created_at": model.created_at,
         "formato_novo": bool(model.mp3_ref),
         "tem_wav": bool(model.wav_ref),
-        "tem_multitrack": bool(model.multitrack_ref),
+        "tem_multitrack": bool(model.multitrack_ref or model.multitrack_url),
+        "multitrack_origem": "link" if model.multitrack_url else ("arquivo" if model.multitrack_ref else None),
         "capa_url": model.capa_url,
     }
     if include_base:
@@ -124,10 +157,16 @@ def _tag(db, producer_id):
     return tag, profile
 
 
-def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, archive=None):
+def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, archive=None, multitrack_url=None):
     if not actor.painel_beats:
         raise HTTPException(403, "Painel de beats nao habilitado para esta conta.")
-    _validate_files(payload, mp3, wav, archive, cover)
+    settings = beat_upload_config_service.limits(db)
+    external = _external_multitrack_url(multitrack_url)
+    if settings.multitrack_mode == "link" and archive is not None:
+        raise HTTPException(422, "O multitrack deve ser enviado por link.")
+    if settings.multitrack_mode == "arquivo" and external:
+        raise HTTPException(422, "O multitrack deve ser enviado como arquivo.")
+    _validate_files(db, payload, mp3, wav, archive, cover, multitrack_url=external)
     tag, profile = _tag(db, actor.id)
     tagged_mp3 = audio_tag_service.mixar(
         mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
@@ -163,6 +202,7 @@ def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, arc
             multitrack_ref=archive_ref,
             multitrack_sha256=hashlib.sha256(archive[0]).hexdigest() if archive else None,
             multitrack_mime=archive[1] if archive else None,
+            multitrack_url=external,
             capa_ref=str(saved_cover.reference),
             capa_url=cover_url,
             capa_sha256=hashlib.sha256(cover[0]).hexdigest(),
@@ -238,6 +278,63 @@ def client_list(db):
     return result
 
 
+def acquired_multitracks(db, actor):
+    if actor.cliente_id is None:
+        return []
+    rows = db.execute(
+        select(BeatLicencaModel, BeatModel)
+        .join(BeatModel, BeatModel.id == BeatLicencaModel.beat_id)
+        .where(
+            BeatLicencaModel.cliente_id == actor.cliente_id,
+            BeatLicencaModel.status == "adquirida",
+            BeatLicencaModel.tipo.in_(("multitrack", "exclusivo")),
+        )
+        .order_by(BeatLicencaModel.adquirida_em.desc())
+    ).all()
+    return [
+        {
+            "beat_id": beat.id,
+            "titulo": beat.titulo,
+            "licenca": license.tipo,
+            "adquirida_em": license.adquirida_em,
+            "disponivel": bool(beat.multitrack_ref or beat.multitrack_url),
+        }
+        for license, beat in rows
+    ]
+
+
+def multitrack_delivery(db, beat_id, actor):
+    if actor.cliente_id is None:
+        raise HTTPException(404, "Multitrack não encontrado.")
+    row = db.execute(
+        select(BeatLicencaModel, BeatModel)
+        .join(BeatModel, BeatModel.id == BeatLicencaModel.beat_id)
+        .where(
+            BeatLicencaModel.beat_id == beat_id,
+            BeatLicencaModel.cliente_id == actor.cliente_id,
+            BeatLicencaModel.status == "adquirida",
+            BeatLicencaModel.tipo.in_(("multitrack", "exclusivo")),
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(404, "Multitrack não encontrado.")
+    _, beat = row
+    if beat.multitrack_url:
+        return {"type": "link", "url": beat.multitrack_url}
+    if not beat.multitrack_ref or not beat.multitrack_sha256:
+        raise HTTPException(409, "O multitrack adquirido ainda não está disponível.")
+    contents = new_production_file_storage("previa").read(beat.multitrack_ref)
+    if hashlib.sha256(contents).hexdigest() != beat.multitrack_sha256:
+        raise HTTPException(409, "Integridade do multitrack inválida.")
+    extension = "rar" if beat.multitrack_mime == "application/vnd.rar" else "zip"
+    return {
+        "type": "file",
+        "contents": contents,
+        "mime": beat.multitrack_mime or "application/octet-stream",
+        "filename": f"beat-{beat.id}-multitrack.{extension}",
+    }
+
+
 def review(db, beat_id, payload, actor):
     model = db.scalar(
         select(BeatModel).where(BeatModel.id == beat_id).with_for_update()
@@ -266,7 +363,7 @@ def review(db, beat_id, payload, actor):
     return _response(db, model)
 
 
-def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover=None):
+def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover=None, multitrack_url=None):
     model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
     if model is None:
         raise HTTPException(404, "Beat nao encontrado.")
@@ -274,8 +371,15 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover
         BeatLicencaModel.beat_id == beat_id, BeatLicencaModel.status.in_(("reservada", "adquirida"))
     )):
         raise HTTPException(409, "Beat com licenca ativa nao pode ser alterado.")
-    _validate_files(payload, mp3, wav, archive, cover, has_wav=bool(model.wav_ref),
-                    has_archive=bool(model.multitrack_ref))
+    settings = beat_upload_config_service.limits(db)
+    external = _external_multitrack_url(multitrack_url)
+    if settings.multitrack_mode == "link" and archive is not None:
+        raise HTTPException(422, "O multitrack deve ser enviado por link.")
+    if settings.multitrack_mode == "arquivo" and external:
+        raise HTTPException(422, "O multitrack deve ser enviado como arquivo.")
+    _validate_files(db, payload, mp3, wav, archive, cover, multitrack_url=external,
+                    has_wav=bool(model.wav_ref), has_archive=bool(model.multitrack_ref),
+                    has_external=bool(model.multitrack_url))
     tagged_mp3 = None
     if mp3 is not None:
         tag, profile = _tag(db, model.produtor_id)
@@ -300,6 +404,13 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover
             old.append(model.original_ref)
             model.original_ref = original_ref
             model.original_sha256 = hashlib.sha256(mp3[0]).hexdigest()
+        if external:
+            if model.multitrack_ref:
+                old.append(model.multitrack_ref)
+            model.multitrack_ref = None
+            model.multitrack_sha256 = None
+            model.multitrack_mime = None
+            model.multitrack_url = external
         for item, reference, digest, mime in (
             ((tagged_mp3, "audio/mpeg") if tagged_mp3 is not None else None, "mp3_ref", "preview_sha256", "audio/mpeg"),
             (wav, "wav_ref", "wav_sha256", "audio/wav"),
@@ -320,6 +431,7 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover
                 model.tamanho_bytes = len(mp3[0])
             elif reference == "multitrack_ref":
                 model.multitrack_mime = item[1]
+                model.multitrack_url = None
         for key, value in payload.model_dump().items():
             setattr(model, key, value)
         model.status = "revisao"

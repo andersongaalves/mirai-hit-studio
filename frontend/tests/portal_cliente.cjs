@@ -179,6 +179,9 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/cliente/beats') {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
+        if (url.pathname === '/portal/cliente/beats/adquiridos') {
+            return route.fulfill({ json: [] });
+        }
         if (url.pathname === '/portal/cliente/beats/71/solicitar' && request.method() === 'POST') {
             assert.equal(request.postDataJSON().licenca, 'lease');
             assert.match(request.headers()['idempotency-key'], /^[0-9a-f-]{36}$/);
@@ -253,6 +256,7 @@ async function staticResponse(route) {
         await page.waitForURL('**/cliente/beats');
         await page.waitForSelector('#client-beats-list .producer-card');
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
+        assert.match(await page.locator('#client-acquired-beats').textContent(), /Nenhum multitrack liberado/);
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
         await page.getByRole('button', { name: /MP3 lease/ }).click();
         await page.waitForFunction(() => document.getElementById('client-alert')?.textContent.includes('Solicitação criada'));

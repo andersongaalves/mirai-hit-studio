@@ -25,3 +25,17 @@ class ConfigModel(Base):
         default=list,
         server_default=text("'[]'"),
     )
+    beat_upload_limits_json = Column(
+        JSON().with_variant(JSONB(), "postgresql"),
+        nullable=False,
+        default=lambda: {
+            "capa_mb": 10,
+            "mp3_mb": 50,
+            "wav_mb": 50,
+            "multitrack_mb": 50,
+            "multitrack_mode": "arquivo",
+        },
+        server_default=text(
+            "'{\"capa_mb\": 10, \"mp3_mb\": 50, \"wav_mb\": 50, \"multitrack_mb\": 50, \"multitrack_mode\": \"arquivo\"}'"
+        ),
+    )

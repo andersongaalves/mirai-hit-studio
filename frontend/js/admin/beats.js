@@ -1,6 +1,7 @@
 import { authFetch } from "./auth.js";
 import { bindImageCrop } from "../modules/image_crop.js";
 import { uploadBusy } from "../modules/upload_feedback.js";
+import { applyBeatUploadLimits, validateBeatUpload } from "../modules/beat_upload_validation.js";
 
 async function data(response) {
     const payload = await response.json().catch(() => null);
@@ -41,7 +42,52 @@ function formatRow(form, label, fileName, priceName, price, present, accept) {
     form.append(row);
 }
 
-function beatCard(beat) {
+function uploadSettings(config) {
+    const section = document.createElement("section");
+    section.className = "admin-card beat-upload-settings";
+    const title = document.createElement("h2"); title.textContent = "Limites de upload";
+    const help = document.createElement("p"); help.textContent = "Defina o limite por arquivo. O total configurado não pode ultrapassar 260 MB.";
+    const form = document.createElement("form"); form.className = "beat-upload-settings__form";
+    const fields = [
+        ["capa_mb", "Capa", 10], ["mp3_mb", "MP3", 50],
+        ["wav_mb", "WAV", 100], ["multitrack_mb", "ZIP ou RAR", 150],
+    ];
+    for (const [name, label, max] of fields) {
+        const wrapper = document.createElement("label"); wrapper.textContent = `${label} (MB)`;
+        const input = document.createElement("input");
+        input.type = "number"; input.name = name; input.min = "1"; input.max = String(max);
+        input.step = "1"; input.required = true; input.value = config[name];
+        wrapper.append(input); form.append(wrapper);
+    }
+    const modeLabel = document.createElement("label"); modeLabel.textContent = "Origem do multitrack";
+    const mode = document.createElement("select"); mode.name = "multitrack_mode";
+    mode.append(new Option("Arquivo no site", "arquivo"), new Option("Link externo", "link"));
+    mode.value = config.multitrack_mode; modeLabel.append(mode); form.append(modeLabel);
+    const save = document.createElement("button"); save.type = "submit"; save.className = "btn-outline"; save.textContent = "Salvar limites";
+    const message = document.createElement("p"); message.className = "beat-review-message"; message.setAttribute("role", "status");
+    form.append(save, message);
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(fields.map(([name]) => [name, Number(form.elements[name].value)]));
+        payload.multitrack_mode = form.elements.multitrack_mode.value;
+        if (Object.values(payload).reduce((sum, value) => sum + value, 0) > 260) {
+            message.textContent = "A soma dos limites não pode ultrapassar 260 MB.";
+            return;
+        }
+        const finish = uploadBusy(save, "Salvando...");
+        try {
+            await data(await authFetch("/admin/beats/configuracao", { method: "PUT", body: JSON.stringify(payload) }));
+            message.textContent = "Limites salvos.";
+            await initBeats();
+        } catch (error) { message.textContent = error.message; }
+        finally { finish(); }
+    });
+    section.append(title, help, form);
+    return section;
+}
+
+function beatCard(beat, config) {
     const card = document.createElement("article");
     card.className = "admin-list-item admin-beat-card";
     const title = document.createElement("h3"); title.textContent = beat.titulo;
@@ -66,7 +112,12 @@ function beatCard(beat) {
     bindImageCrop(field(form, beat.capa_url ? "Substituir capa" : "Adicionar capa", "capa", "", { type: "file", accept: ".jpg,.jpeg,.png,.webp" }), { ratio: 1, width: 1024 });
     formatRow(form, "MP3 lease (com tag)", "mp3", "preco_lease", beat.preco_lease_base, beat.formato_novo, ".mp3");
     formatRow(form, "WAV lease (sem tag)", "wav", "preco_wav", beat.preco_wav_base, beat.tem_wav, ".wav");
-    formatRow(form, "Multitrack (ZIP ou RAR)", "multitrack", "preco_multitrack", beat.preco_multitrack_base, beat.tem_multitrack, ".zip,.rar");
+    const multitrackFile = document.createElement("div"); multitrackFile.dataset.multitrackFile = ""; form.append(multitrackFile);
+    formatRow(multitrackFile, "Multitrack (ZIP ou RAR)", "multitrack", "preco_multitrack", beat.preco_multitrack_base, beat.tem_multitrack && beat.multitrack_origem === "arquivo", ".zip,.rar");
+    const multitrackLink = document.createElement("div"); multitrackLink.className = "beat-form__format hidden"; multitrackLink.dataset.multitrackLink = "";
+    field(multitrackLink, beat.multitrack_origem === "link" ? "Substituir link HTTPS" : "Link HTTPS do multitrack", "multitrack_url", "", { type: "url", maxlength: 2000 });
+    field(multitrackLink, "Preço", "preco_multitrack_link", beat.preco_multitrack_base, { type: "number" });
+    form.append(multitrackLink);
     const pair = document.createElement("div"); pair.className = "beat-form__pair";
     field(pair, "BPM", "bpm", beat.bpm, { type: "number", min: "30", step: "1" });
     field(pair, "Key", "tonalidade", beat.tonalidade, { maxlength: 24 });
@@ -81,14 +132,23 @@ function beatCard(beat) {
     form.addEventListener("submit", async event => {
         event.preventDefault();
         if (save.disabled) return;
+        const validation = validateBeatUpload(form, { limits: config }, { requireFiles: false, existing: beat });
+        if (!validation.valid) { message.textContent = validation.message; return; }
         const finish = uploadBusy(save, "Salvando...");
         message.textContent = "Salvando...";
         const body = new FormData(form);
+        if (config.multitrack_mode === "link") {
+            body.set("preco_multitrack", body.get("preco_multitrack_link") || "");
+            body.delete("preco_multitrack_link"); body.delete("multitrack");
+        } else {
+            body.delete("multitrack_url"); body.delete("preco_multitrack_link");
+        }
         for (const name of ["mp3", "wav", "multitrack", "capa"]) if (!body.get(name)?.size) body.delete(name);
         try { await data(await authFetch(`/admin/beats/${beat.id}`, { method: "PUT", body })); await initBeats(); }
         catch (error) { message.textContent = error.message; save.disabled = false; }
         finally { finish(); }
     });
+    applyBeatUploadLimits(form, config);
     for (const [label, decisao] of [["Aprovar", "aprovar"], ["Rejeitar", "rejeitar"]]) {
         const button = document.createElement("button"); button.type = "button";
         button.className = decisao === "aprovar" ? "btn-cta" : "btn-small";
@@ -113,11 +173,16 @@ function beatCard(beat) {
 
 export async function initBeats() {
     const root = document.getElementById("admin-beats-list");
+    const settings = document.getElementById("admin-beat-upload-settings");
     if (!root) return;
     root.textContent = "Carregando beats...";
     try {
-        const beats = await data(await authFetch("/admin/beats"));
-        root.replaceChildren(...beats.map(beatCard));
+        const [beats, config] = await Promise.all([
+            data(await authFetch("/admin/beats")),
+            data(await authFetch("/admin/beats/configuracao")),
+        ]);
+        settings?.replaceChildren(uploadSettings(config));
+        root.replaceChildren(...beats.map(beat => beatCard(beat, config)));
         if (!beats.length) root.textContent = "Nenhum beat enviado.";
     } catch (error) { root.textContent = error.message; }
 }

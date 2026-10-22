@@ -113,6 +113,61 @@ with Session(engine) as db:
     assert not storage.objects and len(storage.deleted) == 3 and not images.objects and len(images.deleted) == 1
 """)
 
+    def test_upload_limits_are_admin_configurable_and_enforced_before_storage(self):
+        self.run_case(r"""
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
+        producer = await api.get('/portal/produtor/beats/configuracao', headers=bearer('producer-a'))
+        assert producer.status_code == 200 and producer.json()['ready'] is True
+        assert producer.json()['limits'] == {'capa_mb':10,'mp3_mb':50,'wav_mb':50,'multitrack_mb':50,'multitrack_mode':'arquivo'}
+        assert (await api.get('/admin/beats/configuracao', headers=bearer('client-a'))).status_code == 403
+        invalid = await api.put('/admin/beats/configuracao', headers=bearer('admin'), json={
+            'capa_mb':10,'mp3_mb':50,'wav_mb':100,'multitrack_mb':150,'multitrack_mode':'arquivo',
+        })
+        assert invalid.status_code == 422
+        updated = await api.put('/admin/beats/configuracao', headers=bearer('admin'), json={
+            'capa_mb':10,'mp3_mb':1,'wav_mb':50,'multitrack_mb':50,'multitrack_mode':'arquivo',
+        })
+        assert updated.status_code == 200, updated.text
+        assert updated.json()['mp3_mb'] == 1
+        oversized = await api.post('/portal/produtor/beats', headers=bearer('producer-a'),
+            data={'titulo':'Grande','preco_lease':'100'}, files={
+                'mp3':('beat.mp3', b'ID3' + b'0' * (1024 * 1024), 'audio/mpeg'),
+                'capa':('cover.png', png(), 'image/png'),
+            })
+        assert oversized.status_code == 413
+        assert 'limite configurado' in oversized.json()['detail'] and not storage.objects
+asyncio.run(check())
+""")
+
+    def test_external_multitrack_link_is_only_released_after_payment(self):
+        self.run_case(r"""
+from datetime import datetime, timezone
+async def check():
+    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service, 'storage_for', return_value=images), patch.object(beat_service.audio_tag_service, 'duracao', return_value=.2), patch.object(beat_service.audio_tag_service, 'mixar', return_value=mp3()+b'tag'):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
+            configured = await api.put('/admin/beats/configuracao', headers=bearer('admin'), json={
+                'capa_mb':10,'mp3_mb':50,'wav_mb':50,'multitrack_mb':50,'multitrack_mode':'link',
+            })
+            assert configured.status_code == 200, configured.text
+            created = await api.post('/portal/produtor/beats', headers=bearer('producer-a'),
+                data={'titulo':'Link privado','preco_lease':'100','preco_multitrack':'300','multitrack_url':'https://drive.example.test/private-token'},
+                files={'mp3':('beat.mp3',mp3(),'audio/mpeg'),'capa':('cover.png',png(),'image/png')})
+            assert created.status_code == 201, created.text
+            beat_id = created.json()['id']
+            assert created.json()['multitrack_origem'] == 'link'
+            assert 'private-token' not in created.text
+            assert (await api.get(f'/portal/cliente/beats/{beat_id}/multitrack', headers=bearer('client-a'))).status_code == 404
+            with Session(engine) as db:
+                db.add(BeatLicencaModel(beat_id=beat_id, proposta_id=1, cliente_id=1, tipo='multitrack', status='adquirida', valor=300, adquirida_em=datetime.now(timezone.utc)))
+                db.commit()
+            released = await api.get(f'/portal/cliente/beats/{beat_id}/multitrack', headers=bearer('client-a'))
+            assert released.status_code == 200 and released.json() == {'type':'link','url':'https://drive.example.test/private-token'}
+            acquired = await api.get('/portal/cliente/beats/adquiridos', headers=bearer('client-a'))
+            assert acquired.status_code == 200 and acquired.json()[0]['beat_id'] == beat_id
+asyncio.run(check())
+""")
+
     def test_admin_replaces_tagged_preview_and_missing_format_is_rejected(self):
         self.run_case(r"""
 async def check():

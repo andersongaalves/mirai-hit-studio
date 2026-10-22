@@ -233,7 +233,24 @@ async function loadBeats() {
     showView("beats");
     const list = document.getElementById("client-beats-list"); list.textContent = "Carregando catálogo...";
     try {
-        const beats = await api.listarBeats();
+        const [beats, acquired] = await Promise.all([api.listarBeats(), api.listarMultitracksAdquiridos()]);
+        const acquiredList = document.getElementById("client-acquired-beats");
+        acquiredList.replaceChildren(...acquired.map(item => {
+            const card = document.createElement("article"); card.className = "producer-card";
+            const title = document.createElement("h3"); title.textContent = item.titulo;
+            const button = document.createElement("button"); button.type = "button"; button.className = "btn-cta"; button.textContent = "Acessar multitrack"; button.disabled = !item.disponivel;
+            button.onclick = async () => {
+                button.disabled = true;
+                try {
+                    const delivery = await api.acessarMultitrack(item.beat_id);
+                    if (delivery.type === "link") window.open(delivery.url, "_blank", "noopener,noreferrer");
+                    else saveBlob(delivery);
+                } catch (error) { setAlert(error.message, true); }
+                finally { button.disabled = !item.disponivel; }
+            };
+            card.append(title, button); return card;
+        }));
+        if (!acquired.length) acquiredList.textContent = "Nenhum multitrack liberado ainda.";
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article"); card.className = "producer-card";
             const title = document.createElement("h3"); title.textContent = beat.titulo;

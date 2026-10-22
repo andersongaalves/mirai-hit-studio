@@ -151,6 +151,9 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'GET') {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
+        if (url.pathname === '/portal/produtor/beats/configuracao' && request.method() === 'GET') {
+            return route.fulfill({ json: { limits: { capa_mb: 10, mp3_mb: 1, wav_mb: 50, multitrack_mb: 50, multitrack_mode: 'arquivo' }, ready: true, message: '' } });
+        }
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'POST') {
             const body = request.postDataBuffer().toString('latin1');
             for (const field of ['titulo', 'mp3', 'capa', 'preco_lease']) {
@@ -217,10 +220,14 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#producer-beats-list script, #producer-beats-list img').count(), 0);
         await page.getByLabel('Título').fill('Novo beat');
         await page.locator('#producer-beat-form [name="preco_lease"]').fill('120');
-        await page.locator('#producer-beat-form [name="mp3"]').setInputFiles({ name: 'beat.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('ID3synthetic') });
         await page.locator('#producer-beat-form [name="capa"]').setInputFiles({ name: 'capa.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64') });
         await page.getByRole('dialog', { name: 'Ajustar imagem' }).getByRole('button', { name: 'Usar corte' }).click();
         await page.waitForFunction(() => !document.querySelector('#producer-beat-form [name="capa"]').dataset.cropPending);
+        await page.locator('#producer-beat-form [name="mp3"]').setInputFiles({ name: 'beat.mp3', mimeType: 'audio/mpeg', buffer: Buffer.alloc(1024 * 1024 + 1, 1) });
+        await page.getByRole('button', { name: 'Enviar para revisão' }).click();
+        assert.match(await page.locator('#producer-beat-upload-status').textContent(), /excede o limite de 1 MB/);
+        assert.equal(beatUploads, 0);
+        await page.locator('#producer-beat-form [name="mp3"]').setInputFiles({ name: 'beat.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('ID3synthetic') });
         assert.deepEqual(await page.locator('#producer-beat-form [name="capa"]').evaluate(async input => {
             const header = new DataView(await input.files[0].arrayBuffer());
             return [header.getUint32(16), header.getUint32(20)];

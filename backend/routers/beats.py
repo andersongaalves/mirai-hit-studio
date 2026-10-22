@@ -10,8 +10,15 @@ from core.dependencies import (
 from database import get_db
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import Response
-from schemas.beat import BeatCreate, BeatRequest, BeatReview
-from services import beat_service
+from pydantic import ValidationError
+from schemas.beat import (
+    BeatCreate,
+    BeatRequest,
+    BeatReview,
+    BeatUploadConfigResponse,
+    BeatUploadLimits,
+)
+from services import beat_service, beat_upload_config_service
 from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Catalogo de beats"])
@@ -22,10 +29,10 @@ Admin = Annotated[object, Depends(require_admin)]
 User = Annotated[object, Depends(get_current_user)]
 
 
-async def _file(upload, kind):
+async def _file(upload, kind, limits):
     if upload is None:
         return None
-    limit = 10 * 1024 * 1024 if kind == "capa" else beat_service.MAX_BEAT_BYTES
+    limit = limits[kind]
     data = await upload.read(limit + 1)
     await upload.close()
     extension = (upload.filename or "").lower().rsplit(".", 1)[-1]
@@ -38,15 +45,30 @@ async def _file(upload, kind):
 
 
 def _payload(titulo, descricao, bpm, tonalidade, generos, preco_lease, preco_wav, preco_multitrack, preco_exclusivo):
-    return BeatCreate(titulo=titulo, descricao=descricao, bpm=bpm, tonalidade=tonalidade,
-                      generos=generos, preco_lease=preco_lease or None,
-                      preco_wav=preco_wav or None, preco_multitrack=preco_multitrack or None,
-                      preco_exclusivo=preco_exclusivo or None)
+    try:
+        return BeatCreate(titulo=titulo, descricao=descricao, bpm=bpm, tonalidade=tonalidade,
+                          generos=generos, preco_lease=preco_lease or None,
+                          preco_wav=preco_wav or None, preco_multitrack=preco_multitrack or None,
+                          preco_exclusivo=preco_exclusivo or None)
+    except ValidationError:
+        raise HTTPException(422, "Revise os campos e preços do beat.") from None
 
 
 @router.get("/portal/produtor/beats")
 def producer_beats(db: Db, user: Producer):
     return beat_service.producer_list(db, user)
+
+
+@router.get("/portal/produtor/beats/configuracao", response_model=BeatUploadConfigResponse)
+def producer_beat_config(db: Db, user: Producer):
+    if not user.painel_beats:
+        raise HTTPException(403, "Painel de beats não habilitado para esta conta.")
+    try:
+        beat_service._tag(db, user.id)
+        ready, message = True, ""
+    except HTTPException as error:
+        ready, message = False, str(error.detail)
+    return {"limits": beat_upload_config_service.limits(db), "ready": ready, "message": message}
 
 
 @router.post("/portal/produtor/beats", status_code=201)
@@ -58,6 +80,7 @@ async def submit_beat(
     titulo: Annotated[str, Form()],
     wav: Annotated[UploadFile | None, File()] = None,
     multitrack: Annotated[UploadFile | None, File()] = None,
+    multitrack_url: Annotated[str | None, Form()] = None,
     descricao: Annotated[str, Form()] = "",
     bpm: Annotated[int | None, Form()] = None,
     tonalidade: Annotated[str | None, Form()] = None,
@@ -67,16 +90,38 @@ async def submit_beat(
     preco_multitrack: Annotated[str | None, Form()] = None,
     preco_exclusivo: Annotated[str | None, Form()] = None,
 ):
+    limits = beat_upload_config_service.limits_bytes(db)
     payload = _payload(titulo, descricao, bpm, tonalidade, generos,
                        preco_lease, preco_wav, preco_multitrack, preco_exclusivo)
     return beat_service.create(db, actor=user, payload=payload,
-                               mp3=await _file(mp3, "mp3"), wav=await _file(wav, "wav"),
-                               archive=await _file(multitrack, "multitrack"), cover=await _file(capa, "capa"))
+                               mp3=await _file(mp3, "mp3", limits), wav=await _file(wav, "wav", limits),
+                               archive=await _file(multitrack, "multitrack", limits), cover=await _file(capa, "capa", limits),
+                               multitrack_url=multitrack_url)
 
 
 @router.get("/portal/cliente/beats")
 def client_beats(db: Db, user: Client):
     return beat_service.client_list(db)
+
+
+@router.get("/portal/cliente/beats/adquiridos")
+def client_acquired_beats(db: Db, user: Client):
+    return beat_service.acquired_multitracks(db, user)
+
+
+@router.get("/portal/cliente/beats/{beat_id}/multitrack")
+def client_multitrack(beat_id: int, db: Db, user: Client):
+    delivery = beat_service.multitrack_delivery(db, beat_id, user)
+    if delivery["type"] == "link":
+        return {"type": "link", "url": delivery["url"]}
+    return Response(
+        delivery["contents"],
+        media_type=delivery["mime"],
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f'attachment; filename="{delivery["filename"]}"',
+        },
+    )
 
 
 @router.post("/portal/cliente/beats/{beat_id}/solicitar", status_code=201)
@@ -101,6 +146,16 @@ def admin_beats(db: Db, user: Admin):
     return beat_service.admin_list(db)
 
 
+@router.get("/admin/beats/configuracao", response_model=BeatUploadLimits)
+def admin_beat_config(db: Db, user: Admin):
+    return beat_upload_config_service.limits(db)
+
+
+@router.put("/admin/beats/configuracao", response_model=BeatUploadLimits)
+def update_admin_beat_config(payload: BeatUploadLimits, db: Db, user: Admin):
+    return beat_upload_config_service.update(db, payload, user)
+
+
 @router.patch("/admin/beats/{beat_id}")
 def review(beat_id: int, payload: BeatReview, db: Db, user: Admin):
     return beat_service.review(db, beat_id, payload, user)
@@ -117,13 +172,16 @@ async def edit_beat(
     mp3: Annotated[UploadFile | None, File()] = None,
     wav: Annotated[UploadFile | None, File()] = None,
     multitrack: Annotated[UploadFile | None, File()] = None,
+    multitrack_url: Annotated[str | None, Form()] = None,
     capa: Annotated[UploadFile | None, File()] = None,
 ):
+    limits = beat_upload_config_service.limits_bytes(db)
     payload = _payload(titulo, descricao, bpm, tonalidade, generos,
                        preco_lease, preco_wav, preco_multitrack, preco_exclusivo)
     return beat_service.edit(db, beat_id, payload, user,
-                             mp3=await _file(mp3, "mp3"), wav=await _file(wav, "wav"),
-                             archive=await _file(multitrack, "multitrack"), cover=await _file(capa, "capa"))
+                             mp3=await _file(mp3, "mp3", limits), wav=await _file(wav, "wav", limits),
+                             archive=await _file(multitrack, "multitrack", limits), cover=await _file(capa, "capa", limits),
+                             multitrack_url=multitrack_url)
 
 
 @router.get("/beats/{beat_id}/preview")
