@@ -140,6 +140,7 @@ def mixar(original, tag, intervalo, volume):
             content = output.read_bytes()
             if not content or len(content) >= 50 * 1024 * 1024:
                 raise RuntimeError("audio_render_invalid")
+            duracao(content, limite=1800)
             return content
         except (OSError, subprocess.TimeoutExpired):
             raise RuntimeError("audio_render_unavailable") from None

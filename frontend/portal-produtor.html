@@ -16,6 +16,7 @@
         <link rel="stylesheet" href="/css/components/file-quotas.css" />
         <link rel="stylesheet" href="/css/components/portal-notifications.css" />
         <link rel="stylesheet" href="/css/components/portfolio-submissions.css" />
+        <link rel="stylesheet" href="/css/components/upload-tasks.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -150,7 +151,7 @@
                     </section>
                     <section id="producer-beats" class="producer-view hidden" aria-labelledby="producer-beats-title">
                         <div class="producer-page-heading"><div><p class="producer-eyebrow">Catálogo interno</p><h1 id="producer-beats-title">Meus beats</h1><p class="producer-lead">Envie beats com sua tag para revisão da Mirai.</p></div></div>
-                        <form id="producer-beat-form" class="producer-upload beat-form">
+                        <form id="producer-beat-form" class="producer-upload beat-form beat-upload-panel">
                             <label class="beat-form__full">Título<input name="titulo" maxlength="160" required /></label>
                             <label class="beat-form__full">Capa<input name="capa" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required /></label>
                             <div class="beat-form__format"><label>MP3 lease (com tag)<input name="mp3" type="file" accept=".mp3,audio/mpeg" required /></label><label>Preço<input name="preco_lease" type="number" min="0.01" step="0.01" /></label></div>
@@ -164,7 +165,10 @@
                             <button class="btn-cta" type="submit">Enviar para revisão</button>
                             <p id="producer-beat-upload-status" class="beat-upload-status" role="status" aria-live="polite"></p>
                         </form>
-                        <div id="producer-beats-list" class="producer-list"></div>
+                        <section class="beat-submissions" aria-labelledby="producer-beats-list-title">
+                            <h2 id="producer-beats-list-title">Enviados para revisão</h2>
+                            <div id="producer-beats-list" class="producer-list producer-beats-list"></div>
+                        </section>
                     </section>
                 </div>
             </div>

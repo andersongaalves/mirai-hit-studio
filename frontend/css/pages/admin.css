@@ -598,9 +598,14 @@
     border-radius: 6px;
 }
 
-.admin-beat-card { display: grid; align-items: start; gap: 12px; min-width: 0; }
+.admin-beats-review { margin-top: 24px; padding-top: 20px; border-top: var(--border-subtle); }
+.admin-beats-review > h2 { margin: 0 0 16px; }
+.admin-beat-card { display: grid; align-items: start; gap: 16px; min-width: 0; }
+.admin-beat-card__summary { display: grid; grid-template-columns: minmax(0, 1fr) 120px; align-items: center; gap: 16px; }
+.admin-beat-card__content { min-width: 0; }
+.admin-beat-card .beat-cover { width: 120px; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
 .admin-beat-card audio { width: min(100%, 460px); }
-.admin-beat-form { display: grid; gap: 12px; width: min(100%, 850px); }
+.admin-beat-form { display: grid; gap: 12px; width: 100%; padding-top: 16px; border-top: var(--border-subtle); }
 .admin-beat-form label { display: grid; gap: 6px; min-width: 0; }
 .admin-beat-form :where(input, textarea) { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px; border: var(--border-subtle); background: var(--color-background); color: var(--color-text-primary); font: inherit; }
 .admin-beat-form textarea { min-height: 75px; }
@@ -613,6 +618,7 @@
 .beat-upload-settings__form .beat-review-message { grid-column: 1 / -1; }
 .beat-review-message { min-height: 1.3em; margin: 0; color: var(--color-text-secondary); }
 @media (max-width: 600px) { .admin-beat-form .beat-form__format, .admin-beat-form .beat-form__pair, .beat-upload-settings__form { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .admin-beat-card__summary { grid-template-columns: minmax(0, 1fr) 80px; } .admin-beat-card .beat-cover { width: 80px; } }
 
 .admin-param-item {
     display: flex;

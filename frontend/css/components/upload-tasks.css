@@ -1,0 +1,11 @@
+.upload-tasks-button { position: fixed; right: 18px; bottom: 76px; z-index: 80; display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 8px 12px; border: 1px solid var(--color-accent); border-radius: 4px; background: var(--color-surface); color: var(--color-text-primary); font: inherit; cursor: pointer; }
+.upload-tasks-button span { min-width: 20px; padding: 2px 6px; border-radius: 10px; background: var(--color-accent); color: var(--color-background); text-align: center; }
+.upload-tasks-dialog { width: min(92vw, 480px); border: var(--border-subtle); border-radius: 6px; background: var(--color-surface); color: var(--color-text-primary); }
+.upload-tasks-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.upload-tasks-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.upload-tasks-dialog header button { border: 0; background: transparent; color: var(--color-accent); cursor: pointer; }
+.upload-tasks-dialog ul { display: grid; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+.upload-tasks-dialog li { display: grid; gap: 3px; padding: 12px; border: var(--border-subtle); }
+.upload-tasks-dialog li[data-state="completed"] { border-color: var(--color-success, #39d98a); }
+.upload-tasks-dialog li[data-state="failed"] { border-color: var(--color-danger, #ff7a90); }
+.upload-tasks-dialog li span { color: var(--color-text-secondary); }

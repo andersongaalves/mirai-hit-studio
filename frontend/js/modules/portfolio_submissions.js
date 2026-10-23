@@ -1,6 +1,7 @@
 import { authFetch } from "../admin/auth.js";
 import { bindImageCrop } from "./image_crop.js";
 import { uploadBusy } from "./upload_feedback.js";
+import { enqueueUpload } from "./upload_tasks.js";
 
 const labels = { pendente: "Aguardando revisão", aprovado: "Publicado", recusado: "Recusado" };
 const node = (tag, text, className) => {
@@ -128,7 +129,13 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                         const multipart = new FormData();
                         multipart.append("dados", JSON.stringify(data));
                         multipart.append("imagem", coverFile.files[0]);
-                        await request("/portal/produtor/portfolio/com-capa", multipart);
+                        await enqueueUpload("/portal/produtor/portfolio/com-capa", multipart, {
+                            label: `Portfólio · ${data.titulo}`,
+                            meta: { kind: "portfolio-submission" },
+                        });
+                        message.textContent = "Envio iniciado. Acompanhe em Envios.";
+                        form.reset();
+                        return;
                     } else {
                         await request("/portal/produtor/portfolio", data);
                     }
