@@ -2,17 +2,20 @@ from datetime import datetime
 from decimal import Decimal
 from math import ceil
 
-from sqlalchemy import case, func, or_, select
-from sqlalchemy.orm import Session, selectinload
-
 from core.config import settings
 from models.cliente import ClienteModel
-from models.orcamento import OrcamentoModel
 from models.enums.financeiro import CobrancaStatus, PagamentoStatus
 from models.financeiro import CobrancaModel, PagamentoModel
+from models.orcamento import OrcamentoModel
 from models.proposta import PropostaModel
-from services import checkout_service, financial_service
-
+from services import (
+    audit_service,
+    checkout_service,
+    financial_service,
+    producao_liberacao_service,
+)
+from sqlalchemy import case, func, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 ZERO = Decimal("0.00")
 
@@ -239,3 +242,95 @@ def buscar(db: Session, cobranca_id: int):
         ],
     })
     return response
+
+
+def registrar_pix_manual(db, cobranca_id, dados, *, actor, request_id=None):
+    key = f"manual-pix:{dados.idempotency_key}"
+    previous = db.scalar(
+        select(PagamentoModel).where(PagamentoModel.provider_idempotency_key == key)
+    )
+    if previous is not None:
+        amount_changed = (
+            dados.modo == "parcial"
+            and financial_service.normalizar_valor(previous.valor)
+            != financial_service.normalizar_valor(dados.valor)
+        )
+        if (
+            previous.cobranca_id != cobranca_id
+            or previous.provider_reference != dados.referencia
+            or amount_changed
+        ):
+            raise financial_service.FinanceiroConflito(
+                "Referencia de repeticao ja utilizada em outro pagamento."
+            )
+        charge = financial_service.bloquear_cobranca(db, cobranca_id)
+        return _manual_response(charge, previous, repeated=True)
+
+    charge = financial_service.bloquear_cobranca(db, cobranca_id)
+    if charge is None:
+        raise financial_service.FinanceiroInvalido("Cobranca nao encontrada.")
+    db.refresh(charge, ["pagamentos"])
+    if any(
+        payment.status == PagamentoStatus.PENDENTE.value and payment.provider
+        for payment in charge.pagamentos
+    ):
+        raise financial_service.FinanceiroConflito(
+            "Existe uma tentativa externa pendente. Concilie ou cancele antes de registrar o Pix direto."
+        )
+    balance = financial_service.saldo_pendente(charge)
+    if balance <= ZERO:
+        raise financial_service.FinanceiroConflito("Cobranca sem saldo pendente.")
+    amount = (
+        balance
+        if dados.modo == "quitar"
+        else financial_service.normalizar_valor(dados.valor)
+    )
+    if dados.modo == "parcial" and amount >= balance:
+        raise financial_service.FinanceiroConflito(
+            "Para pagar todo o saldo, use a opcao Quitar saldo."
+        )
+    paid_before = financial_service.valor_pago(charge)
+    kind = (
+        "integral"
+        if not paid_before and amount == balance
+        else ("entrada" if not paid_before else "saldo")
+    )
+    payment = financial_service.registrar_pagamento(
+        db,
+        charge.id,
+        tipo=kind,
+        valor=amount,
+        status=PagamentoStatus.APROVADO,
+        metodo="pix_direto",
+        provider="manual_admin",
+        provider_reference=dados.referencia,
+        provider_idempotency_key=key,
+    )
+    charge = financial_service.bloquear_cobranca(db, charge.id)
+    producao_liberacao_service.avaliar_cobranca_bloqueada(
+        db, charge, actor=actor, request_id=request_id
+    )
+    audit_service.record(
+        db,
+        actor=actor,
+        action="payment.manual_pix_recorded",
+        entity_type="payment",
+        entity_id=payment.id,
+        metadata={"new_status": payment.status, "new_amount": str(amount)},
+        request_id=request_id,
+    )
+    db.commit()
+    db.refresh(charge, ["pagamentos"])
+    return _manual_response(charge, payment)
+
+
+def _manual_response(charge, payment, *, repeated=False):
+    return {
+        "payment_id": payment.id,
+        "cobranca_id": charge.id,
+        "valor": _money(payment.valor),
+        "valor_pago": financial_service.valor_pago(charge),
+        "saldo_pendente": financial_service.saldo_pendente(charge),
+        "status": charge.status,
+        "repeated": repeated,
+    }

@@ -72,7 +72,30 @@ function renderSelected() {
         reconcilingPaymentId: financeiroState.reconcilingPaymentId,
         onCopy: copyCheckoutLink,
         onReconcile: reconcilePayment,
+        registeringManualPayment: financeiroState.registeringManualPayment,
+        onManualPayment: registerManualPayment,
     });
+}
+
+
+async function registerManualPayment(payload) {
+    if (financeiroState.registeringManualPayment || !financeiroState.selected) return;
+    const action = payload.modo === "quitar" ? "quitar todo o saldo" : `registrar R$ ${Number(payload.valor).toFixed(2)} como recebido`;
+    if (!window.confirm(`Confirma ${action} por Pix direto? Esta operação ficará no histórico financeiro.`)) return;
+    financeiroState.registeringManualPayment = true;
+    renderSelected();
+    const selectedId = financeiroState.selected.id;
+    try {
+        await API.registrarPixManual(selectedId, payload);
+        Notify.success(payload.modo === "quitar" ? "Produção marcada como paga." : "Pagamento parcial registrado.");
+        await carregarFinanceiro();
+        await abrirCobranca(selectedId);
+    } catch (error) {
+        Notify.error(error.message || "Não foi possível registrar o Pix direto.");
+    } finally {
+        financeiroState.registeringManualPayment = false;
+        if (financeiroState.selected?.id === selectedId) renderSelected();
+    }
 }
 
 

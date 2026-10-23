@@ -4,7 +4,6 @@ import unittest
 
 import test_bootstrap_database as isolated
 
-
 SETUP = r'''
 import asyncio
 from decimal import Decimal
@@ -118,6 +117,73 @@ async def check():
         assert audit.entity_id == str(payment_id)
         assert audit.metadata_json == {'old_status': 'pendente', 'new_status': 'aprovado'}
 asyncio.run(check())
+''')
+
+    def test_manual_pix_partial_settlement_idempotency_and_pending_guard(self):
+        self.run_case(r'''
+from uuid import uuid4
+
+with Session(engine) as db:
+    orcamento = OrcamentoModel(nome_cliente='Cliente Pix', email='pix@example.com', servico='Mix')
+    db.add(orcamento)
+    db.flush()
+    proposta = PropostaModel(orcamento_id=orcamento.id, numero='P-PIX', status='aceita', cliente_snapshot={}, itens_json=[], pagamentos_json=[], totais_json={})
+    db.add(proposta)
+    db.flush()
+    cobranca = CobrancaModel(proposta_id=proposta.id, valor_total=Decimal('100.00'), referencia_externa=str(uuid4()))
+    db.add(cobranca)
+    db.commit()
+    charge_id = cobranca.id
+
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        key = str(uuid4())
+        partial = {'modo': 'parcial', 'valor': '35.00', 'referencia': 'PIX-BANCO-001', 'idempotency_key': key}
+        response = await client.post(f'/financeiro/cobrancas/{charge_id}/pagamentos-manuais', json=partial)
+        assert response.status_code == 200, response.text
+        assert response.json()['valor_pago'] == '35.00'
+        assert response.json()['saldo_pendente'] == '65.00'
+        assert response.json()['status'] == 'parcialmente_paga'
+        repeated = await client.post(f'/financeiro/cobrancas/{charge_id}/pagamentos-manuais', json=partial)
+        assert repeated.status_code == 200 and repeated.json()['repeated'] is True
+        changed_retry = await client.post(f'/financeiro/cobrancas/{charge_id}/pagamentos-manuais', json={**partial, 'valor': '36.00'})
+        assert changed_retry.status_code == 409
+
+        settlement = await client.post(f'/financeiro/cobrancas/{charge_id}/pagamentos-manuais', json={
+            'modo': 'quitar', 'referencia': 'PIX-BANCO-002', 'idempotency_key': str(uuid4()),
+        })
+        assert settlement.status_code == 200, settlement.text
+        assert settlement.json()['valor'] == '65.00'
+        assert settlement.json()['saldo_pendente'] == '0.00'
+        assert settlement.json()['status'] == 'paga'
+
+    with Session(engine) as db:
+        payments = db.query(PagamentoModel).filter_by(cobranca_id=charge_id).order_by(PagamentoModel.id).all()
+        assert len(payments) == 2
+        assert [payment.metodo for payment in payments] == ['pix_direto', 'pix_direto']
+        assert all(payment.provider == 'manual_admin' for payment in payments)
+        assert db.query(AuditLogModel).filter_by(action='payment.manual_pix_recorded').count() == 2
+
+asyncio.run(check())
+
+with Session(engine) as db:
+    orcamento = OrcamentoModel(nome_cliente='Pendente', email='pending@example.com', servico='Master')
+    db.add(orcamento); db.flush()
+    proposta = PropostaModel(orcamento_id=orcamento.id, numero='P-PENDING', status='aceita', cliente_snapshot={}, itens_json=[], pagamentos_json=[], totais_json={})
+    db.add(proposta); db.flush()
+    charge = CobrancaModel(proposta_id=proposta.id, valor_total=Decimal('80.00'), referencia_externa=str(uuid4()))
+    db.add(charge); db.flush()
+    db.add(PagamentoModel(cobranca_id=charge.id, tipo='integral', valor=Decimal('80.00'), status='pendente', provider='mercado_pago', provider_order_id='pending-order'))
+    db.commit(); pending_charge_id = charge.id
+
+async def blocked():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        response = await client.post(f'/financeiro/cobrancas/{pending_charge_id}/pagamentos-manuais', json={
+            'modo': 'quitar', 'referencia': 'PIX-BANCO-003', 'idempotency_key': str(uuid4()),
+        })
+        assert response.status_code == 409
+        assert 'tentativa externa pendente' in response.json()['detail']
+asyncio.run(blocked())
 ''')
         isolated.BootstrapTests().run_case(r'''
 import asyncio

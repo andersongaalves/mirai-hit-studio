@@ -1588,6 +1588,17 @@
                         <div class="admin-form-actions financeiro-modal-actions">
                             <button id="financeiro-copy-link" type="button" class="btn-small">Copiar link do checkout</button>
                         </div>
+                        <form id="financeiro-manual-form" class="financeiro-manual-form">
+                            <h3>Pix recebido diretamente</h3>
+                            <div class="financeiro-manual-options" role="radiogroup" aria-label="Tipo do registro">
+                                <label><input type="radio" name="modo" value="parcial" checked> Pagamento parcial</label>
+                                <label><input type="radio" name="modo" value="quitar"> Quitar saldo</label>
+                            </div>
+                            <label>Valor recebido<input id="financeiro-manual-value" name="valor" type="number" min="0.01" step="0.01" required></label>
+                            <label>Referência do Pix<input name="referencia" minlength="3" maxlength="120" autocomplete="off" required></label>
+                            <p class="admin-help">Registre somente depois de confirmar o crédito na conta. O histórico não substitui conciliação bancária.</p>
+                            <button id="financeiro-manual-submit" type="submit" class="btn-primary">Registrar Pix direto</button>
+                        </form>
                         <section class="financeiro-payments-section" aria-labelledby="financeiro-payments-title">
                             <h3 id="financeiro-payments-title">Pagamentos</h3>
                             <div id="financeiro-payments" class="financeiro-payments"></div>

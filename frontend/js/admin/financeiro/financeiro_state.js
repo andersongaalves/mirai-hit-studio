@@ -9,6 +9,7 @@ export const financeiroState = {
     pages: 0,
     selected: null,
     reconcilingPaymentId: null,
+    registeringManualPayment: false,
     filters: { search: "", status: "", reconciliationStatus: "", dateFrom: "", dateTo: "" },
 };
 
@@ -23,5 +24,6 @@ export function resetFinanceiroState() {
     financeiroState.pages = 0;
     financeiroState.selected = null;
     financeiroState.reconcilingPaymentId = null;
+    financeiroState.registeringManualPayment = false;
     financeiroState.filters = { search: "", status: "", reconciliationStatus: "", dateFrom: "", dateTo: "" };
 }
