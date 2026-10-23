@@ -277,6 +277,50 @@ def aceitar_cliente(db, proposta_id, *, cliente_id, versao, actor, request_id=No
         raise
 
 
+def aceitar_compra_catalogo(db, proposta_id, *, cliente_id, actor, request_id=None):
+    """Accept a single-beat catalog order without sending it through manual review."""
+    if not producao_liberacao_service.pipeline_v2_habilitada():
+        raise service.PropostaNaoEncontrada("Compra de beat indisponivel.")
+    try:
+        model, budget = _carregar(db, proposta_id)
+        if budget.cliente_id != cliente_id:
+            raise service.PropostaNaoEncontrada("Compra de beat nao encontrada.")
+        items = model.itens_json or []
+        if (
+            len(items) != 1
+            or not items[0].get("beat_id")
+            or not items[0].get("licenca_beat")
+            or model.politica_pagamento != "integral"
+        ):
+            raise service.PropostaConflito("Compra de beat invalida para checkout direto.")
+        if model.status in (Status.RASCUNHO.value, Status.PRONTA.value):
+            if budget.status not in (OrcamentoStatus.NOVO.value, OrcamentoStatus.EM_ANALISE.value):
+                raise service.PropostaConflito("Status da compra incompativel com o checkout.")
+            snapshots.congelar(db, model, origem="aceite", estrito=True)
+            model.enviada_em = datetime.now(timezone.utc)
+            model.status = Status.ENVIADA.value
+            budget.status = OrcamentoStatus.PROPOSTA_ENVIADA.value
+            db.flush()
+        response = _aprovar_carregada(
+            db,
+            model,
+            budget,
+            actor,
+            request_id,
+            audit_action="beat.checkout_created",
+        )
+        db.commit()
+        return response
+    except IntegrityError:
+        db.rollback()
+        raise service.PropostaConflito(
+            "Compra concorrente; consulte o checkout antes de repetir."
+        ) from None
+    except Exception:
+        db.rollback()
+        raise
+
+
 def recusar_cliente(db, proposta_id, *, cliente_id, versao, actor, request_id=None):
     if not producao_liberacao_service.pipeline_v2_habilitada():
         raise service.PropostaNaoEncontrada("Proposta nao encontrada.")

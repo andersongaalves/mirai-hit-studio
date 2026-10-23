@@ -246,6 +246,11 @@ async function staticResponse(route) {
         await page.waitForSelector('#producer-beats-list .producer-card');
         assert.match(await page.locator('#producer-beats-list').textContent(), /<Beat seguro>/);
         assert.equal(await page.locator('#producer-beats-list script, #producer-beats-list img').count(), 0);
+        const producerBeatBox = await page.locator('#producer-beats-list .beat-card').boundingBox();
+        assert.ok(Math.abs(producerBeatBox.width - producerBeatBox.height) < 2, 'producer beat card must remain square');
+        assert.equal(await page.locator('#producer-beats-list .producer-beat-card__content').evaluate(element => (
+            element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
+        )), true, 'producer beat content must fit inside the square');
         await page.getByLabel('Título').fill('Novo beat');
         await page.locator('#producer-beat-form [name="preco_lease"]').fill('120');
         await page.locator('#producer-beat-form [name="capa"]').setInputFiles({ name: 'capa.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64') });

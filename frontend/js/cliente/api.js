@@ -39,6 +39,15 @@ export async function solicitarBeat(id, licenca, idempotencyKey) {
     }), "Não foi possível solicitar esta licença.");
 }
 
+export async function baixarBeat(id, kind) {
+    const response = await authFetch(`/portal/cliente/beats/${id}/arquivo/${kind}`);
+    if (!response.ok) return responseData(response, "Não foi possível acessar o arquivo adquirido.");
+    if ((response.headers.get("content-type") || "").includes("application/json")) return response.json();
+    const disposition = response.headers.get("content-disposition") || "";
+    const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || `beat-${id}.${kind}`;
+    return { type: "file", blob: await response.blob(), filename };
+}
+
 export async function obterProposta(id) {
     return responseData(
         await authFetch(`/portal/cliente/propostas/${id}`),

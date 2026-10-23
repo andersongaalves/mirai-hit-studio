@@ -85,6 +85,7 @@ async function staticResponse(route) {
     const url = new URL(route.request().url());
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === '/cliente' || pathname.startsWith('/cliente/')) pathname = '/portal-cliente.html';
+    if (pathname === '/checkout') pathname = '/checkout.html';
     const file = path.resolve(root, '.' + pathname);
     assert.ok(file.startsWith(root + path.sep));
     try {
@@ -210,10 +211,13 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/cliente/beats/adquiridos') {
             return route.fulfill({ json: [] });
         }
+        if (url.pathname === '/beats/71/preview') {
+            return route.fulfill({ body: 'ID3synthetic-preview', contentType: 'audio/mpeg' });
+        }
         if (url.pathname === '/portal/cliente/beats/71/solicitar' && request.method() === 'POST') {
             assert.equal(request.postDataJSON().licenca, 'lease');
             assert.match(request.headers()['idempotency-key'], /^[0-9a-f-]{36}$/);
-            return route.fulfill({ status: 201, json: { id: 91, status: 'rascunho' } });
+            return route.fulfill({ status: 201, json: { id: 91, status: 'aceita', checkout_path: '/checkout?proposta=91' } });
         }
         if (url.pathname === '/portal/cliente/producoes' && request.method() === 'GET') {
             return route.fulfill(failList ? { status: 500, json: { detail: 'Falha controlada da API.' } } : { json: productions });
@@ -284,12 +288,18 @@ async function staticResponse(route) {
         await page.waitForURL('**/cliente/beats');
         await page.waitForSelector('#client-beats-list .producer-card');
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
-        assert.match(await page.locator('#client-acquired-beats').textContent(), /Nenhum multitrack liberado/);
+        assert.match(await page.locator('#client-acquired-beats').textContent(), /Nenhuma compra liberada/);
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
+        await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);
+        const beatBox = await page.locator('#client-beats-list .beat-card').boundingBox();
+        assert.ok(Math.abs(beatBox.width - beatBox.height) < 2, 'client beat card must remain square');
+        assert.equal(await page.locator('#client-beats-list .client-beat-card__content').evaluate(element => (
+            element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
+        )), true, 'client beat content must fit inside the square');
         await page.getByRole('button', { name: /MP3 lease/ }).click();
-        await page.waitForFunction(() => document.getElementById('client-alert')?.textContent.includes('Solicitação criada'));
-        assert.equal(await page.getByRole('button', { name: /MP3 lease/ }).isDisabled(), true);
-        assert.equal(await page.getByRole('button', { name: /Exclusivo/ }).count(), 1);
+        await page.waitForURL('**/checkout?proposta=91');
+        await page.goBack();
+        await page.waitForURL('**/cliente/beats');
         await page.getByRole('link', { name: 'Dashboard' }).click();
         assert.equal(await page.locator('#client-proposal-summary').isVisible(), true);
         await page.getByRole('link', { name: 'Propostas', exact: true }).click();

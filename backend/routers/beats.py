@@ -8,7 +8,16 @@ from core.dependencies import (
     require_producer,
 )
 from database import get_db
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import Response
 from pydantic import ValidationError
 from schemas.beat import (
@@ -124,10 +133,26 @@ def client_multitrack(beat_id: int, db: Db, user: Client):
     )
 
 
+@router.get("/portal/cliente/beats/{beat_id}/arquivo/{kind}")
+def client_purchased_file(beat_id: int, kind: str, db: Db, user: Client):
+    delivery = beat_service.purchased_file(db, beat_id, kind, user)
+    if delivery["type"] == "link":
+        return {"type": "link", "url": delivery["url"]}
+    return Response(
+        delivery["contents"],
+        media_type=delivery["mime"],
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f'attachment; filename="{delivery["filename"]}"',
+        },
+    )
+
+
 @router.post("/portal/cliente/beats/{beat_id}/solicitar", status_code=201)
 def request_beat(
     beat_id: int,
     payload: BeatRequest,
+    request: Request,
     db: Db,
     user: Client,
     idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
@@ -137,7 +162,8 @@ def request_beat(
 
         raise HTTPException(422, "Idempotency-Key obrigatoria.")
     return beat_service.request_license(
-        db, beat_id, payload.licenca, user, str(idempotency_key)
+        db, beat_id, payload.licenca, user, str(idempotency_key),
+        getattr(request.state, "request_id", None),
     )
 
 
