@@ -4,6 +4,7 @@ import { uploadBusy } from "./upload_feedback.js";
 import { enqueueUpload } from "./upload_tasks.js";
 
 const labels = { pendente: "Aguardando revisão", aprovado: "Publicado", recusado: "Recusado" };
+const uploadTasks = new Map();
 const node = (tag, text, className) => {
     const el = document.createElement(tag);
     if (text) el.textContent = text;
@@ -129,12 +130,15 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                         const multipart = new FormData();
                         multipart.append("dados", JSON.stringify(data));
                         multipart.append("imagem", coverFile.files[0]);
+                        const pendingUpload = { root, productions };
+                        uploadTasks.set(requestId, pendingUpload);
+                        form.dataset.uploadRequestId = requestId;
+                        form.portfolioUpload = pendingUpload;
+                        message.textContent = "Envio iniciado. Acompanhe em Envios.";
                         await enqueueUpload("/portal/produtor/portfolio/com-capa", multipart, {
                             label: `Portfólio · ${data.titulo}`,
-                            meta: { kind: "portfolio-submission" },
+                            meta: { kind: "portfolio-submission", requestId },
                         });
-                        message.textContent = "Envio iniciado. Acompanhe em Envios.";
-                        form.reset();
                         return;
                     } else {
                         await request("/portal/produtor/portfolio", data);
@@ -144,6 +148,7 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                     await loadPortfolioSubmissions(root, { productions });
                     root.querySelector('[role="status"]').textContent = "Projeto enviado para revisão do estúdio.";
                 } catch (error) {
+                    uploadTasks.delete(requestId);
                     message.textContent = error.message;
                 } finally {
                     finish();
@@ -216,6 +221,29 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
         root.append(retry);
     }
 }
+
+document.addEventListener("mirai:upload-task", async event => {
+    const task = event.detail;
+    const requestId = task.meta?.requestId;
+    const form = requestId
+        ? [...document.querySelectorAll(".portfolio-submission-form")].find(item => item.dataset.uploadRequestId === requestId)
+        : null;
+    const pending = uploadTasks.get(requestId) || form?.portfolioUpload;
+    if (!pending || !["completed", "failed"].includes(task.status)) return;
+    uploadTasks.delete(requestId);
+    if (form) {
+        delete form.dataset.uploadRequestId;
+        delete form.portfolioUpload;
+    }
+    if (task.status === "failed") {
+        const status = pending.root.querySelector('[role="status"]');
+        if (status) status.textContent = task.message;
+        return;
+    }
+    await loadPortfolioSubmissions(pending.root, { productions: pending.productions });
+    const status = pending.root.querySelector('[role="status"]');
+    if (status) status.textContent = "Projeto enviado para revisão do estúdio.";
+});
 
 document.addEventListener("admin:logout", () => {
     for (const id of ["producer-portfolio-content", "portfolio-submissions-admin"]) {
