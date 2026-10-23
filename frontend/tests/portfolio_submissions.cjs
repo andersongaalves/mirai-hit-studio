@@ -16,7 +16,35 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
     try {
         await fs.mkdir(screenDir, { recursive: true });
         async function setup(role, width) {
-            const context = await browser.newContext({ viewport: { width, height: 900 } });
+            const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
+            await context.addInitScript(() => {
+                const listeners = new Set();
+                const emit = task => listeners.forEach(listener => listener({ data: { type: "mirai-upload-task", task } }));
+                const registration = { active: { postMessage: message => {
+                    if (message.type === "mirai-upload-list") return;
+                    const task = { id: message.id, label: message.label, owner: message.owner, meta: message.meta,
+                        status: "uploading", message: "Aguardando envio.", createdAt: Date.now(), updatedAt: Date.now() };
+                    emit(task);
+                    setTimeout(async () => {
+                        const body = new FormData();
+                        message.entries.forEach(([name, value]) => body.append(name, value));
+                        const response = await fetch(message.url, {
+                            method: message.method,
+                            headers: { Authorization: `Bearer ${message.token}` },
+                            body,
+                        });
+                        task.status = response.ok ? "completed" : "failed";
+                        task.message = response.ok ? "Envio concluído." : "O servidor não concluiu o envio. Tente novamente.";
+                        task.updatedAt = Date.now();
+                        emit(task);
+                    }, 0);
+                } } };
+                Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: {
+                    register: async () => registration,
+                    ready: Promise.resolve(registration),
+                    addEventListener: (type, listener) => { if (type === "message") listeners.add(listener); },
+                } });
+            });
             await context.route("**/*", async route => {
                 const req = route.request();
                 const url = new URL(req.url());
@@ -144,10 +172,12 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         assert.ok(await upload.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await upload.page.screenshot({ path: path.join(screenDir, "producer-image-mobile.png"), fullPage: true });
         await imageForm.locator("button[type=submit]").click();
-        await upload.page.getByText("Falha temporária sintética.", { exact: true }).waitFor();
+        await upload.page.waitForFunction(() => [...document.querySelectorAll(".upload-tasks-dialog li span")]
+            .some(item => item.textContent === "O servidor não concluiu o envio. Tente novamente."));
         assert.equal(imagePosts.length, 1);
         await imageForm.locator("button[type=submit]").click();
-        await upload.page.getByText("Projeto enviado para revisão do estúdio.", { exact: true }).waitFor();
+        await upload.page.waitForFunction(() => [...document.querySelectorAll(".upload-tasks-dialog li span")]
+            .some(item => item.textContent === "Concluído"));
         assert.equal(imagePosts.length, 2);
         assert.deepEqual(imagePosts[0], imagePosts[1], "Retry keeps the UUID, metadata and exact image bytes");
         assert.equal(imagePosts[1].contents.readUInt32BE(16), 1600);

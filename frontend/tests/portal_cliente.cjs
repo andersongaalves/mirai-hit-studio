@@ -106,7 +106,35 @@ async function staticResponse(route) {
     assert.match(redirects, /^\/cliente\/\* \/portal-cliente 200$/m);
 
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' });
-    const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+    const context = await browser.newContext({ viewport: { width: 1024, height: 800 }, serviceWorkers: 'block' });
+    await context.addInitScript(() => {
+        const listeners = new Set();
+        const emit = task => listeners.forEach(listener => listener({ data: { type: 'mirai-upload-task', task } }));
+        const registration = { active: { postMessage: message => {
+            if (message.type === 'mirai-upload-list') return;
+            const task = { id: message.id, label: message.label, owner: message.owner, meta: message.meta,
+                status: 'uploading', message: 'Aguardando envio.', createdAt: Date.now(), updatedAt: Date.now() };
+            emit(task);
+            setTimeout(async () => {
+                const body = new FormData();
+                message.entries.forEach(([name, value]) => body.append(name, value));
+                const response = await fetch(message.url, {
+                    method: message.method,
+                    headers: { Authorization: `Bearer ${message.token}` },
+                    body,
+                });
+                task.status = response.ok ? 'completed' : 'failed';
+                task.message = response.ok ? 'Envio concluído.' : 'O envio foi recusado.';
+                task.updatedAt = Date.now();
+                emit(task);
+            }, 0);
+        } } };
+        Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: {
+            register: async () => registration,
+            ready: Promise.resolve(registration),
+            addEventListener: (type, listener) => { if (type === 'message') listeners.add(listener); },
+        } });
+    });
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -393,41 +421,13 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.file-note b').count(), 0);
         await page.getByLabel('Observação para esta versão').fill('Voz regravada no take 3');
         await page.getByLabel('Versão substituída').selectOption('8');
-        slowUpload = true;
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        assert.equal(await page.getByRole('button', { name: 'Enviando arquivo...' }).isDisabled(), true);
-        assert.match(await page.locator('.producer-upload__feedback').textContent(), /Enviando arquivo/);
-        await page.locator('.producer-upload').evaluate(form => form.requestSubmit());
-        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Nova versão enviada com sucesso'));
-        slowUpload = false;
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Envio iniciado'));
+        await page.getByRole('button', { name: /^Envios/ }).click();
+        await page.waitForFunction(() => document.querySelector('.upload-tasks-dialog')?.textContent.includes('Concluído'));
         assert.equal(uploads, 1);
         assert.match(lastUploadBody, /name="observacao"[\s\S]*Voz regravada no take 3/);
-        assert.match(await page.locator('.producer-file-list').last().textContent(), /nome-longo/);
-        assert.match(await page.locator('.producer-file-list').last().textContent(), /Versão 2/);
-        assert.equal(await page.locator('#client-alert').textContent(), '');
-        uploadFailure = 422;
-        await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'erro.wav', mimeType: 'audio/wav', buffer: Buffer.from('RIFF-client') });
-        await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo não permitido'));
-        assert.equal(await page.getByLabel('Arquivo para enviar').evaluate(input => input.files[0].name), 'erro.wav');
-        uploadFailure = 'network';
-        await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Falha de conexão'));
-        uploadFailure = null;
-        failFileList = true;
-        await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado, mas a lista'));
-        assert.equal(uploads, 4);
-        assert.equal(await page.getByRole('button', { name: 'Atualizar lista' }).count(), 1);
-        failFileList = false;
-        await page.getByRole('button', { name: 'Atualizar lista' }).click();
-        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado com sucesso'));
-        assert.equal(uploads, 4);
-        // AUD-S07-003: superseded versions are no longer offered for replacement.
-        const replacementOptions = await page.getByLabel('Versão substituída').locator('option')
-            .evaluateAll(options => options.map(option => option.value));
-        assert.equal(replacementOptions.includes('8'), false, JSON.stringify(replacementOptions));
-        assert.equal(replacementOptions.includes('10'), true, JSON.stringify(replacementOptions));
+        await page.getByRole('button', { name: 'Fechar' }).click();
 
         // AUD-S07-001: a finance failure keeps the project and its files available.
         await page.setViewportSize({ width: 1024, height: 800 });

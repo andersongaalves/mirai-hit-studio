@@ -106,7 +106,35 @@ async function staticResponse(route) {
     assert.match(redirects, /^\/produtor\/\* \/portal-produtor 200$/m);
 
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' });
-    const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+    const context = await browser.newContext({ viewport: { width: 1024, height: 800 }, serviceWorkers: 'block' });
+    await context.addInitScript(() => {
+        const listeners = new Set();
+        const emit = task => listeners.forEach(listener => listener({ data: { type: 'mirai-upload-task', task } }));
+        const registration = { active: { postMessage: message => {
+            if (message.type === 'mirai-upload-list') return;
+            const task = { id: message.id, label: message.label, owner: message.owner, meta: message.meta,
+                status: 'uploading', message: 'Aguardando envio.', createdAt: Date.now(), updatedAt: Date.now() };
+            emit(task);
+            setTimeout(async () => {
+                const body = new FormData();
+                message.entries.forEach(([name, value]) => body.append(name, value));
+                const response = await fetch(message.url, {
+                    method: message.method,
+                    headers: { Authorization: `Bearer ${message.token}` },
+                    body,
+                });
+                task.status = response.ok ? 'completed' : 'failed';
+                task.message = response.ok ? 'Envio concluído.' : 'O envio foi recusado.';
+                task.updatedAt = Date.now();
+                emit(task);
+            }, 0);
+        } } };
+        Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: {
+            register: async () => registration,
+            ready: Promise.resolve(registration),
+            addEventListener: (type, listener) => { if (type === 'message') listeners.add(listener); },
+        } });
+    });
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -233,7 +261,8 @@ async function staticResponse(route) {
             return [header.getUint32(16), header.getUint32(20)];
         }), [1024, 1024]);
         await page.getByRole('button', { name: 'Enviar para revisão' }).click();
-        await page.waitForFunction(() => !document.querySelector('#producer-beat-form button[type=submit]')?.disabled);
+        await page.waitForFunction(() => [...document.querySelectorAll('.upload-tasks-dialog li span')]
+            .some(item => item.textContent === 'Concluído'));
         assert.equal(beatUploads, 1);
         await page.getByRole('link', { name: 'Dashboard' }).click();
         await page.setViewportSize({ width: 390, height: 900 });
@@ -311,9 +340,13 @@ async function staticResponse(route) {
         await page.getByLabel('Observação para esta versão').fill('Mix com graves reduzidos');
         await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'preview.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('preview') });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Prévia enviada ao cliente com sucesso!'));
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Envio iniciado'));
+        await page.getByRole('button', { name: /^Envios/ }).click();
+        await page.waitForFunction(() => document.querySelector('.upload-tasks-dialog')?.textContent.includes('Concluído'));
         assert.equal(uploads, 1);
         assert.match(lastUploadBody, /name="observacao"[\s\S]*Mix com graves reduzidos/);
+        await page.getByRole('button', { name: 'Fechar' }).click();
+        await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')].some(item => item.textContent.includes('preview.mp3')));
         assert.match(await page.locator('.producer-file').filter({ hasText: 'preview.mp3' }).textContent(), /Compartilhada com o cliente/);
         // AUD-S08-001: replacement options follow the selected type.
         const replacementValues = () => page.getByLabel('Versão substituída').locator('option')

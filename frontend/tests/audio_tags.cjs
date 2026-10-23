@@ -8,7 +8,36 @@ const root = path.resolve(__dirname, "..");
 (async () => {
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || "msedge" });
     try {
-        const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+        const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+        await context.addInitScript(() => {
+            const listeners = new Set();
+            const emit = task => listeners.forEach(listener => listener({ data: { type: "mirai-upload-task", task } }));
+            const registration = { active: { postMessage: message => {
+                if (message.type === "mirai-upload-list") return;
+                const task = { id: message.id, label: message.label, owner: message.owner, meta: message.meta,
+                    status: "uploading", message: "Aguardando envio.", createdAt: Date.now(), updatedAt: Date.now() };
+                emit(task);
+                setTimeout(async () => {
+                    const body = new FormData();
+                    message.entries.forEach(([name, value]) => body.append(name, value));
+                    const response = await fetch(message.url, {
+                        method: message.method,
+                        headers: { Authorization: `Bearer ${message.token}` },
+                        body,
+                    });
+                    task.status = response.ok ? "completed" : "failed";
+                    task.message = response.ok ? "Envio concluído." : "O envio foi recusado.";
+                    task.updatedAt = Date.now();
+                    emit(task);
+                }, 0);
+            } } };
+            Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: {
+                register: async () => registration,
+                ready: Promise.resolve(registration),
+                addEventListener: (type, listener) => { if (type === "message") listeners.add(listener); },
+            } });
+        });
+        const page = await context.newPage();
         const errors = [];
         const writes = [];
         let conflict = false;

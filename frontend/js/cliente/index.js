@@ -1,11 +1,12 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
 import { initProductionRequest } from "./request.js";
-import { uploadBusy } from "../modules/upload_feedback.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
+import { enqueueUpload } from "../modules/upload_tasks.js";
+import { beatPreview } from "../modules/beat_preview.js";
 import {
     applySettings,
     renderDashboard,
@@ -252,12 +253,13 @@ async function loadBeats() {
         }));
         if (!acquired.length) acquiredList.textContent = "Nenhum multitrack liberado ainda.";
         list.replaceChildren(...beats.map(beat => {
-            const card = document.createElement("article"); card.className = "producer-card";
+            const card = document.createElement("article"); card.className = "producer-card client-beat-card";
+            const content = document.createElement("div"); content.className = "client-beat-card__content";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
-            if (beat.capa_url) { const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; card.append(cover); }
+            let cover = null;
+            if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; }
             const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
-            const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
-            audio.addEventListener("play", async () => { if (audio.src) return; audio.src = URL.createObjectURL(await api.ouvirBeat(beat.id)); await audio.play(); }, { once: true });
+            const audio = beatPreview(() => api.ouvirBeat(beat.id));
             const actions = document.createElement("div"); actions.className = "producer-card__footer";
             for (const [kind, label, price] of [[beat.formato_novo ? "lease_mp3" : "lease", "MP3 lease", beat.preco_lease], ["lease_wav", "WAV lease", beat.preco_wav], ["multitrack", "Multitrack", beat.preco_multitrack], ["exclusivo", "Exclusivo", beat.preco_exclusivo]]) {
                 if (!price) continue;
@@ -271,7 +273,10 @@ async function loadBeats() {
                 };
                 actions.append(button);
             }
-            card.append(title, author, audio, actions); return card;
+            content.append(title, author, audio, actions);
+            card.append(content);
+            if (cover) card.append(cover);
+            return card;
         }));
         if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";
     } catch (error) { setAlert(error.message, true); list.textContent = ""; }
@@ -429,30 +434,34 @@ async function refreshFiles(production, setFeedback) {
 async function uploadFile(production, file, type, replacesId, form, setFeedback, note = "") {
     if (form.dataset.busy === "true") return;
     form.dataset.busy = "true";
-    const finish = uploadBusy(form.querySelector('button[type="submit"]'));
-    form.querySelectorAll("input, select, textarea, button").forEach(control => { control.disabled = true; });
-    const submit = form.querySelector('button[type="submit"]');
-    submit.textContent = "Enviando arquivo...";
-    setFeedback("loading", "Enviando arquivo...");
+    setFeedback("loading", "Adicionando à fila de envios...");
     try {
-        await api.enviarArquivo(production.id, file, type, replacesId, note);
-        if (route().view !== "detail" || route().id !== production.id) return;
-        uploadFeedback = {
-            kind: "success",
-            message: replacesId ? "Nova versão enviada com sucesso!" : "Arquivo enviado com sucesso!",
-        };
-        uploadFeedback.successMessage = uploadFeedback.message;
-        await refreshFiles(production, setFeedback);
+        const body = new FormData();
+        body.append("arquivo", file);
+        body.append("tipo", type);
+        if (replacesId) body.append("substitui_arquivo_id", String(replacesId));
+        if (note.trim()) body.append("observacao", note.trim());
+        await enqueueUpload(`/portal/cliente/producoes/${production.id}/arquivos`, body, {
+            label: `${file.name} · ${production.titulo}`,
+            meta: { kind: "client-production", productionId: production.id },
+        });
+        uploadFeedback = { kind: "success", message: "Envio iniciado. Você pode continuar usando o portal e acompanhar em Envios." };
+        setFeedback("success", uploadFeedback.message);
+        form.reset();
     } catch (error) {
         uploadFeedback = { kind: "error", message: uploadError(error) };
         setFeedback("error", uploadFeedback.message);
     } finally {
         form.dataset.busy = "false";
-        finish();
-        form.querySelectorAll("input, select, textarea, button").forEach(control => { control.disabled = false; });
-        submit.textContent = "Enviar arquivo";
     }
 }
+
+document.addEventListener("mirai:upload-task", event => {
+    const task = event.detail;
+    if (task.status !== "completed" || task.meta?.kind !== "client-production") return;
+    if (route().view === "detail" && route().id === task.meta.productionId) openDetail(task.meta.productionId);
+});
+
 
 function denyWrongRole() {
     logout();

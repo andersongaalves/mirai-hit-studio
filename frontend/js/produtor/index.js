@@ -1,7 +1,6 @@
 import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
 import * as api from "./api.js";
 import { bindImageCrop } from "../modules/image_crop.js";
-import { uploadBusy } from "../modules/upload_feedback.js";
 import { applyBeatUploadLimits, validateBeatUpload } from "../modules/beat_upload_validation.js";
 import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
@@ -9,6 +8,8 @@ import { syncUploadHints } from "../modules/file_quotas.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { loadAudioTag } from "../modules/audio_tags.js";
+import { enqueueUpload } from "../modules/upload_tasks.js";
+import { beatPreview } from "../modules/beat_preview.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -162,18 +163,19 @@ async function loadBeats() {
         if (uploadStatus) uploadStatus.textContent = config.ready ? "" : config.message;
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article");
-            card.className = "producer-card";
+            card.className = "producer-card producer-beat-card";
+            const content = document.createElement("div");
+            content.className = "producer-beat-card__content";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
-            if (beat.capa_url) { const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; card.append(cover); }
+            let cover = null;
+            if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; }
             const meta = document.createElement("p"); meta.textContent = `${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
             const prices = document.createElement("p"); prices.textContent = [["MP3 lease", beat.preco_lease], ["WAV lease", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
-            const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
-            audio.addEventListener("play", async () => {
-                if (audio.src) return;
-                const result = await api.ouvirBeat(beat.id); audio.src = URL.createObjectURL(result.blob); await audio.play();
-            }, { once: true });
-            card.append(title, meta, prices, audio);
-            if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; card.append(reason); }
+            const audio = beatPreview(() => api.ouvirBeat(beat.id));
+            content.append(title, meta, prices, audio);
+            if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; content.append(reason); }
+            card.append(content);
+            if (cover) card.append(cover);
             return card;
         }));
         if (!beats.length) list.textContent = "Nenhum beat enviado.";
@@ -241,23 +243,23 @@ async function downloadReceipt(id, button, byStage = false) {
 
 async function uploadFile(production, file, type, replacesId, button, note = "") {
     if (button.disabled) return;
-    const finish = uploadBusy(button);
+    button.disabled = true;
     setAlert();
     try {
-        const sent = await api.enviarArquivo(production.id, file, type, replacesId, note);
-        await openDetail(production.id);
-        // 5.10: the contract may hold previews until the studio approves them.
-        const previewMessage = sent?.visivel_cliente === false
-            ? "Prévia enviada. O cliente verá depois da aprovação do estúdio."
-            : "Prévia enviada ao cliente com sucesso!";
-        setAlert(sent?.processamento_tag === "pendente"
-            ? "Prévia enviada. Processando a versão com tag para o cliente."
-            : type === "previa" ? previewMessage : "Arquivo enviado como uma nova versão.");
+        const form = new FormData();
+        form.append("arquivo", file);
+        form.append("tipo", type);
+        if (replacesId) form.append("substitui_arquivo_id", String(replacesId));
+        if (note.trim()) form.append("observacao", note.trim());
+        await enqueueUpload(`/portal/produtor/producoes/${production.id}/arquivos`, form, {
+            label: `${file.name} · ${production.titulo}`,
+            meta: { kind: "producer-production", productionId: production.id },
+        });
+        setAlert("Envio iniciado. Você pode continuar usando o portal e acompanhar em Envios.");
     } catch (error) {
         setAlert(error.message, true);
-        button.disabled = false;
     } finally {
-        finish();
+        button.disabled = false;
     }
 }
 
@@ -331,8 +333,8 @@ document.getElementById("producer-beat-form").addEventListener("submit", async e
         if (status) textStatus(status, validation.message, true);
         return;
     }
-    const finish = uploadBusy(button);
-    if (status) textStatus(status, "Enviando arquivos...", false);
+    button.disabled = true;
+    if (status) textStatus(status, "Adicionando à fila de envios...", false);
     try {
         const body = new FormData(form);
         if (beatUploadConfig.limits.multitrack_mode === "link") {
@@ -346,16 +348,28 @@ document.getElementById("producer-beat-form").addEventListener("submit", async e
         for (const name of ["wav", "multitrack"]) {
             if (!body.get(name)?.size) body.delete(name);
         }
-        await api.enviarBeat(body);
+        await enqueueUpload("/portal/produtor/beats", body, {
+            label: `Beat · ${body.get("titulo")}`,
+            meta: { kind: "producer-beat" },
+        });
         form.reset();
         applyBeatUploadLimits(form, beatUploadConfig.limits);
-        setAlert("Beat enviado para revisão.");
-        if (status) textStatus(status, "Beat enviado para revisão.", false);
-        await loadBeats();
+        setAlert("Beat adicionado aos envios. Você pode sair desta tela.");
+        if (status) textStatus(status, "Envio iniciado. Acompanhe em Envios.", false);
     }
     catch (error) { setAlert(error.message, true); if (status) textStatus(status, error.message, true); }
-    finally { finish(); }
+    finally { button.disabled = false; }
 });
+
+document.addEventListener("mirai:upload-task", event => {
+    const task = event.detail;
+    if (task.status !== "completed") return;
+    if (task.meta?.kind === "producer-beat") loadBeats();
+    if (task.meta?.kind === "producer-production" && route().view === "detail" && route().id === task.meta.productionId) {
+        openDetail(task.meta.productionId);
+    }
+});
+
 
 function textStatus(node, message, error) {
     node.textContent = message;

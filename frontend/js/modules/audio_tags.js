@@ -1,5 +1,5 @@
 import { authFetch } from "../admin/auth.js";
-import { uploadBusy } from "./upload_feedback.js";
+import { enqueueUpload } from "./upload_tasks.js";
 
 const roots = new Set();
 const node = (tag, text, className = "") => {
@@ -72,15 +72,17 @@ export async function loadAudioTag(root, { admin = false } = {}) {
             event.preventDefault();
             if (send.disabled || !file.files[0]) return;
             if (file.files[0].size > 2 * 1024 * 1024) { feedback.textContent = "A tag deve ter até 2 MB."; return; }
-            const finish = uploadBusy(send);
             const form = new FormData();
             form.append("arquivo", file.files[0]);
             form.append("versao", String(current.versao));
             try {
-                await data(await authFetch(endpoint, { method: "POST", body: form }));
-                if (root.dataset.serial === serial) await loadAudioTag(root, { admin });
-            } catch (error) { feedback.textContent = error.message; send.disabled = false; }
-            finally { finish(); }
+                await enqueueUpload(endpoint, form, {
+                    label: admin ? "Tag padrão da Mirai" : "Minha tag de áudio",
+                    meta: { kind: "audio-tag", admin },
+                });
+                feedback.textContent = "Envio iniciado. Acompanhe em Envios.";
+                upload.reset();
+            } catch (error) { feedback.textContent = error.message; }
         };
         root.append(upload);
         if (admin) {
@@ -131,4 +133,10 @@ document.addEventListener("admin:logout", () => {
         root.replaceChildren();
     });
     roots.clear();
+});
+
+document.addEventListener("mirai:upload-task", event => {
+    const task = event.detail;
+    if (task.status !== "completed" || task.meta?.kind !== "audio-tag") return;
+    roots.forEach(root => loadAudioTag(root, { admin: Boolean(task.meta.admin) }));
 });

@@ -2,6 +2,8 @@ import { authFetch } from "./auth.js";
 import { bindImageCrop } from "../modules/image_crop.js";
 import { uploadBusy } from "../modules/upload_feedback.js";
 import { applyBeatUploadLimits, validateBeatUpload } from "../modules/beat_upload_validation.js";
+import { beatPreview } from "../modules/beat_preview.js";
+import { enqueueUpload } from "../modules/upload_tasks.js";
 
 async function data(response) {
     const payload = await response.json().catch(() => null);
@@ -90,21 +92,20 @@ function uploadSettings(config) {
 function beatCard(beat, config) {
     const card = document.createElement("article");
     card.className = "admin-list-item admin-beat-card";
+    const summary = document.createElement("div");
+    summary.className = "admin-beat-card__summary";
+    const content = document.createElement("div");
+    content.className = "admin-beat-card__content";
     const title = document.createElement("h3"); title.textContent = beat.titulo;
     const cover = beat.capa_url ? document.createElement("img") : null;
     if (cover) { cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; }
     const meta = document.createElement("p"); meta.textContent = `${beat.produtor} · ${beat.status}`;
-    const audio = document.createElement("audio"); audio.controls = true; audio.preload = "none";
     const message = document.createElement("p"); message.className = "beat-review-message"; message.setAttribute("role", "status");
-    audio.addEventListener("play", async () => {
-        if (audio.src) return;
-        try {
-            const response = await authFetch(`/beats/${beat.id}/preview`);
-            if (!response.ok) throw new Error("Prévia indisponível.");
-            audio.src = URL.createObjectURL(await response.blob());
-            await audio.play();
-        } catch (error) { message.textContent = error.message; }
-    }, { once: true });
+    const audio = beatPreview(async () => {
+        const response = await authFetch(`/beats/${beat.id}/preview`);
+        if (!response.ok) throw new Error("Prévia indisponível.");
+        return response.blob();
+    });
 
     const form = document.createElement("form");
     form.className = "beat-form admin-beat-form";
@@ -144,7 +145,20 @@ function beatCard(beat, config) {
             body.delete("multitrack_url"); body.delete("preco_multitrack_link");
         }
         for (const name of ["mp3", "wav", "multitrack", "capa"]) if (!body.get(name)?.size) body.delete(name);
-        try { await data(await authFetch(`/admin/beats/${beat.id}`, { method: "PUT", body })); await initBeats(); }
+        const hasFiles = ["mp3", "wav", "multitrack", "capa"].some(name => body.get(name) instanceof File);
+        try {
+            if (hasFiles) {
+                await enqueueUpload(`/admin/beats/${beat.id}`, body, {
+                    method: "PUT",
+                    label: `Revisão do beat · ${beat.titulo}`,
+                    meta: { kind: "admin-beat" },
+                });
+                message.textContent = "Envio iniciado. Acompanhe em Envios.";
+            } else {
+                await data(await authFetch(`/admin/beats/${beat.id}`, { method: "PUT", body }));
+                await initBeats();
+            }
+        }
         catch (error) { message.textContent = error.message; save.disabled = false; }
         finally { finish(); }
     });
@@ -165,11 +179,17 @@ function beatCard(beat, config) {
         actions.append(button);
     }
     form.append(actions, message);
-    if (cover) card.append(cover);
-    card.append(title, meta, audio, form);
-    if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; card.append(reason); }
+    content.append(title, meta, audio);
+    if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; content.append(reason); }
+    summary.append(content);
+    if (cover) summary.append(cover);
+    card.append(summary, form);
     return card;
 }
+
+document.addEventListener("mirai:upload-task", event => {
+    if (event.detail.status === "completed" && event.detail.meta?.kind === "admin-beat") initBeats();
+});
 
 export async function initBeats() {
     const root = document.getElementById("admin-beats-list");

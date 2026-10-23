@@ -7,6 +7,7 @@ import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
 import { creditAllocationsPanel } from "../../modules/credit_allocations.js";
 import { stagePayoutsPanel } from "../../modules/stage_payouts.js";
 import { uploadBusy } from "../../modules/upload_feedback.js";
+import { enqueueUpload } from "../../modules/upload_tasks.js";
 
 let productionId = null;
 let files = [];
@@ -141,11 +142,14 @@ function bindActions() {
         if (replacement) form.append("substitui_arquivo_id", replacement);
         const note = byId("prod_arquivo_observacao")?.value.trim();
         if (note) form.append("observacao", note);
-        run(byId("prod_arquivo_enviar"), async () => {
-            await API.enviarArquivo(productionId, form);
-            // A note belongs to one version; never carry it over to the next upload.
+        enqueueUpload(`/producoes/${productionId}/arquivos`, form, {
+            label: `${input.files[0].name} · Produção #${productionId}`,
+            meta: { kind: "admin-production", productionId },
+        }).then(() => {
+            input.value = "";
             if (byId("prod_arquivo_observacao")) byId("prod_arquivo_observacao").value = "";
-        }, "Arquivo enviado.");
+            Notify.success("Envio iniciado. Acompanhe em Envios.");
+        }).catch(error => Notify.error(error.message));
     };
     byId("prod_repasse_salvar").onclick = () => {
         const amount = byId("prod_repasse_valor").value;
@@ -173,6 +177,13 @@ function bindActions() {
         "Pagamento registrado.",
     );
 }
+
+document.addEventListener("mirai:upload-task", event => {
+    const task = event.detail;
+    if (task.status === "completed" && task.meta?.kind === "admin-production" && task.meta.productionId === productionId) {
+        carregarOperacao(productionId);
+    }
+});
 
 // Roadmap 5.06: contract stages load independently, like the message thread.
 let producersCache = null;
