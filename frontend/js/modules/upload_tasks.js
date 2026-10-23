@@ -2,7 +2,6 @@ import { API_URL } from "../config.js";
 import { getContextName, getCurrentUser, getToken } from "../admin/auth.js";
 
 const tasks = new Map();
-const listeners = new Map();
 let initialized = false;
 let panel;
 let list;
@@ -38,8 +37,6 @@ function receive(event) {
     if (message.type === "mirai-upload-list") message.tasks?.forEach(task => tasks.set(task.id, task));
     if (message.type === "mirai-upload-task") {
         tasks.set(message.task.id, message.task);
-        listeners.get(message.task.id)?.(message.task);
-        if (["completed", "failed"].includes(message.task.status)) listeners.delete(message.task.id);
         document.dispatchEvent(new CustomEvent("mirai:upload-task", { detail: message.task }));
     }
     render();
@@ -79,7 +76,7 @@ async function initialize() {
     return registration;
 }
 
-export async function enqueueUpload(endpoint, formData, { label = "Arquivo", meta = {}, method = "POST", onStatus } = {}) {
+export async function enqueueUpload(endpoint, formData, { label = "Arquivo", meta = {}, method = "POST" } = {}) {
     const token = getToken();
     const owner = ownerKey();
     if (!token || !owner) throw new Error("Sessão encerrada.");
@@ -87,7 +84,6 @@ export async function enqueueUpload(endpoint, formData, { label = "Arquivo", met
     const id = crypto.randomUUID();
     const task = { id, label, owner, meta, status: "queued", message: "Aguardando envio.", createdAt: Date.now(), updatedAt: Date.now() };
     tasks.set(id, task);
-    if (onStatus) listeners.set(id, onStatus);
     render();
     registration.active.postMessage({
         type: "mirai-upload-start",
@@ -109,6 +105,5 @@ export function startUploadTasks() {
 
 document.addEventListener("admin:logout", () => {
     tasks.clear();
-    listeners.clear();
     render();
 });

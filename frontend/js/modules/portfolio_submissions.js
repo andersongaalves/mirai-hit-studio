@@ -133,16 +133,6 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                         await enqueueUpload("/portal/produtor/portfolio/com-capa", multipart, {
                             label: `Portfólio · ${data.titulo}`,
                             meta: { kind: "portfolio-submission", requestId },
-                            onStatus: async task => {
-                                if (task.status === "failed") {
-                                    message.textContent = task.message;
-                                    return;
-                                }
-                                if (task.status !== "completed") return;
-                                await loadPortfolioSubmissions(root, { productions });
-                                const status = root.querySelector('[role="status"]');
-                                if (status) status.textContent = "Projeto enviado para revisão do estúdio.";
-                            },
                         });
                         return;
                     } else {

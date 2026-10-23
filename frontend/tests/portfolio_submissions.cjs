@@ -144,11 +144,12 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         assert.ok(await upload.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await upload.page.screenshot({ path: path.join(screenDir, "producer-image-mobile.png"), fullPage: true });
         await imageForm.locator("button[type=submit]").click();
-        const uploadStatus = upload.page.locator("#producer-portfolio-content > [role=status]");
-        await uploadStatus.getByText("O servidor não concluiu o envio. Tente novamente.", { exact: true }).waitFor();
+        await upload.page.waitForFunction(() => [...document.querySelectorAll(".upload-tasks-dialog li span")]
+            .some(item => item.textContent === "O servidor não concluiu o envio. Tente novamente."));
         assert.equal(imagePosts.length, 1);
         await imageForm.locator("button[type=submit]").click();
-        await upload.page.getByText("Projeto enviado para revisão do estúdio.", { exact: true }).waitFor();
+        await upload.page.waitForFunction(() => [...document.querySelectorAll(".upload-tasks-dialog li span")]
+            .some(item => item.textContent === "Concluído"));
         assert.equal(imagePosts.length, 2);
         assert.deepEqual(imagePosts[0], imagePosts[1], "Retry keeps the UUID, metadata and exact image bytes");
         assert.equal(imagePosts[1].contents.readUInt32BE(16), 1600);
