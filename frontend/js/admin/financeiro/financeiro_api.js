@@ -44,3 +44,12 @@ export function conciliarPagamento(id) {
     return authFetch(`/financeiro/pagamentos/${id}/reconciliar`, { method: "POST" })
         .then(response => responseData(response, "Não foi possível conciliar o pagamento."));
 }
+
+
+export function registrarPixManual(id, payload) {
+    return authFetch(`/financeiro/cobrancas/${id}/pagamentos-manuais`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    }).then(response => responseData(response, "Não foi possível registrar o Pix direto."));
+}

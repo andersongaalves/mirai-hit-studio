@@ -42,6 +42,9 @@ export function renderFinanceiroModal(detail, options) {
     const summary = document.getElementById("financeiro-detail-summary");
     const payments = document.getElementById("financeiro-payments");
     const copy = document.getElementById("financeiro-copy-link");
+    const manualForm = document.getElementById("financeiro-manual-form");
+    const amount = document.getElementById("financeiro-manual-value");
+    const submit = document.getElementById("financeiro-manual-submit");
     if (!title || !summary || !payments || !copy) return;
     title.textContent = `Cobrança #${detail.id}`;
     summary.replaceChildren(
@@ -57,6 +60,27 @@ export function renderFinanceiroModal(detail, options) {
     payments.replaceChildren(...detail.pagamentos.map(payment => paymentCard(payment, options)));
     if (!detail.pagamentos.length) payments.appendChild(element("p", "Nenhuma tentativa de pagamento registrada.", "admin-state__message"));
     copy.onclick = () => options.onCopy(detail.checkout_url);
+    if (manualForm && amount && submit) {
+        manualForm.hidden = Number(detail.saldo_pendente) <= 0;
+        amount.max = String(detail.saldo_pendente);
+        submit.disabled = options.registeringManualPayment;
+        submit.textContent = options.registeringManualPayment ? "Registrando..." : "Registrar Pix direto";
+        manualForm.onsubmit = event => {
+            event.preventDefault();
+            const data = new FormData(manualForm);
+            options.onManualPayment({
+                modo: data.get("modo"),
+                valor: data.get("modo") === "parcial" ? Number(data.get("valor")) : null,
+                referencia: String(data.get("referencia") || "").trim(),
+                idempotency_key: crypto.randomUUID(),
+            });
+        };
+        manualForm.onchange = () => {
+            amount.disabled = manualForm.elements.modo.value === "quitar";
+            amount.required = !amount.disabled;
+        };
+        manualForm.onchange();
+    }
     const listVariant = window.matchMedia("(max-width: 768px)").matches
         ? ".financeiro-mobile-view"
         : ".financeiro-table-view";

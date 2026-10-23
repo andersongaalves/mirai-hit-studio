@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 let reconciliations = 0;
+const manualPayments = [];
 const financeQueries = [];
 
 async function staticResponse(route) {
@@ -32,6 +33,10 @@ async function staticResponse(route) {
             if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "finance-token", user: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } } });
             if (url.pathname === "/dashboard") return route.fulfill({ json: { metrics: {}, pipeline: {}, attention: {}, recent_activity: [] } });
             if (url.pathname === "/financeiro/resumo") return route.fulfill({ json: { valor_a_receber: "60.00", valor_recebido: "40.00", cobrancas_parciais: 1, pagamentos_em_atencao: 1, total_cobrancas: 1 } });
+            if (url.pathname === "/financeiro/cobrancas/7/pagamentos-manuais") {
+                manualPayments.push(request.postDataJSON());
+                return route.fulfill({ json: { payment_id: 10, cobranca_id: 7, valor: "20.00", valor_pago: "60.00", saldo_pendente: "40.00", status: "parcialmente_paga", repeated: false } });
+            }
             if (url.pathname === "/financeiro/cobrancas/7") return route.fulfill({ json: {
                 id: 7, proposta_id: 2, proposta_numero: "P-001", cliente_nome: "<img src=x onerror=alert(1)>", cliente_email: "safe@example.com",
                 valor_total: "100.00", valor_pago: "40.00", saldo_pendente: "60.00", status: "parcialmente_paga", reconciliation_status: "conflict",
@@ -83,6 +88,17 @@ async function staticResponse(route) {
         assert.match(await page.locator("#financeiro-payments").textContent(), /Valor divergente/);
         await page.getByRole("button", { name: "Copiar link do checkout" }).click();
         assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "https://mirai.example/checkout/token");
+        await page.locator("#financeiro-manual-value").fill("20.00");
+        await page.locator("#financeiro-manual-form input[name=referencia]").fill("PIX-TESTE-001");
+        await page.getByRole("button", { name: "Registrar Pix direto" }).click();
+        await page.waitForFunction(() => document.querySelector("#financeiro-manual-submit")?.textContent.includes("Registrar Pix direto"));
+        assert.equal(manualPayments.length, 1);
+        assert.equal(manualPayments[0].modo, "parcial");
+        assert.equal(manualPayments[0].valor, 20);
+        assert.equal(manualPayments[0].referencia, "PIX-TESTE-001");
+        assert.match(manualPayments[0].idempotency_key, /^[0-9a-f-]{36}$/);
+        await page.locator("#financeiro-manual-form input[value=quitar]").check();
+        assert.equal(await page.locator("#financeiro-manual-value").isDisabled(), true);
         await page.getByRole("button", { name: "Conciliar com provider" }).click();
         await page.waitForFunction(() => document.querySelector("#financeiro-payments")?.textContent.includes("Conciliar com provider"));
         assert.equal(reconciliations, 1);
@@ -107,6 +123,6 @@ async function staticResponse(route) {
         await page.evaluate(() => window.fazerLogout());
         assert.equal(await page.locator("#financeiro-list").textContent(), "");
         assert.deepEqual(errors, []);
-        console.log("PASS: finance summary, safe list/detail, reconciliation, responsive cards and logout cleanup.");
+        console.log("PASS: finance summary, manual Pix, safe detail, reconciliation, responsive cards and logout cleanup.");
     } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

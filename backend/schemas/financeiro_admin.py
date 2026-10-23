@@ -1,7 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class FinanceiroAdminContract(BaseModel):
@@ -68,3 +70,31 @@ class FinanceiroReconciliacaoResponse(FinanceiroAdminContract):
     current_status: str
     changed: bool
     outcome: str
+
+
+class FinanceiroPagamentoManualRequest(FinanceiroAdminContract):
+    modo: Literal["parcial", "quitar"]
+    valor: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    referencia: str = Field(min_length=3, max_length=120)
+    idempotency_key: UUID
+
+    @model_validator(mode="after")
+    def validar_valor(self):
+        if self.modo == "parcial" and self.valor is None:
+            raise ValueError("Informe o valor do pagamento parcial.")
+        if self.modo == "quitar" and self.valor is not None:
+            raise ValueError("A quitacao utiliza automaticamente o saldo pendente.")
+        self.referencia = self.referencia.strip()
+        if len(self.referencia) < 3:
+            raise ValueError("Informe uma referencia valida para o Pix.")
+        return self
+
+
+class FinanceiroPagamentoManualResponse(FinanceiroAdminContract):
+    payment_id: int
+    cobranca_id: int
+    valor: Decimal
+    valor_pago: Decimal
+    saldo_pendente: Decimal
+    status: str
+    repeated: bool = False

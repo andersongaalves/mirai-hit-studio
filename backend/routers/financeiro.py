@@ -1,23 +1,28 @@
-from datetime import datetime
 import logging
+from datetime import datetime
 from typing import Annotated, Literal
-
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
 from core.dependencies import require_admin
 from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from integrations.mercado_pago import MercadoPagoError, MercadoPagoNotConfigured
 from models.enums.financeiro import CobrancaStatus
 from schemas.financeiro_admin import (
     FinanceiroCobrancaDetalhe,
     FinanceiroCobrancaPage,
+    FinanceiroPagamentoManualRequest,
+    FinanceiroPagamentoManualResponse,
     FinanceiroReconciliacaoResponse,
     FinanceiroResumo,
 )
-from services import audit_service, financial_service, financeiro_admin_service, mercado_pago_service
-
+from services import (
+    audit_service,
+    financeiro_admin_service,
+    financial_service,
+    mercado_pago_service,
+)
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 router = APIRouter(
     prefix="/financeiro",
@@ -71,6 +76,36 @@ def obter_cobranca(
     if cobranca is None:
         raise HTTPException(status_code=404, detail="Cobrança não encontrada.")
     return cobranca
+
+
+@router.post(
+    "/cobrancas/{cobranca_id}/pagamentos-manuais",
+    response_model=FinanceiroPagamentoManualResponse,
+)
+def registrar_pagamento_manual(
+    cobranca_id: Annotated[int, Path(gt=0)],
+    dados: FinanceiroPagamentoManualRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
+    try:
+        return financeiro_admin_service.registrar_pix_manual(
+            db,
+            cobranca_id,
+            dados,
+            actor=user,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except financial_service.FinanceiroInvalido as error:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(error)) from None
+    except financial_service.FinanceiroConflito as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error)) from None
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Pagamento manual duplicado ou indisponivel.") from None
 
 
 @router.post(

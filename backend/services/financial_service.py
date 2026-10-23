@@ -145,6 +145,7 @@ def registrar_pagamento(
     provider: str | None = None,
     provider_order_id: str | None = None,
     provider_reference: str | None = None,
+    provider_idempotency_key: str | None = None,
 ) -> PagamentoModel:
     cobranca = db.scalar(
         select(CobrancaModel).where(CobrancaModel.id == cobranca_id).with_for_update()
@@ -159,9 +160,11 @@ def registrar_pagamento(
     except ValueError:
         raise FinanceiroInvalido("Tipo ou status de pagamento invalido.") from None
     amount = normalizar_valor(valor)
-    if status_value == PagamentoStatus.APROVADO.value:
-        if valor_pago(cobranca) + amount > normalizar_valor(cobranca.valor_total):
-            raise FinanceiroConflito("Pagamento acima do valor contratado requer conciliacao.")
+    if (
+        status_value == PagamentoStatus.APROVADO.value
+        and valor_pago(cobranca) + amount > normalizar_valor(cobranca.valor_total)
+    ):
+        raise FinanceiroConflito("Pagamento acima do valor contratado requer conciliacao.")
     payment = PagamentoModel(
         cobranca=cobranca,
         tipo=tipo_value,
@@ -171,6 +174,7 @@ def registrar_pagamento(
         provider=provider,
         provider_order_id=provider_order_id,
         provider_reference=provider_reference,
+        provider_idempotency_key=provider_idempotency_key,
         aprovado_em=datetime.now(timezone.utc)
         if status_value == PagamentoStatus.APROVADO.value
         else None,

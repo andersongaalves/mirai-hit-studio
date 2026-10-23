@@ -1212,6 +1212,24 @@
 
 .financeiro-payments-section { margin-top: var(--space-5); }
 
+.financeiro-manual-form {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+}
+
+.financeiro-manual-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.financeiro-manual-form label { display: grid; gap: var(--space-1); }
+
 .financeiro-payments {
     display: flex;
     flex-direction: column;
