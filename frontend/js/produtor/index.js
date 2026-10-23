@@ -8,7 +8,7 @@ import { syncUploadHints } from "../modules/file_quotas.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { loadAudioTag } from "../modules/audio_tags.js";
-import { enqueueUpload, startUploadTasks } from "../modules/upload_tasks.js";
+import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
@@ -370,7 +370,6 @@ document.addEventListener("mirai:upload-task", event => {
     }
 });
 
-startUploadTasks().catch(() => {});
 
 function textStatus(node, message, error) {
     node.textContent = message;

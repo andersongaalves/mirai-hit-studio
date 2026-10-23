@@ -24,9 +24,6 @@ import { resetInbox } from "./inbox/inbox.js";
 import { resetBuilder } from "./builder/builder.js";
 import { initializeAdminShell, resetAdminShell } from "./admin_shell.js";
 import { closeAllAdminModals } from "./admin_modal.js";
-import { startUploadTasks } from "../modules/upload_tasks.js";
-
-startUploadTasks().catch(() => {});
 
 function expose(name, callback) {
     window[name] = callback;

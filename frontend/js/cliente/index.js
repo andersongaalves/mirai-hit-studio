@@ -5,7 +5,7 @@ import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
-import { enqueueUpload, startUploadTasks } from "../modules/upload_tasks.js";
+import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
 import {
     applySettings,
@@ -462,7 +462,6 @@ document.addEventListener("mirai:upload-task", event => {
     if (route().view === "detail" && route().id === task.meta.productionId) openDetail(task.meta.productionId);
 });
 
-startUploadTasks().catch(() => {});
 
 function denyWrongRole() {
     logout();
