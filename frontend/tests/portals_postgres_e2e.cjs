@@ -219,7 +219,9 @@ function expectStatus(result, status, label) {
             buffer: Buffer.from('RIFF-browser-client-material'),
         });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Arquivo enviado com sucesso'));
+        await page.waitForFunction(() => document.querySelector('.producer-upload__feedback')?.textContent.includes('Envio iniciado'));
+        await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')]
+            .some(item => item.textContent.includes('material-cliente.wav')));
         assert.match(await page.locator('.producer-file-list').last().textContent(), /material-cliente\.wav/);
         assert.equal(await page.locator('#client-alert').textContent(), '');
         assert.equal(expectStatus(
@@ -242,7 +244,9 @@ function expectStatus(result, status, label) {
         });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
         // Producer previews are shared with the client on upload (decisao de 14/10).
-        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Prévia enviada ao cliente'));
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Envio iniciado'));
+        await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')]
+            .some(item => item.textContent.includes('preview-browser.mp3')));
         await page.getByLabel('Tipo de arquivo').selectOption('entrega');
         await page.getByLabel('Arquivo para enviar').setInputFiles({
             name: 'entrega-browser.wav',
@@ -250,7 +254,8 @@ function expectStatus(result, status, label) {
             buffer: Buffer.from('RIFF-browser-delivery'),
         });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Arquivo enviado'));
+        await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')]
+            .some(item => item.textContent.includes('entrega-browser.wav')));
         await page.getByRole('button', { name: 'Enviar para revisão' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         expectStatus(await api(page, 'GET', `/portal/produtor/producoes/${otherProductionId}`), 404, 'producer ownership');
