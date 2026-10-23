@@ -102,7 +102,7 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
         beat_license = getattr(orcamento, "licenca_beat", None)
         item = PropostaItem(
             descricao=orcamento.servico, quantidade=1,
-            valor_unitario=snapshot.orcamento.valor_total or Decimal("0"),
+            valor_unitario=snapshot.orcamento.valor_total or Decimal(0),
             beat_id=beat_id, licenca_beat=beat_license,
         )
         if beat_id is not None:
@@ -119,7 +119,11 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
             "produtor_id": orcamento.produtor_id, "cliente_snapshot": snapshot.model_dump(mode="json"),
             "objeto": orcamento.servico, "descricao": orcamento.detalhes or "",
             "itens_json": [item.model_dump(mode="json", exclude_none=True)], "pagamentos_json": pagamentos,
-            "politica_pagamento": PoliticaPagamento.ENTRADA_50_50.value,
+            "politica_pagamento": (
+                PoliticaPagamento.INTEGRAL.value
+                if beat_id is not None
+                else PoliticaPagamento.ENTRADA_50_50.value
+            ),
             "condicoes": CONDICOES_PADRAO, "totais_json": calcular_totais([item]).model_dump(mode="json"),
         })
         resposta = _resposta(proposta)

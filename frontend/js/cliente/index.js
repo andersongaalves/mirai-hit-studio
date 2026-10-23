@@ -239,25 +239,30 @@ async function loadBeats() {
         acquiredList.replaceChildren(...acquired.map(item => {
             const card = document.createElement("article"); card.className = "producer-card";
             const title = document.createElement("h3"); title.textContent = item.titulo;
-            const button = document.createElement("button"); button.type = "button"; button.className = "btn-cta"; button.textContent = "Acessar multitrack"; button.disabled = !item.disponivel;
-            button.onclick = async () => {
-                button.disabled = true;
-                try {
-                    const delivery = await api.acessarMultitrack(item.beat_id);
-                    if (delivery.type === "link") window.open(delivery.url, "_blank", "noopener,noreferrer");
-                    else saveBlob(delivery);
-                } catch (error) { setAlert(error.message, true); }
-                finally { button.disabled = !item.disponivel; }
-            };
-            card.append(title, button); return card;
+            const actions = document.createElement("div"); actions.className = "producer-card__footer";
+            for (const kind of item.arquivos || []) {
+                const button = document.createElement("button"); button.type = "button"; button.className = "btn-outline";
+                button.textContent = `Baixar ${{ mp3: "MP3", wav: "WAV", multitrack: "multitrack" }[kind]}`;
+                button.onclick = async () => {
+                    button.disabled = true;
+                    try {
+                        const delivery = await api.baixarBeat(item.beat_id, kind);
+                        if (delivery.type === "link") window.open(delivery.url, "_blank", "noopener,noreferrer");
+                        else saveBlob(delivery);
+                    } catch (error) { setAlert(error.message, true); }
+                    finally { button.disabled = false; }
+                };
+                actions.append(button);
+            }
+            card.append(title, actions); return card;
         }));
-        if (!acquired.length) acquiredList.textContent = "Nenhum multitrack liberado ainda.";
+        if (!acquired.length) acquiredList.textContent = "Nenhuma compra liberada ainda.";
         list.replaceChildren(...beats.map(beat => {
-            const card = document.createElement("article"); card.className = "producer-card client-beat-card";
+            const card = document.createElement("article"); card.className = "producer-card beat-card client-beat-card";
             const content = document.createElement("div"); content.className = "client-beat-card__content";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
             let cover = null;
-            if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; }
+            if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; }
             const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
             const audio = beatPreview(() => api.ouvirBeat(beat.id));
             const actions = document.createElement("div"); actions.className = "producer-card__footer";
@@ -268,14 +273,19 @@ async function loadBeats() {
                 button.textContent = `${label} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price)}`;
                 button.onclick = async () => {
                     button.disabled = true;
-                    try { await api.solicitarBeat(beat.id, kind, idempotencyKey); setAlert("Solicitação criada. A Mirai preparará sua proposta."); }
+                    try {
+                        const purchase = await api.solicitarBeat(beat.id, kind, idempotencyKey);
+                        if (!/^\/checkout\?proposta=\d+$/.test(purchase.checkout_path || "")) throw new Error("Checkout indisponível para esta compra.");
+                        window.location.assign(purchase.checkout_path);
+                    }
                     catch (error) { setAlert(error.message, true); button.disabled = false; }
                 };
                 actions.append(button);
             }
             content.append(title, author, audio, actions);
-            card.append(content);
             if (cover) card.append(cover);
+            else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
+            card.append(content);
             return card;
         }));
         if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";

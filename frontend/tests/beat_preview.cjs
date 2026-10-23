@@ -22,17 +22,19 @@ const root = path.resolve(__dirname, '..');
             window.preview = beatPreview(() => new Blob(['ID3-preview'], { type: 'audio/mpeg' }));
             document.getElementById('root').append(window.preview);
         });
-        await page.getByRole('button', { name: 'Carregar prévia' }).click();
-        await page.waitForSelector('audio:not([hidden])');
+        await page.waitForFunction(() => !document.querySelector('.beat-preview__play').disabled);
         assert.equal(await page.locator('audio').getAttribute('src').then(value => value.startsWith('blob:')), true);
+        assert.equal(await page.getByRole('button', { name: 'Reproduzir prévia' }).count(), 1);
+        assert.equal(await page.getByRole('slider', { name: 'Posição da prévia' }).count(), 1);
+        assert.match(await page.getByRole('status').first().textContent(), /Prévia pronta/);
 
         await page.evaluate(async () => {
             const { beatPreview } = await import('/js/modules/beat_preview.js');
             document.getElementById('root').append(beatPreview(() => new Blob([], { type: 'text/plain' })));
         });
-        await page.getByRole('button', { name: 'Carregar prévia' }).click();
-        assert.match(await page.getByRole('status').last().textContent(), /não é um áudio válido/);
-        console.log('PASS: beat preview loads authenticated audio blobs and rejects empty or invalid responses.');
+        await page.waitForFunction(() => document.querySelectorAll('[role="status"]')[1]?.textContent.includes('não é um áudio válido'));
+        assert.equal(await page.getByRole('button', { name: 'Tentar novamente' }).count(), 1);
+        console.log('PASS: beat preview auto-loads authenticated audio blobs, renders custom controls, and rejects invalid responses.');
     } finally {
         await browser.close();
     }

@@ -62,6 +62,8 @@ class BeatCatalogTests(unittest.TestCase):
     def test_role_review_private_preview_and_exclusive_sale(self):
         self.run_case(r"""
 async def check():
+    from core import config
+    config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
     with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service, 'storage_for', return_value=images), patch.object(beat_service.audio_tag_service, 'duracao', return_value=.2), patch.object(beat_service.audio_tag_service, 'mixar', return_value=mp3()+b'tag'):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
             denied = await api.post('/portal/produtor/beats', headers=bearer('producer-b'), data={'titulo':'Nope','preco_lease':'50'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg'),'capa':('cover.png',png(),'image/png')})
@@ -89,6 +91,9 @@ async def check():
             requested = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease_wav'})
             assert requested.status_code == 201, requested.text
             assert requested.json()['itens'][0]['beat_id'] == beat_id and requested.json()['itens'][0]['licenca_beat'] == 'lease_wav'
+            assert requested.json()['status'] == 'aceita'
+            assert requested.json()['checkout_path'] == f"/checkout?proposta={requested.json()['id']}"
+            assert (await api.get('/portal/cliente/beats/adquiridos', headers=bearer('client-a'))).json() == []
             replay = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease_wav'})
             assert replay.status_code == 201 and replay.json()['id'] == requested.json()['id']
             blocked_edit = await api.put(f'/admin/beats/{beat_id}', headers=bearer('client-a'), data={'titulo':'Again','preco_lease':'110'})
@@ -163,8 +168,11 @@ async def check():
                 db.commit()
             released = await api.get(f'/portal/cliente/beats/{beat_id}/multitrack', headers=bearer('client-a'))
             assert released.status_code == 200 and released.json() == {'type':'link','url':'https://drive.example.test/private-token'}
+            purchased = await api.get(f'/portal/cliente/beats/{beat_id}/arquivo/multitrack', headers=bearer('client-a'))
+            assert purchased.status_code == 200 and purchased.json() == released.json()
             acquired = await api.get('/portal/cliente/beats/adquiridos', headers=bearer('client-a'))
             assert acquired.status_code == 200 and acquired.json()[0]['beat_id'] == beat_id
+            assert acquired.json()[0]['arquivos'] == ['multitrack']
 asyncio.run(check())
 """)
 
@@ -227,7 +235,8 @@ with Session(engine) as db:
     beat = BeatModel(produtor_id=1, titulo='Contrato', descricao='', generos='Trap', preco_lease=100,
         preco_exclusivo=500, status='aprovado', ativo=True, original_ref='r2://temp/arquivos/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
         original_sha256='a'*64, preview_ref='r2://temp/arquivos/cccccccccccccccccccccccccccccccc/dddddddddddddddddddddddddddddddd',
-        preview_sha256='b'*64, tamanho_bytes=10, mime_type='audio/mpeg')
+        preview_sha256='b'*64, wav_ref='r2://temp/arquivos/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee/ffffffffffffffffffffffffffffffff',
+        wav_sha256='c'*64, multitrack_url='https://drive.example.test/exclusive', tamanho_bytes=10, mime_type='audio/mpeg')
     db.add(beat); db.commit()
     first = service.criar_por_orcamento(db, 1)
     first = service.atualizar(db, first.id, PropostaUpdate(itens=[{'descricao':'Contrato exclusivo','quantidade':1,'valor_unitario':'500','beat_id':beat.id,'licenca_beat':'exclusivo'}]))
@@ -247,4 +256,5 @@ with Session(engine) as db:
     db.commit(); db.refresh(beat); db.refresh(license)
     assert beat.status == 'vendido' and beat.ativo is False
     assert license.status == 'adquirida' and license.adquirida_em is not None
+    assert beat_service._available_files(beat, license.tipo) == ['mp3', 'wav', 'multitrack']
 """)

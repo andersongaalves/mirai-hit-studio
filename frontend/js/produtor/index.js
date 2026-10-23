@@ -163,19 +163,20 @@ async function loadBeats() {
         if (uploadStatus) uploadStatus.textContent = config.ready ? "" : config.message;
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article");
-            card.className = "producer-card producer-beat-card";
+            card.className = "producer-card beat-card producer-beat-card";
             const content = document.createElement("div");
             content.className = "producer-beat-card__content";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
             let cover = null;
-            if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; cover.loading = "lazy"; }
+            if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; }
             const meta = document.createElement("p"); meta.textContent = `${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
-            const prices = document.createElement("p"); prices.textContent = [["MP3 lease", beat.preco_lease], ["WAV lease", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
+            const prices = document.createElement("p"); prices.className = "beat-card__prices"; prices.textContent = [["MP3", beat.preco_lease], ["WAV", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
             const audio = beatPreview(() => api.ouvirBeat(beat.id));
             content.append(title, meta, prices, audio);
             if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; content.append(reason); }
-            card.append(content);
             if (cover) card.append(cover);
+            else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
+            card.append(content);
             return card;
         }));
         if (!beats.length) list.textContent = "Nenhum beat enviado.";

@@ -287,7 +287,7 @@ def acquired_multitracks(db, actor):
         .where(
             BeatLicencaModel.cliente_id == actor.cliente_id,
             BeatLicencaModel.status == "adquirida",
-            BeatLicencaModel.tipo.in_(("multitrack", "exclusivo")),
+            BeatLicencaModel.tipo.in_(("lease", "lease_mp3", "lease_wav", "multitrack", "exclusivo")),
         )
         .order_by(BeatLicencaModel.adquirida_em.desc())
     ).all()
@@ -297,10 +297,65 @@ def acquired_multitracks(db, actor):
             "titulo": beat.titulo,
             "licenca": license.tipo,
             "adquirida_em": license.adquirida_em,
-            "disponivel": bool(beat.multitrack_ref or beat.multitrack_url),
+            "arquivos": _available_files(beat, license.tipo),
+            "disponivel": bool(_available_files(beat, license.tipo)),
         }
         for license, beat in rows
     ]
+
+
+def _available_files(beat, license_type):
+    allowed = {
+        "lease": ("mp3",),
+        "lease_mp3": ("mp3",),
+        "lease_wav": ("wav",),
+        "multitrack": ("multitrack",),
+        "exclusivo": ("mp3", "wav", "multitrack"),
+    }.get(license_type, ())
+    available = []
+    if "mp3" in allowed and beat.original_ref and beat.original_sha256:
+        available.append("mp3")
+    if "wav" in allowed and beat.wav_ref and beat.wav_sha256:
+        available.append("wav")
+    if "multitrack" in allowed and (beat.multitrack_url or beat.multitrack_ref):
+        available.append("multitrack")
+    return available
+
+
+def purchased_file(db, beat_id, kind, actor):
+    if kind not in {"mp3", "wav", "multitrack"} or actor.cliente_id is None:
+        raise HTTPException(404, "Arquivo adquirido nao encontrado.")
+    rows = db.execute(
+        select(BeatLicencaModel, BeatModel)
+        .join(BeatModel, BeatModel.id == BeatLicencaModel.beat_id)
+        .where(
+            BeatLicencaModel.beat_id == beat_id,
+            BeatLicencaModel.cliente_id == actor.cliente_id,
+            BeatLicencaModel.status == "adquirida",
+        )
+        .order_by(BeatLicencaModel.adquirida_em.desc())
+    ).all()
+    if not rows:
+        raise HTTPException(404, "Arquivo adquirido nao encontrado.")
+    beat = rows[0][1]
+    if not any(kind in _available_files(item, license.tipo) for license, item in rows):
+        raise HTTPException(404, "Arquivo adquirido nao encontrado.")
+    if kind == "multitrack":
+        return multitrack_delivery(db, beat_id, actor)
+    reference, expected_hash, mime, extension = (
+        (beat.original_ref, beat.original_sha256, "audio/mpeg", "mp3")
+        if kind == "mp3"
+        else (beat.wav_ref, beat.wav_sha256, "audio/wav", "wav")
+    )
+    contents = new_production_file_storage("previa").read(reference)
+    if hashlib.sha256(contents).hexdigest() != expected_hash:
+        raise HTTPException(409, "Integridade do arquivo adquirido invalida.")
+    return {
+        "type": "file",
+        "contents": contents,
+        "mime": mime,
+        "filename": f"beat-{beat.id}.{extension}",
+    }
 
 
 def multitrack_delivery(db, beat_id, actor):
@@ -484,9 +539,23 @@ def preview(db, beat_id, actor):
     return data
 
 
-def request_license(db, beat_id, kind, actor, idempotency_key):
+def request_license(db, beat_id, kind, actor, idempotency_key, request_id=None):
     from models import OrcamentoModel
-    from services import proposta_service
+    from services import proposta_comercial_service, proposta_service
+
+    def accept_purchase(proposal_id, client_id):
+        try:
+            return proposta_comercial_service.aceitar_compra_catalogo(
+                db,
+                proposal_id,
+                cliente_id=client_id,
+                actor=actor,
+                request_id=request_id,
+            )
+        except proposta_service.PropostaNaoEncontrada as error:
+            raise HTTPException(404, str(error)) from None
+        except (proposta_service.PropostaConflito, proposta_service.PropostaInvalida) as error:
+            raise HTTPException(409, str(error)) from None
 
     beat = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
     if beat is None or beat.status != "aprovado" or not beat.ativo:
@@ -521,7 +590,9 @@ def request_license(db, beat_id, kind, actor, idempotency_key):
     if existing:
         if existing.request_hash != fingerprint:
             raise HTTPException(409, "Chave de repeticao usada para outra solicitacao.")
-        return proposta_service.criar_por_orcamento(db, existing.id)
+        proposal = proposta_service.criar_por_orcamento(db, existing.id)
+        accepted = accept_purchase(proposal.id, client.id)
+        return {**accepted.model_dump(mode="json"), "checkout_path": f"/checkout?proposta={accepted.id}"}
     budget = OrcamentoModel(
         idempotency_key=idempotency_key,
         request_hash=fingerprint,
@@ -552,7 +623,9 @@ def request_license(db, beat_id, kind, actor, idempotency_key):
                 409, "Solicitacao concorrente; recarregue o catalogo."
             ) from None
         budget = existing
-    return proposta_service.criar_por_orcamento(db, budget.id)
+    proposal = proposta_service.criar_por_orcamento(db, budget.id)
+    accepted = accept_purchase(proposal.id, client.id)
+    return {**accepted.model_dump(mode="json"), "checkout_path": f"/checkout?proposta={accepted.id}"}
 
 
 def reserve_for_proposal(db, proposta, cliente_id):
