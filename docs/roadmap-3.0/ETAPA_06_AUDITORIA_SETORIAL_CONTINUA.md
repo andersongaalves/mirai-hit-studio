@@ -6,14 +6,14 @@
 
 | Campo | Estado atual |
 | --- | --- |
-| Status global | Auditoria em andamento |
+| Status global | Diagnostico setorial concluido (12/12 setores) |
 | Fase atual | 6.1 - Diagnostico setorial |
-| Setor atual | S02 - Identidade e acesso (DIAGNOSTICADO) |
-| Ultima acao concluida | Diagnostico S02 entregue em `auditoria/S02_IDENTIDADE_ACESSO.md` (15 achados: 1 P1, 6 P2, 8 P3) |
-| Proxima acao | Iniciar diagnostico S06 - Checkout e pagamentos. Correcoes do S02 aguardam autorizacao (ordem sugerida: AUD6-S02-001 e 002) |
+| Setor atual | Todos DIAGNOSTICADOS; aplicacao segue na [Etapa 07](ETAPA_07_APLICACAO_AUDITORIA.md) |
+| Ultima acao concluida | Diagnosticos S01-S12 entregues em `auditoria/` (70 achados: 3 P1, sendo 2 distintos, 26 P2, 41 P3); backlog de aplicacao consolidado na Etapa 07 |
+| Proxima acao | Revalidar setores quando a Etapa 07 entregar cada lote (status VALIDADO). Novas correcoes somente pela Etapa 07 e com autorizacao |
 | Ultimo SHA analisado | `18caa5b` (main; sem mudanca de codigo desde `8a7ac44`) |
 | Ultima atualizacao | 24/10/2026 |
-| Bloqueios | Correcoes do S02 dependem de autorizacao; 004, 006, 007 e 015 dependem de decisao |
+| Bloqueios | Aplicacao depende de autorizacao por lote; decisoes pendentes listadas na Etapa 07, secao 5 |
 
 ### Regra de atualizacao obrigatoria
 
@@ -321,17 +321,17 @@ ultima.
 | Ordem | Setor | Foco adicional | Status | Inicio | Ultima atualizacao | Documento de achados |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | S02 - Identidade e acesso | Conta, sessao, papeis e menu central | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S02](auditoria/S02_IDENTIDADE_ACESSO.md) |
-| 2 | S06 - Checkout e pagamentos | Valores, idempotencia, Pix, cartao e webhook | NAO INICIADO | - | - | - |
-| 3 | S10 - Financeiro | Conciliacao, externos, saldos e repasses | NAO INICIADO | - | - | - |
-| 4 | S07 - Portal do Cliente | Projetos, explorar, compras e perfil | NAO INICIADO | - | - | - |
-| 5 | S08 - Portal do Produtor | Producoes, uploads, tag, beats e perfil | NAO INICIADO | - | - | - |
-| 6 | S09 - Administracao operacional | Entidades centrais, tarefas e excecoes | NAO INICIADO | - | - | - |
-| 7 | S05 - Propostas comerciais | Versoes, documentos, aceite e congelamento | NAO INICIADO | - | - | - |
-| 8 | S03 - Orcamentos | Calculadora, combos, resumo e rascunho | NAO INICIADO | - | - | - |
-| 9 | S04 - Catalogo de servicos | Servicos, combos, beats e promocoes | NAO INICIADO | - | - | - |
-| 10 | S01 - Institucional | Conteudo, portfolio, SEO e conversao | NAO INICIADO | - | - | - |
-| 11 | S11 - IA e comunicacao | Assistente, e-mail, notificacoes e consentimento | NAO INICIADO | - | - | - |
-| 12 | S12 - Infraestrutura | Release, Storage, backup, logs e recuperacao | NAO INICIADO | - | - | - |
+| 2 | S06 - Checkout e pagamentos | Valores, idempotencia, Pix, cartao e webhook | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S06](auditoria/S06_CHECKOUT_PAGAMENTOS.md) |
+| 3 | S10 - Financeiro | Conciliacao, externos, saldos e repasses | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S10](auditoria/S10_FINANCEIRO.md) |
+| 4 | S07 - Portal do Cliente | Projetos, explorar, compras e perfil | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S07](auditoria/S07_PORTAL_CLIENTE.md) |
+| 5 | S08 - Portal do Produtor | Producoes, uploads, tag, beats e perfil | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S08](auditoria/S08_PORTAL_PRODUTOR.md) |
+| 6 | S09 - Administracao operacional | Entidades centrais, tarefas e excecoes | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S09](auditoria/S09_ADMIN_OPERACIONAL.md) |
+| 7 | S05 - Propostas comerciais | Versoes, documentos, aceite e congelamento | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S05](auditoria/S05_PROPOSTAS.md) |
+| 8 | S03 - Orcamentos | Calculadora, combos, resumo e rascunho | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S03](auditoria/S03_ORCAMENTOS.md) |
+| 9 | S04 - Catalogo de servicos | Servicos, combos, beats e promocoes | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S04](auditoria/S04_CATALOGO.md) |
+| 10 | S01 - Institucional | Conteudo, portfolio, SEO e conversao | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S01](auditoria/S01_INSTITUCIONAL.md) |
+| 11 | S11 - IA e comunicacao | Assistente, e-mail, notificacoes e consentimento | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S11](auditoria/S11_IA_COMUNICACAO.md) |
+| 12 | S12 - Infraestrutura | Release, Storage, backup, logs e recuperacao | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S12](auditoria/S12_INFRAESTRUTURA.md) |
 
 ## 9. Implementacoes candidatas por setor
 
@@ -390,6 +390,18 @@ Adicionar novas linhas no topo da tabela.
 
 | Data | Setor/fase | Status | SHA | Resultado | Proxima acao |
 | --- | --- | --- | --- | --- | --- |
+| 24/10/2026 | Consolidacao | CONCLUIDO | `18caa5b` | 12 setores diagnosticados (70 achados). Backlog de aplicacao separado na Etapa 07: 49 itens em 8 lotes, 6 decisoes pendentes. AUD6-S02-001/002 corrigidos no PR #96 (aguardando merge) | Autorizar Lote 1 (merge/publicacao do PR #96) e Lote 2 |
+| 24/10/2026 | S12 - Infraestrutura | DIAGNOSTICADO | `18caa5b` | 7 achados (4 P2, 3 P3): ~26 de 63 suites de navegador e ~25 de 96 arquivos Python fora do CI; worker de tag no processo web; limitador local; CSP Report-Only | Etapa 07 |
+| 24/10/2026 | S11 - IA e comunicacao | DIAGNOSTICADO | `18caa5b` | 3 achados (2 P2, 1 P3): Admin sem notificacoes; eventos sem aviso; testes de IA fora do CI | Etapa 07 |
+| 24/10/2026 | S01 - Institucional | DIAGNOSTICADO | `18caa5b` | 3 achados (1 P2, 2 P3): sem Politica de Privacidade; area clicavel; suites fora do CI | Etapa 07 |
+| 24/10/2026 | S04 - Catalogo | DIAGNOSTICADO | `18caa5b` | 4 achados (1 P1 compartilhado com S06-001, 3 P3) | Etapa 07 |
+| 24/10/2026 | S03 - Orcamentos | DIAGNOSTICADO | `18caa5b` | 2 achados (1 P2, 1 P3): valor do rascunho vem do visitante; sem antispam | Etapa 07 |
+| 24/10/2026 | S05 - Propostas | DIAGNOSTICADO | `18caa5b` | 3 achados (1 P2, 2 P3): validade de 10 dias nao aplicada | Etapa 07 |
+| 24/10/2026 | S09 - Administracao operacional | DIAGNOSTICADO | `18caa5b` | 7 achados (2 P2, 5 P3): pendencias incompletas; sem paginas centrais | Etapa 07 |
+| 24/10/2026 | S08 - Portal do Produtor | DIAGNOSTICADO | `18caa5b` | 7 achados (2 P2, 5 P3): menu fragmentado; falha de tag silenciosa | Etapa 07 |
+| 24/10/2026 | S07 - Portal do Cliente | DIAGNOSTICADO | `18caa5b` | 7 achados (1 P2, 6 P3): detalhe do projeto longo no celular | Etapa 07 |
+| 24/10/2026 | S10 - Financeiro | DIAGNOSTICADO | `18caa5b` | 5 achados (3 P2, 2 P3): Pix manual sem anulacao; repasse sem trava; sem fila de conciliacao | Etapa 07 |
+| 24/10/2026 | S06 - Checkout e pagamentos | DIAGNOSTICADO | `18caa5b` | 7 achados (1 P1, 3 P2, 3 P3). P1: reserva de licenca de beat nunca expira | Etapa 07 |
 | 24/10/2026 | S02 - Identidade e acesso | DIAGNOSTICADO | `18caa5b` | 15 achados (1 P1, 6 P2, 8 P3). P1: sessao de conta renomeada autentica a nova conta com o mesmo login. 8 suites de navegador verdes; sondagens de backend no CI (branch descartavel `audit/s02-probes`); consultas agregadas somente leitura. Sem correcao, migration ou deploy | Iniciar S06; aguardar autorizacao para corrigir AUD6-S02-001/002 |
 | 24/10/2026 | S02 - Identidade e acesso | INICIADO | `18caa5b` | Baseline registrado; diagnostico em execucao | Inventariar rotas, telas e sessoes do S02 |
 | 24/10/2026 | 6.0 - Preparacao | CONCLUIDO | `8a7ac44318d5b172ff9df75ca35159b571febd3c` | Roadmap, matriz, centralizacao, tutoriais e ordem definidos; nenhuma auditoria executada | Iniciar diagnostico S02 |
