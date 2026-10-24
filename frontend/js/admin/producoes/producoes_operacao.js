@@ -118,6 +118,13 @@ function renderPayout() {
     receipt.value = payout?.comprovante_arquivo_id ? String(payout.comprovante_arquivo_id) : "";
     if (payout) {
         summary.append(node("p", "", `${money(payout.valor_combinado)} · ${payout.status} · produtor #${payout.produtor_id}`));
+        const situation = payout.situacao_cliente;
+        if (situation && payout.status !== "pago") {
+            if (situation.valor_total !== null && situation.valor_total !== undefined) {
+                summary.append(node("p", "", `Cliente pagou ${money(situation.valor_pago)} de ${money(situation.valor_total)}.`));
+            }
+            for (const pending of situation.pendencias || []) summary.append(node("p", "producao-repasse-alerta", pending));
+        }
         save.textContent = payout.status === "definido" ? "Atualizar valor" : "Corrigir registro";
     } else {
         summary.append(node("p", "admin-empty", "Nenhum repasse definido."));
@@ -163,19 +170,31 @@ function bindActions() {
             : () => API.definirRepasse(productionId, amount);
         run(byId("prod_repasse_salvar"), action, "Repasse atualizado.");
     };
-    byId("prod_repasse_liberar").onclick = () => run(
-        byId("prod_repasse_liberar"),
-        () => API.liberarRepasse(productionId),
-        "Repasse liberado.",
-    );
-    byId("prod_repasse_pagar").onclick = () => run(
-        byId("prod_repasse_pagar"),
-        () => API.pagarRepasse(productionId, {
-            referencia_pagamento: byId("prod_repasse_referencia").value || null,
-            comprovante_arquivo_id: Number(byId("prod_repasse_comprovante").value) || null,
-        }),
-        "Pagamento registrado.",
-    );
+    // AUD6-S10-002: paying the producer before the client paid needs a stated reason.
+    const confirmation = action => {
+        const pending = payout?.situacao_cliente?.pendencias || [];
+        if (!pending.length) return "";
+        const reason = window.prompt(`${pending.join(" ")}\nInforme o motivo para ${action} mesmo assim:`);
+        return reason?.trim() ? reason.trim() : null;
+    };
+    byId("prod_repasse_liberar").onclick = () => {
+        const reason = confirmation("liberar o repasse");
+        if (reason === null) return;
+        run(byId("prod_repasse_liberar"), () => API.liberarRepasse(productionId, reason || null), "Repasse liberado.");
+    };
+    byId("prod_repasse_pagar").onclick = () => {
+        const reason = confirmation("registrar o pagamento");
+        if (reason === null) return;
+        run(
+            byId("prod_repasse_pagar"),
+            () => API.pagarRepasse(productionId, {
+                referencia_pagamento: byId("prod_repasse_referencia").value || null,
+                comprovante_arquivo_id: Number(byId("prod_repasse_comprovante").value) || null,
+                motivo_confirmacao: reason || null,
+            }),
+            "Pagamento registrado.",
+        );
+    };
 }
 
 document.addEventListener("mirai:upload-task", event => {

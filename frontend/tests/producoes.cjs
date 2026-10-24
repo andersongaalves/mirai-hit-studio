@@ -53,6 +53,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         { id: 3, titulo: 'Finalizada', cliente: 'Artista', cliente_email: null, servico: 'Master', status: 'finalizado', produtor_id: 1, produtor_nome: 'Ana', orcamento_id: 12, proposta_id: null, proposta_numero: null, observacoes: '', etapas: '[]', prazo_entrega: new Date(now - 20 * 86400000).toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ];
     let payout = null;
+    const releaseBodies = [];
     const files = [{ id: 8, producao_id: 1, tipo: 'material', nome_exibicao: '<b>material</b>.pdf', tamanho_bytes: 800, versao: 1, visivel_produtor: true, visivel_cliente: false }];
 
     const context = await browser.newContext();
@@ -127,10 +128,13 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         const payoutMatch = url.pathname.match(/^\/producoes\/(\d+)\/repasse$/);
         if (payoutMatch && route.request().method() === 'GET') return route.fulfill({ json: payout });
         if (payoutMatch && route.request().method() === 'PUT') {
-            payout = { id: 4, producao_id: 1, produtor_id: 1, valor_combinado: route.request().postDataJSON().valor_combinado, moeda: 'BRL', status: 'definido', liberado_em: null, pago_em: null, referencia_pagamento: null, comprovante_arquivo_id: null };
+            payout = { id: 4, producao_id: 1, produtor_id: 1, valor_combinado: route.request().postDataJSON().valor_combinado, moeda: 'BRL', status: 'definido', liberado_em: null, pago_em: null, referencia_pagamento: null, comprovante_arquivo_id: null,
+                situacao_cliente: { cobranca_id: 20, cobranca_status: 'parcialmente_paga', valor_total: '500.00', valor_pago: '250.00', producao_status: 'em_andamento',
+                    pendencias: ['Cobrança do cliente parcialmente paga.', 'Produção ainda não finalizada.'] } };
             return route.fulfill({ json: payout });
         }
         if (url.pathname === '/producoes/1/repasse/liberar' && route.request().method() === 'POST') {
+            releaseBodies.push(route.request().postDataJSON());
             payout = { ...payout, status: 'liberado', liberado_em: new Date().toISOString() };
             return route.fulfill({ json: payout });
         }
@@ -212,15 +216,26 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         await page.locator('#prod_repasse_salvar').click();
         await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('250,00'));
         assert.equal(payout.produtor_id, 1);
+        // AUD6-S10-002: the client situation is shown and releasing asks for a reason.
+        assert.match(await page.locator('#prod_repasse_resumo').textContent(), /Cliente pagou R\$\s?250,00 de R\$\s?500,00/);
+        assert.match(await page.locator('#prod_repasse_resumo').textContent(), /parcialmente paga/);
+        page.once('dialog', dialog => dialog.dismiss());
+        await page.locator('#prod_repasse_liberar').click();
+        await page.waitForTimeout(100);
+        assert.equal(releaseBodies.length, 0);
+        page.once('dialog', dialog => dialog.accept('Acordo com o produtor'));
         await page.locator('#prod_repasse_liberar').click();
         await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('liberado'));
+        assert.deepEqual(releaseBodies, [{ motivo_confirmacao: 'Acordo com o produtor' }]);
         await page.locator('#prod_repasse_referencia').fill('PIX-SYNTHETIC');
+        page.once('dialog', dialog => dialog.accept('Acordo com o produtor'));
         await page.locator('#prod_repasse_pagar').click();
         await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('pago'));
         await page.locator('#prod_repasse_valor').fill('275.00');
         await page.locator('#prod_repasse_salvar').click();
         await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('275,00'));
         assert.equal(payout.referencia_pagamento, 'PIX-SYNTHETIC');
+        assert.equal(payout.motivo_confirmacao, 'Acordo com o produtor');
         await page.keyboard.press('Escape');
         await page.waitForFunction(() => document.getElementById('modal-producao').classList.contains('hidden'));
         assert.equal(await desktopOpener.evaluate((element) => element === document.activeElement), true);

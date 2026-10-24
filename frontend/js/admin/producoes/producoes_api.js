@@ -151,8 +151,12 @@ export async function definirRepasse(id, valor) {
     }), "Erro ao definir repasse.");
 }
 
-export async function liberarRepasse(id) {
-    return handleResponse(await authFetch(`/producoes/${id}/repasse/liberar`, { method: "POST" }), "Erro ao liberar repasse.");
+export async function liberarRepasse(id, motivoConfirmacao = null) {
+    return handleResponse(await authFetch(`/producoes/${id}/repasse/liberar`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ motivo_confirmacao: motivoConfirmacao }),
+    }), "Erro ao liberar repasse.");
 }
 
 export async function pagarRepasse(id, payload) {

@@ -344,8 +344,16 @@ async def check():
             early_payment = await client.post(
                 '/producoes/1/repasse/pagar', headers=bearer('admin'), json={})
             assert early_payment.status_code == 409
-            released = await client.post('/producoes/1/repasse/liberar', headers=bearer('admin'))
+            # AUD6-S10-002: without a paid charge and a finished production the
+            # release needs an explicit reason.
+            situation = (await client.get('/producoes/1/repasse', headers=bearer('admin'))).json()['situacao_cliente']
+            assert situation['cobranca_status'] == 'sem_cobranca' and situation['pendencias']
+            unconfirmed = await client.post('/producoes/1/repasse/liberar', headers=bearer('admin'))
+            assert unconfirmed.status_code == 409 and 'informe o motivo' in unconfirmed.json()['detail']
+            released = await client.post('/producoes/1/repasse/liberar', headers=bearer('admin'),
+                json={'motivo_confirmacao':'Acordo direto com o produtor'})
             assert released.status_code == 200 and released.json()['status'] == 'liberado'
+            assert 'situacao_cliente' not in (await client.get('/portal/produtor/repasses', headers=bearer('producer-a'))).json()[0]
 
             receipt = await client.post(
                 '/producoes/1/arquivos', headers=bearer('admin'),
@@ -355,7 +363,8 @@ async def check():
             receipt_id = receipt.json()['id']
             paid = await client.post(
                 '/producoes/1/repasse/pagar', headers=bearer('admin'),
-                json={'referencia_pagamento':'PIX-REF-SINTETICA', 'comprovante_arquivo_id':receipt_id})
+                json={'referencia_pagamento':'PIX-REF-SINTETICA', 'comprovante_arquivo_id':receipt_id,
+                      'motivo_confirmacao':'Acordo direto com o produtor'})
             assert paid.status_code == 200, paid.text
             assert paid.json()['status'] == 'pago' and paid.json()['comprovante_arquivo_id'] == receipt_id
 
@@ -378,6 +387,9 @@ async def check():
             with Session(engine) as db:
                 stored = db.query(RepasseProdutorModel).one()
                 assert stored.produtor_id == 2 and str(stored.valor_combinado) == '120.00'
+                release_audit = db.query(AuditLogModel).filter_by(action='producer_payout.released').one()
+                assert release_audit.metadata_json['confirmation_reason'] == 'Acordo direto com o produtor'
+                assert release_audit.metadata_json['charge_status'] == 'sem_cobranca'
                 correction = db.query(AuditLogModel).filter_by(action='producer_payout.corrected').one()
                 assert correction.metadata_json['old_amount'] == '100.00'
                 assert correction.metadata_json['new_amount'] == '120.00'

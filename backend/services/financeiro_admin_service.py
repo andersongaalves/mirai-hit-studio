@@ -334,3 +334,88 @@ def _manual_response(charge, payment, *, repeated=False):
         "status": charge.status,
         "repeated": repeated,
     }
+
+
+def anular_pix_manual(db, payment_id, dados, *, actor, request_id=None):
+    """AUD6-S10-001: void a direct Pix recorded by mistake, with a reason.
+
+    The charge is recalculated and every release that depends on it is
+    re-evaluated (beat licenses are revoked). Effects that cannot be reverted
+    automatically are either refused (credits already granted) or returned as
+    warnings for the operator (production or payout already released).
+    """
+    from models import CreditoLoteModel, ProducaoModel
+    from models.portal_produtor import RepasseProdutorModel
+
+    payment = db.scalar(
+        select(PagamentoModel).where(PagamentoModel.id == payment_id).with_for_update()
+    )
+    if payment is None:
+        raise financial_service.FinanceiroInvalido("Pagamento não encontrado.")
+    if payment.provider != "manual_admin":
+        raise financial_service.FinanceiroConflito(
+            "Somente pagamentos registrados como Pix direto podem ser anulados."
+        )
+    if payment.status == PagamentoStatus.CANCELADO.value:
+        raise financial_service.FinanceiroConflito("Este pagamento já foi anulado.")
+    if payment.status != PagamentoStatus.APROVADO.value:
+        raise financial_service.FinanceiroConflito("Somente pagamentos aprovados podem ser anulados.")
+    charge = financial_service.bloquear_cobranca(db, payment.cobranca_id)
+    if charge is None:
+        raise financial_service.FinanceiroInvalido("Cobrança não encontrada.")
+    if db.scalar(select(CreditoLoteModel.id).where(CreditoLoteModel.cobranca_id == charge.id)):
+        raise financial_service.FinanceiroConflito(
+            "Esta cobrança já gerou créditos para o cliente; a anulação exige revisão manual dos créditos."
+        )
+    old_charge_status = charge.status
+    payment.status = PagamentoStatus.CANCELADO.value
+    payment.reconciliation_status = None
+    payment.reconciliation_reason = None
+    db.flush()
+    db.refresh(charge, ["pagamentos"])
+    financial_service.sincronizar_status(charge)
+    producao_liberacao_service.avaliar_cobranca_bloqueada(
+        db, charge, actor=actor, request_id=request_id
+    )
+    warnings = []
+    production = None
+    if charge.proposta is not None:
+        production = db.scalar(
+            select(ProducaoModel).where(ProducaoModel.orcamento_id == charge.proposta.orcamento_id)
+        )
+    if production is not None:
+        warnings.append(
+            f"A produção #{production.id} já foi liberada; revise se ela deve continuar."
+        )
+        payout = db.scalar(
+            select(RepasseProdutorModel).where(RepasseProdutorModel.producao_id == production.id)
+        )
+        if payout is not None and payout.status in ("liberado", "pago"):
+            warnings.append(f"O repasse do produtor já está {payout.status}.")
+    audit_service.record(
+        db,
+        actor=actor,
+        action="payment.manual_pix_voided",
+        entity_type="payment",
+        entity_id=payment.id,
+        metadata={
+            "old_status": PagamentoStatus.APROVADO.value,
+            "new_status": payment.status,
+            "amount": str(_money(payment.valor)),
+            "charge_old_status": old_charge_status,
+            "charge_new_status": charge.status,
+            "reason": dados.motivo.strip()[:500],
+        },
+        request_id=request_id,
+    )
+    db.commit()
+    db.refresh(charge, ["pagamentos"])
+    return {
+        "payment_id": payment.id,
+        "cobranca_id": charge.id,
+        "valor": _money(payment.valor),
+        "valor_pago": financial_service.valor_pago(charge),
+        "saldo_pendente": financial_service.saldo_pendente(charge),
+        "status": charge.status,
+        "avisos": warnings,
+    }

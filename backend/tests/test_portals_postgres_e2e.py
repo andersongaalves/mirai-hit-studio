@@ -2363,13 +2363,17 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         )
         self.assertEqual(self.http.get("/portal/produtor/repasses", headers=client_a).status_code, 403)
         self.assertEqual(
-            self.http.post(f"/producoes/{production_id}/repasse/liberar", headers=admin).status_code,
+            self.http.post(
+                f"/producoes/{production_id}/repasse/liberar",
+                headers=admin,
+                json={"motivo_confirmacao": "E2E sintetico"},
+            ).status_code,
             200,
         )
         paid = self.http.post(
             f"/producoes/{production_id}/repasse/pagar",
             headers=admin,
-            json={"referencia_pagamento": "E2E-PIX-SYNTHETIC"},
+            json={"referencia_pagamento": "E2E-PIX-SYNTHETIC", "motivo_confirmacao": "E2E sintetico"},
         )
         self.assertEqual(paid.status_code, 200, paid.text)
         self.assertEqual(paid.json()["status"], "pago")

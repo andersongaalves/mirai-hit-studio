@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from integrations.mercado_pago import MercadoPagoError, MercadoPagoNotConfigured
 from models.enums.financeiro import CobrancaStatus
 from schemas.financeiro_admin import (
+    FinanceiroAnulacaoRequest,
+    FinanceiroAnulacaoResponse,
     FinanceiroCobrancaDetalhe,
     FinanceiroCobrancaPage,
     FinanceiroPagamentoManualRequest,
@@ -106,6 +108,33 @@ def registrar_pagamento_manual(
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Pagamento manual duplicado ou indisponivel.") from None
+
+
+@router.post(
+    "/pagamentos/{payment_id}/anular",
+    response_model=FinanceiroAnulacaoResponse,
+)
+def anular_pagamento_manual(
+    payment_id: Annotated[int, Path(gt=0)],
+    dados: FinanceiroAnulacaoRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
+    try:
+        return financeiro_admin_service.anular_pix_manual(
+            db,
+            payment_id,
+            dados,
+            actor=user,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except financial_service.FinanceiroInvalido as error:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(error)) from None
+    except financial_service.FinanceiroConflito as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error)) from None
 
 
 @router.post(

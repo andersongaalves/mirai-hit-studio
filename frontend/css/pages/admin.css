@@ -1875,3 +1875,4 @@
 /* Display name (credits) with the login username below it. */
 .usuario-display-name { display: block; }
 .usuario-login-name { display: block; color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.producao-repasse-alerta { color: var(--color-warning); margin: var(--space-1, 4px) 0 0; }

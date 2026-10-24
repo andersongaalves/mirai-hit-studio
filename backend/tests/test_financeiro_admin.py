@@ -205,6 +205,124 @@ async def check():
 asyncio.run(check())
 ''')
 
+    def test_manual_pix_void_recalculates_and_warns_about_released_effects(self):
+        """Etapa 07, APL-S10-01 (AUD6-S10-001)."""
+        self.run_case(r'''
+from datetime import datetime, timezone
+from uuid import uuid4
+from models import ProducaoModel, UsuarioModel
+from models.portal_produtor import RepasseProdutorModel
+
+with Session(engine) as db:
+    db.add(UsuarioModel(id=1, username='admin', password_hash='unused', role='admin', is_admin=True, ativo=True))
+    orcamento = OrcamentoModel(nome_cliente='Cliente Pix', email='pix@example.com', servico='Mix')
+    db.add(orcamento); db.flush()
+    proposta = PropostaModel(orcamento_id=orcamento.id, numero='P-VOID', status='aceita', cliente_snapshot={}, itens_json=[], pagamentos_json=[], totais_json={})
+    db.add(proposta); db.flush()
+    cobranca = CobrancaModel(proposta_id=proposta.id, valor_total=Decimal('100.00'), referencia_externa=str(uuid4()))
+    db.add(cobranca); db.flush()
+    provider_payment = PagamentoModel(cobranca_id=cobranca.id, tipo='entrada', valor=Decimal('10.00'), status='aprovado', provider='mercado_pago', provider_order_id='order-void')
+    db.add(provider_payment)
+    db.commit()
+    charge_id, orcamento_id, provider_payment_id = cobranca.id, orcamento.id, provider_payment.id
+
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        recorded = await client.post(f'/financeiro/cobrancas/{charge_id}/pagamentos-manuais', json={
+            'modo': 'quitar', 'referencia': 'PIX-ERRADO', 'idempotency_key': str(uuid4())})
+        assert recorded.status_code == 200 and recorded.json()['status'] == 'paga', recorded.text
+        payment_id = recorded.json()['payment_id']
+        with Session(engine) as db:
+            production = ProducaoModel(titulo='Mix', cliente='Cliente Pix', servico='Mix', orcamento_id=orcamento_id, produtor_id=1)
+            db.add(production); db.flush()
+            db.add(RepasseProdutorModel(producao_id=production.id, produtor_id=1, valor_combinado=Decimal('50.00'),
+                status='liberado', liberado_em=datetime.now(timezone.utc)))
+            db.commit(); production_id = production.id
+
+        short = await client.post(f'/financeiro/pagamentos/{payment_id}/anular', json={'motivo': 'x'})
+        assert short.status_code == 422
+        provider = await client.post(f'/financeiro/pagamentos/{provider_payment_id}/anular', json={'motivo': 'Pagamento do provider'})
+        assert provider.status_code == 409 and 'Pix direto' in provider.json()['detail']
+        missing = await client.post('/financeiro/pagamentos/9999/anular', json={'motivo': 'Nao existe'})
+        assert missing.status_code == 404
+
+        voided = await client.post(f'/financeiro/pagamentos/{payment_id}/anular', json={'motivo': 'Pix lancado na cobranca errada'})
+        assert voided.status_code == 200, voided.text
+        body = voided.json()
+        assert body['status'] == 'parcialmente_paga' and body['valor_pago'] == '10.00' and body['saldo_pendente'] == '90.00'
+        assert any(f'#{production_id}' in warning for warning in body['avisos'])
+        assert any('liberado' in warning for warning in body['avisos'])
+        again = await client.post(f'/financeiro/pagamentos/{payment_id}/anular', json={'motivo': 'Pix lancado na cobranca errada'})
+        assert again.status_code == 409 and 'anulado' in again.json()['detail']
+
+    with Session(engine) as db:
+        payment = db.get(PagamentoModel, payment_id)
+        assert payment.status == 'cancelado'
+        assert db.get(CobrancaModel, charge_id).status == 'parcialmente_paga'
+        entry = db.query(AuditLogModel).filter_by(action='payment.manual_pix_voided').one()
+        assert entry.actor_user_id == 1 and entry.entity_id == payment_id
+        assert entry.metadata_json['reason'] == 'Pix lancado na cobranca errada'
+        assert entry.metadata_json['charge_old_status'] == 'paga'
+        assert entry.metadata_json['charge_new_status'] == 'parcialmente_paga'
+
+asyncio.run(check())
+''')
+
+    def test_payout_release_requires_reason_until_client_paid_and_production_finished(self):
+        """Etapa 07, APL-S10-02 (AUD6-S10-002)."""
+        self.run_case(r'''
+from uuid import uuid4
+from models import ProducaoModel, UsuarioModel
+from models.portal_produtor import RepasseProdutorModel
+from services import repasse_produtor_service as payouts
+
+with Session(engine) as db:
+    db.add(UsuarioModel(id=1, username='admin', password_hash='unused', role='admin', is_admin=True, ativo=True))
+    orcamento = OrcamentoModel(nome_cliente='Cliente', email='c@example.com', servico='Mix')
+    db.add(orcamento); db.flush()
+    proposta = PropostaModel(orcamento_id=orcamento.id, numero='P-REP', status='aceita', cliente_snapshot={}, itens_json=[], pagamentos_json=[], totais_json={})
+    db.add(proposta); db.flush()
+    cobranca = CobrancaModel(proposta_id=proposta.id, valor_total=Decimal('100.00'), status='parcialmente_paga', referencia_externa=str(uuid4()))
+    db.add(cobranca); db.flush()
+    db.add(PagamentoModel(cobranca_id=cobranca.id, tipo='entrada', valor=Decimal('50.00'), status='aprovado', provider='manual_admin'))
+    production = ProducaoModel(titulo='Mix', cliente='Cliente', servico='Mix', orcamento_id=orcamento.id, produtor_id=1, status='em_andamento')
+    db.add(production); db.flush()
+    db.add(RepasseProdutorModel(producao_id=production.id, produtor_id=1, valor_combinado=Decimal('40.00')))
+    db.commit()
+    production_id, charge_id = production.id, cobranca.id
+
+    situation = payouts.client_situation(db, production_id)
+    assert situation['cobranca_status'] == 'parcialmente_paga' and str(situation['valor_pago']) == '50.00'
+    assert len(situation['pendencias']) == 2
+    try: payouts.release(db, production_id=production_id, actor=admin)
+    except payouts.RepasseConflict as error: assert 'parcialmente paga' in str(error) and 'informe o motivo' in str(error)
+    else: raise AssertionError('released without reason')
+    db.rollback()
+
+    # Fully paid and finished: no confirmation needed for release nor payment.
+    db.get(CobrancaModel, charge_id).status = 'paga'
+    db.add(PagamentoModel(cobranca_id=charge_id, tipo='saldo', valor=Decimal('50.00'), status='aprovado', provider='manual_admin'))
+    db.get(ProducaoModel, production_id).status = 'finalizado'
+    db.commit()
+    assert payouts.client_situation(db, production_id)['pendencias'] == []
+    released = payouts.release(db, production_id=production_id, actor=admin)
+    assert released['status'] == 'liberado' and released['situacao_cliente']['cobranca_status'] == 'paga'
+
+    # The client situation is re-checked when paying (a refund may have happened meanwhile).
+    db.get(CobrancaModel, charge_id).status = 'parcialmente_paga'
+    db.commit()
+    try: payouts.mark_paid(db, production_id=production_id, actor=admin)
+    except payouts.RepasseConflict as error: assert 'registrar o pagamento' in str(error)
+    else: raise AssertionError('paid without reason')
+    db.rollback()
+    paid = payouts.mark_paid(db, production_id=production_id, actor=admin, confirmation_reason='Produtor ja recebeu por fora')
+    assert paid['status'] == 'pago'
+    entry = db.query(AuditLogModel).filter_by(action='producer_payout.paid').one()
+    assert entry.metadata_json['confirmation_reason'] == 'Produtor ja recebeu por fora'
+    assert entry.metadata_json['charge_status'] == 'parcialmente_paga'
+    assert 'confirmation_reason' not in db.query(AuditLogModel).filter_by(action='producer_payout.released').one().metadata_json
+''')
+
     def test_producer_gets_forbidden_and_conflict_is_audited(self):
         isolated.BootstrapTests().run_case(r'''
 import asyncio

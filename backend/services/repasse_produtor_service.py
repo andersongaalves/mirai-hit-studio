@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from models.portal_produtor import ProducaoArquivoModel, RepasseProdutorModel
@@ -19,6 +20,65 @@ class RepasseNotFound(RepasseError):
 
 class RepasseConflict(RepasseError):
     pass
+
+
+FINAL_PRODUCTION_STATUSES = ("finalizado", "entregue")
+CHARGE_LABELS = {
+    "pendente": "sem pagamento",
+    "parcialmente_paga": "parcialmente paga",
+    "cancelada": "cancelada",
+}
+
+
+def client_situation(db, production_id):
+    """AUD6-S10-002: what the administrator must know before paying the producer."""
+    from models import CobrancaModel, PropostaModel
+    from services import financial_service
+
+    production = db.get(ProducaoModel, production_id)
+    charge = None
+    if production is not None and production.orcamento_id is not None:
+        charge = db.scalar(
+            select(CobrancaModel)
+            .join(PropostaModel, PropostaModel.id == CobrancaModel.proposta_id)
+            .where(PropostaModel.orcamento_id == production.orcamento_id)
+            .order_by(CobrancaModel.id.desc())
+            .limit(1)
+        )
+    pending = []
+    if charge is None:
+        pending.append("Produção sem cobrança registrada no sistema.")
+    elif charge.status != "paga":
+        pending.append(f"Cobrança do cliente {CHARGE_LABELS.get(charge.status, charge.status)}.")
+    production_status = production.status if production is not None else ""
+    if production_status not in FINAL_PRODUCTION_STATUSES:
+        pending.append("Produção ainda não finalizada.")
+    return {
+        "cobranca_id": charge.id if charge else None,
+        "cobranca_status": charge.status if charge else "sem_cobranca",
+        "valor_total": financial_service.normalizar_valor(charge.valor_total) if charge else None,
+        "valor_pago": financial_service.valor_pago(charge) if charge else None,
+        "producao_status": production_status,
+        "pendencias": pending,
+    }
+
+
+def _confirm(situation, reason, action):
+    reason = (reason or "").strip()
+    if situation["pendencias"] and not reason:
+        raise RepasseConflict(
+            " ".join(situation["pendencias"])
+            + f" Para {action} mesmo assim, informe o motivo."
+        )
+    return reason or None
+
+
+def _locked(db, production_id):
+    return db.scalar(
+        select(RepasseProdutorModel)
+        .where(RepasseProdutorModel.producao_id == production_id)
+        .with_for_update()
+    )
 
 
 def _response(repasse, production_title=None, producer_name=None):
@@ -53,7 +113,9 @@ def get_admin(db, production_id):
     if not row:
         return None
     repasse, title, producer = row
-    return _response(repasse, title, producer)
+    result = _response(repasse, title, producer)
+    result["situacao_cliente"] = client_situation(db, production_id)
+    return result
 
 
 def list_for_producer(db, producer_id):
@@ -136,12 +198,14 @@ def define(db, *, production_id, amount: Decimal, actor, request_id=None):
     return get_admin(db, production_id)
 
 
-def release(db, *, production_id, actor, request_id=None):
-    repasse = db.query(RepasseProdutorModel).filter_by(producao_id=production_id).first()
+def release(db, *, production_id, actor, confirmation_reason=None, request_id=None):
+    repasse = _locked(db, production_id)
     if repasse is None:
         raise RepasseNotFound("Repasse nao encontrado.")
     if repasse.status != "definido":
         raise RepasseConflict("Somente repasses definidos podem ser liberados.")
+    situation = client_situation(db, production_id)
+    reason = _confirm(situation, confirmation_reason, "liberar")
     repasse.status = "liberado"
     repasse.liberado_em = datetime.now(timezone.utc)
     audit_service.record(
@@ -150,7 +214,13 @@ def release(db, *, production_id, actor, request_id=None):
         action="producer_payout.released",
         entity_type="producer_payout",
         entity_id=repasse.id,
-        metadata={"old_status": "definido", "new_status": "liberado"},
+        metadata={
+            "old_status": "definido",
+            "new_status": "liberado",
+            "charge_status": situation["cobranca_status"],
+            "production_status": situation["producao_status"],
+            **({"confirmation_reason": reason[:500]} if reason else {}),
+        },
         request_id=request_id,
     )
     db.commit()
@@ -177,13 +247,16 @@ def mark_paid(
     actor,
     reference=None,
     receipt_id=None,
+    confirmation_reason=None,
     request_id=None,
 ):
-    repasse = db.query(RepasseProdutorModel).filter_by(producao_id=production_id).first()
+    repasse = _locked(db, production_id)
     if repasse is None:
         raise RepasseNotFound("Repasse nao encontrado.")
     if repasse.status != "liberado":
         raise RepasseConflict("Somente repasses liberados podem ser marcados como pagos.")
+    situation = client_situation(db, production_id)
+    reason = _confirm(situation, confirmation_reason, "registrar o pagamento")
     receipt = _receipt(db, production_id, receipt_id)
     if receipt:
         receipt.visivel_produtor = True
@@ -197,7 +270,13 @@ def mark_paid(
         action="producer_payout.paid",
         entity_type="producer_payout",
         entity_id=repasse.id,
-        metadata={"old_status": "liberado", "new_status": "pago"},
+        metadata={
+            "old_status": "liberado",
+            "new_status": "pago",
+            "charge_status": situation["cobranca_status"],
+            "production_status": situation["producao_status"],
+            **({"confirmation_reason": reason[:500]} if reason else {}),
+        },
         request_id=request_id,
     )
     db.commit()

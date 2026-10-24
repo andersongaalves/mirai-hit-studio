@@ -98,3 +98,17 @@ class FinanceiroPagamentoManualResponse(FinanceiroAdminContract):
     saldo_pendente: Decimal
     status: str
     repeated: bool = False
+
+
+class FinanceiroAnulacaoRequest(FinanceiroAdminContract):
+    motivo: str = Field(min_length=5, max_length=500)
+
+
+class FinanceiroAnulacaoResponse(FinanceiroAdminContract):
+    payment_id: int
+    cobranca_id: int
+    valor: Decimal
+    valor_pago: Decimal
+    saldo_pendente: Decimal
+    status: str
+    avisos: list[str]
