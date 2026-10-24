@@ -10,10 +10,13 @@ indice e o checkpoint do documento ativo antes de iniciar trabalho.
 3. [Etapa 03 - Auditoria tecnica inicial](ETAPA_03_AUDITORIA.md)
 4. [Etapa 05 - Plano de evolucao](ETAPA_05_PLANO.md)
 5. [Etapa 06 - Auditoria setorial continua](ETAPA_06_AUDITORIA_SETORIAL_CONTINUA.md)
+6. [Etapa 07 - Aplicacao da auditoria](ETAPA_07_APLICACAO_AUDITORIA.md)
 
 ## Documento ativo
 
 O acompanhamento atual esta em
 [ETAPA_06_AUDITORIA_SETORIAL_CONTINUA.md](ETAPA_06_AUDITORIA_SETORIAL_CONTINUA.md).
 Atualize o checkpoint e o historico desse arquivo no inicio e no encerramento de cada
-sessao de auditoria.
+sessao de auditoria. As mudancas derivadas da auditoria ficam em
+[ETAPA_07_APLICACAO_AUDITORIA.md](ETAPA_07_APLICACAO_AUDITORIA.md), separadas do
+diagnostico.
