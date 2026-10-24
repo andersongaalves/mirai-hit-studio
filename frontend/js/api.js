@@ -17,10 +17,12 @@ async function request(endpoint, options = {}) {
         try {
             const erro = await response.json();
 
-            mensagem = erro.detail || mensagem;
+            if (typeof erro.detail === "string" && erro.detail) mensagem = erro.detail;
         } catch {}
 
-        throw new Error(mensagem);
+        const error = new Error(mensagem);
+        error.status = response.status;
+        throw error;
     }
 
     return await response.json();

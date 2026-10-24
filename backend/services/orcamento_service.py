@@ -22,7 +22,7 @@ def criar_sem_commit(db: Session, dados: OrcamentoCreate, *, erro_em_conflito=Fa
         telefone=dados.whatsapp,
         erro_em_conflito=erro_em_conflito,
     )
-    payload = dados.model_dump()
+    payload = dados.model_dump(exclude={"selecao"})
     payload["email"] = str(dados.email)
     payload["cliente_id"] = cliente.id if cliente else None
     return crud_orcamento.criar_sem_commit(db, payload)

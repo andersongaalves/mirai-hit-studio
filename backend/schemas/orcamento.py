@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator, model_validator
 from schemas.validation import http_url
 
 from core.enums import OrcamentoStatus
@@ -27,6 +27,23 @@ class OrcamentoBase(BaseModel):
 # ===========================
 
 
+class OrcamentoSelecao(BaseModel):
+    """Calculator selection sent by the site so the server can price it (AUD6-S03-001)."""
+
+    model_config = ConfigDict(extra="forbid")
+    servico_id: int | None = Field(default=None, gt=0, strict=True)
+    combo_id: int | None = Field(default=None, gt=0, strict=True)
+    parametros: dict[str, str | int] = Field(default_factory=dict, max_length=12)
+
+    @model_validator(mode="after")
+    def one_origin(self):
+        if (self.servico_id is None) == (self.combo_id is None):
+            raise ValueError("selection_requires_one_origin")
+        if any(len(str(value)) > 20 for value in self.parametros.values()):
+            raise ValueError("selection_value_too_long")
+        return self
+
+
 class OrcamentoCreate(OrcamentoBase):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     nome_cliente: str = Field(min_length=1, max_length=120)
@@ -36,6 +53,7 @@ class OrcamentoCreate(OrcamentoBase):
     valor_total: float | None = Field(ge=0)
     link_guia: str | None = Field(default=None, max_length=500)
     detalhes: str | None = Field(default=None, max_length=20000)
+    selecao: OrcamentoSelecao | None = None
     _url = field_validator("link_guia")(http_url)
 
     @field_validator("nome_cliente", "servico")

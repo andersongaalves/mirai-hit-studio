@@ -35,6 +35,15 @@ def criar_orcamento(
     idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
 
+    from services import orcamento_preco_service
+
+    try:
+        orcamento = orcamento_preco_service.aplicar(db, orcamento)
+    except orcamento_preco_service.SelecaoInvalida:
+        raise HTTPException(
+            status_code=422,
+            detail="O serviço escolhido mudou ou não está mais disponível. Recarregue a página e tente novamente.",
+        ) from None
     try:
         novo, criado = orcamento_service.criar_com_resultado(
             db, orcamento, str(idempotency_key) if idempotency_key else None
@@ -45,7 +54,7 @@ def criar_orcamento(
     if not criado:
         # A public retry must not reveal notes/status added later by an operator.
         return OrcamentoResponse.model_validate(novo).model_copy(update={
-            **orcamento.model_dump(), "status": "novo", "produtor_id": None,
+            **orcamento.model_dump(exclude={"selecao"}), "status": "novo", "produtor_id": None,
             "observacoes": "", "proposta_codigo": None, "proposta_pdf": None,
             "proposta_enviada": False, "proposta_enviada_em": None,
             "updated_at": novo.data_solicitacao,

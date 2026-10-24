@@ -179,6 +179,8 @@ jobs:
                     test_portal_cliente_operacao.py \
                     test_producao.py \
                     test_authenticated_checkout.py \
+                    test_orcamento_preco.py \
+                    test_orcamento_retry_i2.py \
                     test_ambiente_testes.py \
                     test_mercado_pago_webhooks.py \
                     test_http_cors_contract.py \
@@ -239,6 +241,7 @@ jobs:
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
                   node frontend/tests/checkout.cjs
+                  node frontend/tests/public_contracting.cjs
                   node frontend/tests/proposta_comercial.cjs
                   node frontend/tests/usuarios.cjs
                   node frontend/tests/client_signup.cjs

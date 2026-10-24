@@ -20,6 +20,23 @@ function obterDetalhes() {
     return partes.join("\n");
 }
 
+// AUD6-S03-001: the server recalculates the price from this selection; the
+// total shown in the browser is only an estimate.
+function obterSelecao() {
+    const servico = state.servicoSelecionadoOBJ;
+    const parametros = {};
+    const nomes = new Set((servico.parametros || "").split(",").map((item) => item.trim()).filter(Boolean));
+    if (nomes.has("inst_aberto")) nomes.add("canais_inst");
+    for (const nome of nomes) {
+        if (nome === "descricao" || nome === "guia") continue;
+        const campo = $(nome);
+        if (campo && campo.value !== "") parametros[nome] = String(campo.value).slice(0, 20);
+    }
+    return servico.tipo === "combo"
+        ? { combo_id: Number(servico.combo?.id ?? String(servico.id).replace(/^c/, "")), parametros }
+        : { servico_id: Number(servico.id), parametros };
+}
+
 export function initOrcamento() {
     const btnSolicitar = $("btn-solicitar");
     const form = $("orcamento-form");
@@ -68,6 +85,8 @@ export function initOrcamento() {
                 link_guia: $("guia")?.value.trim() || null,
 
                 detalhes: obterDetalhes(),
+
+                selecao: obterSelecao(),
             };
 
             try {
@@ -86,7 +105,12 @@ export function initOrcamento() {
                 }
                 setStatus("Solicitação recebida. A equipe analisará o briefing antes de preparar a proposta.", "success");
                 Notify.success("Solicitação de orçamento enviada.");
-            } catch {
+            } catch (error) {
+                if (error?.status === 422 && error?.message) {
+                    setStatus(error.message, "error");
+                    Notify.error(error.message);
+                    return;
+                }
                 setStatus("Não foi possível enviar agora. Seus dados continuam no formulário para uma nova tentativa.", "error");
                 Notify.error("Erro ao enviar solicitação de orçamento.");
             } finally {
