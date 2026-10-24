@@ -6,12 +6,12 @@
 
 | Campo | Estado atual |
 | --- | --- |
-| Status global | Planejamento concluido; auditorias ainda nao iniciadas |
-| Fase atual | 6.0 - Preparacao |
-| Setor atual | Nenhum |
+| Status global | Auditoria em andamento |
+| Fase atual | 6.1 - Diagnostico setorial |
+| Setor atual | S02 - Identidade e acesso (INICIADO) |
 | Ultima acao concluida | Roadmap e criterios de auditoria definidos |
 | Proxima acao | Iniciar S02 - Identidade e acesso, somente diagnostico |
-| Ultimo SHA analisado | `8a7ac44318d5b172ff9df75ca35159b571febd3c` |
+| Ultimo SHA analisado | `18caa5b` (main; sem mudanca de codigo desde `8a7ac44`) |
 | Ultima atualizacao | 24/10/2026 |
 | Bloqueios | Nenhum para iniciar a auditoria diagnostica |
 
@@ -314,7 +314,7 @@ ultima.
 
 | Ordem | Setor | Foco adicional | Status | Inicio | Ultima atualizacao | Documento de achados |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | S02 - Identidade e acesso | Conta, sessao, papeis e menu central | NAO INICIADO | - | - | - |
+| 1 | S02 - Identidade e acesso | Conta, sessao, papeis e menu central | INICIADO | 24/10/2026 | 24/10/2026 | - |
 | 2 | S06 - Checkout e pagamentos | Valores, idempotencia, Pix, cartao e webhook | NAO INICIADO | - | - | - |
 | 3 | S10 - Financeiro | Conciliacao, externos, saldos e repasses | NAO INICIADO | - | - | - |
 | 4 | S07 - Portal do Cliente | Projetos, explorar, compras e perfil | NAO INICIADO | - | - | - |
@@ -384,6 +384,7 @@ Adicionar novas linhas no topo da tabela.
 
 | Data | Setor/fase | Status | SHA | Resultado | Proxima acao |
 | --- | --- | --- | --- | --- | --- |
+| 24/10/2026 | S02 - Identidade e acesso | INICIADO | `18caa5b` | Baseline registrado; diagnostico em execucao | Inventariar rotas, telas e sessoes do S02 |
 | 24/10/2026 | 6.0 - Preparacao | CONCLUIDO | `8a7ac44318d5b172ff9df75ca35159b571febd3c` | Roadmap, matriz, centralizacao, tutoriais e ordem definidos; nenhuma auditoria executada | Iniciar diagnostico S02 |
 
 ## 13. Restricoes permanentes
