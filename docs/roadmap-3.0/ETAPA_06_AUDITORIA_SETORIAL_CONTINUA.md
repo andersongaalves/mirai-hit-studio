@@ -31,6 +31,12 @@ Ao parar ou concluir:
 4. Adicionar uma linha no historico com achados, PRs, testes e bloqueios.
 5. Nunca marcar como concluido algo que depende de CI, homologacao ou decisao humana.
 
+### Separacao entre auditoria e aplicacao
+
+Esta etapa so diagnostica. Toda mudanca derivada de um achado vai para a
+[Etapa 07 - Aplicacao da auditoria](ETAPA_07_APLICACAO_AUDITORIA.md), com origem,
+decisao, status e PR. Ao concluir cada setor, registrar os itens la.
+
 ## 2. Objetivo
 
 Auditar os 12 setores mapeados da Mirai de forma repetivel, encontrando defeitos,

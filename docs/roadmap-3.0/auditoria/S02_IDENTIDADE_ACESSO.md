@@ -1,7 +1,8 @@
 # Auditoria setorial - S02 Identidade e acesso
 
 Status do setor: **DIAGNOSTICADO**. Este documento nao autoriza correcao, migration,
-merge ou deploy (Etapa 06, secao 13).
+merge ou deploy (Etapa 06, secao 13). As mudancas derivadas estao na
+[Etapa 07](../ETAPA_07_APLICACAO_AUDITORIA.md).
 
 ## 1. Baseline
 
@@ -82,7 +83,7 @@ maiusculas/espacos.
 | Evidencia | Sondagem no CI: produtor `joao` (id 2) com token valido; Admin renomeia para `joao-antigo` e cria um novo `joao` com papel admin. O token antigo em `GET /auth/me` retorna **id 3, papel admin** (200) |
 | Impacto | Acesso indevido, inclusive com privilegio administrativo, durante a validade do token. Exige que o Admin reutilize um login dentro desse prazo; pelo criterio de severidade e acesso indevido, por isso fica acima de P2 |
 | Causa | `sub` do JWT e o username e `get_current_user` busca por username; renomear nao incrementa `auth_version`, e a nova conta nasce com `auth_version = 0` |
-| Recomendacao | Minimo: incrementar `auth_version` ao trocar o username (encerra as sessoes da conta renomeada). Estrutural: usar o id estavel no `sub`, mantendo leitura do formato antigo ate os tokens expirarem |
+| Recomendacao | Vincular a sessao ao id estavel da conta (claim `uid` validada contra o usuario), mantendo leitura do formato antigo ate os tokens expirarem. Incrementar so o `auth_version` da conta renomeada **nao basta**: a conta nova nasce com `auth_version = 0` e casa com o token antigo (verificado na regressao do PR #96) |
 | Teste necessario | Regressao renomear + recriar retornando 401 |
 | Dependencias | Nenhuma; nao exige migration |
 
