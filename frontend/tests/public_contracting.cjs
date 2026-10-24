@@ -27,6 +27,7 @@ async function staticResponse(route) {
         const payloads = [];
         const requestKeys = [];
         let failLead = false;
+        let staleLead = false;
         let pendingLead = false;
         let dropLead = false;
         page.on('pageerror', error => errors.push(error.message));
@@ -55,6 +56,7 @@ async function staticResponse(route) {
                     if (dropLead) return route.abort('failed');
                     if (pendingLead) await new Promise(resolve => setTimeout(resolve, 120));
                     if (failLead) return route.fulfill({ status: 500, json: { detail: 'erro sintetico' } });
+                    if (staleLead) return route.fulfill({ status: 422, json: { detail: 'O serviço escolhido mudou ou não está mais disponível. Recarregue a página e tente novamente.' } });
                     return route.fulfill({ json: { id: payloads.length } });
                 }
             }
@@ -90,6 +92,9 @@ async function staticResponse(route) {
         assert.equal(payloads[0].link_guia, 'https://example.com/referencia');
         assert.match(payloads[0].detalhes, /Trilha para abertura de canal/);
         assert.match(payloads[0].detalhes, /Duração: 210s/);
+        // AUD6-S03-001: the server prices the selection, not the browser total.
+        assert.deepEqual(payloads[0].selecao, { servico_id: 12, parametros: { duracao: '210' } });
+
 
         failLead = true;
         await page.locator('#nome_cliente').fill('Nome preservado');
@@ -130,6 +135,12 @@ async function staticResponse(route) {
                 `overflow at ${width}`,
             );
         }
+        staleLead = true;
+        await page.locator('#nome_cliente').fill('Cliente Catalogo');
+        await page.locator('#btn-solicitar').click();
+        await page.waitForFunction(() => document.getElementById('quote-submit-status').dataset.state === 'error');
+        assert.match(await page.locator('#quote-submit-status').textContent(), /Recarregue a página/);
+        staleLead = false;
         assert.deepEqual(errors, []);
         console.log('PASS: public contracting validation, payload, errors, double-submit and responsive structure.');
     } finally {

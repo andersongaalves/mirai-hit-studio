@@ -67,7 +67,10 @@ with ExitStack() as stack:
     budget = checked(http.post('/orcamentos', json=payload))
     proposal = checked(http.post(f"/orcamentos/{budget['id']}/proposta", headers=headers, json={}))
     proposal_id = proposal['id']
-    assert proposal['cliente_snapshot']['orcamento']['detalhes'] == payload['detalhes']
+    # AUD6-S03-001: without a catalog selection the browser value is only noted, never priced.
+    assert budget['valor_total'] is None
+    assert proposal['cliente_snapshot']['orcamento']['detalhes'].startswith(payload['detalhes'])
+    assert 'sem seleção verificável: R$ 199.99' in proposal['cliente_snapshot']['orcamento']['detalhes']
     assert checked(http.post(f"/orcamentos/{budget['id']}/proposta", headers=headers, json={}))['id'] == proposal_id
     proposal = checked(http.patch(f'/propostas/{proposal_id}', headers=headers, json={
         'objeto':'I2 HTTP journey', 'itens':[{'descricao':'Synthetic work','quantidade':1,'valor_unitario':'199.99'}],

@@ -191,6 +191,8 @@ jobs:
                     test_proposta_service.py \
                     test_proposta_comercial.py \
                     test_proposta_snapshot.py \
+                    test_orcamento_preco.py \
+                    test_orcamento_retry_i2.py \
                     test_beat_catalog.py \
                     test_carteira_creditos.py \
                     test_credito_alocacao.py \
@@ -245,6 +247,7 @@ jobs:
                   node frontend/tests/portal_cliente.cjs
                   node frontend/tests/admin_beat_licenses.cjs
                   node frontend/tests/checkout.cjs
+                  node frontend/tests/public_contracting.cjs
                   node frontend/tests/proposta_comercial.cjs
                   node frontend/tests/usuarios.cjs
                   node frontend/tests/client_signup.cjs
