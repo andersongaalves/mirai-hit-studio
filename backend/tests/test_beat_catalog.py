@@ -10,7 +10,7 @@ from test_proposta_comercial import SETUP as COMMERCIAL_SETUP
 EXTRA = r"""
 import hashlib, io, math, struct, wave
 from unittest.mock import patch
-from models import AudioTagModel, AudioTagPerfilModel, BeatLicencaModel, BeatModel
+from models import AudioTagModel, AudioTagPerfilModel, BeatLicencaModel, BeatModel, ConfigModel
 from routers.beats import router as beats_router
 from schemas.beat import BeatCreate
 from services import beat_service
@@ -81,6 +81,14 @@ async def check():
             assert changed.json()['titulo'] == 'Horizonte revisado' and changed.json()['preco_lease_base'] == 110
             approved = await api.patch(f'/admin/beats/{beat_id}', headers=bearer('admin'), json={'decisao':'aprovar','motivo':''})
             assert approved.status_code == 200
+            with Session(engine) as db:
+                config = db.query(ConfigModel).first()
+                if config is None:
+                    config = ConfigModel(desconto=20)
+                    db.add(config)
+                else:
+                    config.desconto = 20
+                db.commit()
             catalog = (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json()
             assert [item['id'] for item in catalog] == [beat_id]
             assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330 and catalog[0]['capa_url']
@@ -94,6 +102,7 @@ async def check():
             requested = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease_wav'})
             assert requested.status_code == 201, requested.text
             assert requested.json()['itens'][0]['beat_id'] == beat_id and requested.json()['itens'][0]['licenca_beat'] == 'lease_wav'
+            assert float(requested.json()['itens'][0]['valor_unitario']) == 220.0
             assert requested.json()['status'] == 'aceita'
             assert requested.json()['checkout_path'] == f"/checkout?proposta={requested.json()['id']}"
             assert (await api.get('/portal/cliente/beats/adquiridos', headers=bearer('client-a'))).json() == []

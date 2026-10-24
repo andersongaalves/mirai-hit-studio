@@ -233,9 +233,13 @@ function renderRoute() {
 async function loadBeats() {
     showView("beats");
     const list = document.getElementById("client-beats-list"); list.textContent = "Carregando catálogo...";
+    const acquiredSection = document.getElementById("client-acquired-beats-section");
+    const acquiredList = document.getElementById("client-acquired-beats");
+    acquiredSection.classList.add("hidden");
+    acquiredList.replaceChildren();
     try {
         const [beats, acquired] = await Promise.all([api.listarBeats(), api.listarMultitracksAdquiridos()]);
-        const acquiredList = document.getElementById("client-acquired-beats");
+        acquiredSection.classList.toggle("hidden", acquired.length === 0);
         acquiredList.replaceChildren(...acquired.map(item => {
             const card = document.createElement("article"); card.className = "producer-card";
             const title = document.createElement("h3"); title.textContent = item.titulo;
@@ -256,7 +260,6 @@ async function loadBeats() {
             }
             card.append(title, actions); return card;
         }));
-        if (!acquired.length) acquiredList.textContent = "Nenhuma compra liberada ainda.";
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article"); card.className = "producer-card beat-card client-beat-card";
             const content = document.createElement("div"); content.className = "client-beat-card__content";

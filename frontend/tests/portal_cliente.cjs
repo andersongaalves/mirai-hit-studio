@@ -290,7 +290,7 @@ async function staticResponse(route) {
         assert.match(await page.locator('#client-beats').textContent(), /Catálogo de beats/);
         await page.waitForSelector('#client-beats-list .producer-card');
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
-        assert.match(await page.locator('#client-acquired-beats').textContent(), /Nenhuma compra liberada/);
+        assert.equal(await page.locator('#client-acquired-beats-section').isVisible(), false);
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
         await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);
         const beatBox = await page.locator('#client-beats-list .beat-card').boundingBox();

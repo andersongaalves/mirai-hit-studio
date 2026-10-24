@@ -397,13 +397,13 @@
 .explore-tabs [aria-current="page"] { border-color: var(--color-accent); color: var(--color-accent); }
 .beat-card { aspect-ratio: 1; min-width: 0; overflow: hidden; padding: 0; }
 .producer-beat-card,
-.client-beat-card { display: grid; grid-template-rows: 38% minmax(0, 62%); }
+.client-beat-card { display: grid; grid-template-rows: 34% minmax(0, 66%); }
 .producer-beat-card__content,
-.client-beat-card__content { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 6px; padding: 14px; overflow: hidden; }
+.client-beat-card__content { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 5px; padding: 12px 14px; overflow: hidden; }
 .beat-card h3 { font-size: 1rem; line-height: 1.2; }
 .beat-card p { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-xs); line-height: 1.35; overflow-wrap: anywhere; }
 .beat-card .beat-card__prices { font-size: 0.65rem; line-height: 1.2; }
-.beat-card .producer-card__footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: auto; padding-top: 8px; }
+.beat-card .producer-card__footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: auto; padding-top: 4px; }
 .beat-card .producer-card__footer .btn-outline { min-width: 0; min-height: 32px; padding: 5px 7px; font-size: 0.68rem; line-height: 1.2; white-space: normal; }
 .beat-preview { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto 30px; align-items: center; gap: 8px; margin: 4px 0; }
 .beat-preview audio { display: none; }
