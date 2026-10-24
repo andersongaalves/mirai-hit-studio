@@ -101,7 +101,10 @@ def price_details(db, model, kind):
     if base is None:
         return None
     target = SimpleNamespace(
-        valor_base=base, promocao=None, aplica_desconto=model.aplica_desconto
+        valor_base=base,
+        promocao=None,
+        # Service-catalog promotions do not alter producer-defined license prices.
+        aplica_desconto=False,
     )
     return promocao_service.preco(target, promocao_service.desconto_global(db))
 
