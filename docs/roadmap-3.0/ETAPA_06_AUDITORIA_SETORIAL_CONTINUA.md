@@ -8,12 +8,12 @@
 | --- | --- |
 | Status global | Auditoria em andamento |
 | Fase atual | 6.1 - Diagnostico setorial |
-| Setor atual | S02 - Identidade e acesso (INICIADO) |
-| Ultima acao concluida | Roadmap e criterios de auditoria definidos |
-| Proxima acao | Iniciar S02 - Identidade e acesso, somente diagnostico |
+| Setor atual | S02 - Identidade e acesso (DIAGNOSTICADO) |
+| Ultima acao concluida | Diagnostico S02 entregue em `auditoria/S02_IDENTIDADE_ACESSO.md` (15 achados: 1 P1, 6 P2, 8 P3) |
+| Proxima acao | Iniciar diagnostico S06 - Checkout e pagamentos. Correcoes do S02 aguardam autorizacao (ordem sugerida: AUD6-S02-001 e 002) |
 | Ultimo SHA analisado | `18caa5b` (main; sem mudanca de codigo desde `8a7ac44`) |
 | Ultima atualizacao | 24/10/2026 |
-| Bloqueios | Nenhum para iniciar a auditoria diagnostica |
+| Bloqueios | Correcoes do S02 dependem de autorizacao; 004, 006, 007 e 015 dependem de decisao |
 
 ### Regra de atualizacao obrigatoria
 
@@ -314,7 +314,7 @@ ultima.
 
 | Ordem | Setor | Foco adicional | Status | Inicio | Ultima atualizacao | Documento de achados |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | S02 - Identidade e acesso | Conta, sessao, papeis e menu central | INICIADO | 24/10/2026 | 24/10/2026 | - |
+| 1 | S02 - Identidade e acesso | Conta, sessao, papeis e menu central | DIAGNOSTICADO | 24/10/2026 | 24/10/2026 | [S02](auditoria/S02_IDENTIDADE_ACESSO.md) |
 | 2 | S06 - Checkout e pagamentos | Valores, idempotencia, Pix, cartao e webhook | NAO INICIADO | - | - | - |
 | 3 | S10 - Financeiro | Conciliacao, externos, saldos e repasses | NAO INICIADO | - | - | - |
 | 4 | S07 - Portal do Cliente | Projetos, explorar, compras e perfil | NAO INICIADO | - | - | - |
@@ -384,6 +384,7 @@ Adicionar novas linhas no topo da tabela.
 
 | Data | Setor/fase | Status | SHA | Resultado | Proxima acao |
 | --- | --- | --- | --- | --- | --- |
+| 24/10/2026 | S02 - Identidade e acesso | DIAGNOSTICADO | `18caa5b` | 15 achados (1 P1, 6 P2, 8 P3). P1: sessao de conta renomeada autentica a nova conta com o mesmo login. 8 suites de navegador verdes; sondagens de backend no CI (branch descartavel `audit/s02-probes`); consultas agregadas somente leitura. Sem correcao, migration ou deploy | Iniciar S06; aguardar autorizacao para corrigir AUD6-S02-001/002 |
 | 24/10/2026 | S02 - Identidade e acesso | INICIADO | `18caa5b` | Baseline registrado; diagnostico em execucao | Inventariar rotas, telas e sessoes do S02 |
 | 24/10/2026 | 6.0 - Preparacao | CONCLUIDO | `8a7ac44318d5b172ff9df75ca35159b571febd3c` | Roadmap, matriz, centralizacao, tutoriais e ordem definidos; nenhuma auditoria executada | Iniciar diagnostico S02 |
 
