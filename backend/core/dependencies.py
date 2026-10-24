@@ -17,8 +17,13 @@ def get_current_user(token=Depends(security), db=Depends(get_db)):
         payload = decode_token(token.credentials) if token else {}
         user = buscar_por_username(db, payload["sub"]) if payload else None
         auth_version = payload.get("av")
+        account_id = payload.get("uid")
         if (
             user is None
+            # AUD6-S02-001: a token issued to a renamed account must never authenticate a
+            # new account that later reused the same login. Tokens without "uid" were
+            # issued before this check and expire within the access-token lifetime.
+            or (account_id is not None and (type(account_id) is not int or account_id != user.id))
             or not user.ativo
             or type(auth_version) is not int
             or auth_version < 0

@@ -26,7 +26,8 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             detail="Usuário ou senha incorretos",
         )
 
-    access_token = create_access_token({"sub": usuario.username, "av": usuario.auth_version})
+    # "uid" binds the session to the account itself, not only to its (renamable) login.
+    access_token = create_access_token({"sub": usuario.username, "av": usuario.auth_version, "uid": usuario.id})
 
     return {
         "access_token": access_token,

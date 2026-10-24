@@ -54,7 +54,9 @@ def token(username, av):
 async def check():
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
         admin = bearer('admin')
-        old = token('produtor', 0)
+        login = await client.post('/auth/login', json={'username': 'produtor', 'password': 'producer-pass'})
+        assert login.status_code == 200, login.text
+        old = {'Authorization': 'Bearer ' + login.json()['access_token']}
         assert (await client.get('/auth/me', headers=old)).json()['id'] == 2
 
         # Rename, then reuse the old login for a new admin: the old session must not follow it.
@@ -66,6 +68,10 @@ async def check():
         assert (await client.get('/auth/me', headers=old)).status_code == 401
         with Session(engine) as db:
             assert db.get(UsuarioModel, 2).auth_version == 1
+
+        # A token bound to another account id is rejected even with a matching login/version.
+        forged = {'Authorization': 'Bearer ' + create_access_token({'sub': 'produtor', 'av': 0, 'uid': 2})}
+        assert (await client.get('/auth/me', headers=forged)).status_code == 401
 
         # Deactivate and reactivate: sessions issued before stay invalid.
         before = token('produtor-antigo', 1)
