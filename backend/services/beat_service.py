@@ -1,14 +1,14 @@
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 from models import AudioTagModel, BeatLicencaModel, BeatModel
-from models.enums.financeiro import CobrancaStatus
+from models.enums.financeiro import CobrancaStatus, PagamentoStatus
 from schemas.beat import BeatCreate
 from services import audio_tag_service, audit_service, beat_upload_config_service
 from services.producao_arquivo_storage import (
@@ -28,6 +28,9 @@ from sqlalchemy.orm import Session
 
 ARCHIVE_MIMES = {"application/zip", "application/vnd.rar"}
 logger = logging.getLogger(__name__)
+# A payment attempt started before the deadline keeps the reservation alive for
+# this long, so a Pix generated at the last minute can still be paid.
+PENDING_PAYMENT_GRACE = timedelta(hours=24)
 
 
 def _external_multitrack_url(value):
@@ -257,15 +260,44 @@ def producer_catalog(db):
 
 
 def admin_list(db):
-    return [
-        _response(db, row, include_base=True)
-        for row in db.scalars(
-            select(BeatModel).order_by(BeatModel.created_at.desc())
-        ).all()
-    ]
+    if expire_reservations(db):
+        db.commit()
+    rows = db.scalars(select(BeatModel).order_by(BeatModel.created_at.desc())).all()
+    licenses = {}
+    for license in db.scalars(
+        select(BeatLicencaModel).order_by(BeatLicencaModel.created_at.desc())
+    ).all():
+        licenses.setdefault(license.beat_id, []).append(_license_response(license))
+    result = []
+    for row in rows:
+        item = _response(db, row, include_base=True)
+        item["licencas"] = licenses.get(row.id, [])
+        item["pode_voltar_ao_catalogo"] = row.status == "vendido" and not any(
+            entry["tipo"] == "exclusivo" and entry["status"] == "adquirida"
+            for entry in item["licencas"]
+        )
+        result.append(item)
+    return result
+
+
+def _license_response(license):
+    return {
+        "id": license.id,
+        "tipo": license.tipo,
+        "status": license.status,
+        "proposta_id": license.proposta_id,
+        "valor": license.valor,
+        "created_at": license.created_at,
+        "expira_em": _deadline(license),
+        "adquirida_em": license.adquirida_em,
+        "cancelada_em": license.cancelada_em,
+        "motivo_cancelamento": license.motivo_cancelamento,
+    }
 
 
 def client_list(db):
+    if expire_reservations(db):
+        db.commit()
     query = (
         select(BeatModel)
         .where(BeatModel.status == "aprovado", BeatModel.ativo.is_(True))
@@ -573,6 +605,7 @@ def request_license(db, beat_id, kind, actor, idempotency_key, request_id=None):
     beat = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
     if beat is None or beat.status != "aprovado" or not beat.ativo:
         raise HTTPException(404, "Beat nao encontrado.")
+    expire_reservations(db, beat_id=beat.id)
     current_price = price(db, beat, kind)
     if current_price is None:
         raise HTTPException(409, "Licenca indisponivel para este beat.")
@@ -660,6 +693,7 @@ def reserve_for_proposal(db, proposta, cliente_id):
         )
         if existing:
             continue
+        expire_reservations(db, beat_id=beat.id)
         active = select(BeatLicencaModel.id).where(
             BeatLicencaModel.beat_id == beat_id,
             BeatLicencaModel.status == "reservada",
@@ -683,6 +717,7 @@ def reserve_for_proposal(db, proposta, cliente_id):
                 cliente_id=cliente_id,
                 tipo=kind,
                 valor=current_price,
+                expira_em=_now() + _reservation_window(),
             )
         )
     try:
@@ -691,22 +726,260 @@ def reserve_for_proposal(db, proposta, cliente_id):
         raise HTTPException(409, "O beat foi reservado por outra proposta.") from None
 
 
+def _now():
+    return datetime.now(timezone.utc)
+
+
+def _aware(value):
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+def _reservation_window():
+    from core.config import settings
+
+    # Some isolated harnesses replace settings with a namespace; 48 h is the default.
+    return timedelta(hours=int(getattr(settings, "BEAT_RESERVATION_HOURS", 48)))
+
+
+def _deadline(license):
+    if license.status != "reservada":
+        return _aware(license.expira_em)
+    if license.expira_em is not None:
+        return _aware(license.expira_em)
+    return _aware(license.created_at) + _reservation_window()
+
+
+def _cancel(license, reason, now=None):
+    license.status = "cancelada"
+    license.cancelada_em = now or _now()
+    license.motivo_cancelamento = reason
+
+
+def _recent_payment_attempt(db, proposta_id, now):
+    from models import CobrancaModel, PagamentoModel
+
+    rows = db.execute(
+        select(PagamentoModel.status, PagamentoModel.created_at)
+        .join(CobrancaModel, CobrancaModel.id == PagamentoModel.cobranca_id)
+        .where(
+            CobrancaModel.proposta_id == proposta_id,
+            PagamentoModel.status.in_(
+                (PagamentoStatus.PENDENTE.value, PagamentoStatus.APROVADO.value)
+            ),
+        )
+    ).all()
+    # Money already received always keeps the reservation; an open attempt
+    # keeps it only during the grace window.
+    return any(
+        status == PagamentoStatus.APROVADO.value
+        or _aware(created) > now - PENDING_PAYMENT_GRACE
+        for status, created in rows
+    )
+
+
+def expire_reservations(db, *, beat_id=None, proposta_id=None):
+    """AUD6-S06-001: release unpaid reservations past their deadline.
+
+    Runs lazily wherever availability is decided, so no scheduler is needed. A
+    reservation whose charge has a payment attempt younger than the grace
+    window is kept until that attempt resolves.
+    """
+    query = select(BeatLicencaModel).where(BeatLicencaModel.status == "reservada")
+    if beat_id is not None:
+        query = query.where(BeatLicencaModel.beat_id == beat_id)
+    if proposta_id is not None:
+        query = query.where(BeatLicencaModel.proposta_id == proposta_id)
+    now = _now()
+    expired = 0
+    for license in db.scalars(query.with_for_update()).all():
+        if _deadline(license) > now:
+            continue
+        if _recent_payment_attempt(db, license.proposta_id, now):
+            continue
+        _cancel(license, "expirada", now)
+        audit_service.record(
+            db,
+            actor=None,
+            action="beat.licenca.expirada",
+            entity_type="beat_licenca",
+            entity_id=license.id,
+            metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id},
+        )
+        expired += 1
+    if expired:
+        db.flush()
+    return expired
+
+
+def checkout_blocked_reason(db, proposta_id):
+    """Return a client-facing reason when a beat proposal can no longer be paid."""
+    licenses = db.scalars(
+        select(BeatLicencaModel).where(BeatLicencaModel.proposta_id == proposta_id)
+    ).all()
+    if not licenses:
+        return None
+    expire_reservations(db, proposta_id=proposta_id)
+    if any(license.status == "cancelada" for license in licenses):
+        return (
+            "A reserva deste beat expirou ou foi liberada. "
+            "Solicite a licença novamente no catálogo."
+        )
+    return None
+
+
+def _license_conflict(db, license):
+    beat = db.scalar(
+        select(BeatModel).where(BeatModel.id == license.beat_id).with_for_update()
+    )
+    if beat is None or beat.status != "aprovado" or not beat.ativo:
+        return beat, True
+    others = select(BeatLicencaModel.id).where(
+        BeatLicencaModel.beat_id == license.beat_id,
+        BeatLicencaModel.id != license.id,
+        BeatLicencaModel.status.in_(("reservada", "adquirida")),
+    )
+    if license.tipo != "exclusivo":
+        others = others.where(BeatLicencaModel.tipo == "exclusivo")
+    return beat, db.scalar(others) is not None
+
+
+def _flag_payment_conflict(db, cobranca, reason):
+    from models import PagamentoModel
+
+    payment = db.scalar(
+        select(PagamentoModel)
+        .where(
+            PagamentoModel.cobranca_id == cobranca.id,
+            PagamentoModel.status == PagamentoStatus.APROVADO.value,
+        )
+        .order_by(PagamentoModel.id.desc())
+        .limit(1)
+    )
+    if payment is not None:
+        payment.reconciliation_status = "conflict"
+        payment.reconciliation_reason = reason
+
+
+def _revoke_reverted(db, cobranca, now):
+    """AUD6-S06-002: a charge that is no longer fully paid stops granting files."""
+    licenses = db.scalars(
+        select(BeatLicencaModel)
+        .where(
+            BeatLicencaModel.proposta_id == cobranca.proposta_id,
+            BeatLicencaModel.status == "adquirida",
+        )
+        .with_for_update()
+    ).all()
+    for license in licenses:
+        _cancel(license, "pagamento_revertido", now)
+        # An exclusive beat stays out of the catalog until an administrator
+        # decides to list it again (relist).
+        audit_service.record(
+            db,
+            actor=None,
+            action="beat.licenca.revogada",
+            entity_type="beat_licenca",
+            entity_id=license.id,
+            metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id},
+        )
+
+
+def release_reservation(db, license_id, motivo, actor):
+    motivo = (motivo or "").strip()
+    if not motivo:
+        raise HTTPException(422, "Informe o motivo da liberação.")
+    license = db.scalar(
+        select(BeatLicencaModel).where(BeatLicencaModel.id == license_id).with_for_update()
+    )
+    if license is None:
+        raise HTTPException(404, "Licença não encontrada.")
+    if license.status != "reservada":
+        raise HTTPException(409, "Somente reservas em aberto podem ser liberadas.")
+    _cancel(license, "admin")
+    audit_service.record(
+        db,
+        actor=actor,
+        action="beat.licenca.liberada",
+        entity_type="beat_licenca",
+        entity_id=license.id,
+        metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id, "reason": motivo},
+    )
+    db.commit()
+    db.refresh(license)
+    return _license_response(license)
+
+
+def relist(db, beat_id, motivo, actor):
+    motivo = (motivo or "").strip()
+    if not motivo:
+        raise HTTPException(422, "Informe o motivo para devolver o beat ao catálogo.")
+    beat = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
+    if beat is None:
+        raise HTTPException(404, "Beat não encontrado.")
+    if beat.status != "vendido":
+        raise HTTPException(409, "Somente beats vendidos podem voltar ao catálogo.")
+    if db.scalar(
+        select(BeatLicencaModel.id).where(
+            BeatLicencaModel.beat_id == beat_id,
+            BeatLicencaModel.tipo == "exclusivo",
+            BeatLicencaModel.status == "adquirida",
+        )
+    ):
+        raise HTTPException(409, "O exclusivo deste beat continua ativo.")
+    beat.status, beat.ativo = "aprovado", True
+    audit_service.record(
+        db,
+        actor=actor,
+        action="beat.relistado",
+        entity_type="beat",
+        entity_id=beat.id,
+        metadata={"reason": motivo},
+    )
+    db.commit()
+    db.refresh(beat)
+    return _response(db, beat, include_base=True)
+
+
 def confirm_paid(db, cobranca):
+    """Keep beat licenses in step with the charge (called on every payment change)."""
+    now = _now()
     if cobranca.status != CobrancaStatus.PAGA.value:
+        _revoke_reverted(db, cobranca, now)
         return
     licenses = db.scalars(
         select(BeatLicencaModel)
         .where(
             BeatLicencaModel.proposta_id == cobranca.proposta_id,
-            BeatLicencaModel.status == "reservada",
+            BeatLicencaModel.status.in_(("reservada", "cancelada")),
         )
         .with_for_update()
     ).all()
-    now = datetime.now(timezone.utc)
     for license in licenses:
-        beat = db.scalar(
-            select(BeatModel).where(BeatModel.id == license.beat_id).with_for_update()
-        )
+        if license.status == "cancelada":
+            if license.motivo_cancelamento not in ("expirada", "admin"):
+                continue
+            # Paid after the reservation lapsed: honour it only if the beat is
+            # still free; otherwise the payment needs a human decision.
+            beat, conflict = _license_conflict(db, license)
+            if conflict:
+                _flag_payment_conflict(db, cobranca, "beat_reservation_released")
+                audit_service.record(
+                    db,
+                    actor=None,
+                    action="beat.licenca.pagamento_apos_liberacao",
+                    entity_type="beat_licenca",
+                    entity_id=license.id,
+                    metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id},
+                )
+                continue
+            license.cancelada_em = None
+            license.motivo_cancelamento = None
+        else:
+            beat = db.scalar(
+                select(BeatModel).where(BeatModel.id == license.beat_id).with_for_update()
+            )
         license.status = "adquirida"
         license.adquirida_em = now
         if license.tipo == "exclusivo":

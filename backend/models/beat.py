@@ -125,6 +125,11 @@ class BeatLicencaModel(Base):
             name="ck_beat_licencas_status",
         ),
         CheckConstraint("valor > 0", name="ck_beat_licencas_valor"),
+        CheckConstraint(
+            "motivo_cancelamento IS NULL OR motivo_cancelamento IN "
+            "('expirada','admin','pagamento_revertido')",
+            name="ck_beat_licencas_motivo_cancelamento",
+        ),
     )
     id = Column(Integer, primary_key=True)
     beat_id = Column(
@@ -151,6 +156,11 @@ class BeatLicencaModel(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     adquirida_em = Column(DateTime(timezone=True), nullable=True)
+    # AUD6-S06-001/002: a reservation holds the beat only until expira_em; a
+    # cancelled license records when and why it stopped granting access.
+    expira_em = Column(DateTime(timezone=True), nullable=True)
+    cancelada_em = Column(DateTime(timezone=True), nullable=True)
+    motivo_cancelamento = Column(String(24), nullable=True)
 
 
 for table in (BeatModel.__table__, BeatLicencaModel.__table__):

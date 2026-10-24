@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["f3c5d7e9a102"], heads
+                  assert heads == ["a4c6e8f0b217"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -240,6 +240,7 @@ jobs:
                   node frontend/tests/home_mix_comparison.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
+                  node frontend/tests/admin_beat_licenses.cjs
                   node frontend/tests/checkout.cjs
                   node frontend/tests/proposta_comercial.cjs
                   node frontend/tests/usuarios.cjs
@@ -359,12 +360,14 @@ jobs:
                     backend/tests/test_beat_catalog_postgres.py \
                     backend/migrations/versions/d7a2c4e6f810_catalogo_beats.py \
                     backend/migrations/versions/e2b4c6d8f901_beat_formats_review.py \
-                    backend/migrations/versions/f3c5d7e9a102_beat_upload_limits.py
+                    backend/migrations/versions/f3c5d7e9a102_beat_upload_limits.py \
+                    backend/migrations/versions/a4c6e8f0b217_beat_reserva_prazo.py
                   node --check frontend/js/admin/projetos.js
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs
                   node --check frontend/tests/portal_cliente.cjs
                   node --check frontend/js/admin/beats.js
+                  node --check frontend/tests/admin_beat_licenses.cjs
                   node --check frontend/js/modules/beat_upload_validation.js
                   node --check frontend/js/admin/propostas/proposta_mapper.js
                   node --check frontend/tests/proposta_catalogo.cjs
@@ -413,7 +416,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic f3c5d7e9a102: passed"
+                    echo "- PostgreSQL 17 and Alembic a4c6e8f0b217: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

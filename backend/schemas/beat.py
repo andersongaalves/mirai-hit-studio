@@ -55,6 +55,11 @@ class BeatReview(BaseModel):
     motivo: str = Field(default="", max_length=500)
 
 
+class BeatAdminAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    motivo: str = Field(min_length=1, max_length=500)
+
+
 class BeatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     licenca: Literal["lease", "lease_mp3", "lease_wav", "multitrack", "exclusivo"]

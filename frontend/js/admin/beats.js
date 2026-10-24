@@ -89,6 +89,57 @@ function uploadSettings(config) {
     return section;
 }
 
+const LICENSE_LABELS = { lease: "Lease", lease_mp3: "MP3 lease", lease_wav: "WAV lease", multitrack: "Multitrack", exclusivo: "Exclusivo" };
+const LICENSE_STATUS = { reservada: "Reservada", adquirida: "Adquirida", cancelada: "Cancelada" };
+const CANCEL_REASONS = { expirada: "reserva expirada", admin: "liberada pelo Admin", pagamento_revertido: "pagamento revertido" };
+
+function dateTime(value) {
+    return value ? new Date(value).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "";
+}
+
+async function adminAction(path, question, button, message) {
+    const motivo = window.prompt(question);
+    if (!motivo?.trim()) return;
+    button.disabled = true;
+    try {
+        await data(await authFetch(path, { method: "POST", body: JSON.stringify({ motivo: motivo.trim() }) }));
+        await initBeats();
+    } catch (error) { message.textContent = error.message; button.disabled = false; }
+}
+
+function licensesSection(beat, message) {
+    const licenses = beat.licencas || [];
+    if (!licenses.length && !beat.pode_voltar_ao_catalogo) return null;
+    const section = document.createElement("section");
+    section.className = "admin-beat-licenses";
+    const heading = document.createElement("h4"); heading.textContent = "Licenças";
+    const list = document.createElement("ul");
+    for (const license of licenses) {
+        const item = document.createElement("li");
+        const text = document.createElement("span");
+        let detail = `${LICENSE_LABELS[license.tipo] || license.tipo} · ${LICENSE_STATUS[license.status] || license.status} · proposta #${license.proposta_id}`;
+        if (license.status === "reservada" && license.expira_em) detail += ` · reservada até ${dateTime(license.expira_em)}`;
+        if (license.status === "cancelada" && license.motivo_cancelamento) detail += ` · ${CANCEL_REASONS[license.motivo_cancelamento] || license.motivo_cancelamento}`;
+        text.textContent = detail;
+        item.append(text);
+        if (license.status === "reservada") {
+            const release = document.createElement("button");
+            release.type = "button"; release.className = "btn-small"; release.textContent = "Liberar reserva";
+            release.onclick = () => adminAction(`/admin/beats/licencas/${license.id}/liberar`, "Motivo para liberar a reserva:", release, message);
+            item.append(release);
+        }
+        list.append(item);
+    }
+    section.append(heading, list);
+    if (beat.pode_voltar_ao_catalogo) {
+        const relist = document.createElement("button");
+        relist.type = "button"; relist.className = "btn-outline"; relist.textContent = "Devolver ao catálogo";
+        relist.onclick = () => adminAction(`/admin/beats/${beat.id}/voltar-ao-catalogo`, "Motivo para devolver o beat ao catálogo:", relist, message);
+        section.append(relist);
+    }
+    return section;
+}
+
 function beatCard(beat, config) {
     const card = document.createElement("article");
     card.className = "admin-list-item admin-beat-card";
@@ -180,6 +231,8 @@ function beatCard(beat, config) {
     }
     form.append(actions, message);
     content.append(title, meta, audio);
+    const licenses = licensesSection(beat, message);
+    if (licenses) content.append(licenses);
     if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; content.append(reason); }
     summary.append(content);
     if (cover) summary.append(cover);

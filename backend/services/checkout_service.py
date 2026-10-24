@@ -270,6 +270,12 @@ def _get_or_create_attempt(
     except financial_service.FinanceiroConflito as error:
         db.rollback()
         raise CheckoutConflito(str(error)) from None
+    from services import beat_service
+
+    blocked = beat_service.checkout_blocked_reason(db, locked.proposta_id)
+    if blocked:
+        db.commit()
+        raise CheckoutConflito(blocked)
     pending = db.scalar(
         select(PagamentoModel)
         .where(

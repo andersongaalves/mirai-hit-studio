@@ -28,6 +28,9 @@ ALLOWED_METADATA = {
     "proposal_id",
     "result",
     "orcamento_id",
+    # Etapa 07 (S06): beat license events and the operator's stated reason.
+    "beat_id",
+    "reason",
     "old_is_test",
     "new_is_test",
     "old_client_is_test",

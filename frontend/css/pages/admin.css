@@ -603,6 +603,11 @@
 .admin-beat-card { display: grid; align-items: start; gap: 16px; min-width: 0; }
 .admin-beat-card__summary { display: grid; grid-template-columns: minmax(0, 1fr) 120px; align-items: center; gap: 16px; }
 .admin-beat-card__content { min-width: 0; }
+.admin-beat-licenses { margin-top: 0.75rem; display: grid; gap: 0.5rem; }
+.admin-beat-licenses h4 { margin: 0; font-size: 0.95rem; }
+.admin-beat-licenses ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
+.admin-beat-licenses li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; overflow-wrap: anywhere; }
+.admin-beat-licenses > button { justify-self: start; }
 .admin-beat-card .beat-cover { width: 120px; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
 .admin-beat-card audio { width: min(100%, 460px); }
 .admin-beat-form { display: grid; gap: 12px; width: 100%; padding-top: 16px; border-top: var(--border-subtle); }
