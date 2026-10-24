@@ -249,6 +249,10 @@ def producer_list(db, actor):
     ]
 
 
+def producer_catalog(db):
+    return client_list(db)
+
+
 def admin_list(db):
     return [
         _response(db, row, include_base=True)
@@ -528,7 +532,13 @@ def preview(db, beat_id, actor):
         raise HTTPException(404, "Beat nao encontrado.")
     allowed = (
         actor.role == "admin"
-        or (actor.role == "produtor" and model.produtor_id == actor.id)
+        or (
+            actor.role == "produtor"
+            and (
+                model.produtor_id == actor.id
+                or (model.status == "aprovado" and model.ativo)
+            )
+        )
         or (actor.role == "cliente" and model.status == "aprovado" and model.ativo)
     )
     if not allowed:

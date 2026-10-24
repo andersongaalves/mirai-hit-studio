@@ -179,6 +179,9 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'GET') {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
+        if (url.pathname === '/portal/produtor/catalogo-beats' && request.method() === 'GET') {
+            return route.fulfill({ json: [{ id: 81, produtor_id: 3, produtor: 'Outro Produtor', titulo: 'Beat publicado', descricao: '', bpm: 92, tonalidade: 'C', generos: 'R&B', preco_lease: '80.00', preco_exclusivo: '450.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
+        }
         if (url.pathname === '/portal/produtor/beats/configuracao' && request.method() === 'GET') {
             return route.fulfill({ json: { limits: { capa_mb: 10, mp3_mb: 1, wav_mb: 50, multitrack_mb: 50, multitrack_mode: 'arquivo' }, ready: true, message: '' } });
         }
@@ -251,6 +254,18 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#producer-beats-list .producer-beat-card__content').evaluate(element => (
             element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
         )), true, 'producer beat content must fit inside the square');
+        assert.match(await page.locator('#producer-beats-list').textContent(), /Producer A/);
+        await page.getByRole('link', { name: 'Catálogo' }).click();
+        await page.waitForURL('**/produtor/catalogo');
+        await page.waitForSelector('#producer-catalog-list .producer-card');
+        assert.match(await page.locator('#producer-catalog-list').textContent(), /Outro Produtor/);
+        assert.equal(
+            await page.locator('#producer-catalog-list button').count(),
+            await page.locator('#producer-catalog-list .beat-preview button').count(),
+            'catalog only exposes preview player controls',
+        );
+        assert.doesNotMatch(await page.locator('#producer-catalog-list').textContent(), /Comprar|Solicitar/);
+        await page.getByRole('link', { name: 'Beats' }).click();
         await page.getByLabel('Título').fill('Novo beat');
         await page.locator('#producer-beat-form [name="preco_lease"]').fill('120');
         await page.locator('#producer-beat-form [name="capa"]').setInputFiles({ name: 'capa.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64') });

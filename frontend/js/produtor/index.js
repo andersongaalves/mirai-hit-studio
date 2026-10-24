@@ -26,6 +26,7 @@ function route() {
     if (/^\/produtor\/financeiro\/?$/.test(location.pathname)) return { view: "financeiro" };
     if (/^\/produtor\/portfolio\/?$/.test(location.pathname)) return { view: "portfolio" };
     if (/^\/produtor\/perfil\/?$/.test(location.pathname)) return { view: "perfil" };
+    if (/^\/produtor\/catalogo\/?$/.test(location.pathname)) return { view: "catalog" };
     if (/^\/produtor\/beats\/?$/.test(location.pathname)) return { view: "beats" };
     return { view: "dashboard" };
 }
@@ -123,6 +124,10 @@ function renderRoute() {
         loadBeats();
         return;
     }
+    if (current.view === "catalog") {
+        loadBeatCatalog();
+        return;
+    }
     if (current.view === "perfil") {
         showView("perfil");
         loadAudioTag(document.getElementById("producer-audio-tag"));
@@ -169,7 +174,7 @@ async function loadBeats() {
             const title = document.createElement("h3"); title.textContent = beat.titulo;
             let cover = null;
             if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; }
-            const meta = document.createElement("p"); meta.textContent = `${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
+            const meta = document.createElement("p"); meta.textContent = `${beat.produtor} · ${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
             const prices = document.createElement("p"); prices.className = "beat-card__prices"; prices.textContent = [["MP3", beat.preco_lease], ["WAV", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
             const audio = beatPreview(() => api.ouvirBeat(beat.id));
             content.append(title, meta, prices, audio);
@@ -180,6 +185,34 @@ async function loadBeats() {
             return card;
         }));
         if (!beats.length) list.textContent = "Nenhum beat enviado.";
+    } catch (error) { setAlert(error.message, true); list.textContent = ""; }
+}
+
+async function loadBeatCatalog() {
+    showView("catalog");
+    const list = document.getElementById("producer-catalog-list");
+    list.textContent = "Carregando catálogo...";
+    try {
+        const beats = await api.listarCatalogoBeats();
+        list.replaceChildren(...beats.map(beat => {
+            const card = document.createElement("article");
+            card.className = "producer-card beat-card producer-beat-card";
+            const content = document.createElement("div");
+            content.className = "producer-beat-card__content";
+            const title = document.createElement("h3"); title.textContent = beat.titulo;
+            const producer = document.createElement("p"); producer.textContent = beat.produtor;
+            const meta = document.createElement("p"); meta.textContent = `${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.tonalidade ? `${beat.tonalidade} · ` : ""}${beat.generos || "Sem gênero"}`;
+            const prices = document.createElement("p"); prices.className = "beat-card__prices"; prices.textContent = [["MP3", beat.preco_lease], ["WAV", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
+            content.append(title, producer, meta, prices, beatPreview(() => api.ouvirBeat(beat.id)));
+            if (beat.capa_url) {
+                const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; card.append(cover);
+            } else {
+                const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder);
+            }
+            card.append(content);
+            return card;
+        }));
+        if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";
     } catch (error) { setAlert(error.message, true); list.textContent = ""; }
 }
 

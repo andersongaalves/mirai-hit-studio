@@ -68,6 +68,11 @@ def producer_beats(db: Db, user: Producer):
     return beat_service.producer_list(db, user)
 
 
+@router.get("/portal/produtor/catalogo-beats")
+def producer_beat_catalog(db: Db, user: Producer):
+    return beat_service.producer_catalog(db)
+
+
 @router.get("/portal/produtor/beats/configuracao", response_model=BeatUploadConfigResponse)
 def producer_beat_config(db: Db, user: Producer):
     if not user.painel_beats:

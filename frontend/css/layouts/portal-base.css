@@ -393,6 +393,8 @@
 .beat-submissions > h2 { margin: 0 0 var(--space-4); }
 .producer-beats-list,
 .client-beats-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); align-items: start; gap: var(--space-4); }
+.explore-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: var(--space-5); }
+.explore-tabs [aria-current="page"] { border-color: var(--color-accent); color: var(--color-accent); }
 .beat-card { aspect-ratio: 1; min-width: 0; overflow: hidden; padding: 0; }
 .producer-beat-card,
 .client-beat-card { display: grid; grid-template-rows: 38% minmax(0, 62%); }

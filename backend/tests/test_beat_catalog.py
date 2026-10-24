@@ -86,7 +86,10 @@ async def check():
             assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330 and catalog[0]['capa_url']
             preview = await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))
             assert preview.content == mp3()+b'tag' and preview.headers['cache-control'] == 'private, no-store'
-            assert (await api.get(f'/beats/{beat_id}/preview', headers=bearer('producer-b'))).status_code == 404
+            producer_catalog = await api.get('/portal/produtor/catalogo-beats', headers=bearer('producer-b'))
+            assert producer_catalog.status_code == 200
+            assert producer_catalog.json()[0]['produtor'] == catalog[0]['produtor']
+            assert (await api.get(f'/beats/{beat_id}/preview', headers=bearer('producer-b'))).content == mp3()+b'tag'
             key = '11111111-1111-4111-8111-111111111111'
             requested = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease_wav'})
             assert requested.status_code == 201, requested.text
