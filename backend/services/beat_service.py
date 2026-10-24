@@ -805,7 +805,7 @@ def expire_reservations(db, *, beat_id=None, proposta_id=None):
             action="beat.licenca.expirada",
             entity_type="beat_licenca",
             entity_id=license.id,
-            metadata={"beat_id": license.beat_id, "proposta_id": license.proposta_id},
+            metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id},
         )
         expired += 1
     if expired:
@@ -882,7 +882,7 @@ def _revoke_reverted(db, cobranca, now):
             action="beat.licenca.revogada",
             entity_type="beat_licenca",
             entity_id=license.id,
-            metadata={"beat_id": license.beat_id, "proposta_id": license.proposta_id},
+            metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id},
         )
 
 
@@ -904,7 +904,7 @@ def release_reservation(db, license_id, motivo, actor):
         action="beat.licenca.liberada",
         entity_type="beat_licenca",
         entity_id=license.id,
-        metadata={"beat_id": license.beat_id, "proposta_id": license.proposta_id, "motivo": motivo[:500]},
+        metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id, "reason": motivo},
     )
     db.commit()
     db.refresh(license)
@@ -935,7 +935,7 @@ def relist(db, beat_id, motivo, actor):
         action="beat.relistado",
         entity_type="beat",
         entity_id=beat.id,
-        metadata={"motivo": motivo[:500]},
+        metadata={"reason": motivo},
     )
     db.commit()
     db.refresh(beat)
@@ -971,7 +971,7 @@ def confirm_paid(db, cobranca):
                     action="beat.licenca.pagamento_apos_liberacao",
                     entity_type="beat_licenca",
                     entity_id=license.id,
-                    metadata={"beat_id": license.beat_id, "proposta_id": license.proposta_id},
+                    metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id},
                 )
                 continue
             license.cancelada_em = None

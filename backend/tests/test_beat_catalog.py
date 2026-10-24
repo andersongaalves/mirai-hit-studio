@@ -432,4 +432,5 @@ with Session(engine) as db:
     assert [item['id'] for item in beat_service.client_list(db)] == [beat.id]
     entry = db.query(AuditLogModel).filter_by(action='beat.licenca.liberada').one()
     assert entry.actor_user_id == 1
+    assert entry.metadata_json == {'beat_id': beat.id, 'proposal_id': first.id, 'reason': 'Cliente desistiu'}
 """)
