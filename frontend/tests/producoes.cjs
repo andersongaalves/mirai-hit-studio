@@ -225,12 +225,12 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         assert.equal(releaseBodies.length, 0);
         page.once('dialog', dialog => dialog.accept('Acordo com o produtor'));
         await page.locator('#prod_repasse_liberar').click();
-        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('liberado'));
+        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('· liberado ·'));
         assert.deepEqual(releaseBodies, [{ motivo_confirmacao: 'Acordo com o produtor' }]);
         await page.locator('#prod_repasse_referencia').fill('PIX-SYNTHETIC');
         page.once('dialog', dialog => dialog.accept('Acordo com o produtor'));
         await page.locator('#prod_repasse_pagar').click();
-        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('pago'));
+        await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('· pago ·'));
         await page.locator('#prod_repasse_valor').fill('275.00');
         await page.locator('#prod_repasse_salvar').click();
         await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('275,00'));
