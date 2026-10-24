@@ -179,8 +179,6 @@ jobs:
                     test_portal_cliente_operacao.py \
                     test_producao.py \
                     test_authenticated_checkout.py \
-                    test_orcamento_preco.py \
-                    test_orcamento_retry_i2.py \
                     test_ambiente_testes.py \
                     test_mercado_pago_webhooks.py \
                     test_http_cors_contract.py \
@@ -190,6 +188,8 @@ jobs:
                     test_proposta_service.py \
                     test_proposta_comercial.py \
                     test_proposta_snapshot.py \
+                    test_orcamento_preco.py \
+                    test_orcamento_retry_i2.py \
                     test_beat_catalog.py \
                     test_carteira_creditos.py \
                     test_credito_alocacao.py \
