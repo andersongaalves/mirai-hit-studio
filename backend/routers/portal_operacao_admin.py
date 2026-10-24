@@ -16,8 +16,9 @@ from schemas.producao_arquivo import (
 from schemas.repasse_produtor import (
     RepasseCorrecaoRequest,
     RepasseDefinirRequest,
+    RepasseLiberarRequest,
     RepassePagamentoRequest,
-    RepasseProdutorResponse,
+    RepasseProdutorAdminResponse,
 )
 from services import producao_arquivo_service, repasse_produtor_service
 from services.producao_arquivo_storage import MAX_FILE_SIZE
@@ -149,14 +150,14 @@ def download_file(
 
 @router.get(
     "/{producao_id}/repasse",
-    response_model=RepasseProdutorResponse | None,
+    response_model=RepasseProdutorAdminResponse | None,
 )
 def get_payout(producao_id: int, db: Db, user: CurrentAdmin):
     _production(db, producao_id)
     return repasse_produtor_service.get_admin(db, producao_id)
 
 
-@router.put("/{producao_id}/repasse", response_model=RepasseProdutorResponse)
+@router.put("/{producao_id}/repasse", response_model=RepasseProdutorAdminResponse)
 def define_payout(
     producao_id: int,
     payload: RepasseDefinirRequest,
@@ -178,19 +179,21 @@ def define_payout(
 
 @router.post(
     "/{producao_id}/repasse/liberar",
-    response_model=RepasseProdutorResponse,
+    response_model=RepasseProdutorAdminResponse,
 )
 def release_payout(
     producao_id: int,
     request: Request,
     db: Db,
     user: CurrentAdmin,
+    payload: RepasseLiberarRequest | None = None,
 ):
     try:
         return repasse_produtor_service.release(
             db,
             production_id=producao_id,
             actor=user,
+            confirmation_reason=payload.motivo_confirmacao if payload else None,
             request_id=getattr(request.state, "request_id", None),
         )
     except repasse_produtor_service.RepasseError as exc:
@@ -199,7 +202,7 @@ def release_payout(
 
 @router.post(
     "/{producao_id}/repasse/pagar",
-    response_model=RepasseProdutorResponse,
+    response_model=RepasseProdutorAdminResponse,
 )
 def pay_payout(
     producao_id: int,
@@ -215,6 +218,7 @@ def pay_payout(
             actor=user,
             reference=payload.referencia_pagamento,
             receipt_id=payload.comprovante_arquivo_id,
+            confirmation_reason=payload.motivo_confirmacao,
             request_id=getattr(request.state, "request_id", None),
         )
     except repasse_produtor_service.RepasseError as exc:
@@ -223,7 +227,7 @@ def pay_payout(
 
 @router.patch(
     "/{producao_id}/repasse/correcao",
-    response_model=RepasseProdutorResponse,
+    response_model=RepasseProdutorAdminResponse,
 )
 def correct_payout(
     producao_id: int,

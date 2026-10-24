@@ -53,3 +53,12 @@ export function registrarPixManual(id, payload) {
         body: JSON.stringify(payload),
     }).then(response => responseData(response, "Não foi possível registrar o Pix direto."));
 }
+
+
+export function anularPixManual(id, motivo) {
+    return authFetch(`/financeiro/pagamentos/${id}/anular`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo }),
+    }).then(response => responseData(response, "Não foi possível anular o pagamento."));
+}

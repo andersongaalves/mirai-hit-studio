@@ -74,7 +74,32 @@ function renderSelected() {
         onReconcile: reconcilePayment,
         registeringManualPayment: financeiroState.registeringManualPayment,
         onManualPayment: registerManualPayment,
+        voidingPaymentId: financeiroState.voidingPaymentId ?? null,
+        onVoid: voidManualPayment,
     });
+}
+
+
+// AUD6-S10-001: a direct Pix recorded by mistake is voided with a reason, never edited in the database.
+async function voidManualPayment(payment) {
+    if (financeiroState.voidingPaymentId || !financeiroState.selected) return;
+    const reason = window.prompt("Motivo da anulação deste Pix direto (fica no histórico):");
+    if (!reason?.trim()) return;
+    if (reason.trim().length < 5) { Notify.error("Descreva o motivo com pelo menos 5 caracteres."); return; }
+    financeiroState.voidingPaymentId = payment.id;
+    renderSelected();
+    const selectedId = financeiroState.selected.id;
+    try {
+        const result = await API.anularPixManual(payment.id, reason.trim());
+        Notify.success("Pix direto anulado e cobrança recalculada.");
+        for (const warning of result.avisos || []) Notify.warning(warning);
+    } catch (error) {
+        Notify.error(error.message || "Não foi possível anular o pagamento.");
+    } finally {
+        financeiroState.voidingPaymentId = null;
+        await carregarFinanceiro();
+        if (financeiroState.selected?.id === selectedId) await abrirCobranca(selectedId);
+    }
 }
 
 

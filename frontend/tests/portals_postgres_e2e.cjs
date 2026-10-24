@@ -282,9 +282,12 @@ function expectStatus(result, status, label) {
         expectStatus(await api(page, 'PUT', `/producoes/${productionId}/repasse`, {
             valor_combinado: '275.90',
         }), 200, 'admin defines payout');
-        expectStatus(await api(page, 'POST', `/producoes/${productionId}/repasse/liberar`), 200, 'admin releases payout');
+        expectStatus(await api(page, 'POST', `/producoes/${productionId}/repasse/liberar`, {
+            motivo_confirmacao: 'E2E sintetico',
+        }), 200, 'admin releases payout');
         const paid = expectStatus(await api(page, 'POST', `/producoes/${productionId}/repasse/pagar`, {
             referencia_pagamento: 'E2E-BROWSER-SYNTHETIC',
+            motivo_confirmacao: 'E2E sintetico',
         }), 200, 'admin records synthetic payout');
         assert.equal(paid.status, 'pago');
 

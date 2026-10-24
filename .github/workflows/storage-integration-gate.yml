@@ -181,6 +181,7 @@ jobs:
                     test_portal_cliente_operacao.py \
                     test_producao.py \
                     test_authenticated_checkout.py \
+                    test_financeiro_admin.py \
                     test_ambiente_testes.py \
                     test_mercado_pago_webhooks.py \
                     test_http_cors_contract.py \
@@ -235,6 +236,8 @@ jobs:
                   node frontend/tests/credit_allocations.cjs
                   node frontend/tests/stage_payouts.cjs
                   node frontend/tests/producoes.cjs
+                  node frontend/tests/financeiro_admin.cjs
+                  node frontend/tests/beat_preview.cjs
                   node frontend/tests/portfolio_public.cjs
                   node frontend/tests/home_artists.cjs
                   node frontend/tests/home_mix_comparison.cjs
@@ -376,6 +379,8 @@ jobs:
                   node --check frontend/tests/checkout.cjs
                   node --check frontend/js/modules/stage_payouts.js
                   node --check frontend/tests/stage_payouts.cjs
+                  node --check frontend/tests/financeiro_admin.cjs
+                  node --check frontend/js/admin/financeiro/financeiro.js
                   git diff --check origin/main...HEAD
 
             - name: Verify disposable data cleanup

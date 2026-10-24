@@ -6,6 +6,8 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 let reconciliations = 0;
 const manualPayments = [];
+const voids = [];
+let promptAnswer = "";
 const financeQueries = [];
 
 async function staticResponse(route) {
@@ -24,7 +26,7 @@ async function staticResponse(route) {
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", error => errors.push(error.message));
-        page.on("dialog", dialog => dialog.accept());
+        page.on("dialog", dialog => dialog.type() === "prompt" ? dialog.accept(promptAnswer) : dialog.accept());
         await context.route("**/*", async route => {
             const request = route.request();
             const url = new URL(request.url());
@@ -37,11 +39,16 @@ async function staticResponse(route) {
                 manualPayments.push(request.postDataJSON());
                 return route.fulfill({ json: { payment_id: 10, cobranca_id: 7, valor: "20.00", valor_pago: "60.00", saldo_pendente: "40.00", status: "parcialmente_paga", repeated: false } });
             }
+            if (url.pathname === "/financeiro/pagamentos/10/anular") {
+                voids.push(request.postDataJSON());
+                return route.fulfill({ json: { payment_id: 10, cobranca_id: 7, valor: "20.00", valor_pago: "40.00", saldo_pendente: "60.00", status: "parcialmente_paga", avisos: ["A produção #3 já foi liberada; revise se ela deve continuar."] } });
+            }
             if (url.pathname === "/financeiro/cobrancas/7") return route.fulfill({ json: {
                 id: 7, proposta_id: 2, proposta_numero: "P-001", cliente_nome: "<img src=x onerror=alert(1)>", cliente_email: "safe@example.com",
                 valor_total: "100.00", valor_pago: "40.00", saldo_pendente: "60.00", status: "parcialmente_paga", reconciliation_status: "conflict",
                 vencimento: null, created_at: "2026-09-20T12:00:00Z", updated_at: "2026-09-20T12:00:00Z", checkout_url: "https://mirai.example/checkout/token",
-                pagamentos: [{ id: 9, tipo: "entrada", valor: "40.00", status: "aprovado", metodo: "pix", provider: "mercado_pago", provider_order_id: "order-9", reconciliation_status: "conflict", reconciliation_reason: "amount_mismatch", aprovado_em: null, reembolsado_em: null, created_at: "2026-09-20T12:00:00Z", updated_at: "2026-09-20T12:00:00Z" }],
+                pagamentos: [{ id: 9, tipo: "entrada", valor: "40.00", status: "aprovado", metodo: "pix", provider: "mercado_pago", provider_order_id: "order-9", reconciliation_status: "conflict", reconciliation_reason: "amount_mismatch", aprovado_em: null, reembolsado_em: null, created_at: "2026-09-20T12:00:00Z", updated_at: "2026-09-20T12:00:00Z" },
+                    { id: 10, tipo: "saldo", valor: "20.00", status: "aprovado", metodo: "pix_direto", provider: "manual_admin", provider_order_id: null, reconciliation_status: null, reconciliation_reason: null, aprovado_em: null, reembolsado_em: null, created_at: "2026-09-21T12:00:00Z", updated_at: "2026-09-21T12:00:00Z" }],
             } });
             if (url.pathname === "/financeiro/cobrancas") {
                 financeQueries.push(url.search);
@@ -102,6 +109,20 @@ async function staticResponse(route) {
         await page.getByRole("button", { name: "Conciliar com provider" }).click();
         await page.waitForFunction(() => document.querySelector("#financeiro-payments")?.textContent.includes("Conciliar com provider"));
         assert.equal(reconciliations, 1);
+
+        // AUD6-S10-001: only the direct Pix can be voided, and only with a reason.
+        assert.equal(await page.getByRole("button", { name: "Anular Pix direto" }).count(), 1);
+        promptAnswer = "";
+        await page.getByRole("button", { name: "Anular Pix direto" }).click();
+        await page.waitForTimeout(100);
+        assert.equal(voids.length, 0);
+        promptAnswer = "Pix registrado na cobrança errada";
+        const reopened = page.waitForResponse(response => new URL(response.url()).pathname === "/financeiro/cobrancas/7");
+        await page.getByRole("button", { name: "Anular Pix direto" }).click();
+        await reopened;
+        await page.waitForFunction(() => document.body.textContent.includes("já foi liberada"));
+        await page.waitForFunction(() => document.querySelector("#financeiro-payments")?.textContent.includes("Anular Pix direto"));
+        assert.deepEqual(voids, [{ motivo: "Pix registrado na cobrança errada" }]);
 
         await page.keyboard.press("Escape");
         assert.equal(await page.locator("#modal-financeiro").getAttribute("aria-hidden"), "true");

@@ -5,6 +5,15 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+class RepasseSituacaoCliente(BaseModel):
+    cobranca_id: int | None
+    cobranca_status: str
+    valor_total: Decimal | None
+    valor_pago: Decimal | None
+    producao_status: str
+    pendencias: list[str]
+
+
 class RepasseProdutorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -24,6 +33,17 @@ class RepasseProdutorResponse(BaseModel):
     updated_at: datetime
 
 
+class RepasseProdutorAdminResponse(RepasseProdutorResponse):
+    # Admin only: whether the client paid and the production finished.
+    situacao_cliente: RepasseSituacaoCliente | None = None
+
+
+class RepasseLiberarRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    motivo_confirmacao: str | None = Field(default=None, max_length=500)
+
+
 class RepasseDefinirRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -35,6 +55,7 @@ class RepassePagamentoRequest(BaseModel):
 
     referencia_pagamento: str | None = Field(default=None, max_length=160)
     comprovante_arquivo_id: int | None = Field(default=None, gt=0)
+    motivo_confirmacao: str | None = Field(default=None, max_length=500)
 
     @field_validator("referencia_pagamento")
     @classmethod

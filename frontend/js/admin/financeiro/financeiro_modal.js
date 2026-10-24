@@ -3,7 +3,7 @@ import { badge, button, definition, element } from "./financeiro_dom.js";
 import { formatDate, methodLabel, money, paymentTypeLabel, reconciliationLabel, reconciliationReason, statusLabel, statusVariant } from "./financeiro_utils.js";
 
 
-function paymentCard(payment, { onReconcile, reconcilingPaymentId }) {
+function paymentCard(payment, { onReconcile, reconcilingPaymentId, onVoid, voidingPaymentId }) {
     const card = element("article", "", "financeiro-payment");
     const header = element("div", "", "financeiro-payment__header");
     header.append(
@@ -32,6 +32,15 @@ function paymentCard(payment, { onReconcile, reconcilingPaymentId }) {
         );
         reconcile.disabled = reconcilingPaymentId !== null;
         card.appendChild(reconcile);
+    }
+    if (payment.provider === "manual_admin" && payment.status === "aprovado" && onVoid) {
+        const voidButton = button(
+            voidingPaymentId === payment.id ? "Anulando..." : "Anular Pix direto",
+            "btn-small",
+            () => onVoid(payment),
+        );
+        voidButton.disabled = voidingPaymentId !== null && voidingPaymentId !== undefined;
+        card.appendChild(voidButton);
     }
     return card;
 }
