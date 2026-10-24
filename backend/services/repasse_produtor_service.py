@@ -219,7 +219,7 @@ def release(db, *, production_id, actor, confirmation_reason=None, request_id=No
             "new_status": "liberado",
             "charge_status": situation["cobranca_status"],
             "production_status": situation["producao_status"],
-            **({"confirmation_reason": reason[:500]} if reason else {}),
+            **({"reason": reason} if reason else {}),
         },
         request_id=request_id,
     )
@@ -275,7 +275,7 @@ def mark_paid(
             "new_status": "pago",
             "charge_status": situation["cobranca_status"],
             "production_status": situation["producao_status"],
-            **({"confirmation_reason": reason[:500]} if reason else {}),
+            **({"reason": reason} if reason else {}),
         },
         request_id=request_id,
     )

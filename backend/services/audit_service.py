@@ -46,6 +46,10 @@ ALLOWED_METADATA = {
     "old_promotion_active", "new_promotion_active",
     "old_promotion_start", "new_promotion_start",
     "old_promotion_end", "new_promotion_end",
+    # Etapa 07 (S10): financial context and the operator's stated reason.
+    "reason",
+    "charge_status", "production_status",
+    "charge_old_status", "charge_new_status",
 }
 
 

@@ -388,7 +388,7 @@ async def check():
                 stored = db.query(RepasseProdutorModel).one()
                 assert stored.produtor_id == 2 and str(stored.valor_combinado) == '120.00'
                 release_audit = db.query(AuditLogModel).filter_by(action='producer_payout.released').one()
-                assert release_audit.metadata_json['confirmation_reason'] == 'Acordo direto com o produtor'
+                assert release_audit.metadata_json['reason'] == 'Acordo direto com o produtor'
                 assert release_audit.metadata_json['charge_status'] == 'sem_cobranca'
                 correction = db.query(AuditLogModel).filter_by(action='producer_payout.corrected').one()
                 assert correction.metadata_json['old_amount'] == '100.00'

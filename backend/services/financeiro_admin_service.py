@@ -401,10 +401,10 @@ def anular_pix_manual(db, payment_id, dados, *, actor, request_id=None):
         metadata={
             "old_status": PagamentoStatus.APROVADO.value,
             "new_status": payment.status,
-            "amount": str(_money(payment.valor)),
+            "new_amount": str(_money(payment.valor)),
             "charge_old_status": old_charge_status,
             "charge_new_status": charge.status,
-            "reason": dados.motivo.strip()[:500],
+            "reason": dados.motivo.strip(),
         },
         request_id=request_id,
     )

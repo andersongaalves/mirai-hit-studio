@@ -260,7 +260,7 @@ async def check():
         assert payment.status == 'cancelado'
         assert db.get(CobrancaModel, charge_id).status == 'parcialmente_paga'
         entry = db.query(AuditLogModel).filter_by(action='payment.manual_pix_voided').one()
-        assert entry.actor_user_id == 1 and entry.entity_id == payment_id
+        assert entry.actor_user_id == 1 and entry.entity_id == str(payment_id)
         assert entry.metadata_json['reason'] == 'Pix lancado na cobranca errada'
         assert entry.metadata_json['charge_old_status'] == 'paga'
         assert entry.metadata_json['charge_new_status'] == 'parcialmente_paga'
@@ -318,9 +318,9 @@ with Session(engine) as db:
     paid = payouts.mark_paid(db, production_id=production_id, actor=admin, confirmation_reason='Produtor ja recebeu por fora')
     assert paid['status'] == 'pago'
     entry = db.query(AuditLogModel).filter_by(action='producer_payout.paid').one()
-    assert entry.metadata_json['confirmation_reason'] == 'Produtor ja recebeu por fora'
+    assert entry.metadata_json['reason'] == 'Produtor ja recebeu por fora'
     assert entry.metadata_json['charge_status'] == 'parcialmente_paga'
-    assert 'confirmation_reason' not in db.query(AuditLogModel).filter_by(action='producer_payout.released').one().metadata_json
+    assert 'reason' not in db.query(AuditLogModel).filter_by(action='producer_payout.released').one().metadata_json
 ''')
 
     def test_producer_gets_forbidden_and_conflict_is_audited(self):
