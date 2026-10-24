@@ -739,7 +739,8 @@ def _aware(value):
 def _reservation_window():
     from core.config import settings
 
-    return timedelta(hours=settings.BEAT_RESERVATION_HOURS)
+    # Some isolated harnesses replace settings with a namespace; 48 h is the default.
+    return timedelta(hours=int(getattr(settings, "BEAT_RESERVATION_HOURS", 48)))
 
 
 def _deadline(license):
