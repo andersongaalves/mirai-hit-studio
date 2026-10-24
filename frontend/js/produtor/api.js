@@ -100,6 +100,13 @@ export async function listarBeats() {
     return responseData(await authFetch("/portal/produtor/beats"), "Não foi possível carregar seus beats.");
 }
 
+export async function listarCatalogoBeats() {
+    return responseData(
+        await authFetch("/portal/produtor/catalogo-beats"),
+        "Não foi possível carregar o catálogo de beats.",
+    );
+}
+
 export async function obterConfiguracaoBeats() {
     return responseData(
         await authFetch("/portal/produtor/beats/configuracao"),

@@ -284,8 +284,10 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.getElementById('client-alert')?.textContent.includes('Solicitação #82 enviada'));
         assert.equal(await requestDialog.isVisible(), false);
         assert.equal(new URL(page.url()).pathname, '/cliente');
-        await page.getByRole('link', { name: 'Beats' }).click();
-        await page.waitForURL('**/cliente/beats');
+        await page.getByRole('link', { name: 'Explorar' }).click();
+        await page.waitForURL('**/cliente/explorar');
+        assert.equal(await page.getByRole('link', { name: 'Projetos', exact: true }).getAttribute('href'), '/portfolio');
+        assert.match(await page.locator('#client-beats').textContent(), /Catálogo de beats/);
         await page.waitForSelector('#client-beats-list .producer-card');
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
         assert.match(await page.locator('#client-acquired-beats').textContent(), /Nenhuma compra liberada/);
@@ -299,7 +301,7 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: /MP3 lease/ }).click();
         await page.waitForURL('**/checkout?proposta=91');
         await page.goBack();
-        await page.waitForURL('**/cliente/beats');
+        await page.waitForURL('**/cliente/explorar');
         await page.getByRole('link', { name: 'Dashboard' }).click();
         assert.equal(await page.locator('#client-proposal-summary').isVisible(), true);
         await page.getByRole('link', { name: 'Propostas', exact: true }).click();

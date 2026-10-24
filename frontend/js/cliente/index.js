@@ -48,7 +48,7 @@ function watchTaggedPreviews(production, files, failures = 0) {
 }
 
 function route() {
-    if (/^\/cliente\/beats\/?$/.test(location.pathname)) return { view: "beats" };
+    if (/^\/cliente\/(?:explorar|beats)\/?$/.test(location.pathname)) return { view: "beats" };
     if (/^\/cliente\/creditos\/?$/.test(location.pathname)) return { view: "credits" };
     const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
     if (proposal) return { view: "proposal-detail", id: Number(proposal[1]) };
