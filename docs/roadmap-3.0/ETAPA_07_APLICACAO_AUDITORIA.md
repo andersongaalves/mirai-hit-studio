@@ -38,7 +38,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S02-01 | 001, 002 | P1 | Sessao vinculada ao id da conta (`uid`); renomear, desativar ou mudar papel encerra as sessoes | Codigo | Concluido | #96 |
+| APL-S02-01 | 001, 002 | P1 | Sessao vinculada ao id da conta (`uid`); renomear, desativar ou mudar papel encerra as sessoes | Codigo | Publicado | #96 |
 | APL-S02-02 | 003, 010, 013 | P2 | Entrada unica: paineis redirecionam a `/acesso?next=`; `next` validado por papel; remover logins antigos (inclui Enter e placeholder do Admin); `/acesso` com sessao valida oferece continuar | Codigo + testes de navegador | Proposto | - |
 | APL-S02-03 | 005 | P2 | Admin > Usuarios: conta de cliente editavel (papel somente leitura, filtro "Cliente", link para o cadastro do cliente) | Codigo | Proposto | - |
 | APL-S02-04 | 004 | P2 | Troca da propria senha (senha atual + nova, encerra outras sessoes, auditoria); texto de recuperacao para produtores e equipe | Codigo; **Decisao**: produtores passam a ter e-mail para recuperacao? | Decisao | - |
@@ -55,8 +55,8 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S06-01 | S06-001, S04-001 | P1 | Prazo para reserva de licenca de beat com liberacao automatica; cancelar reserva quando proposta/cobranca for cancelada; acao do Admin "liberar reserva" com motivo | Codigo + migration (prazo) | Concluido | #97 |
-| APL-S06-02 | S06-002 | P2 | Reembolso ou anulacao revoga licencas de beat da proposta; exclusivo volta ao catalogo apos decisao do Admin | Codigo | Concluido | #97 |
+| APL-S06-01 | S06-001, S04-001 | P1 | Prazo para reserva de licenca de beat com liberacao automatica; cancelar reserva quando proposta/cobranca for cancelada; acao do Admin "liberar reserva" com motivo | Codigo + migration (prazo) | Publicado | #97 |
+| APL-S06-02 | S06-002 | P2 | Reembolso ou anulacao revoga licencas de beat da proposta; exclusivo volta ao catalogo apos decisao do Admin | Codigo | Publicado | #97 |
 | APL-S06-03 | S06-004 | P2 | Downloads de beat por streaming ou URL assinada curta, sem carregar o arquivo inteiro na memoria | Codigo | Proposto | - |
 | APL-S06-04 | S06-005, S07-007 | P3 | Mensagens humanas para conflitos e indisponibilidade no checkout e nos portais | Codigo/texto | Proposto | - |
 | APL-S06-05 | S06-006, S06-007 | P3 | Catalogo de beats sem N+1; arquivo baixado com o titulo do beat | Codigo | Proposto | - |
@@ -65,10 +65,10 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S10-01 | S10-001 | P2 | Anular pagamento manual (Pix direto) com motivo, auditoria, recalculo da cobranca e revisao das liberacoes | Codigo | Concluido | #98 |
-| APL-S10-02 | S10-002 | P2 | Repasse: bloquear ou exigir confirmacao com motivo quando a cobranca nao estiver quitada; mostrar situacao do cliente | Codigo | Concluido | #98 |
+| APL-S10-01 | S10-001 | P2 | Anular pagamento manual (Pix direto) com motivo, auditoria, recalculo da cobranca e revisao das liberacoes | Codigo | Publicado | #98 |
+| APL-S10-02 | S10-002 | P2 | Repasse: bloquear ou exigir confirmacao com motivo quando a cobranca nao estiver quitada; mostrar situacao do cliente | Codigo | Publicado | #98 |
 | APL-S10-03 | S10-003, S06-003 | P2 | Fila de conciliacao (divergencias, chargeback, reembolso parcial, tentativa externa pendente) com alerta no dashboard | Codigo | Proposto | - |
-| APL-S10-04 | S10-004 | P3 | Travar a linha ao liberar/pagar repasse | Codigo | Concluido | #98 |
+| APL-S10-04 | S10-004 | P3 | Travar a linha ao liberar/pagar repasse | Codigo | Publicado | #98 |
 
 ### S07 - Portal do Cliente ([diagnostico](auditoria/S07_PORTAL_CLIENTE.md))
 
@@ -110,7 +110,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S03-01 | S03-001 | P2 | Recalcular o orcamento no servidor a partir da selecao; Admin ve "estimado pelo visitante" separado | Codigo | Concluido | #99 |
+| APL-S03-01 | S03-001 | P2 | Recalcular o orcamento no servidor a partir da selecao; Admin ve "estimado pelo visitante" separado | Codigo | Publicado | #99 |
 | APL-S03-02 | S03-002 | P3 | Campo isca e limite persistente no formulario publico | Codigo; com APL-S12-03 | Proposto | - |
 
 ### S04 - Catalogo ([diagnostico](auditoria/S04_CATALOGO.md))
@@ -149,8 +149,8 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Lote | Tema | Itens | Status |
 | --- | --- | --- | --- |
-| 1 | Seguranca de sessao | APL-S02-01 | Concluido (PR #96, publicado em 24/10/2026) |
-| 2 | Integridade comercial e financeira | APL-S06-01, APL-S06-02, APL-S10-01, APL-S10-02, APL-S03-01 (+ APL-S10-04) | Concluido (PRs #97, #98, #99, publicados em 24/10/2026) |
+| 1 | Seguranca de sessao | APL-S02-01 | Publicado (PR #96, 24/10/2026) |
+| 2 | Integridade comercial e financeira | APL-S06-01, APL-S06-02, APL-S10-01, APL-S10-02, APL-S03-01 (+ APL-S10-04) | Publicado (PRs #97, #98, #99, 24/10/2026) |
 | 3 | Entrada e conta | APL-S02-02, APL-S02-03, APL-S02-07 + APL-S12-03, APL-S02-08, APL-S02-09, APL-S02-10 | Proposto |
 | 4 | Visibilidade da operacao | APL-S09-01, APL-S11-01, APL-S08-02, APL-S10-03, APL-S04-01 | Proposto |
 | 5 | Confiabilidade e CI | APL-S12-01, APL-S12-02, APL-S12-04, APL-S06-03 | Proposto |
