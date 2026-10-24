@@ -46,6 +46,54 @@ class UsuarioTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(SETUP + source)
 
+    def test_sessions_end_on_rename_deactivation_and_role_change(self):
+        # AUD6-S02-001/002 regression.
+        self.run_case(r'''
+def token(username, av):
+    return {'Authorization': 'Bearer ' + create_access_token({'sub': username, 'av': av})}
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        admin = bearer('admin')
+        login = await client.post('/auth/login', json={'username': 'produtor', 'password': 'producer-pass'})
+        assert login.status_code == 200, login.text
+        old = {'Authorization': 'Bearer ' + login.json()['access_token']}
+        assert (await client.get('/auth/me', headers=old)).json()['id'] == 2
+
+        # Rename, then reuse the old login for a new admin: the old session must not follow it.
+        renamed = await client.patch('/usuarios/2', headers=admin, json={'username': 'produtor-antigo'})
+        assert renamed.status_code == 200, renamed.text
+        created = await client.post('/usuarios', headers=admin, json={
+            'username': 'produtor', 'password': 'another-password', 'role': 'admin'})
+        assert created.status_code == 201, created.text
+        assert (await client.get('/auth/me', headers=old)).status_code == 401
+        with Session(engine) as db:
+            assert db.get(UsuarioModel, 2).auth_version == 1
+
+        # A token bound to another account id is rejected even with a matching login/version.
+        forged = {'Authorization': 'Bearer ' + create_access_token({'sub': 'produtor', 'av': 0, 'uid': 2})}
+        assert (await client.get('/auth/me', headers=forged)).status_code == 401
+
+        # Deactivate and reactivate: sessions issued before stay invalid.
+        before = token('produtor-antigo', 1)
+        assert (await client.get('/auth/me', headers=before)).status_code == 200
+        assert (await client.patch('/usuarios/2', headers=admin, json={'ativo': False})).status_code == 200
+        assert (await client.patch('/usuarios/2', headers=admin, json={'ativo': True})).status_code == 200
+        assert (await client.get('/auth/me', headers=before)).status_code == 401
+        relogin = await client.post('/auth/login', json={'username': 'produtor-antigo', 'password': 'producer-pass'})
+        assert relogin.status_code == 200
+        fresh = {'Authorization': 'Bearer ' + relogin.json()['access_token']}
+        assert (await client.get('/auth/me', headers=fresh)).status_code == 200
+
+        # Changing only the display name keeps the session; a role change ends it.
+        kept = await client.patch('/usuarios/2', headers=admin, json={'nome_exibicao': 'Produtor'})
+        assert kept.status_code == 200 and (await client.get('/auth/me', headers=fresh)).status_code == 200
+        assert (await client.patch('/usuarios/2', headers=admin, json={'role': 'admin'})).status_code == 200
+        assert (await client.get('/auth/me', headers=fresh)).status_code == 401
+        with Session(engine) as db:
+            assert db.get(UsuarioModel, 2).auth_version == 3
+asyncio.run(check())
+''')
+
     def test_crud_permissions_passwords_and_history(self):
         self.run_case(r'''
 async def check():
@@ -97,7 +145,8 @@ async def check():
         })
         assert reset.status_code == 200 and all('password' not in key for key in reset.json())
         with Session(engine) as db:
-            assert db.get(UsuarioModel, identifier).auth_version == 1
+            # Rename + role change ended sessions (1); the password reset ends them again (2).
+            assert db.get(UsuarioModel, identifier).auth_version == 2
         assert (await client.post('/auth/login', json={'username':'usuario_editado', 'password':'new-password'})).status_code == 401
         assert (await client.post('/auth/login', json={'username':'usuario_editado', 'password':'reset-password'})).status_code == 200
 

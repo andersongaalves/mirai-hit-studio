@@ -206,7 +206,8 @@ async def check():
         producer = await client.patch('/usuarios/3', headers=bearer('admin'), json={'role':'produtor'})
         assert producer.status_code == 200, producer.text
         assert producer.json()['cliente_id'] is None
-        assert (await client.get('/portal/cliente/producoes', headers=bearer('client-a'))).status_code == 403
+        # The role change also ends the open session (AUD6-S02-002).
+        assert (await client.get('/portal/cliente/producoes', headers=bearer('client-a'))).status_code == 401
 asyncio.run(check())
 ''')
 

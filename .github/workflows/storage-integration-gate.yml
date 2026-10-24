@@ -176,6 +176,8 @@ jobs:
                     test_portal_produtor.py \
                     test_portal_produtor_operacao.py \
                     test_portal_cliente.py \
+                    test_usuarios.py \
+                    test_audit_logs.py \
                     test_portal_cliente_operacao.py \
                     test_producao.py \
                     test_authenticated_checkout.py \
