@@ -212,6 +212,18 @@ async def check():
 asyncio.run(check())
 """)
 
+    def test_admin_license_actions_require_admin_and_reason(self):
+        self.run_case(r"""
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
+        assert (await api.post('/admin/beats/licencas/999/liberar', headers=bearer('client-a'), json={'motivo':'x'})).status_code == 403
+        assert (await api.post('/admin/beats/licencas/999/liberar', headers=bearer('admin'), json={'motivo':''})).status_code == 422
+        assert (await api.post('/admin/beats/licencas/999/liberar', headers=bearer('admin'), json={'motivo':'x'})).status_code == 404
+        assert (await api.post('/admin/beats/999/voltar-ao-catalogo', headers=bearer('producer-a'), json={'motivo':'x'})).status_code == 403
+        assert (await api.post('/admin/beats/999/voltar-ao-catalogo', headers=bearer('admin'), json={'motivo':'x'})).status_code == 404
+asyncio.run(check())
+""")
+
     def test_proposal_item_contract_rejects_incomplete_or_mixed_origin(self):
         self.run_case(r"""
 from pydantic import ValidationError
@@ -269,4 +281,155 @@ with Session(engine) as db:
     assert beat.status == 'vendido' and beat.ativo is False
     assert license.status == 'adquirida' and license.adquirida_em is not None
     assert beat_service._available_files(beat, license.tipo) == ['mp3', 'wav', 'multitrack']
+""")
+
+
+RESERVATION_SETUP = r"""
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+from models import AuditLogModel, BeatLicencaModel, BeatModel, ClienteModel, OrcamentoModel, PagamentoModel
+from models.enums.financeiro import PagamentoStatus, PagamentoTipo
+from services import beat_service, financial_service, producao_liberacao_service
+from fastapi import HTTPException
+from core import config
+import resend
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+def make_beat(db):
+    db.add_all([ClienteModel(id=91, nome='Cliente 1', email='c1@example.test'), ClienteModel(id=92, nome='Cliente 2', email='c2@example.test')])
+    db.get(OrcamentoModel, 1).cliente_id = 91; db.get(OrcamentoModel, 2).cliente_id = 92
+    beat = BeatModel(produtor_id=1, titulo='Prazo', descricao='', generos='Trap', preco_lease=100,
+        preco_exclusivo=500, status='aprovado', ativo=True, original_ref='r2://temp/arquivos/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        original_sha256='a'*64, preview_ref='r2://temp/arquivos/cccccccccccccccccccccccccccccccc/dddddddddddddddddddddddddddddddd',
+        preview_sha256='b'*64, tamanho_bytes=10, mime_type='audio/mpeg')
+    db.add(beat); db.commit()
+    return beat
+def accepted(db, budget_id, beat, kind, price, mail):
+    proposal = service.criar_por_orcamento(db, budget_id)
+    proposal = service.atualizar(db, proposal.id, PropostaUpdate(itens=[{'descricao':'Beat','quantidade':1,'valor_unitario':price,'beat_id':beat.id,'licenca_beat':kind}]))
+    with patch.object(resend.Emails, 'send', return_value={'id':mail}): commercial.enviar(db, proposal.id)
+    commercial.aprovar(db, proposal.id)
+    return proposal
+def license_of(db, proposal_id):
+    return db.scalar(select(BeatLicencaModel).where(BeatLicencaModel.proposta_id == proposal_id))
+def age(db, license, hours):
+    license.expira_em = datetime.now(timezone.utc) - timedelta(hours=hours)
+    db.commit()
+def pay(db, proposal_id, amount):
+    charge = financial_service.buscar_por_proposta(db, proposal_id)
+    payment = financial_service.registrar_pagamento(db, charge.id, tipo=PagamentoTipo.INTEGRAL, valor=Decimal(amount), status=PagamentoStatus.APROVADO)
+    producao_liberacao_service.avaliar_liberacao_producao(db, charge.id)
+    db.commit()
+    return charge, payment
+"""
+
+
+class BeatReservationTests(unittest.TestCase):
+    """Etapa 07, APL-S06-01/02 (AUD6-S06-001 and AUD6-S06-002)."""
+
+    def run_case(self, source):
+        isolated.BootstrapTests().run_case(COMMERCIAL_SETUP + RESERVATION_SETUP + textwrap.dedent(source))
+
+    def test_expired_exclusive_reservation_frees_the_catalog_and_blocks_checkout(self):
+        self.run_case(r"""
+with Session(engine) as db:
+    beat = make_beat(db)
+    first = accepted(db, 1, beat, 'exclusivo', '500', 'm1')
+    license = license_of(db, first.id)
+    assert license.status == 'reservada' and license.expira_em is not None
+    assert beat_service.client_list(db) == []
+    assert beat_service.checkout_blocked_reason(db, first.id) is None
+    # A recent pending Pix keeps the reservation past its deadline.
+    charge = financial_service.buscar_por_proposta(db, first.id)
+    pending = financial_service.registrar_pagamento(db, charge.id, tipo=PagamentoTipo.INTEGRAL, valor=Decimal('500'), status=PagamentoStatus.PENDENTE)
+    db.commit()
+    age(db, license, 1)
+    assert beat_service.expire_reservations(db) == 0 and license.status == 'reservada'
+    pending.created_at = datetime.now(timezone.utc) - timedelta(hours=30)
+    pending.status = PagamentoStatus.CANCELADO.value
+    db.commit()
+    catalog = beat_service.client_list(db)
+    db.refresh(license)
+    assert license.status == 'cancelada' and license.motivo_cancelamento == 'expirada' and license.cancelada_em
+    assert [item['id'] for item in catalog] == [beat.id] and catalog[0]['preco_exclusivo'] == 500
+    assert 'expirou' in beat_service.checkout_blocked_reason(db, first.id)
+    assert db.query(AuditLogModel).filter_by(action='beat.licenca.expirada', entity_id=license.id).count() == 1
+    # The beat can now be reserved by someone else.
+    second = accepted(db, 2, beat, 'lease', '100', 'm2')
+    assert license_of(db, second.id).status == 'reservada'
+""")
+
+    def test_payment_after_expiry_is_honoured_only_when_the_beat_is_still_free(self):
+        self.run_case(r"""
+with Session(engine) as db:
+    beat = make_beat(db)
+    first = accepted(db, 1, beat, 'lease', '100', 'm1')
+    license = license_of(db, first.id)
+    age(db, license, 1)
+    beat_service.expire_reservations(db); db.commit()
+    assert license.status == 'cancelada'
+    charge, payment = pay(db, first.id, '100')
+    db.refresh(license); db.refresh(payment)
+    assert license.status == 'adquirida' and license.motivo_cancelamento is None
+    assert payment.reconciliation_status is None
+
+    second = accepted(db, 2, beat, 'exclusivo', '500', 'm2')
+    exclusive = license_of(db, second.id)
+    age(db, exclusive, 1)
+    beat_service.expire_reservations(db); db.commit()
+    db.get(OrcamentoModel, 3).cliente_id = 91; db.commit()
+    other = accepted(db, 3, beat, 'exclusivo', '500', 'm3')
+    assert license_of(db, other.id).status == 'reservada'
+    charge, payment = pay(db, second.id, '500')
+    db.refresh(exclusive); db.refresh(payment); db.refresh(beat)
+    assert exclusive.status == 'cancelada' and beat.status == 'aprovado'
+    assert payment.reconciliation_status == 'conflict' and payment.reconciliation_reason == 'beat_reservation_released'
+""")
+
+    def test_refund_revokes_access_and_admin_decides_on_relisting(self):
+        self.run_case(r"""
+admin = type('Actor', (), {'id': 1})()
+with Session(engine) as db:
+    beat = make_beat(db)
+    first = accepted(db, 1, beat, 'exclusivo', '500', 'm1')
+    license = license_of(db, first.id)
+    try: beat_service.relist(db, beat.id, 'teste', admin)
+    except HTTPException as error: assert error.status_code == 409
+    else: raise AssertionError('relisted an approved beat')
+    charge, payment = pay(db, first.id, '500')
+    db.refresh(beat); db.refresh(license)
+    assert license.status == 'adquirida' and beat.status == 'vendido'
+    payment.status = PagamentoStatus.REEMBOLSADO.value
+    financial_service.sincronizar_status(charge)
+    producao_liberacao_service.avaliar_cobranca_bloqueada(db, charge)
+    db.commit(); db.refresh(license); db.refresh(beat)
+    assert license.status == 'cancelada' and license.motivo_cancelamento == 'pagamento_revertido'
+    assert beat.status == 'vendido' and beat.ativo is False
+    assert beat_service.client_list(db) == []
+    listed = [item for item in beat_service.admin_list(db) if item['id'] == beat.id][0]
+    assert listed['pode_voltar_ao_catalogo'] is True and listed['licencas'][0]['motivo_cancelamento'] == 'pagamento_revertido'
+    try: beat_service.relist(db, beat.id, '  ', admin)
+    except HTTPException as error: assert error.status_code == 422
+    else: raise AssertionError('relist without reason')
+    relisted = beat_service.relist(db, beat.id, 'Reembolso confirmado', admin)
+    assert relisted['status'] == 'aprovado' and relisted['ativo'] is True
+    assert [item['id'] for item in beat_service.client_list(db)] == [beat.id]
+    assert db.query(AuditLogModel).filter_by(action='beat.licenca.revogada').count() == 1
+    assert db.query(AuditLogModel).filter_by(action='beat.relistado', actor_user_id=1).count() == 1
+""")
+
+    def test_admin_releases_an_open_reservation_with_a_reason(self):
+        self.run_case(r"""
+admin = type('Actor', (), {'id': 1})()
+with Session(engine) as db:
+    beat = make_beat(db)
+    first = accepted(db, 1, beat, 'exclusivo', '500', 'm1')
+    license = license_of(db, first.id)
+    released = beat_service.release_reservation(db, license.id, 'Cliente desistiu', admin)
+    assert released['status'] == 'cancelada' and released['motivo_cancelamento'] == 'admin'
+    try: beat_service.release_reservation(db, license.id, 'De novo', admin)
+    except HTTPException as error: assert error.status_code == 409
+    else: raise AssertionError('released twice')
+    assert [item['id'] for item in beat_service.client_list(db)] == [beat.id]
+    entry = db.query(AuditLogModel).filter_by(action='beat.licenca.liberada').one()
+    assert entry.actor_user_id == 1
 """)

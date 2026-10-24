@@ -21,6 +21,7 @@ from fastapi import (
 from fastapi.responses import Response
 from pydantic import ValidationError
 from schemas.beat import (
+    BeatAdminAction,
     BeatCreate,
     BeatRequest,
     BeatReview,
@@ -185,6 +186,16 @@ def admin_beat_config(db: Db, user: Admin):
 @router.put("/admin/beats/configuracao", response_model=BeatUploadLimits)
 def update_admin_beat_config(payload: BeatUploadLimits, db: Db, user: Admin):
     return beat_upload_config_service.update(db, payload, user)
+
+
+@router.post("/admin/beats/licencas/{license_id}/liberar")
+def release_beat_reservation(license_id: int, payload: BeatAdminAction, db: Db, user: Admin):
+    return beat_service.release_reservation(db, license_id, payload.motivo, user)
+
+
+@router.post("/admin/beats/{beat_id}/voltar-ao-catalogo")
+def relist_beat(beat_id: int, payload: BeatAdminAction, db: Db, user: Admin):
+    return beat_service.relist(db, beat_id, payload.motivo, user)
 
 
 @router.patch("/admin/beats/{beat_id}")

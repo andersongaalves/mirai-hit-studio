@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     MERCADO_PAGO_TIMEOUT_SECONDS: float = 10.0
     MERCADO_PAGO_3DS_VALIDATION: Literal["never", "on_fraud_risk"] = "on_fraud_risk"
     COMMERCIAL_PIPELINE_V2_ENABLED: bool = False
+    BEAT_RESERVATION_HOURS: int = Field(default=48, ge=1, le=720)
     AUDIO_TAG_WORKER_ENABLED: bool = True
 
     # Storage core. Existing product flows remain on their legacy factories until

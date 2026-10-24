@@ -56,6 +56,7 @@ export function reconciliationReason(value) {
         currency_mismatch: "Moeda divergente",
         overpayment: "Valor pago acima do contratado",
         invalid_status_transition: "Transição de status inválida",
+        beat_reservation_released: "Pagamento após a reserva do beat ser liberada",
     };
     return labels[value] || "Revisão operacional necessária";
 }
