@@ -6,6 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 import argparse
 from getpass import getpass
 from schemas.usuario import LoginRequest
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import SessionLocal
@@ -41,7 +42,7 @@ db = SessionLocal()
 try:
 
     existe = (
-        db.query(UsuarioModel).filter(UsuarioModel.username == args.username).first()
+        db.query(UsuarioModel).filter(func.lower(UsuarioModel.username) == args.username.lower()).first()
     )
 
     if existe:

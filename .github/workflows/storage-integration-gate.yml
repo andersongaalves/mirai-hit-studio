@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["c6e8a0b2d4f1"], heads
+                  assert heads == ["d8f0b2c4e6a3"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -215,6 +215,7 @@ jobs:
                     test_audio_tags.py \
                     test_recursos.py \
                     test_busca_admin.py \
+                    test_uso_infra.py \
                     test_protecao.py \
                     test_portfolio_taxonomy.py \
                     test_catalogo.py \
@@ -289,9 +290,14 @@ jobs:
                   node frontend/tests/seo_content_h2.cjs
                   node frontend/tests/seo_technical.cjs
                   node frontend/tests/style_architecture.cjs
+                  node frontend/tests/uso_infra.cjs
                   node frontend/tests/csp_enforced.cjs
                   node frontend/tests/session_expiry.cjs
                   node frontend/tests/admin_search.cjs
+                  # APL-S12-01: real proposal HTML/PDF from the backend feed the document suite.
+                  (cd backend && PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout python -m unittest discover -s tests -p 'test_proposta_documento.py')
+                  PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout node frontend/tests/proposta_documento.cjs
+                  node frontend/tests/performance_h3.cjs > /tmp/mirai-performance-h3.json
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend
@@ -399,6 +405,7 @@ jobs:
                     backend/migrations/versions/a4c6e8f0b217_beat_reserva_prazo.py \
                     backend/migrations/versions/b5d7f9a1c328_limites_persistentes.py \
                     backend/migrations/versions/c6e8a0b2d4f1_notificacoes_admin.py \
+                    backend/migrations/versions/d8f0b2c4e6a3_login_sem_maiusculas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
                     backend/routers/auth.py \
@@ -465,7 +472,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic c6e8a0b2d4f1: passed"
+                    echo "- PostgreSQL 17 and Alembic d8f0b2c4e6a3: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"
