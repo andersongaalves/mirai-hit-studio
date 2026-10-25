@@ -63,45 +63,64 @@ with Session(engine) as db:
     assert 'client_access.signup_activated' in actions
 ''')
 
-    def test_commercial_identity_and_existing_account_do_not_get_claimed(self):
+    def test_studio_client_with_same_email_gets_confirmation_others_reconcile(self):
+        # AUD6-S02 follow-up: a client the studio created (budget/proposal) can sign up
+        # with the same e-mail; the link goes to that inbox and joins the existing record.
         self.run_case(r'''
+from datetime import datetime, timezone
 with Session(engine) as db:
     commercial = ClienteModel(
         nome='Cliente Comercial', email='teste@example.com',
         telefone='11988887777', observacoes='', ativo=True,
     )
-    db.add(commercial)
+    phone_only = ClienteModel(
+        nome='Outro Cliente', email='outro@example.com',
+        telefone='11977776666', observacoes='', ativo=True,
+    )
+    db.add_all([commercial, phone_only])
     db.commit()
     before_clients = db.query(ClienteModel).count()
-    with patch.object(EmailService, 'enviar_confirmacao_cadastro') as email:
-        first = access.request_signup(
-            db,
-            signup_data(email='TESTE@example.com', telefone=commercial.telefone),
-            'source-commercial',
-            'signup-commercial',
-        )
-    assert first == access._generic_signup_response()
-    assert email.call_count == 0
-    assert db.query(ClienteModel).count() == before_clients
-    assert db.query(ClienteAcessoModel).count() == 0
-    assert db.query(AuditLogModel).filter_by(
-        action='client_access.signup_reconciliation_required'
-    ).count() == 1
 
-    commercial_user = UsuarioModel(
-        username='existing_client', password_hash='not-used', role='cliente',
-        is_admin=False, ativo=True, cliente_id=commercial.id,
-    )
-    db.add(commercial_user)
-    db.commit()
+    # Same phone, different e-mail: never claimed, nothing sent.
     with patch.object(EmailService, 'enviar_confirmacao_cadastro') as email:
-        second = access.request_signup(
-            db,
-            signup_data(email=commercial.email, telefone=None),
-            'source-existing',
-            'signup-existing',
-        )
-    assert second == first and email.call_count == 0
+        result = access.request_signup(
+            db, signup_data(email='intruso@example.com', telefone=phone_only.telefone), 'source-phone', 'signup-phone')
+    assert result == access._generic_signup_response() and email.call_count == 0
+    assert db.query(ClienteAcessoModel).count() == 0
+    assert db.query(AuditLogModel).filter_by(action='client_access.signup_reconciliation_required').count() == 1
+
+    # Exact e-mail (any case) of one studio client without portal access: linked.
+    with patch.object(EmailService, 'enviar_confirmacao_cadastro', return_value={'id': 'linked'}) as email:
+        linked = access.request_signup(
+            db, signup_data(email='TESTE@example.com', telefone=commercial.telefone), 'source-commercial', 'signup-commercial')
+    assert linked == access._generic_signup_response() and email.call_count == 1
+    assert email.call_args.args[0].id == commercial.id
+    assert db.query(ClienteModel).count() == before_clients
+    pending = db.query(ClienteAcessoModel).one()
+    assert pending.cliente_id == commercial.id and pending.origem == 'public_signup'
+    assert db.query(AuditLogModel).filter_by(action='client_access.signup_linked_existing').count() == 1
+
+    # An expired link never deletes the client the studio already had.
+    pending.token_expires_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    db.commit()
+    access.cleanup_expired(db)
+    db.commit()
+    assert db.get(ClienteModel, commercial.id) is not None
+
+    # With a fresh signup again the account is created on the same client.
+    with patch.object(EmailService, 'enviar_confirmacao_cadastro', return_value={'id': 'linked-2'}) as email:
+        access.request_signup(db, signup_data(email=commercial.email, telefone=None), 'source-again', 'signup-again')
+    assert email.call_count == 1
+    user = access.activate(db, ClientInviteActivation(
+        token=raw_token(email), username='cliente_comercial', password='secure-password'
+    ), 'activation-source', 'signup-activate')
+    assert user.cliente_id == commercial.id
+    assert db.get(ClienteModel, commercial.id).nome == 'Cliente Comercial'  # studio data kept
+
+    # A client that already has an account is never claimed again.
+    with patch.object(EmailService, 'enviar_confirmacao_cadastro') as email:
+        again = access.request_signup(db, signup_data(email=commercial.email, telefone=None), 'source-existing', 'signup-existing')
+    assert again == access._generic_signup_response() and email.call_count == 0
     assert db.query(UsuarioModel).filter_by(cliente_id=commercial.id).count() == 1
 ''')
 
