@@ -62,7 +62,8 @@ jobs:
                   i = t.rfind("Traceback (most recent call last)")
                   j = t.find("\n----------", i)
                   seg = t[i:j if j > 0 else len(t)]
-                  print(seg[-2600:])
+                  errs = [l for l in seg.splitlines() if re.match(r"^[A-Za-z_.]+(Error|Exception|Failed)\b", l) or l.startswith("[SQL")]
+                  print("ERRLINES", " || ".join(errs)[-1700:])
                   PY
                   for pattern in test_usuarios.py test_client_access.py; do
                     python -m unittest discover -s tests -p "$pattern" > out.txt 2>&1
