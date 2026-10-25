@@ -1,0 +1,100 @@
+name: TEMP diagnose
+
+on:
+    push:
+        branches: [fix/s12-limitador-persistente]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: tmp-diag-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    commerce-domain:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        services:
+            postgres:
+                # Same official digest; a rerun uses the alternate registry if the shared quota fails.
+                image: ${{ github.run_attempt > 1 && 'public.ecr.aws/docker/library/postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826' || 'docker.io/library/postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826' }}
+                env:
+                    POSTGRES_DB: mirai_portals_e2e
+                    POSTGRES_USER: mirai_e2e
+                    POSTGRES_PASSWORD: mirai_e2e_disposable
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U mirai_e2e -d mirai_portals_e2e"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 12
+        env:
+            APP_ENV: test
+            DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
+            MIRAI_PORTALS_E2E_DATABASE_URL: postgresql+psycopg2://mirai_e2e:mirai_e2e_disposable@127.0.0.1:5432/mirai_portals_e2e
+            MIRAI_PORTALS_E2E_ALLOW: POSTGRES_17_DISPOSABLE_ONLY
+            API_NAME: Mirai commerce domain E2E
+            API_VERSION: "2.0"
+            DEBUG: "false"
+            HOST: 127.0.0.1
+            PORT: "8000"
+            LOG_LEVEL: WARNING
+            SECRET_KEY: commerce-domain-e2e-only-secret
+            ALGORITHM: HS256
+            ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+            REFRESH_TOKEN_EXPIRE_DAYS: "7"
+            ALLOWED_ORIGINS: http://localhost:4173
+            BACKUP_FOLDER: /tmp/mirai-commerce-domain
+            BACKUP_KEEP_DAYS: "1"
+            RESEND_API_KEY: test-only
+            EMAIL_FROM: commerce-e2e@example.invalid
+            ADMIN_EMAIL: commerce-e2e@example.invalid
+            AI_ENABLED: "false"
+            AI_EMAIL_ENABLED: "false"
+
+        steps:
+            - name: Check out source
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version-file: backend/.python-version
+                  cache: pip
+                  cache-dependency-path: |
+                      backend/requirements.txt
+                      backend/requirements-test.txt
+
+            - name: Install dependencies
+              run: |
+                  set -euo pipefail
+                  python -m pip install --disable-pip-version-check -r backend/requirements-test.txt
+                  python -m pip install --disable-pip-version-check ruff==0.16.9
+
+            - name: Prepare disposable PostgreSQL 17
+              working-directory: backend
+              run: |
+                  set -euo pipefail
+                  python -m scripts.bootstrap_database
+                  python -m alembic heads
+
+            - name: Validate migration and PostgreSQL concurrency
+              continue-on-error: true
+              working-directory: backend
+              run: |
+                  set -euo pipefail
+                  python -m unittest discover -s tests -p 'test_commerce_policy_postgres.py' -v
+
+            - name: TEMP diagnose
+              working-directory: backend
+              shell: bash
+              run: |
+                  for pattern in 'test_commerce_domain.py' 'test_proposta_*.py' 'test_financeiro.py' 'test_checkout.py' 'test_mercado_pago.py' 'test_mercado_pago_webhooks.py' 'test_commercial_journey_i2.py' 'test_producao.py' 'test_producao_etapas.py' 'test_combos.py' 'test_cotas_arquivo.py' 'test_politicas.py' 'test_entrega_final.py' 'test_contato_cliente_produtor.py' 'test_catalogo_prazo.py' 'test_promocoes.py' 'test_portal_notificacoes.py' 'test_catalogo.py' 'test_emails.py' 'test_portal_produtor.py' 'test_portal_cliente.py' 'test_usuarios.py' 'test_audit_logs.py' 'test_client_access.py' 'test_client_signup.py' 'test_security_phase_e.py' 'test_password_recovery.py' 'test_storage_core.py' 'test_proposta_storage.py' 'test_commerce_policy_postgres.py'; do
+                    if ! python -m unittest discover -s tests -p "$pattern" > /tmp/out.txt 2>&1; then
+                      body=$(grep -v "^ok$" /tmp/out.txt | grep -E "Error|FAIL|assert|Traceback|line [0-9]+|429|limit" | tail -n 40 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+                      echo "::error::DIAG $pattern%0A$body"
+                    fi
+                  done
+
