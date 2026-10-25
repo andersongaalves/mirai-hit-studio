@@ -287,6 +287,7 @@ jobs:
                   node frontend/tests/seo_content_h2.cjs
                   node frontend/tests/seo_technical.cjs
                   node frontend/tests/style_architecture.cjs
+                  node frontend/tests/csp_enforced.cjs
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend

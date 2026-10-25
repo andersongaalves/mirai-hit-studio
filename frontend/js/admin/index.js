@@ -119,6 +119,19 @@ expose("fecharModalCliente", Clientes.closeClienteModal);
 
 expose("salvarConfiguracoesExtras", Config.salvarConfiguracoesExtras);
 
+// AUD6-S02-007: no inline handlers, so the enforced CSP does not need 'unsafe-inline' for scripts.
+const ADMIN_ACTIONS = new Set([
+    "fazerLogout", "abrirEditorServico", "adicionarParametroBloco", "salvarServico", "fecharEditorServico",
+    "novoProjeto", "salvarConfiguracoesExtras", "novoCliente", "fecharModalProjeto", "salvarProjeto",
+    "fecharModalOrcamento", "fecharEditorProposta", "fecharModalCliente", "fecharModalProducao",
+]);
+document.addEventListener("click", event => {
+    const control = event.target.closest?.("[data-admin-action]");
+    const action = control?.dataset.adminAction;
+    if (!action || !ADMIN_ACTIONS.has(action) || control.disabled) return;
+    window[action]?.();
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         initializeAdminShell({
