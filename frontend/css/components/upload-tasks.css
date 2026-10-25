@@ -9,3 +9,5 @@
 .upload-tasks-dialog li[data-state="completed"] { border-color: var(--color-success, #39d98a); }
 .upload-tasks-dialog li[data-state="failed"] { border-color: var(--color-danger, #ff7a90); }
 .upload-tasks-dialog li span { color: var(--color-text-secondary); }
+/* AUD6-S07-003: room below the content so the floating button never covers it. */
+body.has-upload-tasks { padding-bottom: 132px; }

@@ -319,8 +319,16 @@ def client_list(db):
         active = reserved.get(row.id, [])
         if "exclusivo" in active:
             continue
-        result.append(_response(db, row, exclusive_available=not active))
+        result.append(_public_response(_response(db, row, exclusive_available=not active)))
     return result
+
+
+# AUD6-S07-002: clients and other producers see the offer, not moderation data.
+_PRIVATE_FIELDS = ("produtor_id", "status", "ativo", "motivo_rejeicao")
+
+
+def _public_response(item):
+    return {key: value for key, value in item.items() if key not in _PRIVATE_FIELDS}
 
 
 def acquired_multitracks(db, actor):

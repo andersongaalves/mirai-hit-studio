@@ -329,7 +329,8 @@ function financePanel(finance) {
             ["Valor pago", formatMoney(charge.valor_pago)],
         ]),
         ["Saldo pendente", formatMoney(charge.saldo_pendente)],
-        ["Vencimento", formatDate(charge.vencimento)],
+        // AUD6-S07-004: an empty due date is left out instead of shown as content.
+        ...(charge.vencimento ? [["Vencimento", formatDate(charge.vencimento)]] : []),
     ].forEach(([label, value]) => {
         const item = element("div", "client-finance-item");
         item.append(element("span", "", label), element("strong", "", value));
@@ -361,7 +362,7 @@ export function renderDetail(production, files, finance, handlers) {
     const overview = element("section", "producer-detail__panel");
     overview.append(
         element("h2", "", "Informações"),
-        element("p", "", `Prazo: ${formatDate(production.prazo_entrega)}`),
+        element("p", "", production.prazo_entrega ? `Prazo: ${formatDate(production.prazo_entrega)}` : "Prazo: a combinar com o estúdio"),
         element("p", "", nextAction(production, finance)),
     );
     const progress = element("section", "producer-detail__panel");

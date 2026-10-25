@@ -56,19 +56,9 @@
     background: transparent;
     font: 700 14px/20px var(--font-acoes);
 }
+/* AUD6-S07-005: one identical generic glyph on every item added noise, not meaning. */
 .producer-body .producer-nav a::before,
-.client-body .producer-nav a::before {
-    display: block;
-    width: 13px;
-    height: 13px;
-    flex: 0 0 13px;
-    margin: 0 10px 0 0;
-    border: 1px solid currentColor;
-    border-radius: 2px;
-    background: linear-gradient(90deg, transparent 44%, currentColor 45% 55%, transparent 56%),
-        linear-gradient(transparent 44%, currentColor 45% 55%, transparent 56%);
-    opacity: .75;
-}
+.client-body .producer-nav a::before { content: none; display: none; }
 .producer-body .producer-nav a[aria-current="page"],
 .client-body .producer-nav a[aria-current="page"] {
     border-color: var(--integrado-cyan);

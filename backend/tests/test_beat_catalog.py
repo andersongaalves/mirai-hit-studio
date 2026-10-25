@@ -92,6 +92,7 @@ async def check():
             catalog = (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json()
             assert [item['id'] for item in catalog] == [beat_id]
             assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330 and catalog[0]['capa_url']
+            assert not {'produtor_id', 'status', 'ativo', 'motivo_rejeicao'} & set(catalog[0])
             preview = await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))
             assert preview.content == mp3()+b'tag' and preview.headers['cache-control'] == 'private, no-store'
             producer_catalog = await api.get('/portal/produtor/catalogo-beats', headers=bearer('producer-b'))
