@@ -164,3 +164,8 @@ export async function listarCotas(producaoId) {
         "Não foi possível carregar as cotas de arquivos.",
     );
 }
+
+// AUD6-S08-001: tag state for the dashboard notice (secondary; failures are ignored).
+export async function obterTag() {
+    return responseData(await authFetch("/portal/produtor/audio-tag"), "Não foi possível carregar sua tag.");
+}

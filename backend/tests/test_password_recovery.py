@@ -111,6 +111,63 @@ with Session(engine) as db:
     assert 'client_access.recovery_token_rejected' in actions
 ''')
 
+    def test_studio_account_recovers_with_registered_email_and_changes_own_password(self):
+        # AUD6-S02-004: producers and staff recover through the e-mail registered by the studio.
+        self.run_case(r'''
+from core.security import get_password_hash
+with Session(engine) as db:
+    producer = UsuarioModel(username='producer-rec', password_hash=get_password_hash('old-producer-pass'),
+                            role='produtor', is_admin=False, ativo=True, email='producer@example.com')
+    inactive = UsuarioModel(username='producer-off', password_hash=get_password_hash('old-producer-pass'),
+                            role='produtor', is_admin=False, ativo=False, email='off@example.com')
+    db.add_all([producer, inactive])
+    db.commit()
+    old_jwt = create_access_token({'sub': 'producer-rec', 'av': 0, 'uid': producer.id})
+
+async def check():
+    with patch.object(EmailService, 'enviar_recuperacao_senha', return_value={'id':'recovery-message'}) as sent:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+            requested = await client.post('/auth/password-recovery', json={'email': 'Producer@Example.com'})
+            assert requested.status_code == 202, requested.text
+            assert sent.call_count == 1 and sent.call_args.args[0].email == 'producer@example.com'
+            ignored = await client.post('/auth/password-recovery', json={'email': 'off@example.com'})
+            assert ignored.status_code == 202 and ignored.json() == requested.json() and sent.call_count == 1
+            token = recovery_token(sent)
+            reset = await client.post('/auth/password-recovery/reset', json={'token': token, 'password': 'new-producer-pass'})
+            assert reset.status_code == 200, reset.text
+            replay = await client.post('/auth/password-recovery/reset', json={'token': token, 'password': 'other-producer-pass'})
+            assert replay.status_code in (409, 422)
+            assert (await client.get('/auth/me', headers={'Authorization': 'Bearer ' + old_jwt})).status_code == 401
+            login = await client.post('/auth/login', json={'username': 'producer-rec', 'password': 'new-producer-pass'})
+            assert login.status_code == 200, login.text
+            headers = {'Authorization': 'Bearer ' + login.json()['access_token']}
+            wrong = await client.post('/auth/senha', headers=headers, json={'senha_atual': 'nope', 'nova_senha': 'changed-producer-pass'})
+            assert wrong.status_code == 400
+            changed = await client.post('/auth/senha', headers=headers, json={'senha_atual': 'new-producer-pass', 'nova_senha': 'changed-producer-pass'})
+            assert changed.status_code == 200, changed.text
+            assert (await client.get('/auth/me', headers=headers)).status_code == 401
+            fresh = {'Authorization': 'Bearer ' + changed.json()['access_token']}
+            assert (await client.get('/auth/me', headers=fresh)).json()['username'] == 'producer-rec'
+            # AUD6-S02-006: "Sair de todos os aparelhos" also ends the session that asked for it.
+            other = await client.post('/auth/login', json={'username': 'producer-rec', 'password': 'changed-producer-pass'})
+            other_headers = {'Authorization': 'Bearer ' + other.json()['access_token']}
+            assert (await client.post('/auth/sair-de-todos')).status_code == 401
+            revoked = await client.post('/auth/sair-de-todos', headers=fresh)
+            assert revoked.status_code == 204 and revoked.content == b''
+            assert (await client.get('/auth/me', headers=fresh)).status_code == 401
+            assert (await client.get('/auth/me', headers=other_headers)).status_code == 401
+network_guard.stop()
+asyncio.run(check())
+
+with Session(engine) as db:
+    user = db.query(UsuarioModel).filter_by(username='producer-rec').one()
+    assert verify_password('changed-producer-pass', user.password_hash)
+    assert user.reset_token_hash is None and user.auth_version == 3
+    actions = [row.action for row in db.query(AuditLogModel).all()]
+    assert 'user.password_recovered' in actions and 'user.password_changed' in actions
+    assert 'user.sessions_revoked' in actions
+''')
+
     def test_generic_response_rotation_delivery_failure_and_eligibility(self):
         self.run_case(r'''
 with Session(engine) as db:
