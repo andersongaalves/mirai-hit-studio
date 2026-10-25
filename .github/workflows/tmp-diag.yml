@@ -10,7 +10,7 @@ permissions:
 jobs:
     diag:
         runs-on: ubuntu-latest
-        timeout-minutes: 25
+        timeout-minutes: 30
         env:
             APP_ENV: test
             DATABASE_URL: postgresql+psycopg2://mirai_integration:mirai_integration_disposable@127.0.0.1:5432/mirai_portals_e2e_storage
@@ -56,16 +56,20 @@ jobs:
               shell: bash
               run: |
                   set +e
-                  for pattern in test_commerce_domain.py 'test_proposta_*.py' test_financeiro.py test_checkout.py test_mercado_pago.py test_mercado_pago_webhooks.py test_commercial_journey_i2.py test_producao.py test_portal_notificacoes.py test_usuarios.py test_audit_logs.py test_client_access.py test_security_phase_e.py test_password_recovery.py; do
+                  cat > /tmp/extract.py <<'PY'
+                  import re, sys
+                  t = open(sys.argv[1]).read()
+                  m = [x.start() for x in re.finditer(r"^(FAIL|ERROR):", t, re.M)]
+                  i = m[0] if m else max(0, t.rfind("Error") - 1500)
+                  print(t[i:i + 1600])
+                  j = t.rfind("Error")
+                  print(t[max(0, j - 1200):j + 300])
+                  PY
+                  for pattern in test_commerce_domain.py 'test_proposta_*.py' test_financeiro.py test_checkout.py test_mercado_pago.py test_mercado_pago_webhooks.py test_commercial_journey_i2.py test_producao.py test_portal_notificacoes.py test_usuarios.py test_audit_logs.py test_client_access.py test_security_phase_e.py test_password_recovery.py test_portfolio_mix_comparison.py; do
                     python -m unittest discover -s tests -p "$pattern" > out.txt 2>&1
                     if [ $? -ne 0 ]; then
                       echo "::error::DIAG FILE $pattern"
-                      python3 -c "
-t=open('out.txt').read()
-import re
-m=[x.start() for x in re.finditer(r'^(FAIL|ERROR):', t, re.M)]
-i=m[0] if m else t.rfind('Error')
-print(t[i:i+1500]); j=t.rfind('Error'); print(t[max(0,j-1200):j+300])" | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
+                      python3 /tmp/extract.py out.txt | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
                       break
                     fi
                   done
