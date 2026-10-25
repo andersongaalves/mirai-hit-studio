@@ -3,7 +3,12 @@ from core.security import create_access_token, get_password_hash, verify_passwor
 from crud import crud_usuario
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from schemas.usuario import LoginRequest, LoginResponse, SenhaPropriaUpdate, SessaoUsuarioResponse
+from schemas.usuario import (
+    LoginRequest,
+    LoginResponse,
+    SenhaPropriaUpdate,
+    SessaoUsuarioResponse,
+)
 from services import rate_limit_service
 from sqlalchemy.orm import Session
 

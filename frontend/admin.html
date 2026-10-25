@@ -37,7 +37,7 @@
                             <img src="/assets/mirai-logo-header-symbol.svg" alt="" width="45" height="32" />
                             <img src="/assets/mirai-logo-header-lettering.svg" alt="" width="110" height="14" />
                         </span>
-                        <span class="admin-topbar__actions"><span>Admin</span><button type="button" class="btn-small admin-sidebar__logout" onclick="fazerLogout()">Sair</button></span>
+                        <span class="admin-topbar__actions"><span>Admin</span><button type="button" class="btn-small admin-sidebar__logout" data-admin-action="fazerLogout">Sair</button></span>
                     </header>
                     <aside
                         id="admin-navigation"
@@ -85,6 +85,9 @@
                             <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-auditoria">
                                 Auditoria
                             </button>
+                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-uso">
+                                Uso da infraestrutura
+                            </button>
                         </nav>
                     </aside>
 
@@ -113,16 +116,12 @@
                         </header>
                         <div id="dashboard-content" aria-live="polite">
                             <section aria-labelledby="dashboard-metrics-title">
-                                <h2 id="dashboard-metrics-title" class="admin-visually-hidden">Indicadores operacionais</h2>
+                                <h2 id="dashboard-metrics-title" class="admin-visually-hidden">Clientes e pipeline comercial</h2>
                                 <div id="dashboard-metrics" class="dashboard-kpi-grid"></div>
                             </section>
                             <section class="dashboard-section" aria-labelledby="dashboard-attention-title">
                                 <h2 id="dashboard-attention-title">Requer atenção</h2>
                                 <div id="dashboard-attention"></div>
-                            </section>
-                            <section class="dashboard-section" aria-labelledby="dashboard-pipeline-title">
-                                <h2 id="dashboard-pipeline-title">Pipeline comercial</h2>
-                                <ol id="dashboard-pipeline" class="dashboard-pipeline"></ol>
                             </section>
                             <section class="dashboard-section" aria-labelledby="dashboard-activity-title">
                                 <h2 id="dashboard-activity-title">Atividade recente</h2>
@@ -139,7 +138,7 @@
                                 <p>Gerencie pacotes, valores e formulários dinâmicos.</p>
                             </div>
                             <div class="admin-page-header__actions">
-                                <button type="button" class="btn-cta" onclick="abrirEditorServico()">
+                                <button type="button" class="btn-cta" data-admin-action="abrirEditorServico">
                                     Criar serviço
                                 </button>
                             </div>
@@ -288,7 +287,7 @@
                                         ></select>
                                         <button
                                             class="btn-small"
-                                            onclick="adicionarParametroBloco()"
+                                            data-admin-action="adicionarParametroBloco"
                                             style="
                                                 background: var(--cor-ciano);
                                                 color: black;
@@ -365,14 +364,14 @@
                                                     #059669
                                                 );
                                             "
-                                            onclick="salvarServico()"
+                                            data-admin-action="salvarServico"
                                         >
                                             SALVAR SERVIÇO
                                         </button>
                                         <button
                                             class="btn-cta btn-submit"
                                             style="background: #444"
-                                            onclick="fecharEditorServico()"
+                                            data-admin-action="fecharEditorServico"
                                         >
                                             CANCELAR
                                         </button>
@@ -395,7 +394,7 @@
                                 <p>Gerencie projetos publicados e destaques.</p>
                             </div>
                             <div class="admin-page-header__actions">
-                                <button type="button" class="btn-cta" onclick="novoProjeto()">
+                                <button type="button" class="btn-cta" data-admin-action="novoProjeto">
                                     Novo projeto
                                 </button>
                             </div>
@@ -574,7 +573,7 @@
                                     #059669
                                 );
                             "
-                            onclick="salvarConfiguracoesExtras()"
+                            data-admin-action="salvarConfiguracoesExtras"
                         >
                             SALVAR TABELA
                         </button>
@@ -625,7 +624,7 @@
                                 <p>Gerencie clientes e acompanhe o histórico comercial.</p>
                             </div>
                             <div class="admin-page-header__actions">
-                                <button type="button" class="btn-cta" onclick="novoCliente()">
+                                <button type="button" class="btn-cta" data-admin-action="novoCliente">
                                     Novo cliente
                                 </button>
                             </div>
@@ -948,6 +947,19 @@
                         </nav>
                     </div>
 
+                    <div id="section-uso" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Segurança e operação</span>
+                                <h1>Uso da infraestrutura</h1>
+                                <p>Memória do servidor, Supabase, Cloudinary e Cloudflare, perto dos limites de cada plano.</p>
+                            </div>
+                            <button id="uso-refresh" type="button" class="btn-small">Atualizar agora</button>
+                        </header>
+                        <p id="uso-updated" class="admin-field-help" role="status"></p>
+                        <div id="uso-content" class="uso-grid"></div>
+                    </div>
+
                     <div id="section-auditoria" class="admin-section hidden admin-access-hidden" data-admin-only>
                         <header class="admin-page-header">
                             <div class="admin-page-header__content">
@@ -1231,7 +1243,7 @@
                             <button
                                 class="btn-small"
                                 style="background: #444"
-                                onclick="fecharModalProjeto()"
+                                data-admin-action="fecharModalProjeto"
                             >
                                 Cancelar
                             </button>
@@ -1242,7 +1254,7 @@
                                     color: black;
                                     font-weight: bold;
                                 "
-                                onclick="salvarProjeto()"
+                                data-admin-action="salvarProjeto"
                             >
                                 Salvar Projeto
                             </button>
@@ -1329,7 +1341,7 @@
                         >
                             <button
                                 class="btn-small"
-                                onclick="fecharModalOrcamento()"
+                                data-admin-action="fecharModalOrcamento"
                             >
                                 Fechar
                             </button>
@@ -1393,10 +1405,11 @@
                                 </button>
                                 <button id="btn-enviar-proposta" class="btn-small" type="button" disabled>Enviar proposta</button>
                                 <button id="btn-aprovar-proposta" class="btn-small" type="button" disabled>Aprovar proposta</button>
+                                <button id="btn-reabrir-proposta" class="btn-small hidden" type="button">Reabrir para atualizar</button>
                             </div>
                             <button
                                 class="btn-small"
-                                onclick="fecharEditorProposta()"
+                                data-admin-action="fecharEditorProposta"
                             >
                                 Fechar
                             </button>
@@ -1518,7 +1531,7 @@
                                 <span class="badge badge-info">CRM</span>
                                 <h2 id="cliente-modal-title">Cliente</h2>
                             </div>
-                            <button type="button" class="btn-small" onclick="fecharModalCliente()" aria-label="Fechar cliente">
+                            <button type="button" class="btn-small" data-admin-action="fecharModalCliente" aria-label="Fechar cliente">
                                 Fechar
                             </button>
                         </div>
@@ -1627,7 +1640,7 @@
                             </div>
                             <button
                                 class="btn-small"
-                                onclick="fecharModalProducao()"
+                                data-admin-action="fecharModalProducao"
                                 aria-label="Fechar detalhes da produção"
                             >
                                 Fechar

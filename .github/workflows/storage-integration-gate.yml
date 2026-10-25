@@ -213,6 +213,9 @@ jobs:
                     test_portfolio_creditos.py \
                     test_portfolio_envios.py \
                     test_audio_tags.py \
+                    test_recursos.py \
+                    test_uso_infra.py \
+                    test_protecao.py \
                     test_portfolio_taxonomy.py \
                     test_catalogo.py \
                     test_emails.py; do
@@ -287,6 +290,13 @@ jobs:
                   node frontend/tests/seo_technical.cjs
                   node frontend/tests/style_architecture.cjs
                   node frontend/tests/account_password.cjs
+                  node frontend/tests/uso_infra.cjs
+                  node frontend/tests/csp_enforced.cjs
+                  node frontend/tests/session_expiry.cjs
+                  # APL-S12-01: real proposal HTML/PDF from the backend feed the document suite.
+                  (cd backend && PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout python -m unittest discover -s tests -p 'test_proposta_documento.py')
+                  PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout node frontend/tests/proposta_documento.cjs
+                  node frontend/tests/performance_h3.cjs > /tmp/mirai-performance-h3.json
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend

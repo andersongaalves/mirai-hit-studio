@@ -35,10 +35,13 @@ function contextForPath(pathname = window.location.pathname) {
     return AUTH_CONTEXTS.admin;
 }
 
+const EXPIRY_WARNING_MS = 5 * 60 * 1000;
+
 export function createAuthContext(config) {
     let sessionVersion = 0;
     let verifiedToken = null;
     let expiryTimer = null;
+    let warningTimer = null;
     let currentUser = null;
 
     function getToken() {
@@ -90,6 +93,9 @@ export function createAuthContext(config) {
         setCurrentUser(null);
         clearTimeout(expiryTimer);
         expiryTimer = null;
+        clearTimeout(warningTimer);
+        warningTimer = null;
+        hideExpiryWarning();
         if (emit) emitLogout();
         mostrarLogin(reason);
     }
@@ -100,9 +106,39 @@ export function createAuthContext(config) {
         clearRuntimeSession({ emit: hadSession, reason: typeof reason === "string" ? reason : null });
     }
 
+    // AUD6-S02-011 (decision: 60 min with a warning): a few minutes before the session
+    // ends, the visitor is told to save and sign in again; nothing renews silently.
+    function hideExpiryWarning() {
+        document.getElementById("session-expiry-warning")?.remove();
+    }
+
+    function showExpiryWarning(token, exp) {
+        if (getToken() !== token || document.getElementById("session-expiry-warning")) return;
+        const box = document.createElement("div");
+        box.id = "session-expiry-warning";
+        box.className = "session-expiry-warning";
+        box.setAttribute("role", "alert");
+        const minutes = Math.max(1, Math.round((exp * 1000 - Date.now()) / 60000));
+        const text = document.createElement("p");
+        text.textContent = `Sua sessão termina em cerca de ${minutes} min. Salve o que estiver fazendo; depois, entre de novo.`;
+        const again = document.createElement("button");
+        again.type = "button";
+        again.textContent = "Entrar de novo agora";
+        again.addEventListener("click", () => logout("sessao_expirada"));
+        const dismiss = document.createElement("button");
+        dismiss.type = "button";
+        dismiss.textContent = "Ok";
+        dismiss.addEventListener("click", hideExpiryWarning);
+        box.append(text, again, dismiss);
+        document.body.append(box);
+    }
+
     function watchExpiry(token) {
         clearTimeout(expiryTimer);
         expiryTimer = null;
+        clearTimeout(warningTimer);
+        warningTimer = null;
+        hideExpiryWarning();
         try {
             const payload = token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/");
             const { exp } = JSON.parse(atob(payload));
@@ -110,6 +146,10 @@ export function createAuthContext(config) {
                 expiryTimer = setTimeout(() => {
                     if (getToken() === token) logout("sessao_expirada");
                 }, Math.max(0, Math.min(exp * 1000 - Date.now(), 2147483647)));
+                const warnAt = exp * 1000 - EXPIRY_WARNING_MS - Date.now();
+                if (exp * 1000 - Date.now() > EXPIRY_WARNING_MS / 2) {
+                    warningTimer = setTimeout(() => showExpiryWarning(token, exp), Math.max(0, Math.min(warnAt, 2147483647)));
+                }
             }
         } catch {
             // The backend remains authoritative; this timer only clears expired UI state.

@@ -197,6 +197,10 @@ def upload(
         portal_notificacao_service.arquivo_compartilhado(db, model, actor_id=getattr(actor, "id", None))
         db.commit()
         db.refresh(model)
+        if tag_job is not None:
+            from services import audio_tag_service
+
+            audio_tag_service.sinalizar_fila()
         return model
     except Exception as exc:
         db.rollback()
