@@ -9,9 +9,9 @@ implementado sem autorizacao do responsavel.
 | Campo | Estado atual |
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
-| Lote atual | Lote 4 - Visibilidade da operacao |
+| Lote atual | Lotes 4 a 8 (itens sem migration e sem decisao) |
 | Item em andamento | - |
-| Proxima acao | APL-S09-01: pendencias completas no dashboard administrativo |
+| Proxima acao | APL-S11-01 e APL-S04-01 (exigem migration autorizada); restante de APL-S09-03 e APL-S12-01; decisoes da secao 5 |
 | Ultima atualizacao | 25/10/2026 |
 
 ## 2. Regras
@@ -58,8 +58,8 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S06-01 | S06-001, S04-001 | P1 | Prazo para reserva de licenca de beat com liberacao automatica; cancelar reserva quando proposta/cobranca for cancelada; acao do Admin "liberar reserva" com motivo | Codigo + migration (prazo) | Publicado | #97 |
 | APL-S06-02 | S06-002 | P2 | Reembolso ou anulacao revoga licencas de beat da proposta; exclusivo volta ao catalogo apos decisao do Admin | Codigo | Publicado | #97 |
 | APL-S06-03 | S06-004 | P2 | Downloads de beat por streaming ou URL assinada curta, sem carregar o arquivo inteiro na memoria | Codigo | Proposto | - |
-| APL-S06-04 | S06-005, S07-007 | P3 | Mensagens humanas para conflitos e indisponibilidade no checkout e nos portais | Codigo/texto | Proposto | - |
-| APL-S06-05 | S06-006, S06-007 | P3 | Catalogo de beats sem N+1; arquivo baixado com o titulo do beat | Codigo | Proposto | - |
+| APL-S06-04 | S06-005, S07-007 | P3 | Mensagens humanas para conflitos e indisponibilidade no checkout e nos portais | Codigo/texto | Publicado | #108 (checkout) e #121 (portal do cliente) |
+| APL-S06-05 | S06-006, S06-007 | P3 | Catalogo de beats sem N+1; arquivo baixado com o titulo do beat | Codigo | Publicado | #108 |
 
 ### S10 - Financeiro ([diagnostico](auditoria/S10_FINANCEIRO.md))
 
@@ -67,37 +67,37 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | --- | --- | --- | --- | --- | --- | --- |
 | APL-S10-01 | S10-001 | P2 | Anular pagamento manual (Pix direto) com motivo, auditoria, recalculo da cobranca e revisao das liberacoes | Codigo | Publicado | #98 |
 | APL-S10-02 | S10-002 | P2 | Repasse: bloquear ou exigir confirmacao com motivo quando a cobranca nao estiver quitada; mostrar situacao do cliente | Codigo | Publicado | #98 |
-| APL-S10-03 | S10-003, S06-003 | P2 | Fila de conciliacao (divergencias, chargeback, reembolso parcial, tentativa externa pendente) com alerta no dashboard | Codigo | Proposto | - |
+| APL-S10-03 | S10-003, S06-003 | P2 | Fila de conciliacao (divergencias, chargeback, reembolso parcial, tentativa externa pendente) com alerta no dashboard | Codigo | Publicado | #113 |
 | APL-S10-04 | S10-004 | P3 | Travar a linha ao liberar/pagar repasse | Codigo | Publicado | #98 |
 
 ### S07 - Portal do Cliente ([diagnostico](auditoria/S07_PORTAL_CLIENTE.md))
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S07-01 | S07-001 | P2 | Detalhe do projeto por secoes (visao geral, arquivos, mensagens, pagamento) com a pendencia principal no topo | Codigo | Proposto | - |
-| APL-S07-02 | S07-002 | P3 | Resposta publica do beat sem campos internos | Codigo | Proposto | - |
-| APL-S07-03 | S07-003, S08-004 | P3 | Botao "Envios" sem sobrepor conteudo (cabecalho ou espaco reservado) | Codigo | Proposto | - |
-| APL-S07-04 | S07-004, S07-005 | P3 | Ocultar campos vazios; icones distintos no menu | Codigo | Proposto | - |
-| APL-S07-05 | S07-006 | P3 | Limite diario de solicitacoes por cliente | Codigo | Proposto | - |
+| APL-S07-01 | S07-001 | P2 | Detalhe do projeto por secoes (visao geral, arquivos, mensagens, pagamento) com a pendencia principal no topo | Codigo | Publicado | #120 |
+| APL-S07-02 | S07-002 | P3 | Resposta publica do beat sem campos internos | Codigo | Publicado | #109 |
+| APL-S07-03 | S07-003, S08-004 | P3 | Botao "Envios" sem sobrepor conteudo (cabecalho ou espaco reservado) | Codigo | Publicado | #109 |
+| APL-S07-04 | S07-004, S07-005 | P3 | Ocultar campos vazios; icones distintos no menu | Codigo | Publicado | #109 |
+| APL-S07-05 | S07-006 | P3 | Limite diario de solicitacoes por cliente | Codigo | Publicado | #109 |
 
 ### S08 - Portal do Produtor ([diagnostico](auditoria/S08_PORTAL_PRODUTOR.md))
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | APL-S08-01 | S08-001 | P2 | "Beats" unico (Meus beats / Catalogo) e tag dentro do perfil do produtor, com aviso no dashboard | Codigo; depende de APL-S02-12 | Proposto | - |
-| APL-S08-02 | S08-002 | P2 | Falha de tag gera pendencia/aviso ao Admin com "Reprocessar" | Codigo; com APL-S11-01 | Proposto | - |
-| APL-S08-03 | S08-003, S08-005 | P3 | Seletor de arquivo estilizado em portugues; "Enviar para revisao" dentro da etapa | Codigo | Proposto | - |
-| APL-S08-04 | S08-007 | P3 | Nao permitir versionar arquivo oculto para o produtor | Codigo | Proposto | - |
+| APL-S08-02 | S08-002 | P2 | Falha de tag gera pendencia/aviso ao Admin com "Reprocessar" | Codigo; com APL-S11-01 | Publicado | #114 (lista no dashboard com Reprocessar; notificacao ao Admin segue com APL-S11-01) |
+| APL-S08-03 | S08-003, S08-005 | P3 | Seletor de arquivo estilizado em portugues; "Enviar para revisao" dentro da etapa | Codigo | Publicado | #110 (seletor) e #118 (acao geral dentro do resumo) |
+| APL-S08-04 | S08-007 | P3 | Nao permitir versionar arquivo oculto para o produtor | Codigo | Publicado | #110 |
 
 ### S09 - Administracao operacional ([diagnostico](auditoria/S09_ADMIN_OPERACIONAL.md))
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S09-01 | S09-001 | P2 | Pendencias completas no dashboard (solicitacoes, beats e portfolio em revisao, falha de tag, conciliacao, entregas) | Codigo | Em revisao | #107 |
+| APL-S09-01 | S09-001 | P2 | Pendencias completas no dashboard (solicitacoes, beats e portfolio em revisao, falha de tag, conciliacao, entregas) | Codigo | Publicado | #107 |
 | APL-S09-02 | S09-002 | P2 | Paginas centrais de cliente e produtor; links contextuais entre entidades | Codigo (grande) | Proposto | - |
-| APL-S09-03 | S09-003, 004, 005 | P3 | Dashboard sem blocos repetidos; carregar secoes sob demanda; textos com acento e erros humanos | Codigo/texto | Proposto | - |
+| APL-S09-03 | S09-003, 004, 005 | P3 | Dashboard sem blocos repetidos; carregar secoes sob demanda; textos com acento e erros humanos | Codigo/texto | Em correcao | #115 (acentos do dashboard); faltam blocos repetidos e carregamento sob demanda |
 | APL-S09-04 | S09-006 | P3 | Busca global | Codigo | Proposto | - |
-| APL-S09-05 | S09-007 | P3 | `PUT /config` sem a linha `id=1` | Codigo | Proposto | - |
+| APL-S09-05 | S09-007 | P3 | `PUT /config` sem a linha `id=1` | Codigo | Publicado | #115 |
 
 ### S05 - Propostas ([diagnostico](auditoria/S05_PROPOSTAS.md))
 
@@ -111,21 +111,21 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | APL-S03-01 | S03-001 | P2 | Recalcular o orcamento no servidor a partir da selecao; Admin ve "estimado pelo visitante" separado | Codigo | Publicado | #99 |
-| APL-S03-02 | S03-002 | P3 | Campo isca e limite persistente no formulario publico | Codigo; com APL-S12-03 | Proposto | - |
+| APL-S03-02 | S03-002 | P3 | Campo isca e limite persistente no formulario publico | Codigo; com APL-S12-03 | Publicado | #119 (campo isca; limite persistente ja no #105) |
 
 ### S04 - Catalogo ([diagnostico](auditoria/S04_CATALOGO.md))
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | APL-S04-01 | S04-002, S11-002 | P3 | Notificar o produtor na aprovacao/rejeicao do beat | Codigo | Proposto | - |
-| APL-S04-02 | S04-003 | P3 | Impedir rejeitar beat com licenca reservada sem decidir a reserva | Codigo | Proposto | - |
+| APL-S04-02 | S04-003 | P3 | Impedir rejeitar beat com licenca reservada sem decidir a reserva | Codigo | Publicado | #111 |
 
 ### S01 - Institucional ([diagnostico](auditoria/S01_INSTITUCIONAL.md))
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | APL-S01-01 | S01-001 | P2 | Pagina de Politica de Privacidade e links (rodape, consentimento, cadastro, orcamento, newsletter) | **Decisao** (texto revisado pelo responsavel) | Decisao | - |
-| APL-S01-02 | S01-002 | P3 | Area clicavel minima nos links de verticais do portfolio | Codigo | Proposto | - |
+| APL-S01-02 | S01-002 | P3 | Area clicavel minima nos links de verticais do portfolio | Codigo | Publicado | #112 |
 
 ### S11 - IA e comunicacao ([diagnostico](auditoria/S11_IA_COMUNICACAO.md))
 
@@ -137,11 +137,11 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S12-01 | S12-001, S01-003, S04-004, S05-003, S10-005, S11-003 | P2 | Job de CI com as suites restantes; consertar `flows.cjs`, `public_accessibility.cjs` e `proposta_documento.cjs` | CI | Proposto | - |
+| APL-S12-01 | S12-001, S01-003, S04-004, S05-003, S10-005, S11-003 | P2 | Job de CI com as suites restantes; consertar `flows.cjs`, `public_accessibility.cjs` e `proposta_documento.cjs` | CI | Em correcao | #116 e #112 (18 suites no gate; faltam `proposta_documento.cjs` e `performance_h3.cjs`) |
 | APL-S12-02 | S12-002 | P2 | Worker de tag fora do processo web | Infra (Render) | Proposto | - |
 | APL-S12-03 | S12-003 | P2 | Limitador persistente (tabela `auth_rate_limits`) para login, orcamento e newsletter | Codigo; inclui APL-S02-07 | Publicado | #105 |
 | APL-S12-04 | S12-005 | P3 | Estabilizar o passo instavel do Portals E2E | Testes | Proposto | - |
-| APL-S12-05 | S12-006, S12-007 | P3 | Limpeza de branches descartaveis; README atualizado | Manutencao | Proposto | - |
+| APL-S12-05 | S12-006, S12-007 | P3 | Limpeza de branches descartaveis; README atualizado | Manutencao | Em correcao | #117 (README); limpeza de branches aguarda o responsavel |
 
 ## 4. Lotes de execucao
 
@@ -152,7 +152,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 | 1 | Seguranca de sessao | APL-S02-01 | Publicado (PR #96, 24/10/2026) |
 | 2 | Integridade comercial e financeira | APL-S06-01, APL-S06-02, APL-S10-01, APL-S10-02, APL-S03-01 (+ APL-S10-04) | Publicado (PRs #97, #98, #99, 24/10/2026) |
 | 3 | Entrada e conta | APL-S02-02, APL-S02-03, APL-S02-07 + APL-S12-03, APL-S02-08, APL-S02-09, APL-S02-10 | Publicado (PRs #102, #103 e #105; concluido em 25/10/2026) |
-| 4 | Visibilidade da operacao | APL-S09-01, APL-S11-01, APL-S08-02, APL-S10-03, APL-S04-01 | Em andamento (#107) |
+| 4 | Visibilidade da operacao | APL-S09-01, APL-S11-01, APL-S08-02, APL-S10-03, APL-S04-01 | Parcial: #107, #113 e #114 publicados; APL-S11-01 e APL-S04-01 dependem de migration |
 | 5 | Confiabilidade e CI | APL-S12-01, APL-S12-02, APL-S12-04, APL-S06-03 | Proposto |
 | 6 | Experiencia dos portais | APL-S07-01, APL-S02-12, APL-S08-01, APL-S02-04 (apos decisao), APL-S07-03, APL-S07-04, APL-S08-03 | Proposto |
 | 7 | Conformidade e decisoes | APL-S01-01, APL-S05-01, APL-S02-05, APL-S02-06, APL-S02-11 | Decisao |
@@ -173,6 +173,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 25/10/2026 | Lotes 4 a 8 (sem migration) | PRs #107-#121 publicados no SHA `ee2f6b34c4c5af57c9769112426353d59e9d21cf`: pendencias do dashboard (#107), fila de conciliacao (#113), falhas de tag com Reprocessar (#114), detalhe do projeto por secoes (#120), mensagens claras no checkout e no portal (#108, #121), catalogo sem campos internos e limite diario (#109), refinamentos do produtor (#110, #118), beat reservado nao pode ser rejeitado (#111), alvos de toque (#112), `/config` sem 500 e acentos (#115), 18 suites a mais no gate (#112, #116), README (#117), campo isca (#119). Sem migration. Gate `40205419764`, evidencia Storage `40206403229`, dry-run `40206510344` e publicacao `40206565321` aprovados. Ref. `CTRL-20261025-R7-ETAPA07-LOTES4A8`; Commercial V2 permaneceu `true` | APL-S11-01/APL-S04-01 com migration autorizada; restante de APL-S09-03 e APL-S12-01 |
 | 25/10/2026 | APL-S09-01 | PR #107 aberto: dashboard passa a reunir solicitacoes, revisoes de beats e portfolio, falhas de tag, conciliacoes e entregas aguardando aprovacao; cadeias de teste ficam fora das contagens | Validar CI e integrar sem misturar os demais setores do Lote 4 |
 | 25/10/2026 | Lote 3 concluido | #105 publicou APL-S12-03 e a parte restante de APL-S02-07 no SHA `4ab947b51d2febe0d08ddcd54810e565c2d98c74`. Migration `b5d7f9a1c328` ja estava aplicada no Supabase. Gate `40189023647`, evidencia Storage `40189744411`, dry-run `40189876701` e publicacao `40189945225` aprovados; Render, Cloudflare Pages e smoke de producao verdes. Ref. `CTRL-20261025-R6-LOTE3`; Commercial V2 permaneceu `true` | Iniciar Lote 4 por APL-S09-01 |
 | 24/10/2026 | Lote 3 (parcial) | #102: entrada unica pelo /acesso (paineis sem login proprio, next validado por papel, "Continuar" com sessao existente, aviso de sessao expirada, textos de acesso, ativacao entra direto) e 27 suites de navegador migradas; #103: conta de cliente em Usuarios, nome de exibicao nos portais, /auth/me minimo, hash ficticio no login. Publicacao `40147407737` (main `8592ff4`), ref. CTRL-20261024-R5-LOTE3, sem migration | APL-S12-03 |
