@@ -66,6 +66,9 @@ def enviar(db, actor, payload, *, capa_sha256=None):
         return _replay(existing, data, producao_id)
     audit_service.record(db, actor=actor, action="portfolio.submitted", entity_type="portfolio_submission",
                          entity_id=item.id, metadata={"producao_id": producao_id, "artist_consent": True})
+    from services import portal_notificacao_service
+
+    portal_notificacao_service.portfolio_proposto(db, item)
     db.commit()
     db.refresh(item)
     return item

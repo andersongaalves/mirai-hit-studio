@@ -64,6 +64,13 @@ async function staticResponse(route) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
         if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
+        if (url.pathname === '/admin/notificacoes') return route.fulfill({ json: {
+            itens: [{ id: 9, tipo: 'admin_beat_revisao', texto: 'Um beat foi enviado para revisão.', url: '/admin.html#section-beats', created_at: '2026-10-25T12:00:00Z', vista_em: null }],
+            nao_vistas: 1, tem_mais: false,
+        } });
+        if (url.pathname === '/admin/notificacoes/vistas') return route.fulfill({ json: [
+            { id: 9, tipo: 'admin_beat_revisao', texto: 'Um beat foi enviado para revisão.', url: '/admin.html#section-beats', created_at: '2026-10-25T12:00:00Z', vista_em: '2026-10-25T12:01:00Z' },
+        ] });
         if (url.pathname === '/admin/audio-tag/previas/falhas') return route.fulfill({ json: [
             { arquivo_id: 41, arquivo_nome: '<b>mix.wav</b>', producao_id: 3, producao_titulo: 'Single Aurora', created_at: '2026-10-20T12:00:00Z' },
         ] });
@@ -107,6 +114,15 @@ async function staticResponse(route) {
         }
         assert.equal(await page.locator('#dashboard-activity img, #dashboard-activity script').count(), 0);
         assert.match(await page.locator('#dashboard-activity').textContent(), /<img src=x/);
+        // AUD6-S11-001: the Admin has its own inbox; a notice opens the matching section.
+        const bell = page.locator('.admin-topbar__actions .portal-notifications-button');
+        await bell.waitFor();
+        const notice = page.locator('.portal-notifications-new a', { hasText: 'Um beat foi enviado para revisão.' });
+        await notice.waitFor();
+        assert.equal(await notice.getAttribute('href'), '/admin.html#section-beats');
+        await notice.click();
+        assert.equal(await page.locator('#section-beats').isVisible(), true);
+        await page.evaluate(() => window.mostrarDashboard());
         await page.locator('#dashboard-attention').getByRole('button', { name: 'Ver produções' }).click();
         assert.equal(await page.locator('#section-producoes').isVisible(), true);
         await page.evaluate(() => window.mostrarDashboard());

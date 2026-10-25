@@ -14,9 +14,12 @@ export function startPortalNotifications(user) {
     const key = `${user.id}:${user.role}:${token}`;
     if (owner === key) return;
     stopPortalNotifications();
-    const account = document.querySelector(".producer-account");
-    const workspace = document.querySelector(".producer-workspace");
-    if (!account || !workspace || !["cliente", "produtor"].includes(user.role)) return;
+    // AUD6-S11-001: the Admin panel uses the same inbox with its own endpoint and sections.
+    const admin = Boolean(user.is_admin) && user.role === "admin";
+    const account = document.querySelector(admin ? ".admin-topbar__actions" : ".producer-account");
+    const workspace = document.querySelector(admin ? ".admin-shell__workspace" : ".producer-workspace");
+    if (!account || !workspace || !(admin || ["cliente", "produtor"].includes(user.role))) return;
+    const endpoint = admin ? "/admin/notificacoes" : "/portal/notificacoes";
     owner = key;
     const controller = new AbortController();
     const current = () => !controller.signal.aborted && getToken() === token && getCurrentUser()?.id === user.id;
@@ -62,7 +65,7 @@ export function startPortalNotifications(user) {
     let banner = null;
 
     async function request(path, options = {}) {
-        const response = await authFetch(`/portal/notificacoes${path}`, { ...options, signal: controller.signal });
+        const response = await authFetch(`${endpoint}${path}`, { ...options, signal: controller.signal });
         if (!response.ok) throw new Error("notifications_unavailable");
         const data = await response.json();
         if (!current()) throw new Error("session_changed");
@@ -71,9 +74,22 @@ export function startPortalNotifications(user) {
 
     function link(item) {
         const anchor = document.createElement("a");
-        const allowed = user.role === "cliente" ? /^\/cliente\/(projetos|propostas)\/[1-9]\d*$/ : /^\/produtor\/producoes\/[1-9]\d*$/;
-        anchor.href = allowed.test(item.url) ? item.url : `/${user.role}`;
         anchor.textContent = item.texto;
+        if (admin) {
+            const section = /^\/admin\.html#((?:section-[a-z-]+)|dashboard-menu)$/.exec(item.url)?.[1] || "dashboard-menu";
+            anchor.href = `/admin.html#${section}`;
+            anchor.addEventListener("click", event => {
+                event.preventDefault();
+                if (dialog.open) dialog.close();
+                if (section === "dashboard-menu") window.mostrarDashboard?.();
+                else window.mostrarSecao?.(section);
+            });
+            return anchor;
+        }
+        const allowed = user.role === "cliente"
+            ? /^\/cliente\/(projetos|propostas)\/[1-9]\d*$/
+            : /^\/produtor\/(producoes\/[1-9]\d*|beats)$/;
+        anchor.href = allowed.test(item.url) ? item.url : `/${user.role}`;
         return anchor;
     }
 

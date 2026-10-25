@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from core.dependencies import get_current_user
+from core.dependencies import get_current_user, require_admin
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query
 from schemas.portal_notificacao import (
@@ -32,4 +32,20 @@ def listar(db: Db, user: User, antes_id: Annotated[int | None, Query(gt=0)] = No
 
 @router.post("/vistas", response_model=list[NotificacaoResponse])
 def marcar_vistas(dados: NotificacoesVistas, db: Db, user: User):
+    return service.marcar_vistas(db, user, dados.ids)
+
+
+# AUD6-S11-001: the studio has its own inbox of events that need attention.
+admin_router = APIRouter(prefix="/admin/notificacoes", tags=["Notificacoes do Admin"])
+Admin = Annotated[object, Depends(require_admin)]
+
+
+@admin_router.get("", response_model=NotificacoesResponse)
+def listar_admin(db: Db, user: Admin, antes_id: Annotated[int | None, Query(gt=0)] = None,
+                 limite: Annotated[int, Query(ge=1, le=50)] = 30, somente_nao_vistas: bool = False):
+    return service.listar(db, user, antes_id=antes_id, limite=limite, somente_nao_vistas=somente_nao_vistas)
+
+
+@admin_router.post("/vistas", response_model=list[NotificacaoResponse])
+def marcar_vistas_admin(dados: NotificacoesVistas, db: Db, user: Admin):
     return service.marcar_vistas(db, user, dados.ids)
