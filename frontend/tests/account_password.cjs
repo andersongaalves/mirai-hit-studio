@@ -58,11 +58,17 @@ async function scenario(browser, role, next) {
         return route.fulfill({ json: [] });
     });
     await signIn(page, { next, username: users[role].username });
-    const button = page.getByRole('button', { name: 'Alterar senha' });
+    const button = page.getByRole('button', { name: 'Minha conta' });
     await button.waitFor();
     await button.click();
-    const dialog = page.getByRole('dialog', { name: 'Alterar senha' });
+    const dialog = page.getByRole('dialog', { name: 'Minha conta' });
     await dialog.waitFor();
+    // AUD6-S02-012: one account entry with profile, password, sessions and help.
+    assert.match(await dialog.textContent(), new RegExp(`Conectado como ${users[role].username}\\.`));
+    assert.equal(await dialog.getByRole('link', { name: 'contato@miraihitstudio.com.br' }).getAttribute('href'), 'mailto:contato@miraihitstudio.com.br');
+    assert.equal(await dialog.getByRole('link', { name: 'Editar meu perfil e minha tag' }).count(), role === 'produtor' ? 1 : 0);
+    assert.equal(await dialog.getByRole('heading', { name: 'Alterar senha' }).count(), 1);
+    if (process.env.VISUAL_OUTPUT) await page.screenshot({ path: path.join(process.env.VISUAL_OUTPUT, `account-${role}.png`) });
     await dialog.getByLabel('Senha atual').fill('old-password');
     await dialog.getByLabel('Nova senha (8 a 72 caracteres)').fill('new-password-1');
     await dialog.getByLabel('Repita a nova senha').fill('new-password-2');
