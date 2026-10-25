@@ -57,20 +57,11 @@ jobs:
               run: |
                   set +e
                   cat > /tmp/extract.py <<'PY'
-                  import re, sys
+                  import sys
                   t = open(sys.argv[1]).read()
-                  m = [x.start() for x in re.finditer(r"^(FAIL|ERROR):", t, re.M)]
-                  i = m[0] if m else max(0, t.rfind("Error") - 1500)
-                  print(t[i:i + 1600])
-                  j = t.rfind("Error")
-                  print(t[max(0, j - 1200):j + 300])
+                  i = t.rfind("Traceback (most recent call last)")
+                  print(t[i:i + 2700])
                   PY
-                  for pattern in test_commerce_domain.py 'test_proposta_*.py' test_financeiro.py test_checkout.py test_mercado_pago.py test_mercado_pago_webhooks.py test_commercial_journey_i2.py test_producao.py test_portal_notificacoes.py test_usuarios.py test_audit_logs.py test_client_access.py test_security_phase_e.py test_password_recovery.py test_portfolio_mix_comparison.py; do
-                    python -m unittest discover -s tests -p "$pattern" > out.txt 2>&1
-                    if [ $? -ne 0 ]; then
-                      echo "::error::DIAG FILE $pattern"
-                      python3 /tmp/extract.py out.txt | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
-                      break
-                    fi
-                  done
+                  python -m unittest discover -s tests -p test_portal_notificacoes.py -k test_admin_inbox > out.txt 2>&1
+                  python3 /tmp/extract.py out.txt | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
                   exit 1
