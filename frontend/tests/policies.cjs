@@ -111,7 +111,9 @@ const stage = (extra) => ({ id: 1, ordem: 1, item_indice: 1, item_descricao: 'Pl
             vencimento: null, pagamentos: [] };
         await page.evaluate(([p, f]) => window.renderClient(p, f), [production, { producao_id: 7, cobranca: charge, checkout_url: null, resumido: true }]);
         const finance = await page.locator('.client-finance-grid').textContent();
-        assert.match(finance, /Situação.*Saldo pendente.*Vencimento/);
+        // AUD6-S07-004: an empty due date is omitted from the summary.
+        assert.match(finance, /Situação.*Saldo pendente/);
+        assert.doesNotMatch(finance, /Vencimento/);
         assert.doesNotMatch(finance, /Valor cobrado|Valor pago/);
         await page.evaluate(([p, f]) => window.renderClient(p, f), [production, { producao_id: 7, checkout_url: null,
             cobranca: { ...charge, valor_total: '800.00', valor_pago: '400.00' } }]);
