@@ -138,7 +138,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             )
         )
         cls.stack.enter_context(
-            patch("core.http_security.allow_request", return_value=(True, 0))
+            patch("core.http_security.allow_shared", return_value=(True, 0))
         )
         cls._cleanup()
         cls.api_url = cls.stack.enter_context(local_server(app, port=8000))

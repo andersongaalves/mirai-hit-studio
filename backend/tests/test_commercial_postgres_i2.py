@@ -92,7 +92,7 @@ class CommercialPostgresI2Tests(unittest.TestCase):
         cls.stack = ExitStack()
         cls.stack.enter_context(patch.object(resend.Emails, "send", return_value={"id":"i2-fake-email"}))
         cls.stack.enter_context(patch.object(mercado_pago_service, "MercadoPagoClient", return_value=cls.provider))
-        cls.stack.enter_context(patch("core.http_security.allow_request", return_value=(True, 0)))
+        cls.stack.enter_context(patch("core.http_security.allow_shared", return_value=(True, 0)))
         cls.server = cls.stack.enter_context(local_server(app, port=8000))
         frontend_root = Path(__file__).resolve().parents[2] / "frontend"
         cls.frontend = cls.stack.enter_context(local_frontend_server(frontend_root, port=5500))
