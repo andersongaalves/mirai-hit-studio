@@ -44,9 +44,14 @@ def _sqlite_table(*, extended):
             sa.Column(name, sa.Integer(), sa.ForeignKey(f"{table}.id", ondelete="CASCADE"), nullable=True)
             for name, table in NEW_COLUMNS
         ]
+    metadata = sa.MetaData()
+    # Minimal stand-ins so the foreign keys of the rebuilt table resolve; batch mode never creates them.
+    for referenced in ("usuarios", "producoes", "propostas", "producao_arquivos") + tuple(
+            table for _, table in NEW_COLUMNS):
+        sa.Table(referenced, metadata, sa.Column("id", sa.Integer(), primary_key=True))
     return sa.Table(
         "portal_notificacoes",
-        sa.MetaData(),
+        metadata,
         *columns,
         sa.UniqueConstraint("usuario_id", "chave_evento", name="uq_portal_notificacao_usuario_evento"),
         sa.CheckConstraint(NEW_ROLES if extended else OLD_ROLES, name="ck_portal_notificacao_papel"),
