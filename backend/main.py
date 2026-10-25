@@ -28,6 +28,7 @@ from routers.orcamentos import router as orcamentos_router
 from routers.politicas import router as politicas_router
 from routers.portal_cliente import router as portal_cliente_router
 from routers.portal_config import router as portal_config_router
+from routers.portal_notificacoes import admin_router as admin_notificacoes_router
 from routers.portal_notificacoes import router as portal_notificacoes_router
 from routers.uso_infra import router as uso_infra_router
 from routers.portal_operacao_admin import router as portal_operacao_admin_router
@@ -104,6 +105,7 @@ app.include_router(ai_inbox_router)
 app.include_router(portal_produtor_router)
 app.include_router(portal_notificacoes_router)
 app.include_router(uso_infra_router)
+app.include_router(admin_notificacoes_router)
 app.include_router(portal_cliente_router)
 app.include_router(portal_operacao_admin_router)
 app.include_router(portal_config_router)

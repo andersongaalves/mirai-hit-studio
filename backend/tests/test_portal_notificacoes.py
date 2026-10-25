@@ -6,10 +6,12 @@ from test_entrega_final import SETUP as DELIVERY_SETUP
 
 SETUP = DELIVERY_SETUP + '''
 from models import PortalNotificacaoModel
+from routers.portal_notificacoes import admin_router as admin_notifications_router
 from routers.portal_notificacoes import router as notifications_router
 from routers.producao_mensagens import router as messages_router
 from services import portal_notificacao_service as notifications
 app.include_router(notifications_router)
+app.include_router(admin_notifications_router)
 app.include_router(messages_router)
 
 def notices(username='client-a'):
@@ -209,10 +211,40 @@ with Session(engine) as db:
 assert notices()['itens'] == []
 ''')
 
+    def test_admin_inbox_is_private_and_skips_test_chains(self):
+        self.run_case('''
+from models import OrcamentoModel
+with Session(engine) as db:
+    real = OrcamentoModel(nome_cliente='Cliente', email='lead@example.test', servico='Mix', valor_total=0)
+    test = OrcamentoModel(nome_cliente='Teste', email='test@example.test', servico='Mix', valor_total=0, is_test=True)
+    db.add_all([real, test]); db.flush()
+    notifications.solicitacao_producao(db, real)
+    notifications.solicitacao_producao(db, real)  # replay: same event key, one row
+    notifications.solicitacao_producao(db, test)
+    db.commit()
+    real_id = real.id
+inbox = api.get('/admin/notificacoes', headers=ADMIN)
+assert inbox.status_code == 200, inbox.text
+assert [(item['tipo'], item['url']) for item in inbox.json()['itens']] == [
+    ('admin_solicitacao_producao', '/admin.html#section-orcamentos')], inbox.json()
+assert inbox.json()['nao_vistas'] == 1
+assert api.get('/admin/notificacoes', headers=bearer('client-a')).status_code == 403
+assert api.get('/admin/notificacoes', headers=bearer('producer-a')).status_code == 403
+assert notices()['itens'] == [] and notices('producer-a')['itens'] == []
+ids = [item['id'] for item in inbox.json()['itens']]
+assert api.post('/portal/notificacoes/vistas', headers=bearer('client-a'), json={'ids': ids}).json() == []
+claimed = api.post('/admin/notificacoes/vistas', headers=ADMIN, json={'ids': ids})
+assert claimed.status_code == 200 and len(claimed.json()) == 1, claimed.text
+assert api.get('/admin/notificacoes', headers=ADMIN).json()['nao_vistas'] == 0
+with Session(engine) as db:
+    rows = db.query(PortalNotificacaoModel).filter_by(orcamento_id=real_id).all()
+    assert rows and {row.papel for row in rows} == {'admin'}  # one per active admin
+''')
+
     def test_additive_migration_roundtrip_does_not_backfill(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
-assert bootstrap(engine) == 'b5d7f9a1c328'
+assert bootstrap(engine) == 'c6e8a0b2d4f1'
 assert 'portal_notificacoes' in inspect(engine).get_table_names()
 with engine.connect() as connection:
     assert connection.exec_driver_sql('SELECT count(*) FROM portal_notificacoes').scalar_one() == 0

@@ -53,8 +53,9 @@ with Session(engine) as db:
         'itens', 'totais', 'politica_pagamento', 'condicoes',
         'documento_disponivel', 'situacao_comercial', 'cobranca_status',
         'enviada_em', 'aprovada_em', 'created_at', 'updated_at',
-        'finalidade', 'contrato_creditos',
+        'finalidade', 'contrato_creditos', 'valida_ate', 'expirada',
     }
+    assert listed[0]['expirada'] is False and listed[0]['valida_ate'] is not None
     assert listed[0]['finalidade'] == 'producao' and listed[0]['contrato_creditos'] is None
     assert listed[0]['status'] == 'enviada'
     assert listed[0]['situacao_comercial'] == 'aguardando_aceite'
@@ -124,6 +125,46 @@ with Session(engine) as db:
         pass
     else:
         raise AssertionError('V2 endpoint available with flag off')
+''')
+
+    def test_expired_proposal_blocks_acceptance_until_reopened_and_resent(self):
+        # AUD6-S05-001: the PDF promises 10 days of validity.
+        self.run_case(r'''
+from datetime import datetime, timedelta, timezone
+with Session(engine) as db:
+    proposal, client = sent_proposal(db, 1)
+    user = UsuarioModel(username='client-a', password_hash=get_password_hash('client-pass'),
+                        role='cliente', is_admin=False, ativo=True, cliente_id=client.id)
+    db.add(user)
+    proposal.enviada_em = datetime.now(timezone.utc) - timedelta(days=12)
+    db.commit()
+    listed = portal_proposals.list_for_client(db, client.id)
+    assert listed[0]['expirada'] is True and listed[0]['situacao_comercial'] == 'expirada', listed[0]
+    try:
+        portal_proposals.accept(db, proposal.id, client.id, proposal.versao, user, 'client-late')
+    except portal_proposals.PropostaClienteConflict as error:
+        assert 'venceu em' in str(error)
+    else:
+        raise AssertionError('expired proposal accepted')
+    assert db.query(CobrancaModel).filter_by(proposta_id=proposal.id).count() == 0
+    old_version = proposal.versao
+    reopened = commercial.reabrir_expirada(db, proposal.id)
+    assert reopened.status == 'rascunho' and reopened.versao == old_version + 1 and reopened.enviada_em is None
+    assert db.get(OrcamentoModel, proposal.orcamento_id).status == 'em_analise'
+    assert portal_proposals.list_for_client(db, client.id) == []
+    assert db.query(AuditLogModel).filter_by(action='proposal.reopened_expired').count() == 1
+    try:
+        commercial.reabrir_expirada(db, proposal.id)
+    except service.PropostaConflito:
+        pass
+    else:
+        raise AssertionError('draft reopened twice')
+    with patch.object(resend.Emails, 'send', return_value={'id':'proposal-message-2'}):
+        commercial.enviar(db, proposal.id)
+    current = db.get(PropostaModel, proposal.id)
+    assert current.status == 'enviada' and current.snapshot_economico is not None
+    accepted = portal_proposals.accept(db, proposal.id, client.id, current.versao, user, 'client-on-time')
+    assert accepted['status'] == 'aceita'
 ''')
 
     def test_invite_sent_existing_account_and_identity_conflict(self):

@@ -460,7 +460,7 @@ async function uploadImage(projectId, file) {
 
 export async function salvarProjeto() {
     if ($("proj_capa_upload").dataset.cropPending) return;
-    const button = document.querySelector('[onclick="salvarProjeto()"]');
+    const button = document.querySelector('[data-admin-action="salvarProjeto"]');
     if (button.disabled) return;
     const finish = uploadBusy(button, "Salvando...");
     const originalId = $("proj_id").value;

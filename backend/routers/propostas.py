@@ -103,6 +103,18 @@ def enviar(proposta_id: IdPath, request: Request, db: Db, user=Depends(require_a
     )
 
 
+@router.post("/propostas/{proposta_id}/reabrir", response_model=PropostaResponse)
+def reabrir(proposta_id: IdPath, request: Request, db: Db, user=Depends(require_admin)):
+    # AUD6-S05-001: an expired proposal returns to draft to be updated and sent again.
+    return _responder(
+        comercial.reabrir_expirada,
+        db,
+        proposta_id,
+        user,
+        getattr(request.state, "request_id", None),
+    )
+
+
 @router.post("/propostas/{proposta_id}/aprovar", response_model=PropostaResponse)
 def aprovar(proposta_id: IdPath, request: Request, db: Db, user=Depends(require_admin)):
     return _responder(

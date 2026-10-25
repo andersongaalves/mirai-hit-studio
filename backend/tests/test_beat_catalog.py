@@ -81,6 +81,11 @@ async def check():
             assert changed.json()['titulo'] == 'Horizonte revisado' and changed.json()['preco_lease_base'] == 110
             approved = await api.patch(f'/admin/beats/{beat_id}', headers=bearer('admin'), json={'decisao':'aprovar','motivo':''})
             assert approved.status_code == 200
+            # AUD6-S11-002/S04-002: the studio hears about the submission, the producer about the decision.
+            from models import PortalNotificacaoModel
+            with Session(engine) as db:
+                events = {(row.papel, row.tipo) for row in db.query(PortalNotificacaoModel).filter_by(beat_id=beat_id)}
+                assert ('admin', 'admin_beat_revisao') in events and ('produtor', 'beat_aprovado') in events, events
             with Session(engine) as db:
                 config = db.query(ConfigModel).first()
                 if config is None:

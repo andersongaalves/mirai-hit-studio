@@ -92,6 +92,13 @@ def carregar(db: Session, agora: datetime | None = None) -> DashboardResponse:
     clientes_ativos = _contar(db, ClienteModel, ClienteModel.ativo.is_(True), cliente_oficial())
     orcamentos_abertos = _contar(db, OrcamentoModel, _orcamento_oficial(), OrcamentoModel.status.in_(ORCAMENTOS_ABERTOS))
     propostas_enviadas = _contar(db, PropostaModel, _proposta_oficial(), PropostaModel.status == PropostaStatus.ENVIADA.value)
+    from core.proposta_validade import corte_expiracao
+
+    propostas_expiradas = _contar(
+        db, PropostaModel, _proposta_oficial(), PropostaModel.status == PropostaStatus.ENVIADA.value,
+        PropostaModel.enviada_em < corte_expiracao(agora).astimezone(timezone.utc),
+    )
+    propostas_aguardando = propostas_enviadas - propostas_expiradas
     propostas_aprovadas = _contar(db, PropostaModel, _proposta_oficial(), PropostaModel.status == PropostaStatus.ACEITA.value)
     producoes_ativas = _contar(db, ProducaoModel, _producao_oficial(), ProducaoModel.status.in_(PRODUCOES_ATIVAS))
     producoes_atrasadas = _contar(
@@ -161,7 +168,7 @@ def carregar(db: Session, agora: datetime | None = None) -> DashboardResponse:
         metrics=DashboardMetrics(
             clientes_ativos=clientes_ativos,
             orcamentos_abertos=orcamentos_abertos,
-            propostas_aguardando_decisao=propostas_enviadas,
+            propostas_aguardando_decisao=propostas_aguardando,
             producoes_ativas=producoes_ativas,
             producoes_atrasadas=producoes_atrasadas,
         ),
@@ -173,13 +180,14 @@ def carregar(db: Session, agora: datetime | None = None) -> DashboardResponse:
         ),
         attention=DashboardAttention(
             producoes_atrasadas=producoes_atrasadas,
-            propostas_aguardando_decisao=propostas_enviadas,
+            propostas_aguardando_decisao=propostas_aguardando,
             solicitacoes_producao=solicitacoes_producao,
             beats_em_revisao=beats_em_revisao,
             portfolio_em_revisao=portfolio_em_revisao,
             falhas_processamento_tag=falhas_processamento_tag,
             pagamentos_em_conciliacao=pagamentos_em_conciliacao,
             entregas_aguardando_aprovacao=entregas_aguardando_aprovacao,
+            propostas_expiradas=propostas_expiradas,
         ),
         recent_activity=_atividade_recente(db),
     )
