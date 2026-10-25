@@ -32,13 +32,19 @@ function payload() {
             painel_beats: field("usuario-painel-beats").checked,
         };
     }
-    return {
+    const update = {
         username: field("usuario-username").value.trim(),
         nome_exibicao: displayName(),
         role: field("usuario-role").value,
         ativo: field("usuario-ativo").checked,
         painel_beats: field("usuario-painel-beats").checked,
     };
+    // AUD6-S02-005: a client account keeps its role and client link; only name and access change here.
+    if (current.role === "cliente") {
+        delete update.role;
+        delete update.painel_beats;
+    }
+    return update;
 }
 
 
@@ -47,6 +53,7 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     onSave = handlers.onSave || null;
     onPasswordReset = handlers.onPasswordReset || null;
     const self = usuario?.id === getCurrentUser()?.id;
+    const client = usuario?.role === "cliente";
     field("usuario-modal-title").textContent = usuario ? "Usuario" : "Novo usuario";
     field("usuario-username").value = usuario?.username || "";
     field("usuario-nome-exibicao").value = usuario?.nome_exibicao || "";
@@ -56,7 +63,13 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     field("usuario-password").value = "";
     field("usuario-new-password").value = "";
     field("usuario-username").disabled = self;
-    field("usuario-role").disabled = self;
+    field("usuario-role").disabled = self || client;
+    field("usuario-role").querySelector('option[value="cliente"]').hidden = !client;
+    field("usuario-client-help").classList.toggle("hidden", !client);
+    field("usuario-open-client").onclick = client && usuario.cliente_id
+        ? () => { closeUsuarioModal(); handlers.onOpenClient?.(usuario.cliente_id); }
+        : null;
+    field("usuario-open-client").classList.toggle("hidden", !(client && usuario.cliente_id && handlers.onOpenClient));
     field("usuario-ativo").disabled = self;
     field("usuario-active-field").classList.toggle("hidden", !usuario);
     field("usuario-create-password").classList.toggle("hidden", Boolean(usuario));

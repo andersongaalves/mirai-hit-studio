@@ -7,6 +7,7 @@ const { expectAccessPage, signIn } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 const now = '2026-09-13T12:00:00Z';
 const createdDisplayNames = [];
+const patches = [];
 const users = [
     { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true, created_at: now, updated_at: now },
     { id: 2, username: '<img src=x onerror=alert(1)>', role: 'produtor', is_admin: false, ativo: true, created_at: now, updated_at: now },
@@ -86,9 +87,11 @@ async function staticResponse(route) {
             const user = users.find(item => item.id === Number(match[1]));
             if (!user) return route.fulfill({ status: 404, json: { detail: 'Usuario nao encontrado.' } });
             if (request.method() === 'GET') return route.fulfill({ json: user });
-            Object.assign(user, request.postDataJSON(), { is_admin: request.postDataJSON().role === 'admin', updated_at: now });
+            patches.push({ id: user.id, body: request.postDataJSON() });
+            Object.assign(user, request.postDataJSON(), { is_admin: (request.postDataJSON().role || user.role) === 'admin', updated_at: now });
             return route.fulfill({ json: user });
         }
+        if (url.pathname === '/clientes/9') return route.fulfill({ json: { id: 9, nome: 'Cliente Nove', email: 'nove@example.com', telefone: null, ativo: true, observacoes: '', created_at: now, updated_at: now } });
         if (['/config', '/servicos', '/projetos/admin', '/orcamentos', '/producoes', '/clientes'].includes(url.pathname)) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
@@ -157,6 +160,35 @@ async function staticResponse(route) {
         await page.locator('#usuario-password-reset').click();
         await page.waitForFunction(() => document.getElementById('usuario-new-password')?.value === '');
         assert.equal(await page.locator('#usuario-new-password').inputValue(), '');
+        await page.keyboard.press('Escape');
+
+        // AUD6-S02-005: a client login is editable (name and access) but keeps its role.
+        users.push({ id: 5, username: 'cliente_nove', nome_exibicao: null, role: 'cliente', is_admin: false, ativo: true, cliente_id: 9, created_at: now, updated_at: now });
+        await page.evaluate(async () => (await import('/js/admin/usuarios/usuarios.js')).carregarUsuarios());
+        await page.locator('#usuarios-role-filter').selectOption('cliente');
+        assert.equal(await page.locator('.usuarios-table tbody tr').count(), 1);
+        await page.getByRole('button', { name: 'Abrir usuario cliente_nove', exact: true }).click();
+        await page.waitForFunction(() => document.getElementById('usuario-username').value === 'cliente_nove');
+        assert.equal(await page.locator('#usuario-role').isDisabled(), true);
+        assert.equal(await page.locator('#usuario-role').inputValue(), 'cliente');
+        assert.equal(await page.locator('#usuario-role option:checked').textContent(), 'Cliente');
+        assert.equal(await page.locator('#usuario-client-help').isVisible(), true);
+        await page.locator('#usuario-nome-exibicao').fill('Cliente Nove');
+        await page.locator('#usuario-save').click();
+        await page.waitForFunction(() => document.getElementById('modal-usuario').classList.contains('hidden'));
+        assert.deepEqual(patches.at(-1), { id: 5, body: { username: 'cliente_nove', nome_exibicao: 'Cliente Nove', ativo: true } });
+        await page.locator('.usuarios-table tbody tr').filter({ hasText: 'cliente_nove' }).getByRole('button', { name: /^Abrir usuario/ }).click();
+        await page.waitForFunction(() => document.getElementById('usuario-username').value === 'cliente_nove');
+        await page.locator('#usuario-open-client').click();
+        await page.waitForFunction(() => !document.getElementById('section-clientes').classList.contains('hidden'));
+        await page.locator('#modal-cliente').waitFor({ state: 'visible' });
+        await page.evaluate(() => window.fecharModalCliente());
+        await page.locator('[data-admin-target="section-usuarios"]').click();
+        await page.locator('#usuarios-clear-filters').click();
+        // The role selector never offers "Cliente" for internal accounts.
+        await page.getByRole('button', { name: 'Abrir usuario inativo', exact: true }).click();
+        await page.waitForFunction(() => document.getElementById('usuario-username').value === 'inativo');
+        assert.equal(await page.locator('#usuario-role option[value="cliente"]').evaluate(option => option.hidden), true);
         await page.keyboard.press('Escape');
 
         duplicate = true;

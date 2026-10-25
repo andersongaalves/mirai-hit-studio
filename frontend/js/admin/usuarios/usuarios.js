@@ -100,11 +100,20 @@ export function novoUsuario() {
 }
 
 
+// AUD6-S02-005: from a client login to the client record it belongs to.
+async function abrirCadastroCliente(clienteId) {
+    document.querySelector('[data-admin-target="section-clientes"]')?.click();
+    const { abrirCliente } = await import("../clientes/clientes.js");
+    await abrirCliente(clienteId);
+}
+
+
 export async function abrirUsuario(id) {
     try {
         openUsuarioModal(await API.buscarUsuario(id), {
             onSave: salvarUsuario,
             onPasswordReset: resetPassword,
+            onOpenClient: abrirCadastroCliente,
         });
     } catch (error) {
         console.error(error);

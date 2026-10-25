@@ -148,7 +148,35 @@ class UsuarioResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SessaoUsuarioResponse(BaseModel):
+    """AUD6-S02-012: what the browser needs about the signed-in account, by role."""
+
+    id: int
+    username: str
+    nome_exibicao: str | None = None
+    role: str
+    is_admin: bool
+    ativo: bool
+    # Only for clients (portal ownership) and producers (beats panel).
+    cliente_id: int | None = None
+    painel_beats: bool | None = None
+
+    @classmethod
+    def from_user(cls, usuario):
+        role = usuario.role
+        return cls(
+            id=usuario.id,
+            username=usuario.username,
+            nome_exibicao=getattr(usuario, "nome_exibicao", None),
+            role=role,
+            is_admin=bool(getattr(usuario, "is_admin", False)),
+            ativo=bool(getattr(usuario, "ativo", True)),
+            cliente_id=getattr(usuario, "cliente_id", None) if role == "cliente" else None,
+            painel_beats=bool(getattr(usuario, "painel_beats", False)) if role == "produtor" else None,
+        )
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
-    user: UsuarioResponse
+    user: SessaoUsuarioResponse

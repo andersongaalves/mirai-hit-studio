@@ -94,6 +94,42 @@ async def check():
 asyncio.run(check())
 ''')
 
+    def test_session_payload_is_minimal_and_unknown_login_costs_a_hash(self):
+        # Etapa 07, APL-S02-09 (AUD6-S02-012) and APL-S02-07 (AUD6-S02-008).
+        self.run_case(r'''
+from unittest.mock import patch
+from models import ClienteModel
+import routers.auth as auth_module
+with Session(engine) as db:
+    db.add(ClienteModel(id=7, nome='Cliente', email='cliente@example.com'))
+    db.flush()
+    db.add(UsuarioModel(username='cliente', password_hash=get_password_hash('client-pass'), role='cliente', is_admin=False, ativo=True, cliente_id=7, is_test=True))
+    db.get(UsuarioModel, 2).painel_beats = True
+    db.get(UsuarioModel, 2).nome_exibicao = 'Ana Produtora'
+    db.commit()
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        expected = {
+            'admin': {'id', 'username', 'role', 'is_admin', 'ativo'},
+            'produtor': {'id', 'username', 'nome_exibicao', 'role', 'is_admin', 'ativo', 'painel_beats'},
+            'cliente': {'id', 'username', 'role', 'is_admin', 'ativo', 'cliente_id'},
+        }
+        for username, password in (('admin', 'admin-pass'), ('produtor', 'producer-pass'), ('cliente', 'client-pass')):
+            login = await client.post('/auth/login', json={'username': username, 'password': password})
+            assert login.status_code == 200, login.text
+            assert set(login.json()['user']) == expected[username], login.json()['user']
+            me = await client.get('/auth/me', headers={'Authorization': 'Bearer ' + login.json()['access_token']})
+            assert set(me.json()) == expected[username], me.json()
+        assert me.json()['cliente_id'] == 7 and 'is_test' not in me.json()
+        checked = []
+        real = auth_module.verify_password
+        with patch.object(auth_module, 'verify_password', side_effect=lambda plain, hashed: checked.append(hashed) or real(plain, hashed)):
+            unknown = await client.post('/auth/login', json={'username': 'ninguem', 'password': 'whatever-pass'})
+        assert unknown.status_code == 401 and unknown.json()['detail'] == 'Usuário ou senha incorretos'
+        assert len(checked) == 1 and checked[0].startswith('$2')
+asyncio.run(check())
+''')
+
     def test_crud_permissions_passwords_and_history(self):
         self.run_case(r'''
 async def check():

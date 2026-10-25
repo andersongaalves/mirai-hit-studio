@@ -313,9 +313,11 @@ async function enterPortal() {
     setCurrentUserId(user.id);
     document.getElementById("producer-beats-link").classList.toggle("hidden", !user.painel_beats);
     if (!user.painel_beats && route().view === "beats") history.replaceState({}, "", "/produtor");
-    document.getElementById("producer-username").textContent = user.username;
+    // AUD6-S02-011: people are greeted by their display name, not their login.
+    const shownName = user.nome_exibicao?.trim() || user.username;
+    document.getElementById("producer-username").textContent = shownName;
     startPortalNotifications(user);
-    document.getElementById("producer-greeting").textContent = user.username;
+    document.getElementById("producer-greeting").textContent = shownName;
     document.getElementById("producer-loading").classList.remove("hidden");
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));
     try {

@@ -496,9 +496,11 @@ async function enterPortal() {
         denyWrongRole();
         return;
     }
-    document.getElementById("client-username").textContent = user.username;
+    // AUD6-S02-011: people are greeted by their display name, not their login.
+    const shownName = user.nome_exibicao?.trim() || user.username;
+    document.getElementById("client-username").textContent = shownName;
     startPortalNotifications(user);
-    document.getElementById("client-greeting").textContent = user.username;
+    document.getElementById("client-greeting").textContent = shownName;
     document.getElementById("client-loading").classList.remove("hidden");
     document.querySelectorAll(".producer-view").forEach(item => item.classList.add("hidden"));
     try {
