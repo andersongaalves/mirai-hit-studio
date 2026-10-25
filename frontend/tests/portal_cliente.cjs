@@ -375,6 +375,19 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').first().textContent(), /<script>preview<\/script>/);
         assert.match(await page.locator('.client-finance-grid').textContent(), /R\$\s*1\.000,00/);
         assert.equal(await page.getByRole('link', { name: 'Ir para pagamento' }).count(), 1);
+        // AUD6-S07-007: operator wording from the API becomes plain Portuguese.
+        const human = await page.evaluate(async () => {
+            const { humanClientMessage } = await import('/js/cliente/messages.js');
+            return [
+                humanClientMessage('Situacao financeira requer conciliacao.', 'x'),
+                humanClientMessage('Producao nao encontrada.', 'x'),
+                humanClientMessage('Not Found', 'Falha padrão.'),
+                humanClientMessage(null, 'Falha padrão.'),
+                humanClientMessage('Mensagem já clara.', 'x'),
+            ];
+        });
+        assert.match(human[0], /^Estamos conferindo um pagamento/);
+        assert.deepEqual(human.slice(1), ['Projeto não encontrado.', 'Falha padrão.', 'Falha padrão.', 'Mensagem já clara.']);
 
         // Roadmap 5.14: the held delivery shows its state and the payment link, never a download.
         const heldFile = page.locator('.producer-file').filter({ hasText: 'master-final.wav' });
