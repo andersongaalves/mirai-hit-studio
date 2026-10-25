@@ -114,9 +114,9 @@ with Session(engine) as db:
     def test_honeypot_rejects_without_storing(self):
         self.run_case(r'''
 with TestClient(app) as http, patch.object(EmailService, 'enviar'):
-    trapped = post(http, email='bot@example.com', contato_site='https://spam.example', selecao={'servico_id': 12, 'parametros': {}})
+    trapped = post(http, email='bot@example.com', valor_total=1, contato_site='https://spam.example', selecao={'servico_id': 12, 'parametros': {}})
     assert trapped.status_code == 400 and trapped.json()['detail'] == 'Não foi possível enviar a solicitação.', trapped.text
-    blank = post(http, email='person@example.com', contato_site='  ', selecao={'servico_id': 12, 'parametros': {}})
+    blank = post(http, email='person@example.com', valor_total=1, contato_site='  ', selecao={'servico_id': 12, 'parametros': {}})
     assert blank.status_code == 200, blank.text
     assert 'contato_site' not in blank.json()
 with Session(engine) as db:
