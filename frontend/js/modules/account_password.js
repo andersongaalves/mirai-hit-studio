@@ -42,7 +42,7 @@ export function startAccountPassword(user) {
     button.setAttribute("aria-haspopup", "dialog");
     account.insertBefore(button, account.lastElementChild);
 
-    const dialog = element("dialog", "", "portal-notifications-dialog account-password-dialog");
+    const dialog = element("dialog", "", "portal-dialog account-password-dialog");
     dialog.setAttribute("aria-labelledby", "account-password-title");
     const header = element("header");
     const title = element("h2", "Alterar senha");
