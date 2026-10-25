@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const id = '2af0260f-8486-4a0a-9a43-9e1dd1b4f19e';
@@ -69,6 +70,7 @@ function listPage(url) {
         if (url.pathname === '/auth/login') return route.fulfill({ json: {
             access_token: 'test-token', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true },
         } });
+        if (url.pathname === '/auth/me') return route.fulfill({ json: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } });
         if (url.pathname === '/dashboard') return route.fulfill({ json: {
             metrics: { clientes_ativos: 0, orcamentos_abertos: 0, propostas_aguardando_decisao: 0, producoes_ativas: 0, producoes_atrasadas: 0 },
             pipeline: { orcamentos_abertos: 0, propostas_enviadas: 0, propostas_aprovadas: 0, producoes_ativas: 0 },
@@ -118,10 +120,7 @@ function listPage(url) {
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
     try {
-        await page.goto('http://localhost:4173/admin.html');
-        await page.locator('#username').fill('admin');
-        await page.locator('#password').fill('test-password');
-        await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
+        await signIn(page, { next: '/admin.html', username: 'admin', password: 'test-password' });
         await page.locator('[data-admin-target="section-inbox"]').click();
         assert.equal(calls.filter(call => call.includes('/metrics')).length, 0);
         await page.locator('#inbox-metrics > summary').click();
@@ -178,14 +177,14 @@ function listPage(url) {
             }
         }
         assert.ok(calls.includes(`POST /admin/ai/conversations/${id}/messages`));
-        await page.getByRole('button', { name: 'Sair' }).click();
-        assert.equal(await page.locator('#inbox-detail').innerText(), '');
-        assert.equal(await page.locator('#inbox-list').innerText(), '');
-        assert.equal(await page.locator('#inbox-metrics-content').innerText(), '');
-        assert.equal(await page.locator('#inbox-metrics').evaluate(node => node.open), false);
-        await page.locator('#username').fill('admin');
-        await page.locator('#password').fill('test-password');
-        await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
+        const logout = await expectAccessPage(page, () => page.evaluate(() => {
+            window.fazerLogout();
+            return ['#inbox-detail', '#inbox-list', '#inbox-metrics-content']
+                .map(selector => document.querySelector(selector).innerText)
+                .concat(String(document.querySelector('#inbox-metrics').open));
+        }));
+        assert.deepEqual(logout.result, ['', '', '', 'false']);
+        await signIn(page, { next: '/admin.html', username: 'admin', password: 'test-password' });
         await page.locator('[data-admin-target="section-inbox"]').click();
         await page.locator('.inbox-conversation-item').waitFor();
         const beforeSearch = calls.filter(call => call === 'GET /admin/ai/conversations').length;

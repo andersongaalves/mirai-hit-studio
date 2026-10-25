@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const now = '2026-09-13T12:00:00Z';
@@ -47,6 +48,7 @@ async function staticResponse(route) {
             access_token: 'users-token',
             user: users[0],
         } });
+        if (url.pathname === '/auth/me') return route.fulfill({ json: users[0] });
         if (url.pathname === '/dashboard') return route.fulfill({ json: {
             metrics: { clientes_ativos: 0, orcamentos_abertos: 0, propostas_aguardando_decisao: 0, producoes_ativas: 0, producoes_atrasadas: 0 },
             pipeline: { orcamentos_abertos: 0, propostas_enviadas: 0, propostas_aprovadas: 0, producoes_ativas: 0 },
@@ -94,10 +96,7 @@ async function staticResponse(route) {
     });
 
     try {
-        await page.goto('http://localhost:4173/admin.html');
-        await page.locator('#username').fill('admin');
-        await page.locator('#password').fill('admin-pass');
-        await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
+        await signIn(page, { next: '/admin.html', username: 'admin', password: 'admin-pass' });
         await page.waitForSelector('.usuarios-table tbody tr', { state: 'attached' });
         assert.equal(await page.locator('[data-admin-target="section-usuarios"]').isVisible(), true);
         await page.locator('[data-admin-target="section-usuarios"]').click();
@@ -181,9 +180,14 @@ async function staticResponse(route) {
         listFailure = true;
         await page.evaluate(async () => (await import('/js/admin/usuarios/usuarios.js')).carregarUsuarios());
         await page.waitForSelector('#usuarios-list .admin-error');
-        await page.evaluate(() => window.fazerLogout());
-        assert.equal(await page.locator('[data-admin-target="section-usuarios"]').isVisible(), false);
-        assert.equal(await page.locator('#usuarios-list').textContent(), '');
+        // Logout clears the panel, then sends the visitor to /acesso.
+        const logout = await expectAccessPage(page, () => page.evaluate(() => {
+            window.fazerLogout();
+            const menu = document.querySelector('[data-admin-target="section-usuarios"]');
+            return { menuVisible: Boolean(menu && menu.offsetParent), list: document.getElementById('usuarios-list').textContent };
+        }));
+        assert.deepEqual(logout.result, { menuVisible: false, list: '' });
+        assert.equal(logout.params.get('next'), '/admin.html');
         assert.ok(calls.includes('PATCH /usuarios/3/senha'));
         assert.deepEqual(errors, []);
         console.log('PASS: users CRUD, filters, roles, status, password reset, modal, responsive UI, logout and XSS safety.');

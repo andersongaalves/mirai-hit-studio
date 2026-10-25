@@ -22,7 +22,7 @@ const tokens = new Map([
 ]);
 
 const harness = `<!doctype html><html><body>
-<section id="login-panel"><input id="username"><input id="password" type="password"><p id="login-error" class="hidden"></p></section>
+<section id="login-panel"></section>
 <main id="admin-area" class="hidden"><div data-admin-only></div></main>
 <script type="module">
 window.Auth = await import('/js/admin/auth.js');
@@ -30,8 +30,11 @@ window.restoreResult = await window.Auth.restaurarSessao();
 window.authReady = true;
 </script></body></html>`;
 
+const accessStub = '<!doctype html><html><body><h1>Acesso</h1></body></html>';
+
 async function staticResponse(route) {
     const url = new URL(route.request().url());
+    if (url.pathname === '/acesso') return route.fulfill({ body: accessStub, contentType: 'text/html' });
     if (/^\/(admin|produtor|cliente)(\/|$)/.test(url.pathname)) {
         return route.fulfill({ body: harness, contentType: 'text/html' });
     }
@@ -52,10 +55,26 @@ async function open(page, route) {
     await page.waitForFunction(() => window.authReady === true);
 }
 
+const sessions = {
+    admin: { key: keys.admin, token: 'admin-token', route: '/admin' },
+    producer: { key: keys.produtor, token: 'producer-token', route: '/produtor' },
+    client: { key: keys.cliente, token: 'client-token', route: '/cliente' },
+};
+
+// AUD6-S02-003: panels have no login form. /acesso stores the token (covered by
+// acesso.cjs); here the stored token is restored when the panel opens.
 async function login(page, username) {
-    await page.locator('#username').fill(username);
-    await page.locator('#password').fill('synthetic-password');
-    return page.evaluate(() => window.Auth.fazerLogin());
+    const session = sessions[username];
+    await page.evaluate(({ key, token }) => localStorage.setItem(key, token), session);
+    await open(page, session.route);
+    return page.evaluate(() => window.restoreResult);
+}
+
+async function expectAccess(page, next, reason = null) {
+    await page.waitForURL(url => url.pathname === '/acesso');
+    const params = new URL(page.url()).searchParams;
+    assert.equal(params.get('next'), next);
+    assert.equal(params.get('motivo'), reason);
 }
 
 (async () => {
@@ -105,6 +124,7 @@ async function login(page, username) {
         assert.deepEqual(simultaneous, { admin: 'admin-token', produtor: 'producer-token', cliente: 'client-token' });
 
         await producer.evaluate(() => window.Auth.logout());
+        await expectAccess(producer, '/produtor');
         assert.equal(await admin.evaluate(key => localStorage.getItem(key), keys.admin), 'admin-token');
         assert.equal(await client.evaluate(key => localStorage.getItem(key), keys.cliente), 'client-token');
 
@@ -113,7 +133,7 @@ async function login(page, username) {
         await open(producerTab, '/produtor/producoes/42');
         assert.equal(await producerTab.evaluate(() => window.restoreResult), true);
         await producer.evaluate(() => window.Auth.logout());
-        await producerTab.waitForFunction(() => window.Auth.getToken() === null);
+        await expectAccess(producerTab, '/produtor/producoes/42');
         // The cross-tab scenario is complete; do not let this tab restore later legacy fixtures.
         await producerTab.close();
 
@@ -123,12 +143,14 @@ async function login(page, username) {
         ).status);
         assert.equal(forbiddenStatus, 403);
         assert.equal(await producer.evaluate(() => window.Auth.isAuthenticated()), true);
-        await producer.evaluate(() => window.Auth.authFetch('/expired').catch(() => null));
-        assert.equal(await producer.evaluate(() => window.Auth.isAuthenticated()), false);
+        await producer.evaluate(() => window.Auth.authFetch('/expired').catch(() => null)).catch(() => null);
+        await expectAccess(producer, '/produtor', 'sessao_expirada');
+        assert.equal(await producer.evaluate(key => localStorage.getItem(key), keys.produtor), null);
         assert.equal(await admin.evaluate(() => window.Auth.isAuthenticated()), true);
         assert.equal(await client.evaluate(() => window.Auth.isAuthenticated()), true);
 
         await admin.evaluate(() => window.Auth.logout());
+        await expectAccess(admin, '/admin');
         await admin.evaluate(token => localStorage.setItem('access_token', token), 'legacy-producer-token');
         await open(admin, '/admin');
         assert.equal(await admin.evaluate(() => window.restoreResult), false);
@@ -141,12 +163,12 @@ async function login(page, username) {
 
         users.produtor.role = 'cliente';
         users.produtor.cliente_id = 9;
-        await open(producer, '/produtor');
-        assert.equal(await producer.evaluate(() => window.restoreResult), false);
+        await producer.goto('http://localhost:4173/produtor');
+        await expectAccess(producer, '/produtor');
         assert.equal(await producer.evaluate(key => localStorage.getItem(key), keys.produtor), null);
 
         assert.deepEqual(errors, []);
-        console.log('PASS: isolated admin, producer and client sessions; refresh, tabs, logout, 401, 403 and legacy migration.');
+        console.log('PASS: isolated admin, producer and client sessions; refresh, tabs, logout and 401 return to /acesso, 403 and legacy migration.');
     } finally {
         await browser.close();
     }

@@ -2,6 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 let reconciliations = 0;
@@ -33,6 +34,7 @@ async function staticResponse(route) {
             if (url.origin === "http://localhost:4173") return staticResponse(route);
             if (url.origin !== "http://localhost:8000") return route.fulfill({ status: 404 });
             if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "finance-token", user: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } } });
+            if (url.pathname === "/auth/me") return route.fulfill({ json: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } });
             if (url.pathname === "/dashboard") return route.fulfill({ json: { metrics: {}, pipeline: {}, attention: {}, recent_activity: [] } });
             if (url.pathname === "/financeiro/resumo") return route.fulfill({ json: { valor_a_receber: "60.00", valor_recebido: "40.00", cobrancas_parciais: 1, pagamentos_em_atencao: 1, total_cobrancas: 1 } });
             if (url.pathname === "/financeiro/cobrancas/7/pagamentos-manuais") {
@@ -63,10 +65,7 @@ async function staticResponse(route) {
             return route.fulfill({ status: 404, json: { detail: "not found" } });
         });
 
-        await page.goto("http://localhost:4173/admin.html");
-        await page.locator("#username").fill("admin");
-        await page.locator("#password").fill("password");
-        await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
+        await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
         await page.locator('[data-admin-target="section-financeiro"]').click();
         await page.waitForSelector(".financeiro-table-view tbody tr");
         assert.match(await page.locator("#financeiro-metrics").textContent(), /R\$\s*60,00/);
@@ -141,8 +140,11 @@ async function staticResponse(route) {
             assert.equal(await page.locator(".financeiro-mobile-view").isVisible(), width <= 768);
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
         }
-        await page.evaluate(() => window.fazerLogout());
-        assert.equal(await page.locator("#financeiro-list").textContent(), "");
+        const logout = await expectAccessPage(page, () => page.evaluate(() => {
+            window.fazerLogout();
+            return document.getElementById("financeiro-list").textContent;
+        }));
+        assert.equal(logout.result, "");
         assert.deepEqual(errors, []);
         console.log("PASS: finance summary, manual Pix, safe detail, reconciliation, responsive cards and logout cleanup.");
     } finally { await browser.close(); }

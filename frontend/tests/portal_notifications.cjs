@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 
@@ -50,10 +51,7 @@ const root = path.resolve(__dirname, '..');
             });
             const page = await context.newPage();
             page.on('pageerror', error => errors.push(error.message));
-            await page.goto(`http://localhost:4173/${role}`);
-            await page.locator('#username').fill(role);
-            await page.locator('#password').fill('synthetic-password');
-            await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+            await signIn(page, { next: `/${role}`, username: role });
             await page.locator('.portal-notifications-new li').waitFor();
             assert.deepEqual(claims, [1]);
             assert.equal(await page.locator('.portal-notifications-new img').count(), 0);

@@ -20,7 +20,7 @@ async function staticResponse(route) {
     const url = new URL(route.request().url());
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === '/acesso') pathname = '/acesso.html';
-    if (['/admin', '/produtor', '/cliente'].includes(pathname)) {
+    if (/^\/(admin|produtor|cliente)(\/|$)/.test(pathname)) {
         return route.fulfill({ body: '<!doctype html><title>Destino</title>', contentType: 'text/html' });
     }
     const file = path.resolve(root, `.${pathname}`);
@@ -64,6 +64,11 @@ async function login(page, username) {
     await context.route('**/*', async route => {
         const url = new URL(route.request().url());
         if (url.origin === 'http://localhost:4173') return staticResponse(route);
+        if (url.origin === 'http://localhost:8000' && url.pathname === '/auth/me') {
+            const token = (route.request().headers().authorization || '').replace('Bearer ', '');
+            const user = users[token.replace(/-token$/, '')];
+            return route.fulfill(user ? { json: { ...user, nome_exibicao: user.username === 'admin' ? 'Equipe Mirai' : null } } : { status: 401, json: {} });
+        }
         if (url.origin !== 'http://localhost:8000' || url.pathname !== '/auth/login') {
             return route.fulfill({ status: 404, body: '' });
         }
@@ -105,6 +110,46 @@ async function login(page, username) {
             assert.equal(stored[role], `${role}-token`);
             assert.equal(Object.values(stored).filter(Boolean).length, 1);
         }
+
+        // AUD6-S02-003: each role returns to its own requested panel; other targets fall back home.
+        for (const [role, next, expected] of [
+            ['produtor', '/produtor/producoes/3', '/produtor/producoes/3'],
+            ['admin', '/admin?secao=financeiro', '/admin'],
+            ['admin', '/produtor', '/admin'],
+            ['cliente', '//evil.example/cliente', '/cliente'],
+            ['cliente', '/cliente/../admin', '/cliente'],
+        ]) {
+            await page.goto('http://localhost:4173/acesso');
+            await page.evaluate(() => localStorage.clear());
+            await page.goto(`http://localhost:4173/acesso?next=${encodeURIComponent(next)}`);
+            await page.locator('#username').fill(role);
+            await page.locator('#password').fill('synthetic-password');
+            await Promise.all([
+                page.waitForURL(url => url.pathname === expected, { waitUntil: 'commit' }),
+                page.locator('#access-login-form').evaluate(form => form.requestSubmit()),
+            ]);
+            if (expected === '/admin' && next.startsWith('/admin?')) assert.equal(new URL(page.url()).search, '?secao=financeiro');
+        }
+
+        // AUD6-S02-013: an existing session offers "Continuar"; the form stays available.
+        await page.goto('http://localhost:4173/acesso');
+        await page.evaluate(() => { localStorage.clear(); localStorage.setItem('mirai.auth.admin.access_token', 'admin-token'); });
+        await page.goto(`http://localhost:4173/acesso?next=${encodeURIComponent('/admin')}`);
+        await page.locator('#access-session:not(.hidden)').waitFor();
+        assert.equal(await page.locator('#access-session-name').textContent(), 'Equipe Mirai');
+        assert.equal(await page.locator('#access-login-form').isVisible(), true);
+        await Promise.all([page.waitForURL('http://localhost:4173/admin'), page.locator('#access-continue').click()]);
+        await page.goto('http://localhost:4173/acesso');
+        await page.evaluate(() => { localStorage.clear(); localStorage.setItem('mirai.auth.produtor.access_token', 'revoked-token'); });
+        await page.goto('http://localhost:4173/acesso');
+        await page.waitForTimeout(150);
+        assert.equal(await page.locator('#access-session').isVisible(), false);
+
+        // An expired session explains why the visitor is back here.
+        await page.goto('http://localhost:4173/acesso?next=%2Fcliente&motivo=sessao_expirada');
+        assert.match(await page.locator('#access-notice').textContent(), /Sua sessão terminou/);
+        await page.goto('http://localhost:4173/acesso?motivo=%3Cimg%3E');
+        assert.equal(await page.locator('#access-notice').isVisible(), false);
 
         await page.goto('http://localhost:4173/acesso');
         await page.evaluate(() => localStorage.clear());

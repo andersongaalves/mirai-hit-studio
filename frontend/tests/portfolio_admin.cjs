@@ -2,6 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 const coverPng = Buffer.from(
@@ -74,6 +75,7 @@ async function staticResponse(route) {
         if (url.origin === "http://localhost:4173") return staticResponse(route);
         if (url.origin !== "http://localhost:8000") return route.fulfill({ status: 200, body: "" });
         if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "session", user: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } } });
+        if (url.pathname === "/auth/me") return route.fulfill({ json: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } });
         if (url.pathname === "/projetos/admin") return route.fulfill({ json: projects });
         if (url.pathname === "/config/portfolio-segments") return route.fulfill({ json: segmentCatalog });
         if (/\/projetos\/(7|8)/.test(url.pathname) && request.method() === "PUT") {
@@ -129,10 +131,7 @@ async function staticResponse(route) {
     }
 
     try {
-        await page.goto("http://localhost:4173/admin.html");
-        await page.locator("#username").fill("admin");
-        await page.locator("#password").fill("password");
-        await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
+        await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
         await page.waitForFunction(() => typeof window.editarProjeto === "function");
         await openProject(7);
 

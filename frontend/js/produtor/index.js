@@ -1,4 +1,4 @@
-import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
+import { exigirSessao, getCurrentUser, logout } from "../admin/auth.js";
 import * as api from "./api.js";
 import { bindImageCrop } from "../modules/image_crop.js";
 import { applyBeatUploadLimits, validateBeatUpload } from "../modules/beat_upload_validation.js";
@@ -350,10 +350,6 @@ async function enterPortal() {
     }
 }
 
-document.getElementById("producer-login-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    if (await fazerLogin()) await enterPortal();
-});
 
 document.getElementById("producer-logout").addEventListener("click", logout);
 document.getElementById("producer-beat-form").addEventListener("submit", async event => {
@@ -434,4 +430,4 @@ document.addEventListener("admin:logout", () => {
     setAlert();
 });
 
-if (await restaurarSessao()) await enterPortal();
+if (await exigirSessao()) await enterPortal();

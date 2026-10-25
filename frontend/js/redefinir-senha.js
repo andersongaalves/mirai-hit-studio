@@ -13,9 +13,16 @@ function showMessage(text, error = false) {
     if (error) message.classList.add("producer-message--error");
 }
 
+const newLink = document.getElementById("reset-new-link");
+
+function offerNewLink() {
+    newLink?.classList.remove("hidden");
+}
+
 if (token.length < 32) {
     form.classList.add("hidden");
     showMessage("Este link é inválido ou não está mais disponível.", true);
+    offerNewLink();
 }
 
 form?.addEventListener("submit", async event => {
@@ -51,6 +58,7 @@ form?.addEventListener("submit", async event => {
         window.history.replaceState({}, document.title, "/redefinir-senha");
     } catch (error) {
         showMessage(error instanceof Error ? error.message : "Erro temporário. Tente novamente.", true);
+        if (!(error instanceof Error) || !error.message.startsWith("Muitas tentativas")) offerNewLink();
     } finally {
         button.disabled = false;
         button.textContent = "Redefinir senha";

@@ -4,6 +4,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { stayWithoutSession } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 
 const CONFIG = { capa_mb: 10, mp3_mb: 50, wav_mb: 50, multitrack_mb: 50, multitrack_mode: 'arquivo' };
@@ -52,7 +53,8 @@ const beats = () => [
             }
             return route.fulfill({ body: '' });
         });
-        await page.goto('http://localhost:4173/admin.html');
+        await stayWithoutSession(page);
+        await page.goto('http://localhost:4173/admin.html', { waitUntil: 'domcontentloaded' });
         await page.evaluate(() => localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only'));
         await page.waitForTimeout(300);
         await page.evaluate(async () => {

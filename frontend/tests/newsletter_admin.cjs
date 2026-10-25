@@ -2,6 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 const now = "2026-09-14T12:00:00Z";
@@ -33,6 +34,7 @@ async function staticResponse(route) {
             if (url.origin === "http://localhost:4173") return staticResponse(route);
             if (url.origin !== "http://localhost:8000") return route.fulfill({ status: 404 });
             if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "newsletter-token", user: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } } });
+            if (url.pathname === "/auth/me") return route.fulfill({ json: { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true } });
             if (url.pathname === "/dashboard") return route.fulfill({ json: { metrics: { clientes_ativos: 0, orcamentos_abertos: 0, propostas_aguardando_decisao: 0, producoes_ativas: 0, producoes_atrasadas: 0 }, pipeline: {}, attention: {}, recent_activity: [] } });
             if (url.pathname === "/newsletter/subscribers" && request.method() === "GET") return route.fulfill({ json: subscribers });
             if (url.pathname === "/newsletter/campaigns" && request.method() === "GET") return route.fulfill({ json: campaigns });
@@ -63,10 +65,7 @@ async function staticResponse(route) {
             if (["/config", "/servicos", "/projetos/admin", "/orcamentos", "/producoes", "/clientes", "/usuarios", "/usuarios/produtores"].includes(url.pathname)) return route.fulfill({ json: url.pathname === "/config" ? {} : [] });
             return route.fulfill({ status: 404, json: { detail: "not found" } });
         });
-        await page.goto("http://localhost:4173/admin.html");
-        await page.locator("#username").fill("admin");
-        await page.locator("#password").fill("password");
-        await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
+        await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
         await page.locator('[data-admin-target="section-newsletter"]').click();
         await page.waitForSelector(".newsletter-campaigns-table tbody tr");
         assert.equal(await page.locator("#newsletter-campaigns-panel").isVisible(), true);
@@ -94,8 +93,11 @@ async function staticResponse(route) {
             await page.setViewportSize({ width, height: 800 });
             assert.equal(await page.locator(".newsletter-mobile-view").first().isVisible(), width <= 768);
         }
-        await page.evaluate(() => window.fazerLogout());
-        assert.equal(await page.locator("#newsletter-campaigns-list").textContent(), "");
+        const logout = await expectAccessPage(page, () => page.evaluate(() => {
+            window.fazerLogout();
+            return document.getElementById("newsletter-campaigns-list").textContent;
+        }));
+        assert.equal(logout.result, "");
         assert.deepEqual(errors, []);
         console.log("PASS: newsletter admin lists, filters, drafts, confirmation, send, cancellation, mobile, logout and XSS safety.");
     } finally { await browser.close(); }

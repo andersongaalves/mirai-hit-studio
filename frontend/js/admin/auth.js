@@ -1,4 +1,5 @@
 import { API_URL } from "../config.js";
+import { accessPath } from "../auth_next.js";
 import { $ } from "../utils/dom.js";
 
 const LEGACY_ACCESS_TOKEN_KEY = "access_token";
@@ -68,9 +69,13 @@ export function createAuthContext(config) {
         $("admin-area")?.classList.remove("hidden");
     }
 
-    function mostrarLogin() {
+    // AUD6-S02-003: panels have no login form; without a session they send the
+    // visitor to /acesso and come back to the same address after signing in.
+    function mostrarLogin(reason = null) {
         $("admin-area")?.classList.add("hidden");
         $("login-panel")?.classList.remove("hidden");
+        const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.assign(accessPath(here, reason));
     }
 
     function emitLogout() {
@@ -79,22 +84,20 @@ export function createAuthContext(config) {
         }));
     }
 
-    function clearRuntimeSession({ emit = true } = {}) {
+    function clearRuntimeSession({ emit = true, reason = null } = {}) {
         sessionVersion++;
         verifiedToken = null;
         setCurrentUser(null);
         clearTimeout(expiryTimer);
         expiryTimer = null;
         if (emit) emitLogout();
-        mostrarLogin();
+        mostrarLogin(reason);
     }
 
-    function logout() {
+    function logout(reason = null) {
         const hadSession = Boolean(getToken() || verifiedToken || currentUser);
         localStorage.removeItem(config.storageKey);
-        clearRuntimeSession({ emit: hadSession });
-        if ($("username")) $("username").value = "";
-        if ($("password")) $("password").value = "";
+        clearRuntimeSession({ emit: hadSession, reason: typeof reason === "string" ? reason : null });
     }
 
     function watchExpiry(token) {
@@ -105,7 +108,7 @@ export function createAuthContext(config) {
             const { exp } = JSON.parse(atob(payload));
             if (Number.isFinite(exp)) {
                 expiryTimer = setTimeout(() => {
-                    if (getToken() === token) logout();
+                    if (getToken() === token) logout("sessao_expirada");
                 }, Math.max(0, Math.min(exp * 1000 - Date.now(), 2147483647)));
             }
         } catch {
@@ -124,42 +127,6 @@ export function createAuthContext(config) {
         setCurrentUser(user);
         watchExpiry(token);
         mostrarAdmin();
-    }
-
-    async function fazerLogin() {
-        const version = sessionVersion;
-        const username = $("username")?.value.trim() || "";
-        const password = $("password")?.value || "";
-        const errorEl = $("login-error");
-        errorEl?.classList.add("hidden");
-
-        try {
-            const response = await fetch(`${API_URL}/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }),
-            });
-            const data = await response.json();
-            if (version !== sessionVersion) return false;
-            if (!response.ok) {
-                throw new Error(typeof data.detail === "string" ? data.detail : "Usuário ou senha incorretos.");
-            }
-            if (typeof data.access_token !== "string" || !data.access_token) {
-                throw new Error("Sessão inválida.");
-            }
-            if (!config.accepts(data.user)) throw new Error(config.deniedMessage);
-
-            commitSession(data.access_token, data.user);
-            if ($("password")) $("password").value = "";
-            return true;
-        } catch (error) {
-            console.error(error);
-            if (errorEl) {
-                errorEl.innerText = error.message;
-                errorEl.classList.remove("hidden");
-            }
-            return false;
-        }
     }
 
     async function authFetch(endpoint, options = {}) {
@@ -183,7 +150,7 @@ export function createAuthContext(config) {
         const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
         ensureSession();
         if (response.status === 401) {
-            logout();
+            logout("sessao_expirada");
             throw new Error("Sessão expirada.");
         }
 
@@ -196,6 +163,13 @@ export function createAuthContext(config) {
             };
         }
         return response;
+    }
+
+    // Restores the stored session or sends the visitor to /acesso.
+    async function exigirSessao() {
+        if (await restaurarSessao()) return true;
+        if (!getToken()) mostrarLogin();
+        return false;
     }
 
     async function restaurarSessao() {
@@ -247,15 +221,19 @@ export function createAuthContext(config) {
 
     function handleStorage(event) {
         if (event.key !== config.storageKey) return;
+        if (event.newValue !== null) {
+            sessionVersion++;
+            location.reload();
+            return;
+        }
         clearRuntimeSession();
-        if (event.newValue !== null) location.reload();
     }
 
     window.addEventListener("storage", handleStorage);
 
     return Object.freeze({
         authFetch,
-        fazerLogin,
+        exigirSessao,
         getContextName: () => config.name,
         getCurrentUser,
         getStorageKey: () => config.storageKey,
@@ -270,7 +248,7 @@ export function createAuthContext(config) {
 const auth = createAuthContext(contextForPath());
 
 export const authFetch = auth.authFetch;
-export const fazerLogin = auth.fazerLogin;
+export const exigirSessao = auth.exigirSessao;
 export const getContextName = auth.getContextName;
 export const getCurrentUser = auth.getCurrentUser;
 export const getStorageKey = auth.getStorageKey;

@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const now = Date.now();
@@ -236,10 +237,7 @@ async function staticResponse(route) {
     });
 
     try {
-        await page.goto('http://localhost:4173/produtor');
-        await page.locator('#username').fill('producer-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/produtor', username: 'producer-a' });
         await page.waitForSelector('.producer-metric');
         assert.equal(await page.locator('.producer-metric').count(), 5);
         assert.match(await page.locator('#producer-metrics').textContent(), /Produções ativas2/);
@@ -417,48 +415,46 @@ async function staticResponse(route) {
             }
         }
 
-        await page.getByRole('button', { name: 'Sair' }).click();
-        assert.equal(await page.locator('#login-panel').isVisible(), true);
+        // AUD6-S02-003: "Sair" sends the producer to the single access page.
+        await expectAccessPage(page, () => page.getByRole('button', { name: 'Sair' }).click());
 
         productions = [];
         payouts = [];
-        await page.goto('http://localhost:4173/produtor');
-        await page.locator('#username').fill('producer-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/produtor', username: 'producer-a' });
         await page.waitForSelector('.producer-metric');
         assert.match(await page.locator('#producer-metrics').textContent(), /Produções ativas0/);
         await page.getByRole('link', { name: 'Minhas produções' }).click();
         assert.match(await page.locator('#producer-list').textContent(), /ainda não possui produções/);
-        await page.getByRole('button', { name: 'Sair' }).click();
+        await expectAccessPage(page, () => page.getByRole('button', { name: 'Sair' }).click());
 
+        // An administrator who follows a producer link goes to the Admin, never into this portal.
         loginRole = 'admin';
-        await page.locator('#username').fill('admin');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
-        await page.waitForFunction(() => document.getElementById('login-error').textContent.includes('exclusiva'));
-        assert.equal(await page.locator('#admin-area').isVisible(), false);
+        const adminArea = url => url.pathname === '/admin';
+        await page.route(adminArea, route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Admin</title>' }));
+        await page.goto(`http://localhost:4173/acesso.html?next=${encodeURIComponent('/produtor/producoes')}`);
+        await page.locator('#access-login-form #username').fill('admin');
+        await page.locator('#access-login-form #password').fill('synthetic-password');
+        await Promise.all([page.waitForURL(adminArea), page.locator('#access-login-form button[type=submit]').click()]);
+        assert.equal(await page.evaluate(() => localStorage.getItem('mirai.auth.produtor.access_token')), null);
+        await page.evaluate(() => localStorage.removeItem('mirai.auth.admin.access_token'));
+        await page.unroute(adminArea);
 
         // AUD-S08-002: a payout failure must not block the production workspace.
         loginRole = 'produtor';
         failPayouts = true;
-        await page.locator('#username').fill('producer-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/produtor', username: 'producer-a' });
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('repasses'));
         assert.equal(await page.locator('.producer-metric').count(), 5);
         failPayouts = false;
-        await page.getByRole('button', { name: 'Sair' }).click();
+        await expectAccessPage(page, () => page.getByRole('button', { name: 'Sair' }).click());
 
         failList = true;
-        await page.locator('#username').fill('producer-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/produtor', username: 'producer-a' });
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Falha controlada'));
         assert.equal(await page.locator('#producer-loading').isVisible(), false);
 
         // Roadmap 5.01: published settings drive notice, texts, indicators and filters.
-        await page.getByRole('button', { name: 'Sair' }).click();
+        await expectAccessPage(page, () => page.getByRole('button', { name: 'Sair' }).click());
         failList = false;
         portalSettings = {
             aviso: { ativo: true, nivel: 'info', texto: 'Novo fluxo de entregas a partir de segunda.' },
@@ -466,9 +462,7 @@ async function staticResponse(route) {
             indicadores: ['vencidos', 'ativas'],
             filtros: { status_padrao: 'revisao', ordenacao_padrao: 'recente' },
         };
-        await page.locator('#username').fill('producer-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/produtor', username: 'producer-a' });
         await page.waitForFunction(() => document.getElementById('producer-loading').classList.contains('hidden'));
         await page.getByRole('link', { name: 'Dashboard' }).click();
         await page.waitForSelector('#producer-metrics .producer-metric');

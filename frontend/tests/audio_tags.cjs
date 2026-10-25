@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 const root = path.resolve(__dirname, "..");
 
 (async () => {
@@ -75,11 +76,7 @@ const root = path.resolve(__dirname, "..");
             if (url.pathname === "/config/portfolio-segments") return route.fulfill({ json: { segments: [] } });
             return route.fulfill({ json: [] });
         });
-        await page.goto("http://localhost:4173/admin.html");
-        await page.locator("#username").fill("admin");
-        await page.locator("#password").fill("synthetic-only");
-        await page.waitForFunction(() => typeof window.fazerLogin === "function");
-        await page.evaluate(() => window.fazerLogin());
+        await signIn(page, { next: "/admin.html", username: "admin", password: "synthetic-only" });
         await page.waitForFunction(() => document.getElementById("admin-area")?.classList.contains("hidden") === false);
         await page.evaluate(() => window.mostrarSecao("section-custos"));
         await page.getByRole("tab", { name: "Portais", exact: true }).click();

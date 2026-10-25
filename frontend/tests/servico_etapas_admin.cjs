@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const service = { id: 3, nome: 'Plano Start', subtitulo: '', valor_base: 1000, categoria: 'Mixagem', aplica_desconto: false, parametros: '', estrutura_servico: '{"intro":"","sections":[],"benefits":[]}' };
@@ -42,6 +43,7 @@ async function staticResponse(route) {
         if (url.pathname === '/auth/login') {
             return route.fulfill({ json: { access_token: 'synthetic-admin', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } } });
         }
+        if (url.pathname === '/auth/me') return route.fulfill({ json: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } });
         if (url.pathname === '/servicos') return route.fulfill({ json: [service] });
         if (url.pathname === '/servicos/3/etapas' && request.method() === 'GET') return route.fulfill({ json: stored });
         if (url.pathname === '/servicos/3/etapas' && request.method() === 'PUT') {
@@ -83,11 +85,7 @@ async function staticResponse(route) {
     });
 
     try {
-        await page.goto('http://localhost:4173/admin.html');
-        await page.waitForFunction(() => typeof window.fazerLogin === 'function');
-        await page.locator('#username').fill('admin');
-        await page.locator('#password').fill('synthetic-password');
-        await page.locator('#login-panel').getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
+        await signIn(page, { next: '/admin.html', username: 'admin' });
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
         await page.locator('[data-admin-target="section-servicos"]').click();
         await page.locator('#section-servicos').getByRole('button', { name: 'Editar' }).click();

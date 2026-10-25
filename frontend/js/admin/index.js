@@ -31,7 +31,6 @@ function expose(name, callback) {
 
 let inicializacao = null;
 let sessaoInicializada = null;
-let loginEmAndamento = null;
 
 async function initializeAdmin() {
     const token = Auth.getToken();
@@ -48,15 +47,6 @@ async function initializeAdmin() {
         console.error("Erro ao iniciar admin:", error);
     });
     return inicializacao;
-}
-
-function fazerLogin() {
-    if (!loginEmAndamento) {
-        loginEmAndamento = (async () => {
-            if (await Auth.fazerLogin()) await initializeAdmin();
-        })().finally(() => { loginEmAndamento = null; });
-    }
-    return loginEmAndamento;
 }
 
 document.addEventListener("admin:logout", () => {
@@ -98,7 +88,6 @@ document.addEventListener("admin:logout", () => {
     if (proposalTitle) proposalTitle.textContent = "";
     document.querySelectorAll(".notification").forEach(el => el.remove());
 });
-expose("fazerLogin", fazerLogin);
 expose("fazerLogout", Auth.logout);
 
 expose("mostrarDashboard", Dashboard.mostrarDashboard);
@@ -137,7 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ? Dashboard.mostrarDashboard()
                 : Dashboard.mostrarSecao(id),
         });
-        if (await Auth.restaurarSessao()) {
+        if (await Auth.exigirSessao()) {
             await initializeAdmin();
         }
     } catch (error) {

@@ -58,10 +58,12 @@ async function sendChat(page, text) {
         if (response.url().includes('/suggestions')) console.log('I3_SUGGESTION', response.status(), await response.text());
     });
     admin.on('dialog', dialog => dialog.accept());
-    await admin.goto('http://127.0.0.1:5500/admin.html');
+    // AUD6-S02-003: the Admin signs in through /acesso and returns to the panel.
+    await admin.goto(`http://127.0.0.1:5500/acesso.html?next=${encodeURIComponent('/admin.html')}`);
     await admin.locator('#username').fill(username);
     await admin.locator('#password').fill(password);
-    await admin.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
+    await admin.locator('#access-login-form button[type=submit]').click();
+    await admin.waitForURL(url => url.pathname === '/admin.html');
     await admin.locator('[data-admin-target="section-inbox"]').click();
     console.log('I3_STEP admin');
     const conversation = admin.locator('.inbox-conversation-item').first();

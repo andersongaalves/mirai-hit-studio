@@ -119,14 +119,12 @@ function result(value) { console.log(`I2_RESULT ${JSON.stringify(value)}`); }
             assert.ok(!JSON.stringify(await page.evaluate(() => window.dataLayer || [])).includes(process.env.I2_REFERENCE));
             result({ rejected, challenge: await page.locator("#challenge-container").isVisible() });
         } else if (mode === "finance") {
-            await page.goto(`${frontendOrigin}/admin.html`);
-            await page.waitForFunction(() => typeof window.fazerLogin === "function", null, { timeout: 10000 }).catch(error => {
-                throw new Error(JSON.stringify({ message: error.message, errors, failedRequests }));
-            });
+            // AUD6-S02-003: the Admin signs in through /acesso and returns to the panel.
+            await page.goto(`${frontendOrigin}/acesso?next=${encodeURIComponent("/admin.html")}`);
             await page.locator("#username").fill(process.env.I2_USERNAME);
             await page.locator("#password").fill(process.env.I2_PASSWORD);
             const loginPromise = page.waitForResponse(r => new URL(r.url()).pathname === "/auth/login");
-            await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
+            await page.locator("#access-login-form button[type=submit]").click();
             const loginResponse = await loginPromise;
             if (loginResponse.status() !== 200) throw new Error(`admin login failed: ${loginResponse.status()}`);
             await page.locator("#admin-area:not(.hidden)").waitFor();
@@ -148,14 +146,12 @@ function result(value) { console.log(`I2_RESULT ${JSON.stringify(value)}`); }
             if (process.env.I2_SCREENSHOT) await page.screenshot({ path: process.env.I2_SCREENSHOT, fullPage: true });
             result({ visible: true });
         } else if (mode === "admin-budget") {
-            await page.goto(`${frontendOrigin}/admin.html`);
-            await page.waitForFunction(() => typeof window.fazerLogin === "function", null, { timeout: 10000 }).catch(error => {
-                throw new Error(JSON.stringify({ message: error.message, errors, failedRequests }));
-            });
+            // AUD6-S02-003: the Admin signs in through /acesso and returns to the panel.
+            await page.goto(`${frontendOrigin}/acesso?next=${encodeURIComponent("/admin.html")}`);
             await page.locator("#username").fill(process.env.I2_USERNAME);
             await page.locator("#password").fill(process.env.I2_PASSWORD);
             const loginPromise = page.waitForResponse(r => new URL(r.url()).pathname === "/auth/login");
-            await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
+            await page.locator("#access-login-form button[type=submit]").click();
             const loginResponse = await loginPromise;
             if (loginResponse.status() !== 200) throw new Error(`admin login failed: ${loginResponse.status()}`);
             await page.locator("#admin-area:not(.hidden)").waitFor();

@@ -1,4 +1,4 @@
-import { fazerLogin, getCurrentUser, logout, restaurarSessao } from "../admin/auth.js";
+import { exigirSessao, getCurrentUser, logout } from "../admin/auth.js";
 import * as api from "./api.js";
 import { initProductionRequest } from "./request.js";
 import { messagesPanel } from "../modules/production_messages.js";
@@ -536,10 +536,6 @@ async function enterPortal() {
     }
 }
 
-document.getElementById("client-login-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    if (await fazerLogin()) await enterPortal();
-});
 document.getElementById("client-logout").addEventListener("click", logout);
 document.getElementById("client-detail-back").addEventListener("click", () => navigate("/cliente/projetos"));
 document.getElementById("client-proposal-back").addEventListener("click", () => navigate("/cliente/propostas"));
@@ -597,4 +593,4 @@ document.addEventListener("visibilitychange", () => {
 });
 
 initProductionRequest(setAlert);
-if (await restaurarSessao()) await enterPortal();
+if (await exigirSessao()) await enterPortal();

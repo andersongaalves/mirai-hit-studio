@@ -44,13 +44,8 @@ async function waitForActivationUrl() {
         await page.getByLabel('Nome de usuário').fill('e2e-public-client');
         await page.getByLabel('Senha', { exact: true }).fill(password);
         await page.getByLabel('Confirmar senha').fill(password);
+        // AUD6-S02-014: activation signs the new account in and opens the portal.
         await page.getByRole('button', { name: 'Ativar acesso' }).click();
-        await page.getByText('Conta criada com sucesso.').waitFor();
-        await page.getByRole('link', { name: 'Entrar na sua conta' }).click();
-
-        await page.getByLabel('Usuário').fill('e2e-public-client');
-        await page.getByLabel('Senha').fill(password);
-        await page.getByRole('button', { name: 'Entrar' }).click();
         await page.waitForURL('**/cliente');
         await page.locator('#admin-area').waitFor({ state: 'visible' });
         await page.locator('#client-loading').waitFor({ state: 'hidden' });
@@ -69,7 +64,8 @@ async function waitForActivationUrl() {
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
         }
         await page.getByRole('button', { name: 'Sair' }).click();
-        await page.locator('#login-panel').waitFor({ state: 'visible' });
+        await page.waitForURL(url => url.pathname === '/acesso');
+        assert.equal(await page.evaluate(() => localStorage.getItem('mirai.auth.cliente.access_token')), null);
         assert.deepEqual(errors, []);
         console.log('CLIENT_SIGNUP_E2E_PASS');
     } finally {
