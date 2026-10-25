@@ -22,8 +22,6 @@ jobs:
                   npx playwright install --with-deps chromium
             - name: Diagnose
               shell: bash
-              env:
-                  BROWSER_CHANNEL: chromium
               run: |
                   set +e
                   node frontend/tests/public_accessibility.cjs > out.txt 2>&1
