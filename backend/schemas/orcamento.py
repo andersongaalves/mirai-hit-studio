@@ -54,6 +54,8 @@ class OrcamentoCreate(OrcamentoBase):
     link_guia: str | None = Field(default=None, max_length=500)
     detalhes: str | None = Field(default=None, max_length=20000)
     selecao: OrcamentoSelecao | None = None
+    # AUD6-S03-002: honeypot filled only by bots; never stored.
+    contato_site: str | None = Field(default=None, max_length=200, exclude=True)
     _url = field_validator("link_guia")(http_url)
 
     @field_validator("nome_cliente", "servico")

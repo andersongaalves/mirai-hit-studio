@@ -37,6 +37,8 @@ def criar_orcamento(
 
     from services import orcamento_preco_service
 
+    if orcamento.contato_site and orcamento.contato_site.strip():
+        raise HTTPException(status_code=400, detail="Não foi possível enviar a solicitação.")
     try:
         orcamento = orcamento_preco_service.aplicar(db, orcamento)
     except orcamento_preco_service.SelecaoInvalida:
