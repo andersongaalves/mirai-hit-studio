@@ -214,6 +214,7 @@ jobs:
                     test_portfolio_envios.py \
                     test_audio_tags.py \
                     test_recursos.py \
+                    test_protecao.py \
                     test_portfolio_taxonomy.py \
                     test_catalogo.py \
                     test_emails.py; do
