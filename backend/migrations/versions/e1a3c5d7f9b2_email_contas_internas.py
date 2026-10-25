@@ -30,10 +30,7 @@ def downgrade():
         op.execute("ALTER TABLE usuarios DROP CONSTRAINT ck_usuarios_email_interno")
     op.execute("DROP INDEX uq_usuarios_email_lower")
     op.drop_index("uq_usuarios_reset_token_hash", table_name="usuarios")
-    with op.batch_alter_table("usuarios") as batch:
-        batch.drop_column("reset_expires_at")
-        batch.drop_column("reset_token_hash")
-        batch.drop_column("email")
-    if op.get_bind().dialect.name == "sqlite":
-        # The SQLite rebuild cannot reflect expression indexes; restore the one from d8f0b2c4e6a3.
-        op.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_usuarios_username_lower ON usuarios (lower(username))")
+    # Plain DROP COLUMN (SQLite >= 3.35): a batch rebuild of usuarios fails while
+    # other tables reference it and would lose the lower(username) index.
+    for column in ("reset_expires_at", "reset_token_hash", "email"):
+        op.execute(f"ALTER TABLE usuarios DROP COLUMN {column}")
