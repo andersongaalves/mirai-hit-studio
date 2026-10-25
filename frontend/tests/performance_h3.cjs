@@ -127,6 +127,8 @@ async function measure(browser, origin, profile, target) {
         }).observe({ type: "longtask", buffered: true });
     });
     await context.route("http://localhost:8000/**", apiResponse);
+    // APL-S12-01: third-party hosts (fonts, analytics) answer empty so CI runs stay offline and repeatable.
+    await context.route(url => !["localhost", "127.0.0.1"].includes(url.hostname), route => route.fulfill({ status: 204, body: "" }));
     const page = await context.newPage();
     const client = await context.newCDPSession(page);
     await client.send("Network.enable");
