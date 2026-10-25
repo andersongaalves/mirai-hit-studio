@@ -36,9 +36,36 @@ function renderHistory(items = []) {
         date.textContent = formatarData(item.data, "Data não informada");
         if (item.data) date.dateTime = item.data;
         row.append(title, date);
+        // AUD6-S09-002: each event opens the record it talks about.
+        const target = item.producao_id
+            ? ["Abrir produção", () => openRecord("section-producoes", async () => {
+                const { visualizarProducao } = await import("../producoes/producoes.js");
+                await visualizarProducao(item.producao_id);
+            })]
+            : item.orcamento_id
+                ? ["Abrir orçamento", () => openRecord("section-orcamentos", async () => {
+                    const { visualizarOrcamento } = await import("../orcamentos/orcamentos.js");
+                    visualizarOrcamento(item.orcamento_id);
+                })]
+                : null;
+        if (target) {
+            const open = document.createElement("button");
+            open.type = "button";
+            open.className = "btn-small cliente-history-open";
+            open.textContent = target[0];
+            open.addEventListener("click", () => target[1]().catch(() => {}));
+            row.append(open);
+        }
         list.appendChild(row);
     });
     container.appendChild(list);
+}
+
+
+async function openRecord(section, open) {
+    closeClienteModal();
+    await window.mostrarSecao?.(section);
+    await open();
 }
 
 

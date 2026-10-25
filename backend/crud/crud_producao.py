@@ -8,7 +8,7 @@ from models.proposta import PropostaModel
 from models.usuario import UsuarioModel
 
 
-def _resposta(producao, produtor_nome=None, cliente_email=None, proposta=None, is_test=False):
+def _resposta(producao, produtor_nome=None, cliente_email=None, proposta=None, is_test=False, cliente_id=None):
     return {
         "id": producao.id,
         "titulo": producao.titulo,
@@ -22,6 +22,7 @@ def _resposta(producao, produtor_nome=None, cliente_email=None, proposta=None, i
         "proposta_numero": proposta.numero if proposta else None,
         "is_test": bool(is_test),
         "cliente_email": cliente_email,
+        "cliente_id": cliente_id,  # AUD6-S09-002: link to the client page
         "observacoes": producao.observacoes or "",
         "etapas": producao.etapas or "[]",
         "prazo_entrega": producao.prazo_entrega,
@@ -38,6 +39,7 @@ def _consulta_detalhes(db: Session):
             OrcamentoModel.email,
             PropostaModel,
             OrcamentoModel.is_test,
+            OrcamentoModel.cliente_id,
         )
         .outerjoin(UsuarioModel, ProducaoModel.produtor_id == UsuarioModel.id)
         .outerjoin(OrcamentoModel, ProducaoModel.orcamento_id == OrcamentoModel.id)
@@ -83,8 +85,8 @@ def listar(db: Session, ambiente: str = "real"):
         query = query.filter(ProducaoModel.orcamento_id.in_(marked_ids))
     rows = query.order_by(ProducaoModel.id.desc()).all()
     return [
-        _resposta(producao, produtor, email, proposta, is_test)
-        for producao, produtor, email, proposta, is_test in rows
+        _resposta(producao, produtor, email, proposta, is_test, cliente_id)
+        for producao, produtor, email, proposta, is_test, cliente_id in rows
     ]
 
 
@@ -92,8 +94,8 @@ def buscar(db: Session, producao_id: int):
     row = _consulta_detalhes(db).filter(ProducaoModel.id == producao_id).first()
     if not row:
         return None
-    producao, produtor, email, proposta, is_test = row
-    return _resposta(producao, produtor, email, proposta, is_test)
+    producao, produtor, email, proposta, is_test, cliente_id = row
+    return _resposta(producao, produtor, email, proposta, is_test, cliente_id)
 
 
 def acesso_produtor(produtor_id: int):

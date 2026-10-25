@@ -41,6 +41,18 @@ export function abrirModalOrcamento(orcamento) {
     orcamentoAtual = orcamento;
 
     setText("orc_nome", orcamento.nome_cliente);
+    // AUD6-S09-002: a budget linked to a client opens the client page.
+    const clientButton = document.getElementById("orc_cliente_abrir");
+    if (clientButton) {
+        const clientId = orcamento.cliente_id;
+        clientButton.classList.toggle("hidden", !Number.isInteger(clientId));
+        clientButton.onclick = Number.isInteger(clientId) ? async () => {
+            fecharModalOrcamento();
+            await window.mostrarSecao?.("section-clientes");
+            const { abrirCliente } = await import("../clientes/clientes.js");
+            await abrirCliente(clientId);
+        } : null;
+    }
     setText("orc_email", orcamento.email);
     setText("orc_produtor", orcamento.produtor?.username ?? "Sem produtor");
     setText("orc_whatsapp", orcamento.whatsapp);

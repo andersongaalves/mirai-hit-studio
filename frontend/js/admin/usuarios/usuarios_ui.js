@@ -13,6 +13,22 @@ function classificationButton(user) {
 }
 
 
+// AUD6-S09-002: producers open their page (productions and beats) from the list.
+function overviewButton(user) {
+    if (user.role !== "produtor") return null;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn-small";
+    button.textContent = "Visão geral";
+    button.setAttribute("aria-label", `Visão geral de ${user.nome_exibicao || user.username}`);
+    button.onclick = async () => {
+        const { openProdutorResumo } = await import("../produtor_resumo.js");
+        await openProdutorResumo(user.id);
+    };
+    return button;
+}
+
+
 // Display name first (used in credits); the login username stays visible below it.
 function nameCell(tag, usuario) {
     const cell = document.createElement(tag);
@@ -48,6 +64,8 @@ function tableView(usuarios, onOpen) {
         role.appendChild(roleBadge(usuario));
         status.appendChild(statusBadge(usuario));
         action.appendChild(actionButton(usuario, onOpen));
+        const tableOverview = overviewButton(usuario);
+        if (tableOverview) action.appendChild(tableOverview);
         action.appendChild(classificationButton(usuario));
         row.append(nameCell("td", usuario), role, status, action);
         body.appendChild(row);
@@ -68,6 +86,8 @@ function cardView(usuarios, onOpen) {
         header.append(nameCell("strong", usuario), statusBadge(usuario));
         meta.appendChild(roleBadge(usuario));
         actions.appendChild(actionButton(usuario, onOpen));
+        const cardOverview = overviewButton(usuario);
+        if (cardOverview) actions.appendChild(cardOverview);
         actions.appendChild(classificationButton(usuario));
         if (usuario.is_test) meta.append(textElement("span", "TESTE", "badge badge-info"));
         card.append(header, meta, actions);
