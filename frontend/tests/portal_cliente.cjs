@@ -145,6 +145,10 @@ async function staticResponse(route) {
         const request = route.request();
         const url = new URL(request.url());
         if (url.origin === 'http://localhost:4173') return staticResponse(route);
+        // AUD6-S06-003: the signed storage link answers as an attachment.
+        if (url.origin === 'https://signed.example.test') {
+            return route.fulfill({ body: 'RIFFsynthetic', contentType: 'audio/wav', headers: { 'content-disposition': 'attachment; filename="horizonte.wav"' } });
+        }
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 200, body: '' });
 
         const user = { id: 4, username: 'client-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true, cliente_id: loginRole === 'cliente' ? 1 : null };
@@ -210,7 +214,10 @@ async function staticResponse(route) {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
         if (url.pathname === '/portal/cliente/beats/adquiridos') {
-            return route.fulfill({ json: [] });
+            return route.fulfill({ json: [{ beat_id: 72, titulo: '<Comprado>', arquivos: ['wav'] }] });
+        }
+        if (url.pathname === '/portal/cliente/beats/72/arquivo/wav') {
+            return route.fulfill({ json: { type: 'download', url: 'https://signed.example.test/r2/horizonte.wav?X-Amz-Signature=synthetic', filename: 'horizonte.wav' } });
         }
         if (url.pathname === '/beats/71/preview') {
             return route.fulfill({ body: 'ID3synthetic-preview', contentType: 'audio/mpeg' });
@@ -288,7 +295,11 @@ async function staticResponse(route) {
         assert.match(await page.locator('#client-beats').textContent(), /Catálogo de beats/);
         await page.waitForSelector('#client-beats-list .producer-card');
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
-        assert.equal(await page.locator('#client-acquired-beats-section').isVisible(), false);
+        assert.equal(await page.locator('#client-acquired-beats-section').isVisible(), true);
+        const signedDownload = page.waitForEvent('download');
+        await page.getByRole('button', { name: 'Baixar WAV' }).click();
+        assert.equal((await signedDownload).suggestedFilename(), 'horizonte.wav');
+        assert.equal(new URL(page.url()).pathname, '/cliente/explorar');
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
         await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);
         const beatBox = await page.locator('#client-beats-list .beat-card').boundingBox();
