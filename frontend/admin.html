@@ -838,6 +838,7 @@
                                     <option value="todos">Todos</option>
                                     <option value="admin">Administrador</option>
                                     <option value="produtor">Produtor</option>
+                                    <option value="cliente">Cliente</option>
                                 </select>
                             </label>
                             <div class="admin-filter-bar__actions">
@@ -1430,6 +1431,7 @@
                                     <select id="usuario-role" required>
                                         <option value="produtor">Produtor</option>
                                         <option value="admin">Administrador</option>
+                                        <option value="cliente" hidden>Cliente</option>
                                     </select>
                                 </label>
                                 <label id="usuario-active-field" class="usuario-active-field">
@@ -1439,6 +1441,7 @@
                                     <input id="usuario-painel-beats" type="checkbox" /> Painel de beats
                                 </label>
                             </div>
+                            <p id="usuario-client-help" class="admin-field-help hidden">Conta de acesso de um cliente. O papel não muda por esta tela; o nome de exibição e o acesso podem. <button id="usuario-open-client" type="button" class="btn-small">Abrir cadastro do cliente</button></p>
                             <p id="usuario-self-help" class="admin-field-help hidden">Sua própria conta não pode ter acesso, papel ou nome de usuário alterados por esta tela; o nome de exibição pode.</p>
                         </section>
                         <section id="usuario-create-password" class="usuario-detail-block">

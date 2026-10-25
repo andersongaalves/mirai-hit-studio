@@ -146,7 +146,7 @@ async function staticResponse(route) {
         if (url.origin === 'http://localhost:4173') return staticResponse(route);
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 200, body: '' });
 
-        const user = { id: 2, username: 'producer-a', role: loginRole, is_admin: loginRole === 'admin', ativo: true, painel_beats: true };
+        const user = { id: 2, username: 'producer-a', nome_exibicao: 'Ana Produtora', role: loginRole, is_admin: loginRole === 'admin', ativo: true, painel_beats: true };
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'synthetic-producer-token', user } });
         if (url.pathname === '/auth/me') return route.fulfill({ json: user });
         const stageList = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)\/etapas$/);
@@ -472,6 +472,9 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#producer-status-filter').inputValue(), 'revisao');
         assert.equal(await page.locator('#producer-order').inputValue(), 'recente');
         assert.equal(await page.locator('#producer-finance-help').textContent(), 'Repasses às sextas.');
+        // AUD6-S02-011: the portal shows the display name, never the login.
+        assert.equal(await page.locator('#producer-greeting').textContent(), 'Ana Produtora');
+        assert.equal(await page.locator('#producer-username').textContent(), 'Ana Produtora');
 
         assert.deepEqual(errors, []);
         console.log('PASS: producer login/logout, dashboard, list, detail, progress, safe text, errors and responsive structure.');
