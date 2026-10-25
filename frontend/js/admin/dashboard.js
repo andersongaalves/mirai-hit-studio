@@ -23,24 +23,41 @@ import { initBeats } from "./beats.js";
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
 
-const loaders = [
-    carregarServicos,
-    carregarPortfolio,
-    initOrcamentos,
-    carregarConfiguracoes,
-    initProducoes,
-    initClientes,
-    initUsuarios,
-    initNewsletterAdmin,
-    initAuditoria,
-    initFinanceiro,
-];
+// AUD6-S09-004: each section loads its data the first time it is opened, so
+// signing in only asks the API for the dashboard. Inbox and Beats refresh on
+// every visit, as before.
+const firstVisitLoaders = {
+    "section-servicos": carregarServicos,
+    "section-portfolio": carregarPortfolio,
+    "section-orcamentos": initOrcamentos,
+    "section-custos": carregarConfiguracoes,
+    "section-producoes": initProducoes,
+    "section-clientes": initClientes,
+    "section-usuarios": initUsuarios,
+    "section-newsletter": initNewsletterAdmin,
+    "section-auditoria": initAuditoria,
+    "section-financeiro": initFinanceiro,
+};
 
 const sectionLoaders = {
     "section-inbox": initInbox,
     "section-beats": initBeats,
     "section-uso": initUso,
 };
+
+const loadedSections = new Set();
+document.addEventListener("admin:logout", () => loadedSections.clear());
+
+function loadSection(id) {
+    const loader = sectionLoaders[id] || (!loadedSections.has(id) && firstVisitLoaders[id]);
+    if (!loader) return Promise.resolve();
+    if (firstVisitLoaders[id]) loadedSections.add(id);
+    return Promise.resolve().then(loader).catch((error) => {
+        // A failed first load can be retried by opening the section again.
+        loadedSections.delete(id);
+        throw error;
+    });
+}
 
 function focusHeading(container) {
     const heading = container?.querySelector("h1, h2");
@@ -53,7 +70,7 @@ export async function inicializarDashboard() {
     mostrarDashboard({ carregar: false });
     inicializarParametros();
 
-    await Promise.all([carregarDashboard().catch(() => null), ...loaders.map((loader) => loader())]);
+    await carregarDashboard().catch(() => null);
 }
 
 export function mostrarDashboard({ carregar = true } = {}) {
@@ -75,7 +92,7 @@ export function mostrarSecao(id) {
     setActiveSection(id);
 
     focusHeading($(id));
-    sectionLoaders[id]?.().catch(() => {});
+    loadSection(id).catch(() => {});
 }
 
 export function voltarDashboard() {
@@ -83,7 +100,8 @@ export function voltarDashboard() {
 }
 
 export function atualizarTudo() {
-    Promise.all([carregarDashboard(), ...loaders.map((loader) => loader())]).catch((error) => {
+    const loaded = [...loadedSections].map((id) => firstVisitLoaders[id]());
+    Promise.all([carregarDashboard(), ...loaded]).catch((error) => {
         console.error(error);
     });
 }

@@ -90,7 +90,11 @@ async function staticResponse(route) {
         await page.waitForSelector('#dashboard-metrics .dashboard-kpi');
         assert.equal(await page.locator('#dashboard-metrics .dashboard-kpi').count(), 5);
         assert.match(await page.locator('#dashboard-metrics').textContent(), /4/);
-        assert.equal(await page.locator('#dashboard-pipeline li').count(), 4);
+        // AUD6-S09-003: one indicator row (pipeline) and one pending list, no repeats.
+        assert.equal(await page.locator('#dashboard-pipeline').count(), 0);
+        const kpiText = await page.locator('#dashboard-metrics').textContent();
+        assert.match(kpiText, /Propostas enviadas/);
+        assert.doesNotMatch(kpiText, /atrasad|aguardando decisão/);
         assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 9);
         assert.match(await page.locator('#dashboard-attention').textContent(), /2 propostas vencidas sem resposta/);
         assert.match(await page.locator('#dashboard-attention').textContent(), /1 produção atrasada/);
@@ -102,9 +106,9 @@ async function staticResponse(route) {
         await failures.getByRole('button', { name: 'Reprocessar a tag de <b>mix.wav</b>' }).click();
         await page.waitForFunction(() => document.querySelector('.dashboard-tag-failures')?.textContent.includes('na fila para reprocessar'));
         assert.equal(tagRetries, 1);
-        const attentionBeforePipeline = await page.evaluate(() =>
-            Boolean(document.getElementById('dashboard-attention').compareDocumentPosition(document.getElementById('dashboard-pipeline')) & Node.DOCUMENT_POSITION_FOLLOWING));
-        assert.equal(attentionBeforePipeline, true);
+        const attentionBeforeActivity = await page.evaluate(() =>
+            Boolean(document.getElementById('dashboard-attention').compareDocumentPosition(document.getElementById('dashboard-activity')) & Node.DOCUMENT_POSITION_FOLLOWING));
+        assert.equal(attentionBeforeActivity, true);
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });
