@@ -149,7 +149,7 @@ const root = path.resolve(__dirname, '..');
         await page.waitForTimeout(100);
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /admin/audio-tag', 'GET /audit-logs', 'GET /clientes', 'GET /combos', 'GET /config', 'GET /config/portfolio-segments', 'GET /config/portfolio-segments', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos/admin', 'GET /projetos/envios/admin', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores', 'GET /usuarios/produtores'];
+        const expected = ['GET /admin/audio-tag', 'GET /admin/notificacoes', 'GET /audit-logs', 'GET /clientes', 'GET /combos', 'GET /config', 'GET /config/portfolio-segments', 'GET /config/portfolio-segments', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos/admin', 'GET /projetos/envios/admin', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores', 'GET /usuarios/produtores'];
         const entryCalls = () => calls.filter(call => call.startsWith('GET') && call !== 'GET /auth/me').sort();
         assert.deepEqual(entryCalls(), expected);
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);

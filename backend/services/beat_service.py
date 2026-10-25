@@ -224,6 +224,9 @@ def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, arc
             entity_type="beat",
             entity_id=model.id,
         )
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.beat_em_revisao(db, model)
         db.commit()
         db.refresh(model)
         return _response(db, model, include_base=True)
@@ -487,6 +490,9 @@ def review(db, beat_id, payload, actor):
         entity_type="beat",
         entity_id=model.id,
     )
+    from services import portal_notificacao_service
+
+    portal_notificacao_service.beat_revisado(db, model)
     db.commit()
     db.refresh(model)
     return _response(db, model)
@@ -568,6 +574,9 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover
         model.revisado_por_id = None
         model.revisado_em = None
         audit_service.record(db, actor=actor, action="beat.edited", entity_type="beat", entity_id=beat_id)
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.beat_em_revisao(db, model, actor_id=actor.id)
         db.commit()
         db.refresh(model)
     except Exception:

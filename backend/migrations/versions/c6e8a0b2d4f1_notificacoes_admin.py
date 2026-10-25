@@ -66,11 +66,13 @@ def upgrade():
                     name, sa.Integer(), sa.ForeignKey(f"{table}.id", ondelete="CASCADE"), nullable=True))
             batch.create_check_constraint("ck_portal_notificacao_papel", NEW_ROLES)
             batch.create_check_constraint("ck_portal_notificacao_contexto", NEW_CONTEXT)
+        for name, _ in NEW_COLUMNS:
+            op.create_index(f"ix_portal_notificacoes_{name}", "portal_notificacoes", [name])
         return
     for name, table in NEW_COLUMNS:
         op.add_column("portal_notificacoes", sa.Column(
             name, sa.Integer(), sa.ForeignKey(f"{table}.id", ondelete="CASCADE"), nullable=True))
-        op.create_index(f"ix_portal_notificacao_{name}", "portal_notificacoes", [name])
+        op.create_index(f"ix_portal_notificacoes_{name}", "portal_notificacoes", [name])
     op.execute("ALTER TABLE portal_notificacoes DROP CONSTRAINT ck_portal_notificacao_papel")
     op.execute(f"ALTER TABLE portal_notificacoes ADD CONSTRAINT ck_portal_notificacao_papel CHECK ({NEW_ROLES})")
     op.execute("ALTER TABLE portal_notificacoes DROP CONSTRAINT ck_portal_notificacao_contexto")
@@ -84,6 +86,8 @@ def downgrade():
         "OR (producao_id IS NULL AND proposta_id IS NULL)"
     )
     if op.get_bind().dialect.name == "sqlite":
+        for name, _ in NEW_COLUMNS:
+            op.drop_index(f"ix_portal_notificacoes_{name}", table_name="portal_notificacoes")
         with op.batch_alter_table("portal_notificacoes", recreate="always",
                                   copy_from=_sqlite_table(extended=True)) as batch:
             batch.drop_constraint("ck_portal_notificacao_papel", type_="check")
@@ -98,5 +102,5 @@ def downgrade():
     op.execute("ALTER TABLE portal_notificacoes DROP CONSTRAINT ck_portal_notificacao_papel")
     op.execute(f"ALTER TABLE portal_notificacoes ADD CONSTRAINT ck_portal_notificacao_papel CHECK ({OLD_ROLES})")
     for name, _ in NEW_COLUMNS:
-        op.drop_index(f"ix_portal_notificacao_{name}", table_name="portal_notificacoes")
+        op.drop_index(f"ix_portal_notificacoes_{name}", table_name="portal_notificacoes")
         op.drop_column("portal_notificacoes", name)

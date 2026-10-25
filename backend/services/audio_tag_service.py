@@ -193,6 +193,14 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
                         logger.error("audio_tag_compensation_failed file_id=%s", arquivo_id)
                 if job is not None and job.estado == "pendente":
                     job.estado = "erro"
+                    try:
+                        # AUD6-S08-002: the studio hears about the failure; the job state never depends on it.
+                        with db.begin_nested():
+                            failed = db.get(ProducaoArquivoModel, arquivo_id)
+                            if failed is not None:
+                                portal_notificacao_service.falha_tag(db, failed)
+                    except Exception:
+                        logger.warning("audio_tag_failure_notice_failed file_id=%s", arquivo_id)
                     db.commit()
                 logger.warning("audio_tag_processing_failed file_id=%s", arquivo_id)
             return False
