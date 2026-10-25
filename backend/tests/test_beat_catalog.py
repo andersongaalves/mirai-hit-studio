@@ -212,6 +212,14 @@ async def check():
 asyncio.run(check())
 """)
 
+    def test_download_names_follow_the_beat_title(self):
+        self.run_case(r"""
+from types import SimpleNamespace
+assert beat_service._download_name(SimpleNamespace(id=4, titulo='Horizonte Ação #1'), '', 'wav') == 'horizonte-acao-1.wav'
+assert beat_service._download_name(SimpleNamespace(id=4, titulo='../../etc'), '-multitrack', 'zip') == 'etc-multitrack.zip'
+assert beat_service._download_name(SimpleNamespace(id=9, titulo='✨✨'), '', 'mp3') == 'beat-9.mp3'
+""")
+
     def test_admin_license_actions_require_admin_and_reason(self):
         self.run_case(r"""
 async def check():

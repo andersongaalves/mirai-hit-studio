@@ -303,14 +303,20 @@ def client_list(db):
         .where(BeatModel.status == "aprovado", BeatModel.ativo.is_(True))
         .order_by(BeatModel.created_at.desc())
     )
-    result = []
-    for row in db.scalars(query).all():
-        active = db.scalars(
-            select(BeatLicencaModel.tipo).where(
-                BeatLicencaModel.beat_id == row.id,
+    rows = db.scalars(query).all()
+    # AUD6-S06-006: one query for every open reservation instead of one per beat.
+    reserved = {}
+    if rows:
+        for beat_id, kind in db.execute(
+            select(BeatLicencaModel.beat_id, BeatLicencaModel.tipo).where(
+                BeatLicencaModel.beat_id.in_([row.id for row in rows]),
                 BeatLicencaModel.status == "reservada",
             )
-        ).all()
+        ).all():
+            reserved.setdefault(beat_id, []).append(kind)
+    result = []
+    for row in rows:
+        active = reserved.get(row.id, [])
         if "exclusivo" in active:
             continue
         result.append(_response(db, row, exclusive_available=not active))
@@ -361,6 +367,16 @@ def _available_files(beat, license_type):
     return available
 
 
+def _download_name(beat, suffix, extension):
+    """AUD6-S06-007: the file is named after the beat, safely, not its internal id."""
+    import re
+    import unicodedata
+
+    plain = unicodedata.normalize("NFKD", beat.titulo or "").encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", plain).strip("-").lower()[:60] or f"beat-{beat.id}"
+    return f"{slug}{suffix}.{extension}"
+
+
 def purchased_file(db, beat_id, kind, actor):
     if kind not in {"mp3", "wav", "multitrack"} or actor.cliente_id is None:
         raise HTTPException(404, "Arquivo adquirido nao encontrado.")
@@ -393,7 +409,7 @@ def purchased_file(db, beat_id, kind, actor):
         "type": "file",
         "contents": contents,
         "mime": mime,
-        "filename": f"beat-{beat.id}.{extension}",
+        "filename": _download_name(beat, "", extension),
     }
 
 
@@ -425,7 +441,7 @@ def multitrack_delivery(db, beat_id, actor):
         "type": "file",
         "contents": contents,
         "mime": beat.multitrack_mime or "application/octet-stream",
-        "filename": f"beat-{beat.id}-multitrack.{extension}",
+        "filename": _download_name(beat, "-multitrack", extension),
     }
 
 
