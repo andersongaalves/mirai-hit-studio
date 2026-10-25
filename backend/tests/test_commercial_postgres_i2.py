@@ -66,7 +66,7 @@ class CommercialPostgresI2Tests(unittest.TestCase):
         settings.PUBLIC_FRONTEND_URL = "http://127.0.0.1:5500"
         settings.COMMERCIAL_PIPELINE_V2_ENABLED = False
         with engine.connect() as connection:
-            if connection.execute(text("select version_num from alembic_version")).scalar_one() != "a4c6e8f0b217":
+            if connection.execute(text("select version_num from alembic_version")).scalar_one() != "b5d7f9a1c328":
                 raise RuntimeError("I.2 database is not at expected head")
             columns = {item["name"] for item in inspect(connection).get_columns("orcamentos")}
             if not {"idempotency_key", "request_hash"} <= columns:
@@ -92,7 +92,7 @@ class CommercialPostgresI2Tests(unittest.TestCase):
         cls.stack = ExitStack()
         cls.stack.enter_context(patch.object(resend.Emails, "send", return_value={"id":"i2-fake-email"}))
         cls.stack.enter_context(patch.object(mercado_pago_service, "MercadoPagoClient", return_value=cls.provider))
-        cls.stack.enter_context(patch("core.http_security.allow_request", return_value=(True, 0)))
+        cls.stack.enter_context(patch("core.http_security.allow_shared", return_value=(True, 0)))
         cls.server = cls.stack.enter_context(local_server(app, port=8000))
         frontend_root = Path(__file__).resolve().parents[2] / "frontend"
         cls.frontend = cls.stack.enter_context(local_frontend_server(frontend_root, port=5500))

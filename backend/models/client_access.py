@@ -122,7 +122,7 @@ class AuthRateLimitModel(Base):
     __tablename__ = "auth_rate_limits"
     __table_args__ = (
         CheckConstraint(
-            "action IN ('signup', 'confirmation', 'resend', 'activation', 'recovery')",
+            "action IN ('signup', 'confirmation', 'resend', 'activation', 'recovery', 'login', 'login_account', 'budget', 'newsletter', 'checkout_payment', 'checkout_resume')",
             name="ck_auth_rate_limits_action_valida",
         ),
         CheckConstraint(

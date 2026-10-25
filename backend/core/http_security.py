@@ -2,14 +2,16 @@ import sqlite3
 import re
 import uuid
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
-from core.rate_limit import allow_request
+from services.rate_limit_service import allow_shared
 
+# path -> (counter action, limit, window seconds)
 LIMITS = {
-    "/auth/login": (10, 60),
-    "/orcamentos": (5, 600),
-    "/newsletter": (5, 600),
-    "/newsletter/subscribe": (5, 600),
+    "/auth/login": ("login", 10, 60),
+    "/orcamentos": ("budget", 5, 600),
+    "/newsletter": ("newsletter", 5, 600),
+    "/newsletter/subscribe": ("newsletter", 5, 600),
 }
 
 CHECKOUT_PAYMENT_PATH = re.compile(
@@ -33,17 +35,20 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         response = None
         path = request.url.path.rstrip("/")
-        limit_key = path
         limit = LIMITS.get(path) if request.method == "POST" else None
         if request.method == "POST" and CHECKOUT_PAYMENT_PATH.fullmatch(path):
-            limit_key, limit = "/checkout/payment", (8, 300)
+            limit = ("checkout_payment", 8, 300)
         elif request.method == "GET" and CHECKOUT_RESUME_PATH.fullmatch(path):
-            limit_key, limit = "/checkout/pending-payment", (12, 60)
+            limit = ("checkout_resume", 12, 60)
         if limit:
             try:
-                allowed, retry = allow_request(
-                    f"{limit_key}:{request.client.host if request.client else 'unknown'}",
-                    *limit,
+                action, count, window = limit
+                allowed, retry = await run_in_threadpool(
+                    allow_shared,
+                    action,
+                    request.client.host if request.client else "unknown",
+                    count,
+                    window,
                 )
             except (sqlite3.Error, OSError):
                 response = JSONResponse({"detail": "Protecao temporariamente indisponivel."}, status_code=503)
