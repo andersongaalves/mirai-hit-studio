@@ -76,7 +76,7 @@ def _normalize_note(note):
     return cleaned
 
 
-def _version(db, production_id, file_type, replaces_id, replacement_actor_id=None):
+def _version(db, production_id, file_type, replaces_id, replacement_actor_id=None, replacement_audience=None):
     if replaces_id is None:
         return str(uuid4()), 1, None
     previous = db.get(ProducaoArquivoModel, replaces_id)
@@ -88,6 +88,8 @@ def _version(db, production_id, file_type, replaces_id, replacement_actor_id=Non
             replacement_actor_id is not None
             and previous.remetente_usuario_id != replacement_actor_id
         )
+        # AUD6-S08-007: a producer can only build on a version they can see.
+        or (replacement_audience == "produtor" and not previous.visivel_produtor)
     ):
         raise ProducaoArquivoNotFound("Arquivo anterior nao encontrado.")
     replacement = (
@@ -113,6 +115,7 @@ def upload(
     visible_to_client: bool,
     replaces_id: int | None = None,
     replacement_actor_id: int | None = None,
+    replacement_audience: str | None = None,
     storage=None,
     request_id=None,
     note: str | None = None,
@@ -134,6 +137,7 @@ def upload(
         file_type,
         replaces_id,
         replacement_actor_id,
+        replacement_audience,
     )
     if enforce_quota:
         try:

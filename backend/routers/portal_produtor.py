@@ -179,6 +179,7 @@ async def enviar_arquivo(
             visible_to_client=tipo == "previa"
             and politica_service.vigentes(db, production.id)["publicacao_previa"] == "automatica",
             replaces_id=substitui_arquivo_id,
+            replacement_audience="produtor",
             note=observacao,
             enforce_quota=True,  # 5.09: contractual file quotas.
             request_id=getattr(request.state, "request_id", None),
