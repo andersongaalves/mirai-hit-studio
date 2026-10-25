@@ -43,6 +43,24 @@ def _validar_vinculo_cliente(
         raise UsuarioConflito("Cliente ja possui uma conta vinculada.")
 
 
+def _validar_email(db: Session, *, role: str, email: str | None, usuario_id: int | None = None):
+    # AUD6-S02-004: one e-mail recovers exactly one account.
+    if not email:
+        return
+    if role == "cliente":
+        raise UsuarioInvalido("Contas de cliente usam o e-mail do cadastro do cliente.")
+    from models.cliente import ClienteModel
+    from sqlalchemy import func
+
+    other = db.query(UsuarioModel.id).filter(func.lower(UsuarioModel.email) == email.lower())
+    if usuario_id is not None:
+        other = other.filter(UsuarioModel.id != usuario_id)
+    if other.first() is not None:
+        raise UsuarioConflito("Este e-mail já está em outra conta.")
+    if db.query(ClienteModel.id).filter(func.lower(ClienteModel.email) == email.lower()).first() is not None:
+        raise UsuarioConflito("Este e-mail pertence a um cliente; use outro para a conta interna.")
+
+
 def _buscar(db: Session, usuario_id: int):
     usuario = crud_usuario.buscar_por_id(db, usuario_id)
     if not usuario:
@@ -66,6 +84,7 @@ def criar(db: Session, dados: UsuarioCreate, ator, request_id: str | None = None
     role = payload.pop("role")
     password = payload.pop("password")
     _validar_vinculo_cliente(db, role=role, cliente_id=payload.get("cliente_id"))
+    _validar_email(db, role=role, email=payload.get("email"))
     try:
         usuario = crud_usuario.criar_sem_commit(db, {
             **payload,
@@ -121,6 +140,13 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
     if "role" in payload and proximo_role != "cliente":
         payload["cliente_id"] = None
     proximo_cliente_id = payload.get("cliente_id", usuario.cliente_id)
+    if proximo_role == "cliente":
+        payload["email"] = None  # clients keep their e-mail in the client record
+    if "email" in payload and payload["email"] != usuario.email:
+        # A new address invalidates any pending recovery link.
+        payload["reset_token_hash"] = None
+        payload["reset_expires_at"] = None
+    _validar_email(db, role=proximo_role, email=payload.get("email", usuario.email), usuario_id=usuario.id)
     _validar_vinculo_cliente(
         db,
         role=proximo_role,
