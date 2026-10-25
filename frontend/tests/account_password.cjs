@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { signIn } = require('./support/access.cjs');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml' };
@@ -29,6 +29,7 @@ async function scenario(browser, role, next) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     const changes = [];
+    const revokes = [];
     let token = `${role}-token-1`;
     await context.route('**/*', async route => {
         const request = route.request();
@@ -43,6 +44,10 @@ async function scenario(browser, role, next) {
             if (body.senha_atual !== 'old-password') return route.fulfill({ status: 400, json: { detail: 'Senha atual incorreta.' } });
             token = `${role}-token-2`;
             return route.fulfill({ json: { access_token: token, token_type: 'bearer', user: users[role] } });
+        }
+        if (url.pathname === '/auth/sair-de-todos' && request.method() === 'POST') {
+            revokes.push(request.headers().authorization);
+            return route.fulfill({ status: 204, body: '' });
         }
         if (url.pathname.endsWith('/notificacoes')) return route.fulfill({ json: { itens: [], nao_vistas: 0, tem_mais: false } });
         if (url.pathname === '/dashboard') return route.fulfill({ json: {
@@ -62,7 +67,7 @@ async function scenario(browser, role, next) {
     await dialog.getByLabel('Nova senha (8 a 72 caracteres)').fill('new-password-1');
     await dialog.getByLabel('Repita a nova senha').fill('new-password-2');
     await dialog.getByRole('button', { name: 'Salvar nova senha' }).click();
-    assert.match(await dialog.getByRole('status').textContent(), /precisam ser iguais/);
+    assert.match(await dialog.locator('form').getByRole('status').textContent(), /precisam ser iguais/);
     assert.equal(changes.length, 0);
     await dialog.getByLabel('Senha atual').fill('wrong-password');
     await dialog.getByLabel('Repita a nova senha').fill('new-password-1');
@@ -79,6 +84,14 @@ async function scenario(browser, role, next) {
     const stored = await page.evaluate(() => Object.values(localStorage).filter(value => /token-\d$/.test(value)));
     assert.ok(stored.includes(`${role}-token-2`), JSON.stringify(stored));
     assert.equal(await page.locator('.account-password__status').textContent(), 'Senha alterada. Os outros aparelhos foram desconectados.');
+    // AUD6-S02-006: "Sair de todos os aparelhos" ends this session too.
+    page.once('dialog', confirmation => confirmation.dismiss());
+    await dialog.getByRole('button', { name: 'Sair de todos os aparelhos' }).click();
+    assert.equal(revokes.length, 0);
+    page.once('dialog', confirmation => confirmation.accept());
+    await expectAccessPage(page, () => dialog.getByRole('button', { name: 'Sair de todos os aparelhos' }).click());
+    assert.deepEqual(revokes, [`Bearer ${role}-token-2`]);
+    assert.equal(await page.evaluate(() => Object.values(localStorage).filter(value => /token-\d$/.test(value)).length), 0);
     await context.close();
 }
 

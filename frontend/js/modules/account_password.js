@@ -1,4 +1,4 @@
-import { authFetch, getCurrentUser, renovarSessao } from "../admin/auth.js";
+import { authFetch, getCurrentUser, logout, renovarSessao } from "../admin/auth.js";
 
 // AUD6-S02-004: every account changes its own password with the current one.
 // The backend ends every other session and returns a new token for this tab.
@@ -62,7 +62,36 @@ export function startAccountPassword(user) {
     const submit = element("button", "Salvar nova senha", "btn-cta");
     submit.type = "submit";
     form.append(current.wrapper, next.wrapper, confirm.wrapper, help, status, submit);
-    dialog.append(header, form);
+    // AUD6-S02-006: end every session (lost phone, shared computer), this one too.
+    const everywhere = element("section", "", "account-password__everywhere");
+    everywhere.setAttribute("aria-labelledby", "account-everywhere-title");
+    const everywhereTitle = element("h3", "Sair de todos os aparelhos");
+    everywhereTitle.id = "account-everywhere-title";
+    const everywhereHelp = element("p", "Use se perdeu um aparelho ou entrou em um computador de outra pessoa. Você também sai desta aba.", "account-password__help");
+    const everywhereStatus = element("p", "", "account-everywhere__status");
+    everywhereStatus.setAttribute("role", "status");
+    const everywhereButton = element("button", "Sair de todos os aparelhos", "btn-outline");
+    everywhereButton.type = "button";
+    everywhereButton.addEventListener("click", async () => {
+        if (!window.confirm("Sair da conta em todos os aparelhos, inclusive neste?")) return;
+        everywhereButton.disabled = true;
+        everywhereStatus.textContent = "Encerrando sessões...";
+        try {
+            const response = await authFetch("/auth/sair-de-todos", { method: "POST" });
+            if (!response.ok) {
+                everywhereStatus.textContent = "Não foi possível encerrar as sessões agora.";
+                return;
+            }
+            everywhereStatus.textContent = "Pronto. Todos os aparelhos saíram da conta.";
+            logout();
+        } catch {
+            everywhereStatus.textContent = "Não foi possível encerrar as sessões agora.";
+        } finally {
+            everywhereButton.disabled = false;
+        }
+    });
+    everywhere.append(everywhereTitle, everywhereHelp, everywhereStatus, everywhereButton);
+    dialog.append(header, form, everywhere);
     document.body.append(dialog);
 
     form.addEventListener("submit", async event => {
@@ -104,6 +133,7 @@ export function startAccountPassword(user) {
     button.addEventListener("click", () => {
         form.reset();
         status.textContent = "";
+        everywhereStatus.textContent = "";
         dialog.showModal();
         current.input.focus();
     });

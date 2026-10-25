@@ -2,7 +2,7 @@ from core.dependencies import get_current_user
 from core.security import create_access_token, get_password_hash, verify_password
 from crud import crud_usuario
 from database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from schemas.usuario import LoginRequest, LoginResponse, SenhaPropriaUpdate, SessaoUsuarioResponse
 from services import rate_limit_service
 from sqlalchemy.orm import Session
@@ -82,3 +82,12 @@ def trocar_senha(data: SenhaPropriaUpdate, db: Session = Depends(get_db), user=D
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Senha atual incorreta.") from None
     access_token = create_access_token({"sub": updated.username, "av": updated.auth_version, "uid": updated.id})
     return {"access_token": access_token, "token_type": "bearer", "user": SessaoUsuarioResponse.from_user(updated)}
+
+
+@router.post("/sair-de-todos", status_code=status.HTTP_204_NO_CONTENT)
+def sair_de_todos(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    # AUD6-S02-006: every token issued so far stops working, on every device.
+    from services import conta_interna_service
+
+    conta_interna_service.encerrar_sessoes(db, user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
