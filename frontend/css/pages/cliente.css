@@ -106,7 +106,7 @@
     gap: var(--space-5);
 }
 
-.client-body .producer-detail > :where(h1, .producer-detail__meta, .producer-detail__grid) {
+.client-body .producer-detail > :where(h1, .producer-detail__meta, .producer-detail__grid, .client-detail-nav) {
     grid-column: 1 / -1;
 }
 
@@ -173,3 +173,32 @@
 .client-request-dialog textarea { resize: vertical; }
 .client-request-dialog h2, .client-request-dialog p { margin: 0; }
 .client-request-dialog [role="alert"] { color: var(--color-danger); }
+
+/* AUD6-S07-001: atalhos para as seções do detalhe do projeto. */
+.client-detail-nav {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    margin: 0;
+    padding: var(--space-2) 0;
+    background: var(--color-background);
+    scrollbar-width: thin;
+}
+.client-detail-nav__item {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 8px 14px;
+    border: var(--border-subtle);
+    border-radius: 999px;
+    color: var(--color-text-primary);
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+.client-detail-nav__item:hover,
+.client-detail-nav__item:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
+.client-detail-cta { display: inline-flex; width: fit-content; margin-top: var(--space-3); }
+.client-body .producer-detail :where(section, #production-messages-slot) { scroll-margin-top: 72px; }
