@@ -1,11 +1,12 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models.usuario import UsuarioModel
 
 
 def buscar_por_username(db: Session, username: str):
-
-    return db.query(UsuarioModel).filter(UsuarioModel.username == username).first()
+    # AUD6-S02-006: logins do not depend on letter case; uq_usuarios_username_lower keeps them unique.
+    return db.query(UsuarioModel).filter(func.lower(UsuarioModel.username) == username.lower()).first()
 
 
 def buscar_por_id(db: Session, usuario_id: int):
@@ -29,7 +30,7 @@ def listar_usuarios(
 
 
 def username_em_uso(db: Session, username: str, ignorar_id: int | None = None):
-    query = db.query(UsuarioModel).filter(UsuarioModel.username == username)
+    query = db.query(UsuarioModel).filter(func.lower(UsuarioModel.username) == username.lower())
     if ignorar_id is not None:
         query = query.filter(UsuarioModel.id != ignorar_id)
     return query.first() is not None
