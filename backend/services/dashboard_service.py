@@ -1,14 +1,18 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
-
 from core.enums import OrcamentoStatus
+from models.audio_tag import PreviaTagJobModel
+from models.beat import BeatModel
 from models.cliente import ClienteModel
 from models.enums.proposta import PropostaStatus
+from models.financeiro import CobrancaModel, PagamentoModel
 from models.orcamento import OrcamentoModel
+from models.portal_produtor import ProducaoArquivoModel
+from models.portfolio_envio import PortfolioEnvioModel
 from models.producao import ProducaoModel
+from models.producao_etapa import ProducaoEtapaModel
 from models.proposta import PropostaModel
+from models.usuario import UsuarioModel
 from schemas.dashboard import (
     DashboardActivity,
     DashboardAttention,
@@ -17,7 +21,8 @@ from schemas.dashboard import (
     DashboardResponse,
 )
 from services.classificacao_service import cliente_oficial
-
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session
 
 ORCAMENTOS_ABERTOS = (
     OrcamentoStatus.NOVO.value,
@@ -97,6 +102,61 @@ def carregar(db: Session, agora: datetime | None = None) -> DashboardResponse:
         ProducaoModel.prazo_entrega < agora,
         ProducaoModel.status.notin_(PRODUCOES_FINAIS),
     )
+    solicitacoes_producao = _contar(
+        db,
+        OrcamentoModel,
+        _orcamento_oficial(),
+        OrcamentoModel.status.in_(ORCAMENTOS_ABERTOS),
+        OrcamentoModel.beat_id.is_(None),
+        OrcamentoModel.detalhes.like("Solicitacao pelo Portal do Cliente%"),
+    )
+    beats_em_revisao = (
+        db.query(func.count(BeatModel.id))
+        .join(UsuarioModel, UsuarioModel.id == BeatModel.produtor_id)
+        .filter(BeatModel.status == "revisao", UsuarioModel.is_test.is_(False))
+        .scalar()
+        or 0
+    )
+    portfolio_em_revisao = (
+        db.query(func.count(PortfolioEnvioModel.id))
+        .join(UsuarioModel, UsuarioModel.id == PortfolioEnvioModel.produtor_id)
+        .filter(
+            PortfolioEnvioModel.status == "pendente",
+            UsuarioModel.is_test.is_(False),
+        )
+        .scalar()
+        or 0
+    )
+    falhas_processamento_tag = (
+        db.query(func.count(PreviaTagJobModel.arquivo_id))
+        .join(
+            ProducaoArquivoModel,
+            ProducaoArquivoModel.id == PreviaTagJobModel.arquivo_id,
+        )
+        .join(ProducaoModel, ProducaoModel.id == ProducaoArquivoModel.producao_id)
+        .filter(PreviaTagJobModel.estado == "erro", _producao_oficial())
+        .scalar()
+        or 0
+    )
+    pagamentos_em_conciliacao = (
+        db.query(func.count(PagamentoModel.id))
+        .join(CobrancaModel, CobrancaModel.id == PagamentoModel.cobranca_id)
+        .join(PropostaModel, PropostaModel.id == CobrancaModel.proposta_id)
+        .join(OrcamentoModel, OrcamentoModel.id == PropostaModel.orcamento_id)
+        .filter(
+            PagamentoModel.reconciliation_status.isnot(None),
+            OrcamentoModel.is_test.is_(False),
+        )
+        .scalar()
+        or 0
+    )
+    entregas_aguardando_aprovacao = (
+        db.query(func.count(ProducaoEtapaModel.id))
+        .join(ProducaoModel, ProducaoModel.id == ProducaoEtapaModel.producao_id)
+        .filter(ProducaoEtapaModel.status == "em_revisao", _producao_oficial())
+        .scalar()
+        or 0
+    )
     return DashboardResponse(
         metrics=DashboardMetrics(
             clientes_ativos=clientes_ativos,
@@ -114,6 +174,12 @@ def carregar(db: Session, agora: datetime | None = None) -> DashboardResponse:
         attention=DashboardAttention(
             producoes_atrasadas=producoes_atrasadas,
             propostas_aguardando_decisao=propostas_enviadas,
+            solicitacoes_producao=solicitacoes_producao,
+            beats_em_revisao=beats_em_revisao,
+            portfolio_em_revisao=portfolio_em_revisao,
+            falhas_processamento_tag=falhas_processamento_tag,
+            pagamentos_em_conciliacao=pagamentos_em_conciliacao,
+            entregas_aguardando_aprovacao=entregas_aguardando_aprovacao,
         ),
         recent_activity=_atividade_recente(db),
     )
