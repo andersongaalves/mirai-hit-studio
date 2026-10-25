@@ -90,7 +90,7 @@ export function mostrarSecao(id) {
     setActiveSection(id);
 
     focusHeading($(id));
-    loadSection(id).catch(() => {});
+    return loadSection(id).catch(() => {});
 }
 
 export function voltarDashboard() {

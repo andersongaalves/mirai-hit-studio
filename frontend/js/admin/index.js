@@ -25,6 +25,7 @@ import { resetBuilder } from "./builder/builder.js";
 import { initializeAdminShell, resetAdminShell } from "./admin_shell.js";
 import { closeAllAdminModals } from "./admin_modal.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
+import { startBuscaGlobal } from "./busca.js";
 
 function expose(name, callback) {
     window[name] = callback;
@@ -44,6 +45,7 @@ async function initializeAdmin() {
     sessaoInicializada = token;
     const user = Auth.getCurrentUser?.();
     if (user) startPortalNotifications(user);
+    if (Auth.isAdmin()) startBuscaGlobal();
     inicializacao = Dashboard.inicializarDashboard().catch((error) => {
         sessaoInicializada = null;
         inicializacao = null;
