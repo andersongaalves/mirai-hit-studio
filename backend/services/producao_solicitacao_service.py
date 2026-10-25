@@ -1,11 +1,16 @@
 import hashlib
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from models.cliente import ClienteModel
 from models.orcamento import OrcamentoModel
 from models.servico import ServicoModel
 from services import audit_service
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
+
+# AUD6-S07-006: a client account cannot flood the studio with requests.
+DAILY_REQUESTS = 5
 
 
 def solicitar(db, dados, actor):
@@ -28,6 +33,18 @@ def solicitar(db, dados, actor):
     found = existente()
     if found is not None:
         return {"id": found.id, "status": found.status}
+    since = datetime.now(timezone.utc) - timedelta(days=1)
+    recent = db.query(func.count(OrcamentoModel.id)).filter(
+        OrcamentoModel.cliente_id == client.id,
+        OrcamentoModel.detalhes.like("Solicitacao pelo Portal do Cliente%"),
+        OrcamentoModel.data_solicitacao >= since,
+    ).scalar() or 0
+    if recent >= DAILY_REQUESTS:
+        raise HTTPException(
+            429,
+            f"Você já enviou {DAILY_REQUESTS} solicitações nas últimas 24 horas. "
+            "O estúdio vai analisar os pedidos; se precisar de algo urgente, fale conosco.",
+        )
     service = db.get(ServicoModel, dados.servico_id)
     if service is None:
         raise HTTPException(422, "Servico nao encontrado.")

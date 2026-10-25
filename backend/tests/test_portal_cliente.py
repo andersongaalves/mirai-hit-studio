@@ -121,6 +121,27 @@ async def check():
 asyncio.run(check())
 ''')
 
+    def test_project_requests_are_limited_per_client_per_day(self):
+        # Etapa 07, APL-S07-05 (AUD6-S07-006).
+        self.run_case(r'''
+import uuid
+from models.servico import ServicoModel
+with Session(engine) as db:
+    db.add(ServicoModel(id=50, nome='Mixagem', valor_base=100))
+    db.commit()
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        def payload(n):
+            return {'request_id': str(uuid.uuid4()), 'servico_id': 50, 'titulo': f'Faixa {n}', 'descricao': 'Pedido.'}
+        for n in range(5):
+            assert (await client.post('/portal/cliente/solicitacoes', headers=bearer('client-a'), json=payload(n))).status_code == 201
+        limited = await client.post('/portal/cliente/solicitacoes', headers=bearer('client-a'), json=payload(6))
+        assert limited.status_code == 429 and '24 horas' in limited.json()['detail']
+        # Another client is not affected.
+        assert (await client.post('/portal/cliente/solicitacoes', headers=bearer('client-b'), json=payload(7))).status_code == 201
+asyncio.run(check())
+''')
+
     def test_auth_ownership_history_and_safe_financial_projection(self):
         self.run_case(r'''
 async def check():

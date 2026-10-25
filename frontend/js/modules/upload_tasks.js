@@ -70,6 +70,8 @@ async function initialize() {
     list = document.createElement("ul");
     panel.append(header, list);
     document.body.append(button, panel);
+    // AUD6-S07-003: keep the floating button from covering the end of the page.
+    document.body.classList.add("has-upload-tasks");
     button.addEventListener("click", () => panel.showModal());
     registration.active?.postMessage({ type: "mirai-upload-list" });
     render();
