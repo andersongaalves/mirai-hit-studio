@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import (
     BaseModel,
     ConfigDict,
+    EmailStr,
     Field,
     StrictBool,
     field_validator,
@@ -62,6 +63,13 @@ class UsuarioCreate(BaseModel):
     role: UsuarioRole = "produtor"
     cliente_id: int | None = Field(default=None, gt=0)
     painel_beats: StrictBool = False
+    # AUD6-S02-004: recovery e-mail for studio accounts (admin and producers).
+    email: EmailStr | None = Field(default=None, max_length=150)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def email_vazio(cls, value):
+        return value.strip().lower() or None if isinstance(value, str) else value
 
     @field_validator("username")
     @classmethod
@@ -99,6 +107,13 @@ class UsuarioUpdate(BaseModel):
     ativo: StrictBool | None = None
     cliente_id: int | None = Field(default=None, gt=0)
     painel_beats: StrictBool | None = None
+    # Null or blank removes the recovery e-mail.
+    email: EmailStr | None = Field(default=None, max_length=150)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def email_vazio(cls, value):
+        return value.strip().lower() or None if isinstance(value, str) else value
 
     @field_validator("nome_exibicao")
     @classmethod
@@ -131,6 +146,19 @@ class UsuarioPasswordUpdate(BaseModel):
         return validar_senha(value)
 
 
+class SenhaPropriaUpdate(BaseModel):
+    """AUD6-S02-004: own password change, any logged-in account."""
+    model_config = ConfigDict(extra="forbid")
+
+    senha_atual: str = Field(min_length=1, max_length=72)
+    nova_senha: str = Field(min_length=8, max_length=72)
+
+    @field_validator("nova_senha")
+    @classmethod
+    def password_valido(cls, value: str) -> str:
+        return validar_senha(value)
+
+
 class UsuarioResponse(BaseModel):
 
     id: int
@@ -142,6 +170,7 @@ class UsuarioResponse(BaseModel):
     is_test: bool = False
     painel_beats: bool = False
     cliente_id: int | None
+    email: str | None = None
     created_at: datetime
     updated_at: datetime
 

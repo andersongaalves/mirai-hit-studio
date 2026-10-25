@@ -231,8 +231,16 @@ export function createAuthContext(config) {
 
     window.addEventListener("storage", handleStorage);
 
+    // AUD6-S02-004: a password change ends every session, so the current tab keeps the new token.
+    function renovarSessao(token, user) {
+        if (!token || !user?.id || !config.accepts(user)) return false;
+        commitSession(token, user);
+        return true;
+    }
+
     return Object.freeze({
         authFetch,
+        renovarSessao,
         exigirSessao,
         getContextName: () => config.name,
         getCurrentUser,
@@ -257,3 +265,4 @@ export const isAdmin = auth.isAdmin;
 export const isAuthenticated = auth.isAuthenticated;
 export const logout = auth.logout;
 export const restaurarSessao = auth.restaurarSessao;
+export const renovarSessao = auth.renovarSessao;
