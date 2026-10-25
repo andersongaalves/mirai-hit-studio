@@ -242,6 +242,7 @@ jobs:
                   node frontend/tests/financeiro_admin.cjs
                   node frontend/tests/beat_preview.cjs
                   node frontend/tests/portfolio_public.cjs
+                  node frontend/tests/public_accessibility.cjs
                   node frontend/tests/home_artists.cjs
                   node frontend/tests/home_mix_comparison.cjs
                   node frontend/tests/portal_produtor.cjs
