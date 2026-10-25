@@ -134,17 +134,37 @@ async def startup():
         return
     import asyncio
 
+    from core.recursos import memoria_apertada
     from database import SessionLocal
-    from services.audio_tag_service import processar_um
+    from services.audio_tag_service import processar_um, registrar_despertador
+
+    # AUD6-S12-002: one preview at a time; idle polling backs off and an upload wakes the loop.
+    loop = asyncio.get_running_loop()
+    wake = asyncio.Event()
+    registrar_despertador(lambda: loop.call_soon_threadsafe(wake.set))
 
     async def process_previews():
+        idle = 5
         while True:
+            if memoria_apertada():
+                logger.info("audio_tag_worker_waiting_memory")
+                await asyncio.sleep(30)
+                continue
             try:
                 processed = await asyncio.to_thread(processar_um, SessionLocal)
             except Exception:
                 logger.warning("audio_tag_worker_unavailable")
                 processed = False
-            await asyncio.sleep(0 if processed else 5)
+            if processed:
+                idle = 5
+                await asyncio.sleep(1)  # breathing room for API requests between renders
+                continue
+            wake.clear()
+            try:
+                await asyncio.wait_for(wake.wait(), timeout=idle)
+            except asyncio.TimeoutError:
+                pass
+            idle = min(idle * 2, 120)
 
     app.state.audio_tag_worker = asyncio.create_task(process_previews())
 
