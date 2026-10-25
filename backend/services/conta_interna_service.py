@@ -116,3 +116,17 @@ def trocar_senha(db, user_id, senha_atual, nova_senha, *, request_id=None):
     db.commit()
     db.refresh(user)
     return user
+
+
+def encerrar_sessoes(db, user_id, *, request_id=None):
+    """AUD6-S02-006: "Sair de todos os aparelhos" ends every session, this one included."""
+    user = db.scalar(select(UsuarioModel).where(UsuarioModel.id == user_id)
+                     .with_for_update().execution_options(populate_existing=True))
+    if user is None or not user.ativo:
+        db.rollback()
+        return None
+    user.auth_version += 1
+    audit_service.record(db, actor=user, action="user.sessions_revoked", entity_type="user",
+                         entity_id=user.id, request_id=request_id)
+    db.commit()
+    return user

@@ -26,6 +26,7 @@ import { initializeAdminShell, resetAdminShell } from "./admin_shell.js";
 import { closeAllAdminModals } from "./admin_modal.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { startAccountPassword } from "../modules/account_password.js";
+import { startBuscaGlobal } from "./busca.js";
 
 function expose(name, callback) {
     window[name] = callback;
@@ -48,6 +49,7 @@ async function initializeAdmin() {
         startPortalNotifications(user);
         startAccountPassword(user);
     }
+    if (Auth.isAdmin()) startBuscaGlobal();
     inicializacao = Dashboard.inicializarDashboard().catch((error) => {
         sessaoInicializada = null;
         inicializacao = null;

@@ -1898,3 +1898,19 @@
 .proposta-mudancas__list { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
 .proposta-mudancas__item { overflow-wrap: anywhere; }
 .proposta-mudancas__item--removido { text-decoration: none; opacity: .85; }
+/* AUD6-S09-002: client and producer pages and the links that open them. */
+.entity-link { margin-left: 8px; }
+.entity-link.hidden { display: none; }
+.cliente-history-open { margin-top: 4px; justify-self: start; }
+.admin-entity-dialog { width: min(640px, calc(100vw - 32px)); }
+.admin-entity-dialog__meta { margin: 8px 0 0; color: var(--color-text-secondary); font-size: var(--font-size-small); }
+.admin-entity-dialog__counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 16px 0; }
+.admin-entity-dialog__counts div { padding: 8px; border: 1px solid var(--color-border, #334155); border-radius: 6px; }
+.admin-entity-dialog__counts dt { color: var(--color-text-secondary); font-size: 12px; }
+.admin-entity-dialog__counts dd { margin: 2px 0 0; font-size: 20px; font-weight: 700; }
+.admin-entity-dialog h3 { margin: 8px 0 4px; font-size: 15px; }
+.admin-entity-dialog__list { margin: 0; padding: 0; list-style: none; }
+.admin-entity-dialog__list li { display: grid; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--color-border, #334155); }
+.admin-entity-dialog__link { justify-self: start; padding: 0; border: 0; background: none; color: var(--color-accent); font-weight: 600; text-align: left; cursor: pointer; min-height: 24px; }
+.admin-entity-dialog__late { color: var(--color-danger); }
+@media (max-width: 600px) { .admin-entity-dialog__counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
