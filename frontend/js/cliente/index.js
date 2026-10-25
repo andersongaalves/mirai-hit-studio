@@ -252,6 +252,7 @@ async function loadBeats() {
                     try {
                         const delivery = await api.baixarBeat(item.beat_id, kind);
                         if (delivery.type === "link") window.open(delivery.url, "_blank", "noopener,noreferrer");
+                        else if (delivery.type === "download") saveSignedLink(delivery);
                         else saveBlob(delivery);
                     } catch (error) { setAlert(error.message, true); }
                     finally { button.disabled = false; }
@@ -317,6 +318,17 @@ async function loadWallet() {
         retry.onclick = loadWallet;
         document.getElementById("client-credits-content").append(retry);
     }
+}
+
+// AUD6-S06-003: large purchased files come straight from storage through a
+// short signed link; the storage answers as an attachment, so the page stays.
+function saveSignedLink({ url, filename }) {
+    if (!/^https:\/\//.test(url || "")) throw new Error("Link de download inválido.");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename || "";
+    link.rel = "noopener noreferrer";
+    link.click();
 }
 
 function saveBlob({ blob, filename }) {

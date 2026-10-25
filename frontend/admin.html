@@ -17,6 +17,7 @@
         <link rel="stylesheet" href="css/components/service-credits.css" />
         <link rel="stylesheet" href="css/components/stage-payouts.css" />
         <link rel="stylesheet" href="css/components/upload-tasks.css" />
+        <link rel="stylesheet" href="css/components/portal-notifications.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -36,7 +37,7 @@
                             <img src="/assets/mirai-logo-header-symbol.svg" alt="" width="45" height="32" />
                             <img src="/assets/mirai-logo-header-lettering.svg" alt="" width="110" height="14" />
                         </span>
-                        <span class="admin-topbar__actions"><span>Admin</span><button type="button" class="btn-small admin-sidebar__logout" onclick="fazerLogout()">Sair</button></span>
+                        <span class="admin-topbar__actions"><span>Admin</span><button type="button" class="btn-small admin-sidebar__logout" data-admin-action="fazerLogout">Sair</button></span>
                     </header>
                     <aside
                         id="admin-navigation"
@@ -134,7 +135,7 @@
                                 <p>Gerencie pacotes, valores e formulários dinâmicos.</p>
                             </div>
                             <div class="admin-page-header__actions">
-                                <button type="button" class="btn-cta" onclick="abrirEditorServico()">
+                                <button type="button" class="btn-cta" data-admin-action="abrirEditorServico">
                                     Criar serviço
                                 </button>
                             </div>
@@ -283,7 +284,7 @@
                                         ></select>
                                         <button
                                             class="btn-small"
-                                            onclick="adicionarParametroBloco()"
+                                            data-admin-action="adicionarParametroBloco"
                                             style="
                                                 background: var(--cor-ciano);
                                                 color: black;
@@ -360,14 +361,14 @@
                                                     #059669
                                                 );
                                             "
-                                            onclick="salvarServico()"
+                                            data-admin-action="salvarServico"
                                         >
                                             SALVAR SERVIÇO
                                         </button>
                                         <button
                                             class="btn-cta btn-submit"
                                             style="background: #444"
-                                            onclick="fecharEditorServico()"
+                                            data-admin-action="fecharEditorServico"
                                         >
                                             CANCELAR
                                         </button>
@@ -390,7 +391,7 @@
                                 <p>Gerencie projetos publicados e destaques.</p>
                             </div>
                             <div class="admin-page-header__actions">
-                                <button type="button" class="btn-cta" onclick="novoProjeto()">
+                                <button type="button" class="btn-cta" data-admin-action="novoProjeto">
                                     Novo projeto
                                 </button>
                             </div>
@@ -569,7 +570,7 @@
                                     #059669
                                 );
                             "
-                            onclick="salvarConfiguracoesExtras()"
+                            data-admin-action="salvarConfiguracoesExtras"
                         >
                             SALVAR TABELA
                         </button>
@@ -620,7 +621,7 @@
                                 <p>Gerencie clientes e acompanhe o histórico comercial.</p>
                             </div>
                             <div class="admin-page-header__actions">
-                                <button type="button" class="btn-cta" onclick="novoCliente()">
+                                <button type="button" class="btn-cta" data-admin-action="novoCliente">
                                     Novo cliente
                                 </button>
                             </div>
@@ -1226,7 +1227,7 @@
                             <button
                                 class="btn-small"
                                 style="background: #444"
-                                onclick="fecharModalProjeto()"
+                                data-admin-action="fecharModalProjeto"
                             >
                                 Cancelar
                             </button>
@@ -1237,7 +1238,7 @@
                                     color: black;
                                     font-weight: bold;
                                 "
-                                onclick="salvarProjeto()"
+                                data-admin-action="salvarProjeto"
                             >
                                 Salvar Projeto
                             </button>
@@ -1324,7 +1325,7 @@
                         >
                             <button
                                 class="btn-small"
-                                onclick="fecharModalOrcamento()"
+                                data-admin-action="fecharModalOrcamento"
                             >
                                 Fechar
                             </button>
@@ -1392,7 +1393,7 @@
                             </div>
                             <button
                                 class="btn-small"
-                                onclick="fecharEditorProposta()"
+                                data-admin-action="fecharEditorProposta"
                             >
                                 Fechar
                             </button>
@@ -1510,7 +1511,7 @@
                                 <span class="badge badge-info">CRM</span>
                                 <h2 id="cliente-modal-title">Cliente</h2>
                             </div>
-                            <button type="button" class="btn-small" onclick="fecharModalCliente()" aria-label="Fechar cliente">
+                            <button type="button" class="btn-small" data-admin-action="fecharModalCliente" aria-label="Fechar cliente">
                                 Fechar
                             </button>
                         </div>
@@ -1619,7 +1620,7 @@
                             </div>
                             <button
                                 class="btn-small"
-                                onclick="fecharModalProducao()"
+                                data-admin-action="fecharModalProducao"
                                 aria-label="Fechar detalhes da produção"
                             >
                                 Fechar

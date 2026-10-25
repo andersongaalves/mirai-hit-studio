@@ -60,6 +60,9 @@ def solicitar(db, dados, actor):
         audit_service.record(db, actor=actor, action="production.requested",
                              entity_type="budget", entity_id=budget.id,
                              metadata={"cliente_id": client.id, "servico_id": service.id})
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.solicitacao_producao(db, budget)
         db.commit()
         return {"id": budget.id, "status": budget.status}
     except IntegrityError:

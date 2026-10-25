@@ -18,8 +18,12 @@ class PortalNotificacaoModel(Base):
     __tablename__ = "portal_notificacoes"
     __table_args__ = (
         UniqueConstraint("usuario_id", "chave_evento", name="uq_portal_notificacao_usuario_evento"),
-        CheckConstraint("papel IN ('cliente', 'produtor')", name="ck_portal_notificacao_papel"),
-        CheckConstraint("producao_id IS NOT NULL OR proposta_id IS NOT NULL", name="ck_portal_notificacao_contexto"),
+        CheckConstraint("papel IN ('cliente', 'produtor', 'admin')", name="ck_portal_notificacao_papel"),
+        CheckConstraint(
+            "producao_id IS NOT NULL OR proposta_id IS NOT NULL OR beat_id IS NOT NULL "
+            "OR orcamento_id IS NOT NULL OR portfolio_envio_id IS NOT NULL",
+            name="ck_portal_notificacao_contexto",
+        ),
         Index("ix_portal_notificacao_usuario_vista_id", "usuario_id", "vista_em", "id"),
     )
 
@@ -31,6 +35,10 @@ class PortalNotificacaoModel(Base):
     producao_id = Column(Integer, ForeignKey("producoes.id", ondelete="CASCADE"), nullable=True)
     proposta_id = Column(Integer, ForeignKey("propostas.id", ondelete="CASCADE"), nullable=True)
     arquivo_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="SET NULL"), nullable=True)
+    # AUD6-S11-001/002: Admin and beat events have no production or proposal.
+    beat_id = Column(Integer, ForeignKey("beats.id", ondelete="CASCADE"), nullable=True, index=True)
+    orcamento_id = Column(Integer, ForeignKey("orcamentos.id", ondelete="CASCADE"), nullable=True, index=True)
+    portfolio_envio_id = Column(Integer, ForeignKey("portfolio_envios.id", ondelete="CASCADE"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     vista_em = Column(DateTime(timezone=True), nullable=True)
 
