@@ -49,7 +49,7 @@ def listar_cobrancas(
     ambiente: Literal['real', 'teste', 'todos'] = 'real',
     search: Annotated[str | None, Query(max_length=120)] = None,
     status: CobrancaStatus | None = None,
-    reconciliation_status: Literal["required", "conflict", "clear"] | None = None,
+    reconciliation_status: Literal["pending", "required", "conflict", "clear"] | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     db: Session = Depends(get_db),

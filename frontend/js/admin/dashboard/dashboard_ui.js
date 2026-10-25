@@ -110,7 +110,11 @@ function renderAtencao(data) {
         if (quantidade <= 0) return [];
         const item = element("div", `dashboard-attention-item dashboard-attention-item--${variante}`);
         item.append(element("span", `admin-badge admin-badge--${variante}`, `${quantidade} ${quantidade === 1 ? singular : plural}`));
-        item.append(criarLink(secao, acao));
+        const link = criarLink(secao, acao);
+        if (campo === "pagamentos_em_conciliacao") {
+            link.addEventListener("click", () => document.dispatchEvent(new CustomEvent("financeiro:conciliacao", { detail: { status: "pending" } })));
+        }
+        item.append(link);
         return [item];
     });
     if (items.length === 0) {

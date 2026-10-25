@@ -77,6 +77,9 @@ async def check():
         page = listing.json()
         assert page['total'] == 1 and page['items'][0]['saldo_pendente'] == '60.00'
         assert page['items'][0]['cliente_nome'].startswith('<img')
+        queue = (await client.get('/financeiro/cobrancas', params={'reconciliation_status': 'pending'})).json()
+        assert queue['total'] == 1 and queue['items'][0]['reconciliation_status'] == 'conflict', queue
+        assert (await client.get('/financeiro/cobrancas', params={'reconciliation_status': 'clear'})).json()['total'] == 0
         detail = await client.get(f"/financeiro/cobrancas/{page['items'][0]['id']}")
         assert detail.status_code == 200, detail.text
         data = detail.json()

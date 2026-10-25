@@ -176,6 +176,17 @@ function registerControls() {
 }
 
 
+// Atalho do dashboard: abre o financeiro ja filtrado pela fila de conciliacao.
+export function filtrarConciliacao(value = "pending") {
+    const field = document.getElementById("financeiro-reconciliation-filter");
+    if (field) field.value = value;
+    financeiroState.filters = filtersFromForm();
+    financeiroState.page = 1;
+    return carregarFinanceiro();
+}
+document.addEventListener("financeiro:conciliacao", event => filtrarConciliacao(event.detail?.status || "pending"));
+
+
 export function initFinanceiro() {
     if (!Auth.isAdmin()) return Promise.resolve();
     registerControls();
