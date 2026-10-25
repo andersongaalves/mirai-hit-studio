@@ -66,6 +66,28 @@ def ouvir_pessoal(db: Db, user=Depends(require_producer)):
     return _conteudo(db, f"producer:{user.id}")
 
 
+@router.get("/admin/audio-tag/previas/falhas")
+def falhas(db: Db, user=Depends(require_admin)):
+    # AUD6-S08-002: the Admin sees which previews failed and can retry each one.
+    from models import ProducaoArquivoModel, ProducaoModel
+    from services.dashboard_service import _producao_oficial
+
+    rows = db.execute(
+        select(PreviaTagJobModel.arquivo_id, PreviaTagJobModel.created_at, ProducaoArquivoModel.nome_exibicao,
+               ProducaoModel.id, ProducaoModel.titulo)
+        .join(ProducaoArquivoModel, ProducaoArquivoModel.id == PreviaTagJobModel.arquivo_id)
+        .join(ProducaoModel, ProducaoModel.id == ProducaoArquivoModel.producao_id)
+        .where(PreviaTagJobModel.estado == "erro", _producao_oficial())
+        .order_by(PreviaTagJobModel.created_at.desc())
+        .limit(20)
+    ).all()
+    return [
+        {"arquivo_id": arquivo_id, "arquivo_nome": nome, "producao_id": producao_id,
+         "producao_titulo": titulo, "created_at": created_at}
+        for arquivo_id, created_at, nome, producao_id, titulo in rows
+    ]
+
+
 @router.post("/admin/audio-tag/previas/{arquivo_id}/reprocessar")
 def reprocessar(arquivo_id: int, db: Db, user=Depends(require_admin)):
     from services import audit_service
