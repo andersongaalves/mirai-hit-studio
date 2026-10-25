@@ -525,12 +525,13 @@ rate_app.add_middleware(SecurityMiddleware)
 def limited(): return {'ok': True}
 @rate_app.get('/checkout/11111111-1111-4111-8111-111111111111/status')
 def polling(): return {'ok': True}
-with patch('core.http_security.allow_request', return_value=(False, 17)) as limiter:
+with patch('core.http_security.allow_shared', return_value=(False, 17)) as limiter:
     rate_client = TestClient(rate_app)
     blocked = rate_client.post('/checkout/11111111-1111-4111-8111-111111111111/pix')
     assert blocked.status_code == 429 and blocked.headers['Retry-After'] == '17'
     assert rate_client.get('/checkout/11111111-1111-4111-8111-111111111111/status').status_code == 200
     assert limiter.call_count == 1
+    assert limiter.call_args.args[0] == 'checkout_payment' and limiter.call_args.args[2:] == (8, 300)
 ''')
 
     def test_provider_errors_are_safe_and_rejected_card_can_retry(self):
