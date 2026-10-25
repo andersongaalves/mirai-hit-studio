@@ -99,4 +99,5 @@ def reprocessar(arquivo_id: int, db: Db, user=Depends(require_admin)):
         job.estado = "pendente"
         audit_service.record(db, actor=user, action="audio_tag.retry", entity_type="production_file", entity_id=arquivo_id)
         db.commit()
+        service.sinalizar_fila()
     return {"estado": job.estado}
