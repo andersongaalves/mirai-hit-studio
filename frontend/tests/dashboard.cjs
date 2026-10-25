@@ -112,13 +112,13 @@ async function staticResponse(route) {
         dashboard.recent_activity = [];
         await page.evaluate(() => window.mostrarDashboard());
         await page.waitForFunction(() => document.querySelector('#dashboard-metrics')?.textContent.includes('0'));
-        assert.equal(await page.locator('.admin-success').textContent(), 'Nenhuma acao pendente no momento.');
-        assert.equal(await page.locator('#dashboard-activity .admin-empty').textContent(), 'Ainda nao ha atividade recente.');
+        assert.equal(await page.locator('.admin-success').textContent(), 'Nenhuma ação pendente no momento.');
+        assert.equal(await page.locator('#dashboard-activity .admin-empty').textContent(), 'Ainda não há atividade recente.');
 
         dashboardFailure = true;
         await page.evaluate(() => window.mostrarDashboard());
         await page.waitForSelector('#dashboard-content .admin-error');
-        assert.equal(await page.locator('#dashboard-content .admin-error').textContent(), 'Nao foi possivel carregar o dashboard.Tentar novamente');
+        assert.equal(await page.locator('#dashboard-content .admin-error').textContent(), 'Não foi possível carregar o dashboard.Tentar novamente');
         for (const width of [320, 375, 390, 414, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 800 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);

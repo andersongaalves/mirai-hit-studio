@@ -7,11 +7,11 @@ export async function carregarDashboardApi() {
     if (!response.ok) {
         throw new Error(typeof data?.detail === "string"
             ? data.detail
-            : "Nao foi possivel carregar o dashboard.");
+            : "Não foi possível carregar o dashboard.");
     }
     if (!data || typeof data !== "object" || !data.metrics || !data.pipeline
         || !data.attention || !Array.isArray(data.recent_activity)) {
-        throw new Error("Resposta invalida do dashboard.");
+        throw new Error("Resposta inválida do dashboard.");
     }
     return data;
 }

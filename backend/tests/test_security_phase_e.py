@@ -67,6 +67,14 @@ async def check():
                 cfg['desconto'] = discount
                 assert (await client.put('/config', json=cfg, headers=bearer('admin'))).status_code == 200
                 assert (await client.get('/config')).json()['desconto'] == discount
+            with Session(engine) as db:
+                db.delete(db.get(ConfigModel, 1))
+                db.commit()
+            missing = await client.get('/config')
+            assert missing.status_code == 404 and 'ainda não cadastrada' in missing.json()['detail'], missing.text
+            cfg['desconto'] = 12
+            assert (await client.put('/config', json=cfg, headers=bearer('admin'))).status_code == 200
+            assert (await client.get('/config')).json()['desconto'] == 12
             assert (await client.patch('/orcamentos/1/produtor', json={'produtor_id':999}, headers=bearer('common'))).status_code == 403
             result = await client.post('/auth/login', json={'username':'admin', 'password':'password-test'})
             assert result.status_code == 200, result.text
