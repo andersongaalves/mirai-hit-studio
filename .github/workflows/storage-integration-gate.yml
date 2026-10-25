@@ -214,6 +214,7 @@ jobs:
                     test_portfolio_envios.py \
                     test_audio_tags.py \
                     test_recursos.py \
+                    test_uso_infra.py \
                     test_portfolio_taxonomy.py \
                     test_catalogo.py \
                     test_emails.py; do
@@ -287,6 +288,7 @@ jobs:
                   node frontend/tests/seo_content_h2.cjs
                   node frontend/tests/seo_technical.cjs
                   node frontend/tests/style_architecture.cjs
+                  node frontend/tests/uso_infra.cjs
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend
