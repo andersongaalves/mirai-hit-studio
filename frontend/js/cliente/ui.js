@@ -214,6 +214,7 @@ function fileGroup(title, files, handlers, help = "") {
 
 function filesPanel(production, files, handlers) {
     const panel = element("section", "producer-files");
+    panel.id = "project-section-files";
     panel.append(element("h2", "", "Arquivos e entregas"));
     if (portalSettings?.textos?.ajuda_arquivos) {
         panel.append(element("p", "producer-help", portalSettings.textos.ajuda_arquivos));
@@ -307,6 +308,7 @@ function filesPanel(production, files, handlers) {
 
 function financePanel(finance) {
     const panel = element("section", "producer-files");
+    panel.id = "project-section-payment";
     panel.append(element("h2", "", "Pagamento"));
     if (finance?.indisponivel) {
         panel.append(element("p", "producer-help", "As informações de pagamento estão indisponíveis no momento."));
@@ -376,10 +378,47 @@ export function renderDetail(production, files, finance, handlers) {
         progress.append(list);
     }
     grid.append(overview, progress);
+    grid.id = "project-section-overview";
     const messagesSlot = element("div");
     messagesSlot.id = "production-messages-slot";
-    detail.append(title, meta, grid, filesPanel(production, files, { ...handlers, finance }), messagesSlot, financePanel(finance));
+    const pending = paymentPending(finance);
+    if (pending) overview.append(sectionButton("project-section-payment", "Ver pagamento", "btn-cta client-detail-cta"));
+    detail.append(title, meta, sectionNavigation(pending), grid, filesPanel(production, files, { ...handlers, finance }), messagesSlot, financePanel(finance));
     root.append(detail);
+}
+
+// AUD6-S07-001: the detail is long on phones; sections are one tap away and the
+// pending payment is reachable from the top.
+function paymentPending(finance) {
+    const charge = finance?.cobranca;
+    return Boolean(charge && Number(charge.saldo_pendente) > 0 && !["cancelada", "paga"].includes(charge.status));
+}
+
+function sectionButton(target, label, className) {
+    const button = element("button", className, label);
+    button.type = "button";
+    button.dataset.sectionTarget = target;
+    button.addEventListener("click", () => {
+        const section = document.getElementById(target);
+        if (!section) return;
+        section.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+        const heading = section.querySelector("h2") || section;
+        heading.tabIndex = -1;
+        heading.focus({ preventScroll: true });
+    });
+    return button;
+}
+
+function sectionNavigation(pending) {
+    const nav = element("nav", "client-detail-nav");
+    nav.setAttribute("aria-label", "Seções do projeto");
+    [
+        ["project-section-overview", "Visão geral"],
+        ["project-section-files", "Arquivos"],
+        ["production-messages-slot", "Mensagens"],
+        ["project-section-payment", pending ? "Pagamento pendente" : "Pagamento"],
+    ].forEach(([target, label]) => nav.append(sectionButton(target, label, "client-detail-nav__item")));
+    return nav;
 }
 
 const PROPOSAL_STATUS = Object.freeze({
