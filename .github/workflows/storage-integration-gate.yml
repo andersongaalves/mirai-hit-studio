@@ -214,6 +214,7 @@ jobs:
                     test_portfolio_envios.py \
                     test_audio_tags.py \
                     test_recursos.py \
+                    test_busca_admin.py \
                     test_uso_infra.py \
                     test_protecao.py \
                     test_portfolio_taxonomy.py \
@@ -293,6 +294,7 @@ jobs:
                   node frontend/tests/uso_infra.cjs
                   node frontend/tests/csp_enforced.cjs
                   node frontend/tests/session_expiry.cjs
+                  node frontend/tests/admin_search.cjs
                   # APL-S12-01: real proposal HTML/PDF from the backend feed the document suite.
                   (cd backend && PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout python -m unittest discover -s tests -p 'test_proposta_documento.py')
                   PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout node frontend/tests/proposta_documento.cjs
@@ -408,7 +410,10 @@ jobs:
                     backend/migrations/versions/e1a3c5d7f9b2_email_contas_internas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
-                    backend/routers/auth.py
+                    backend/routers/auth.py \
+                    backend/services/busca_admin_service.py \
+                    backend/routers/busca_admin.py \
+                    backend/tests/test_busca_admin.py
                   node --check frontend/js/admin/projetos.js
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs
