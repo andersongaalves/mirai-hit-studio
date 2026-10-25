@@ -202,3 +202,7 @@
 .client-detail-nav__item:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
 .client-detail-cta { display: inline-flex; width: fit-content; margin-top: var(--space-3); }
 .client-body .producer-detail :where(section, #production-messages-slot) { scroll-margin-top: 72px; }
+/* AUD6-S05-001: validade da proposta. */
+.client-proposal-validity,
+.client-proposal-expired { flex-basis: 100%; margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-small); text-align: right; }
+.client-proposal-expired { color: var(--color-warning); }

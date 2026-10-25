@@ -55,6 +55,7 @@ with Session(engine) as db:
     db.flush()
     db.add_all([
         PropostaModel(orcamento_id=aberto.id, numero='P-ENVIADA', status='enviada', cliente_snapshot={}, itens_json=[], pagamentos_json=[], totais_json={}, enviada_em=now - timedelta(minutes=30)),
+        PropostaModel(orcamento_id=analise.id, numero='P-VENCIDA', status='enviada', cliente_snapshot={}, itens_json=[], pagamentos_json=[], totais_json={}, enviada_em=now - timedelta(days=12)),
         PropostaModel(orcamento_id=aprovado.id, numero='P-ACEITA', status='aceita', cliente_snapshot={}, itens_json=[], pagamentos_json=[], totais_json={}, aprovada_em=now - timedelta(minutes=15)),
         ProducaoModel(titulo='Ativa', cliente='Cliente', servico='Mix', status='em_producao', etapas='[]', created_at=now - timedelta(minutes=20)),
         ProducaoModel(titulo='Atrasada', cliente='Cliente', servico='Master', status='revisao', etapas='[]', prazo_entrega=now - timedelta(days=1), created_at=now - timedelta(hours=3)),
@@ -104,7 +105,7 @@ async def check():
         }, data
         assert data['pipeline'] == {
             'orcamentos_abertos': 4,
-            'propostas_enviadas': 1,
+            'propostas_enviadas': 2,
             'propostas_aprovadas': 2,
             'producoes_ativas': 3,
         }
@@ -117,6 +118,7 @@ async def check():
             'falhas_processamento_tag': 1,
             'pagamentos_em_conciliacao': 1,
             'entregas_aguardando_aprovacao': 1,
+            'propostas_expiradas': 1,
         }
         assert len(data['recent_activity']) <= 8
         assert data['recent_activity'] == sorted(data['recent_activity'], key=lambda item: item['data'], reverse=True)
