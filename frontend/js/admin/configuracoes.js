@@ -50,6 +50,11 @@ export async function carregarConfiguracoes() {
     loadAudioTag($("audio-tag-settings"), { admin: true });
     try {
         const response = await authFetch("/config");
+        // AUD6-S09-007: no saved prices yet; the first save creates them.
+        if (response.status === 404) {
+            await carregarSegmentosPortfolio();
+            return;
+        }
         if (!response.ok) throw new Error("Erro ao carregar configurações.");
         const config = await response.json();
 

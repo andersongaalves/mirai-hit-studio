@@ -1,7 +1,7 @@
 import models
 from core.dependencies import require_admin
 from database import get_db
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.config import (
     ConfigResponse,
     PortfolioSegmentCatalogResponse,
@@ -19,7 +19,11 @@ router = APIRouter(prefix="/config", tags=["Configurações"])
 
 @router.get("", response_model=ConfigResponse)
 def get_config(db: Session = Depends(get_db)):
-    return db.query(models.ConfigModel).filter(models.ConfigModel.id == 1).first()
+    config = db.get(models.ConfigModel, 1)
+    if config is None:
+        # AUD6-S09-007: a missing row is a clear 404, never a 500.
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Configuração de preços ainda não cadastrada.")
+    return config
 
 
 @router.put("", response_model=ConfigResponse)
@@ -29,7 +33,11 @@ def update_config(
     user=Depends(require_admin),
 ):
 
-    config = db.query(models.ConfigModel).filter(models.ConfigModel.id == 1).first()
+    config = db.get(models.ConfigModel, 1)
+    if config is None:
+        # AUD6-S09-007: saving the prices creates the single configuration row.
+        config = models.ConfigModel(id=1)
+        db.add(config)
 
     for key, value in novo_config.model_dump(exclude_none=True).items():
         setattr(config, key, value)
