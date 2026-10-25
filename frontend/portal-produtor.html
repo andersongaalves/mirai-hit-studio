@@ -25,20 +25,9 @@
         <a class="skip-link" href="#producer-content">Ir para o conteúdo</a>
 
         <main class="producer-entry" id="producer-content">
-            <section id="login-panel" class="producer-login" aria-labelledby="login-title">
-                <img src="/img/logo-horizontal.png" alt="Mirai Hit Studio" width="240" height="74" />
-                <div>
-                    <p class="producer-eyebrow">Portal do Produtor</p>
-                    <h1 id="login-title">Acesse seus trabalhos</h1>
-                </div>
-                <form id="producer-login-form" class="producer-login__form">
-                    <label for="username">Usuário</label>
-                    <input id="username" name="username" autocomplete="username" required />
-                    <label for="password">Senha</label>
-                    <input id="password" name="password" type="password" autocomplete="current-password" required />
-                    <button class="btn-cta" type="submit">Entrar</button>
-                    <p id="login-error" class="producer-message producer-message--error hidden" role="alert"></p>
-                </form>
+            <section id="login-panel" class="producer-login access-redirect" aria-live="polite">
+                <p class="producer-lead">Verificando seu acesso…</p>
+                <a class="btn-cta" href="/acesso">Ir para o acesso</a>
             </section>
 
             <div id="admin-area" class="producer-shell hidden">

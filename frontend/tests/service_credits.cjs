@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 const root = path.resolve(__dirname, "..");
 const real = process.env.MIRAI_CREDITS_REAL_BACKEND === "POSTGRES_17_DISPOSABLE_ONLY";
 if (process.env.MIRAI_CREDITS_REAL_BACKEND && !real) throw new Error("Invalid disposable backend acknowledgement");
@@ -45,10 +46,7 @@ assert.ok(password);
                 }
                 return route.fulfill({ json: [] });
             });
-            await page.goto("http://localhost:4173/cliente/creditos");
-            await page.locator("#username").fill(username);
-            await page.locator("#password").fill(password);
-            await page.getByRole("button", { name: "Entrar", exact: true }).click();
+            await signIn(page, { next: "/cliente/creditos", username, password });
             const panel = page.locator("#client-credits-content");
             if (username.endsWith("a")) {
                 await panel.getByText("Disponíveis: 20 canais", { exact: true }).waitFor();

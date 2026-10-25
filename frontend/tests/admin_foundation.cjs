@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 
@@ -48,6 +49,7 @@ async function staticResponse(route) {
         if (url.pathname === '/auth/login') {
             return route.fulfill({ json: { access_token: 'synthetic-admin-session', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } } });
         }
+        if (url.pathname === '/auth/me') return route.fulfill({ json: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } });
         if (url.pathname === '/config') return route.fulfill({ json: {} });
         if (url.pathname === '/config/portfolio-segments') {
             return route.fulfill({ json: { segments: [], revision: '0'.repeat(64) } });
@@ -71,11 +73,7 @@ async function staticResponse(route) {
     });
 
     try {
-        await page.goto('http://localhost:4173/admin.html');
-        await page.waitForFunction(() => typeof window.fazerLogin === 'function');
-        await page.locator('#username').fill('admin');
-        await page.locator('#password').fill('synthetic-password');
-        await page.locator('#login-panel').getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
+        await signIn(page, { next: '/admin.html', username: 'admin', password: 'synthetic-password' });
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
         const dangerStyle = await page.evaluate(() => {
             const button = document.createElement('button');

@@ -22,20 +22,8 @@
     background: var(--color-surface);
 }
 
-#login-panel .form-group { margin-bottom: var(--space-4); }
-#login-panel label { display: block; margin-bottom: var(--space-2); }
-#login-panel input {
-    width: 100%;
-    min-height: 44px;
-    padding: var(--space-3);
-    border: var(--border-subtle);
-    border-radius: var(--radius-sm);
-    color: var(--color-text-primary);
-    background: var(--color-background);
-    font: inherit;
-}
-#login-panel input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-#login-panel .btn-submit { width: 100%; }
+#login-panel.access-redirect { display: grid; gap: var(--space-4); justify-items: start; }
+#login-panel.access-redirect.hidden { display: none; }
 
 .admin-shell {
     display: grid;

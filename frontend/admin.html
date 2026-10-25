@@ -25,35 +25,10 @@
 
         <main class="admin-main">
             <div class="admin-container">
-                <div id="login-panel">
-                    <div class="admin-header"><h2>Acesso Restrito</h2></div>
-                    <div class="form-group">
-                        <label for="username">Usuário</label
-                        ><input type="text" id="username" placeholder="admin" />
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Senha</label
-                        ><input
-                            type="password"
-                            id="password"
-                            placeholder="••••••••"
-                        />
-                    </div>
-                    <button class="btn-cta btn-submit" onclick="fazerLogin()">
-                        ENTRAR NO SISTEMA
-                    </button>
-                    <p
-                        id="login-error"
-                        class="hidden"
-                        style="
-                            color: #ef4444;
-                            text-align: center;
-                            margin-top: 15px;
-                        "
-                    >
-                        Senha incorreta!
-                    </p>
-                </div>
+                <section id="login-panel" class="access-redirect" aria-live="polite">
+                    <p>Verificando seu acesso…</p>
+                    <a class="btn-cta" href="/acesso">Ir para o acesso</a>
+                </section>
 
                 <div id="admin-area" class="admin-shell hidden">
                     <header class="admin-topbar">

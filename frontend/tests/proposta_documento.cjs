@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
+const { stayWithoutSession } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 
 (async () => {
@@ -57,7 +58,8 @@ const root = path.resolve(__dirname, '..');
             }
             return route.fulfill({ body: '' });
         });
-        await page.goto('http://localhost:4173/admin.html');
+        await stayWithoutSession(page);
+        await page.goto('http://localhost:4173/admin.html', { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => typeof window.fecharEditorProposta === 'function');
         await page.evaluate(() => {
             localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only');

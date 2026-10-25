@@ -79,13 +79,16 @@ const access = {
         await page.locator('#activation-username').fill('cliente_portal');
         await page.locator('#activation-password').fill('secure-password');
         await page.locator('#activation-confirm').fill('secure-password');
-        await page.locator('#activation-form').getByRole('button', { name: 'Ativar acesso' }).click();
-        await page.waitForSelector('#activation-login:not(.hidden)');
         assert.equal(
             await page.locator('#activation-login').getAttribute('href'),
             `/acesso?next=${encodeURIComponent(proposalPath)}`,
         );
-        assert.equal(new URL(page.url()).searchParams.has('token'), false);
+        await page.locator('#activation-form').getByRole('button', { name: 'Ativar acesso' }).click();
+        // AUD6-S02-014: activation signs the new account in and opens the requested page.
+        await page.waitForURL(`**${proposalPath}`);
+        assert.equal(await page.evaluate(() => localStorage.getItem('mirai.auth.cliente.access_token')), 'client-deep-link-token');
+        await page.goto('http://localhost:4173/acesso');
+        await page.evaluate(() => localStorage.clear());
 
         await page.goto('http://localhost:4173/ativar?token=synthetic-token-with-sufficient-length-1234&next=https%3A%2F%2Fevil.example%2Fcliente');
         await page.waitForSelector('#activation-form:not(.hidden)');
@@ -98,6 +101,8 @@ const access = {
         await page.waitForURL(`**${proposalPath}`);
         assert.equal(new URL(page.url()).pathname, proposalPath);
 
+        // Leave the portal before dropping its session so it does not redirect mid-test.
+        await page.goto('http://localhost:4173/acesso');
         await page.evaluate(() => localStorage.clear());
         await page.goto('http://localhost:4173/acesso?next=https%3A%2F%2Fevil.example%2Fcliente');
         await page.locator('#username').fill('client');

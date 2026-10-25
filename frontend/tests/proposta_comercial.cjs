@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { stayWithoutSession } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 
 (async () => {
@@ -89,7 +90,8 @@ const root = path.resolve(__dirname, '..');
             }
             return route.fulfill({ body: '' });
         });
-        await page.goto('http://localhost:4173/admin.html');
+        await stayWithoutSession(page);
+        await page.goto('http://localhost:4173/admin.html', { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => typeof window.fecharEditorProposta === 'function');
         await page.evaluate(() => localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only'));
         await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);
@@ -218,8 +220,10 @@ const root = path.resolve(__dirname, '..');
         assert.equal(patches(), 2);
         assert.equal(await testCheckbox.isDisabled(), true);
         await page.evaluate(() => window.fecharEditorProposta());
+        // The classification change reloads lists; let them finish before dropping the session (APL-S12-04).
+        await page.waitForLoadState('networkidle');
         await page.evaluate(() => localStorage.removeItem('mirai.auth.admin.access_token'));
-        await page.reload();
+        await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => typeof window.fecharEditorProposta === 'function');
         await page.evaluate(() => localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only'));
         await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);

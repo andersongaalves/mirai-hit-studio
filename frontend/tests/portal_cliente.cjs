@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const now = Date.now();
@@ -254,10 +255,7 @@ async function staticResponse(route) {
     });
 
     try {
-        await page.goto('http://localhost:4173/cliente');
-        await page.locator('#username').fill('client-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/cliente', username: 'client-a' });
         await page.waitForSelector('.producer-metric');
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
@@ -470,36 +468,40 @@ async function staticResponse(route) {
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
         }
 
-        await page.getByRole('button', { name: 'Sair' }).click();
-        assert.equal(await page.locator('#login-panel').isVisible(), true);
+        // AUD6-S02-003: "Sair" sends the client to the single access page.
+        const signedOut = await expectAccessPage(page, () => page.getByRole('button', { name: 'Sair' }).click());
+        assert.match(signedOut.params.get('next'), /^\/cliente(\/|$)/);
 
         productions = [];
-        await page.goto('http://localhost:4173/cliente');
-        await page.locator('#username').fill('client-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/cliente', username: 'client-a' });
         await page.waitForSelector('.producer-metric');
         await page.getByRole('link', { name: 'Meus projetos' }).click();
         assert.match(await page.locator('#client-list').textContent(), /ainda não possui projetos/);
-        await page.getByRole('button', { name: 'Sair' }).click();
+        await expectAccessPage(page, () => page.getByRole('button', { name: 'Sair' }).click());
 
+        // A producer who follows a client link is taken to the producer area, never into this portal.
         loginRole = 'produtor';
-        await page.locator('#username').fill('producer-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
-        await page.waitForFunction(() => document.getElementById('login-error').textContent.includes('exclusiva'));
-        assert.equal(await page.locator('#admin-area').isVisible(), false);
+        const producerArea = url => url.pathname === '/produtor';
+        await page.route(producerArea, route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Produtor</title>' }));
+        await page.goto(`http://localhost:4173/acesso.html?next=${encodeURIComponent('/cliente/projetos')}`);
+        await page.locator('#access-login-form #username').fill('producer-a');
+        await page.locator('#access-login-form #password').fill('synthetic-password');
+        await Promise.all([
+            page.waitForURL(producerArea),
+            page.locator('#access-login-form button[type=submit]').click(),
+        ]);
+        assert.equal(await page.evaluate(() => localStorage.getItem('mirai.auth.cliente.access_token')), null);
+        await page.evaluate(() => localStorage.removeItem('mirai.auth.produtor.access_token'));
+        await page.unroute(producerArea);
 
         loginRole = 'cliente';
         failList = true;
-        await page.locator('#username').fill('client-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/cliente', username: 'client-a' });
         await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Falha controlada'));
         assert.equal(await page.locator('#client-loading').isVisible(), false);
 
         // Roadmap 5.01: published settings drive notice, texts, indicators, filters and areas.
-        await page.getByRole('button', { name: 'Sair' }).click();
+        await expectAccessPage(page, () => page.getByRole('button', { name: 'Sair' }).click());
         failList = false;
         productions = [{ id: 1, titulo: 'Faixa A', servico: 'Mixagem', status: 'revisao', etapas: '[]', prazo_entrega: null, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() }];
         portalSettings = {
@@ -509,9 +511,7 @@ async function staticResponse(route) {
             filtros: { situacao_padrao: 'ativos', ordenacao_padrao: 'prazo' },
             areas: { propostas: false },
         };
-        await page.locator('#username').fill('client-a');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'Entrar' }).click();
+        await signIn(page, { next: '/cliente', username: 'client-a' });
         await page.waitForFunction(() => document.getElementById('client-loading').classList.contains('hidden'));
         await page.getByRole('link', { name: 'Dashboard' }).click();
         await page.waitForSelector('#client-metrics .producer-metric');

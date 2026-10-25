@@ -4,6 +4,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { stayWithoutSession } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 
 const SERVICES = [
@@ -130,7 +131,8 @@ const SNAPSHOT = {
         });
 
         const boot = async () => {
-            await page.goto('http://localhost:4173/admin.html');
+            await stayWithoutSession(page);
+            await page.goto('http://localhost:4173/admin.html', { waitUntil: 'domcontentloaded' });
             await page.waitForFunction(() => typeof window.fecharEditorProposta === 'function');
             await page.evaluate(() => localStorage.setItem('mirai.auth.admin.access_token', 'synthetic-only'));
         };

@@ -245,6 +245,7 @@ jobs:
                   node frontend/tests/home_mix_comparison.cjs
                   node frontend/tests/portal_produtor.cjs
                   node frontend/tests/portal_cliente.cjs
+                  node frontend/tests/acesso.cjs
                   node frontend/tests/admin_beat_licenses.cjs
                   node frontend/tests/checkout.cjs
                   node frontend/tests/public_contracting.cjs
@@ -373,6 +374,10 @@ jobs:
                   node --check frontend/tests/portal_produtor.cjs
                   node --check frontend/tests/portal_cliente.cjs
                   node --check frontend/js/admin/beats.js
+                  node --check frontend/js/acesso.js
+                  node --check frontend/js/auth_next.js
+                  node --check frontend/js/admin/auth.js
+                  node --check frontend/tests/support/access.cjs
                   node --check frontend/tests/admin_beat_licenses.cjs
                   node --check frontend/js/modules/beat_upload_validation.js
                   node --check frontend/js/admin/propostas/proposta_mapper.js

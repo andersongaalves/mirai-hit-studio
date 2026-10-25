@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const dashboard = {
@@ -38,6 +39,7 @@ async function staticResponse(route) {
         if (url.origin === 'http://localhost:4173') return staticResponse(route);
         if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 404 });
         if (url.pathname === '/auth/login') return route.fulfill({ json: { access_token: 'dashboard-token', user: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } } });
+        if (url.pathname === '/auth/me') return route.fulfill({ json: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true } });
         if (url.pathname === '/dashboard') return route.fulfill(dashboardFailure
             ? { status: 500, json: { detail: 'Falha controlada' } }
             : { json: dashboard });
@@ -48,10 +50,7 @@ async function staticResponse(route) {
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
     try {
-        await page.goto('http://localhost:4173/admin.html');
-        await page.locator('#username').fill('admin');
-        await page.locator('#password').fill('synthetic-password');
-        await page.getByRole('button', { name: 'ENTRAR NO SISTEMA' }).click();
+        await signIn(page, { next: '/admin.html', username: 'admin', password: 'synthetic-password' });
         await page.waitForSelector('.dashboard-kpi');
         assert.equal(await page.locator('.dashboard-kpi').count(), 5);
         assert.match(await page.locator('#dashboard-metrics').textContent(), /4/);

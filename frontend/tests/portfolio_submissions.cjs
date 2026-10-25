@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 const items = [];
@@ -102,11 +103,7 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
             });
             const page = await context.newPage();
             page.on("pageerror", error => errors.push(error.message));
-            await page.goto(`http://localhost:4173/${role === "admin" ? "admin.html" : "produtor/portfolio"}`);
-            await page.locator("#username").fill(role);
-            await page.locator("#password").fill("synthetic-only");
-            if (role === "admin") await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
-            else await page.locator("#producer-login-form button[type=submit]").click();
+            await signIn(page, { next: role === "admin" ? "/admin.html" : "/produtor/portfolio", username: role, password: "synthetic-only" });
             return { page, context };
         }
         const { page, context } = await setup("produtor", 1280);

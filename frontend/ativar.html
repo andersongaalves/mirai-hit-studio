@@ -34,11 +34,11 @@
                     <label for="activation-username">Nome de usuário</label>
                     <input id="activation-username" name="username" autocomplete="username" maxlength="50" required />
                     <label for="activation-password">Senha</label>
-                    <input id="activation-password" name="password" type="password" autocomplete="new-password" placeholder="••••••••••••" minlength="8" maxlength="72" required />
+                    <input id="activation-password" name="password" type="password" autocomplete="new-password" placeholder="Nova senha" minlength="8" maxlength="72" required />
                     <button class="integrado-auth__password-toggle" type="button" data-password-toggle="activation-password" aria-pressed="false"><img src="/assets/mirai-integrado-eye.svg" width="18" height="18" alt="" /><span>Mostrar senha</span></button>
                     <p class="integrado-auth__hint">Use uma senha longa e diferente das outras contas.</p>
                     <label for="activation-confirm">Confirmar senha</label>
-                    <input id="activation-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="••••••••••••" minlength="8" maxlength="72" required />
+                    <input id="activation-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Repita a senha" minlength="8" maxlength="72" required />
                     <button class="integrado-auth__password-toggle" type="button" data-password-toggle="activation-confirm" aria-pressed="false"><img src="/assets/mirai-integrado-eye.svg" width="18" height="18" alt="" /><span>Mostrar confirmação</span></button>
                     <button class="btn-cta" type="submit">Ativar acesso</button>
                 </form>
@@ -46,7 +46,7 @@
                 <a id="activation-login" class="btn-cta hidden" href="/acesso">Entrar na sua conta</a>
             </section>
         </main>
-        <footer class="integrado-auth__footer">Mirai Hit Studio · Privacidade</footer>
+        <footer class="integrado-auth__footer">Mirai Hit Studio</footer>
         <script type="module" src="/js/integrado_auth.js"></script>
         <script type="module" src="/js/ativar.js"></script>
     </body>

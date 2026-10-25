@@ -114,17 +114,23 @@
 .integrado-auth__field .integrado-auth__password-toggle { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; font-weight: 400; }
 .integrado-auth__password-toggle img { display: block; flex: 0 0 18px; }
 .integrado-auth__hint { margin: 0; color: var(--integrado-secondary); font: 400 13px/20px var(--font-texto); }
+/* AUD6-S02-014: a quiet text link, not a second button competing with "Entrar". */
 .integrado-auth__forgot {
     display: inline-flex;
     align-items: center;
     justify-self: start;
     min-height: 44px;
-    padding: 12px 20px;
-    border-radius: var(--radius-sm);
+    padding: 0;
     color: var(--integrado-cyan);
-    background: var(--integrado-surface);
-    font: 700 14px/20px var(--font-acoes);
+    font: 400 14px/20px var(--font-texto);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
+.access-session { display: grid; gap: 12px; }
+.access-session p { margin: 0; color: var(--integrado-secondary); }
+.access-session strong { color: var(--integrado-primary); }
+.access-session .btn-cta { min-height: 46px; margin: 0; }
+.access-session .access-session__other { font-size: 13px; }
 .integrado-auth--access .producer-login__form .btn-cta { min-height: 46px; margin: 0; }
 .integrado-auth__signup { display: grid; gap: 16px; border-top: 1px solid var(--integrado-border); padding-top: 20px; }
 .integrado-auth__signup a {
@@ -159,3 +165,4 @@
     .integrado-auth__intro { display: none; }
     .integrado-auth .producer-login { width: 100%; }
 }
+.access-session .btn-cta { justify-content: flex-start; text-align: left; padding: 12px 20px; }

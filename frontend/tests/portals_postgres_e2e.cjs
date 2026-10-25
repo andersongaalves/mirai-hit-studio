@@ -25,11 +25,15 @@ for (const [name, value] of Object.entries({
     assert.ok(value, `missing ${name}`);
 }
 
+// AUD6-S02-003: panels sign in through /acesso, which returns to the requested panel.
 async function login(page, path, username) {
-    await page.goto(`${FRONTEND}${path}`);
+    await page.goto(`${FRONTEND}/acesso?next=${encodeURIComponent(path)}`);
     await page.locator('#username').fill(username);
     await page.locator('#password').fill(password);
-    await page.getByRole('button', { name: 'Entrar' }).click();
+    await Promise.all([
+        page.waitForURL(url => url.pathname === path),
+        page.getByRole('button', { name: 'Entrar', exact: true }).click(),
+    ]);
     await page.locator('#admin-area').waitFor({ state: 'visible' });
     const loadingSelector = path.startsWith('/produtor')
         ? '#producer-loading'

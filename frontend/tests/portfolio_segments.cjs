@@ -2,6 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 const configValues = {
@@ -143,10 +144,7 @@ async function staticResponse(route) {
     });
 
     try {
-        await page.goto("http://localhost:4173/admin.html");
-        await page.locator("#username").fill("admin");
-        await page.locator("#password").fill("password");
-        await page.getByRole("button", { name: "ENTRAR NO SISTEMA" }).click();
+        await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
         await page.locator("#admin-area:not(.hidden)").waitFor();
         await page.locator("#dashboard-metrics .dashboard-kpi").first().waitFor();
         await page.evaluate(() => window.mostrarSecao("section-custos"));
@@ -207,7 +205,7 @@ async function staticResponse(route) {
         }
 
         await page.reload();
-        await page.waitForFunction(() => window.fazerLogin instanceof Function);
+        await page.waitForFunction(() => window.fazerLogout instanceof Function);
         await page.locator('[data-segment-id="brazilian_phonk"]').waitFor({ state: "attached" });
         assert.deepEqual(errors, []);
         console.log("PASS: segment catalog CRUD, stable IDs, ordering, multi-select, keyboard, legacy values, finance isolation and mobile layout.");
