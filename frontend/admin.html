@@ -85,6 +85,9 @@
                             <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-auditoria">
                                 Auditoria
                             </button>
+                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-uso">
+                                Uso da infraestrutura
+                            </button>
                         </nav>
                     </aside>
 
@@ -942,6 +945,19 @@
                             <span id="financeiro-page-label"></span>
                             <button id="financeiro-next-page" type="button" class="btn-small">Próxima</button>
                         </nav>
+                    </div>
+
+                    <div id="section-uso" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Segurança e operação</span>
+                                <h1>Uso da infraestrutura</h1>
+                                <p>Memória do servidor, Supabase, Cloudinary e Cloudflare, perto dos limites de cada plano.</p>
+                            </div>
+                            <button id="uso-refresh" type="button" class="btn-small">Atualizar agora</button>
+                        </header>
+                        <p id="uso-updated" class="admin-field-help" role="status"></p>
+                        <div id="uso-content" class="uso-grid"></div>
                     </div>
 
                     <div id="section-auditoria" class="admin-section hidden admin-access-hidden" data-admin-only>

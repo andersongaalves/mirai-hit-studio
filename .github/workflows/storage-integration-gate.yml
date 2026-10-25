@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["c6e8a0b2d4f1"], heads
+                  assert heads == ["d8f0b2c4e6a3"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -214,6 +214,7 @@ jobs:
                     test_portfolio_envios.py \
                     test_audio_tags.py \
                     test_recursos.py \
+                    test_uso_infra.py \
                     test_protecao.py \
                     test_portfolio_taxonomy.py \
                     test_catalogo.py \
@@ -288,6 +289,7 @@ jobs:
                   node frontend/tests/seo_content_h2.cjs
                   node frontend/tests/seo_technical.cjs
                   node frontend/tests/style_architecture.cjs
+                  node frontend/tests/uso_infra.cjs
                   node frontend/tests/csp_enforced.cjs
                   node frontend/tests/session_expiry.cjs
 
@@ -397,6 +399,7 @@ jobs:
                     backend/migrations/versions/a4c6e8f0b217_beat_reserva_prazo.py \
                     backend/migrations/versions/b5d7f9a1c328_limites_persistentes.py \
                     backend/migrations/versions/c6e8a0b2d4f1_notificacoes_admin.py \
+                    backend/migrations/versions/d8f0b2c4e6a3_login_sem_maiusculas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
                     backend/routers/auth.py
@@ -460,7 +463,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic c6e8a0b2d4f1: passed"
+                    echo "- PostgreSQL 17 and Alembic d8f0b2c4e6a3: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

@@ -1072,7 +1072,8 @@ def activate(db: Session, data: ClientInviteActivation, source_key: str, request
             raise ClientAccessConflict("Os dados de identidade mudaram. Solicite um novo convite.")
         if _user_for_client(db, client.id) is not None:
             raise ClientAccessConflict("Cliente ja possui acesso ao portal.")
-        if db.scalar(select(UsuarioModel).where(UsuarioModel.username == data.username)) is not None:
+        if db.scalar(select(UsuarioModel).where(
+                func.lower(UsuarioModel.username) == data.username.lower())) is not None:
             raise ClientAccessConflict("Nome de usuario indisponivel.")
         user = UsuarioModel(
             username=data.username,
