@@ -57,6 +57,14 @@ export function reconciliationReason(value) {
         overpayment: "Valor pago acima do contratado",
         invalid_status_transition: "Transição de status inválida",
         beat_reservation_released: "Pagamento após a reserva do beat ser liberada",
+        ambiguous_external_reference: "Referência associada a mais de uma cobrança",
+        payment_not_found: "Pagamento não encontrado no provedor",
+        status_mismatch: "Status do provedor diferente do registrado",
+        cancel_status_mismatch: "Cancelamento com status divergente no provedor",
+        cancel_confirmation_pending: "Cancelamento aguardando confirmação do provedor",
+        chargeback_unsupported: "Contestação (chargeback) aberta pelo cliente",
+        partial_refund_unsupported: "Reembolso parcial feito no provedor",
+        unsupported_provider_status: "Status do provedor não reconhecido",
     };
     return labels[value] || "Revisão operacional necessária";
 }
