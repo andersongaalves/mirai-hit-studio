@@ -104,6 +104,8 @@ class PropostaClienteResponse(BaseModel):
     situacao_comercial: str
     cobranca_status: str | None
     enviada_em: datetime
+    valida_ate: datetime | None = None
+    expirada: bool = False
     aprovada_em: datetime | None
     created_at: datetime | None
     updated_at: datetime | None

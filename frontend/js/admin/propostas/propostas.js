@@ -259,7 +259,7 @@ function atualizarStatusLocal() {
         : salvando ? "Salvando proposta..."
         : gerando ? "Gerando PDF..."
         : processando ? "Processando proposta..."
-        : proposta ? `${proposta.numero} | ${proposta.status} | Versão ${proposta.versao}${dirty ? " | Alterações não salvas" : ""}`
+        : proposta ? `${proposta.numero} | ${proposta.expirada ? `vencida em ${formatarValidade(proposta.valida_ate)}` : proposta.status} | Versão ${proposta.versao}${proposta.status === "enviada" && !proposta.expirada && proposta.valida_ate ? ` | Válida até ${formatarValidade(proposta.valida_ate)}` : ""}${dirty ? " | Alterações não salvas" : ""}`
         : "Proposta não carregada";
     const salvar = $("btn-save-proposta");
     if (salvar) {
@@ -281,6 +281,13 @@ function atualizarStatusLocal() {
     if (aprovar) {
         aprovar.disabled = ocupado || dirty || proposta?.status !== "enviada";
         aprovar.onclick = aprovarProposta;
+    }
+    // AUD6-S05-001: a proposal past its 10 days goes back to draft to be updated and resent.
+    const reabrir = $("btn-reabrir-proposta");
+    if (reabrir) {
+        reabrir.classList.toggle("hidden", !proposta?.expirada);
+        reabrir.disabled = ocupado || dirty || !proposta?.expirada;
+        reabrir.onclick = reabrirProposta;
     }
     const content = $("proposta-content");
     if (content) {
@@ -456,6 +463,38 @@ async function executarAcaoComercial(acao) {
         renderizarAbaAtiva();
         if (!envio) await carregarAcessoCliente();
         Notify.success(envio ? "Proposta enviada." : "Proposta aceita. Produção disponível.");
+    } catch (error) {
+        if (atual === contexto) Notify.error(error.message);
+    } finally {
+        if (atual === contexto) {
+            propostaState.processando = false;
+            atualizarStatusLocal();
+        }
+    }
+}
+
+function formatarValidade(value) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime())
+        ? date.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+        : "data indisponível";
+}
+
+export async function reabrirProposta() {
+    const { proposta, dirty, carregando, salvando, gerando, processando } = propostaState;
+    if (!proposta?.expirada || dirty || carregando || salvando || gerando || processando) return;
+    if (!confirm("Reabrir a proposta vencida? Ela volta a rascunho para você atualizar os valores e enviar de novo.")) return;
+    const atual = contexto;
+    propostaState.processando = true;
+    atualizarStatusLocal();
+    try {
+        const resposta = await PropostaAPI.reabrirProposta(proposta.id);
+        if (atual !== contexto) return;
+        if (resposta.id !== proposta.id || resposta.status !== "rascunho") throw new Error("Resposta comercial inválida.");
+        setProposta(resposta);
+        document.dispatchEvent(new CustomEvent("proposta:comercial-atualizada", { detail: { proposta: resposta } }));
+        renderizarAbaAtiva();
+        Notify.success("Proposta reaberta. Atualize os valores e envie de novo.");
     } catch (error) {
         if (atual === contexto) Notify.error(error.message);
     } finally {

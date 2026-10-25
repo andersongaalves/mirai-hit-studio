@@ -66,7 +66,9 @@ def _owned(db: Session, proposta_id: int, cliente_id: int):
 
 def _commercial_state(model):
     if model.status == PropostaStatus.ENVIADA.value:
-        return "aguardando_aceite"
+        from core import proposta_validade
+
+        return "expirada" if proposta_validade.expirada(model.status, model.enviada_em) else "aguardando_aceite"
     if model.status == PropostaStatus.RECUSADA.value:
         return "recusada"
     if model.cobranca is None:
@@ -107,6 +109,8 @@ def _project(model):
         "situacao_comercial": _commercial_state(model),
         "cobranca_status": model.cobranca.status if model.cobranca else None,
         "enviada_em": proposal.enviada_em,
+        "valida_ate": proposal.valida_ate,
+        "expirada": proposal.expirada,
         "aprovada_em": proposal.aprovada_em,
         "created_at": proposal.created_at,
         "updated_at": proposal.updated_at,

@@ -288,6 +288,7 @@ jobs:
                   node frontend/tests/seo_technical.cjs
                   node frontend/tests/style_architecture.cjs
                   node frontend/tests/csp_enforced.cjs
+                  node frontend/tests/session_expiry.cjs
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend

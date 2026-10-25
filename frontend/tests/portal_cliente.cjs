@@ -313,6 +313,23 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#client-proposal-detail-content img').count(), 0);
         assert.match(await page.locator('#client-proposal-detail-content').textContent(), /<img src=x onerror=alert\(2\)>/);
         assert.match(await page.locator('#client-proposal-detail-content').textContent(), /R\$\s*1\.200,00/);
+        // AUD6-S05-001: an expired proposal shows the date and no longer offers acceptance.
+        const expired = await page.evaluate(async () => {
+            const ui = await import('/js/cliente/ui.js');
+            const host = document.getElementById('client-proposal-detail-content');
+            const previous = [...host.childNodes];
+            ui.renderProposalDetail({
+                id: 99, numero: 'P-99', versao: 1, status: 'enviada', expirada: true, valida_ate: '2026-10-10T23:59:59-03:00',
+                objeto: 'Vencida', servico: 'Mix', descricao: '', condicoes: '', itens: [], totais: { total: '0.00' },
+                politica_pagamento: 'integral', documento_disponivel: false, finalidade: 'producao',
+            }, { onDownload() {}, onRefuse() {}, onAccept() {} });
+            const result = { text: host.textContent, accept: host.querySelectorAll('button').length };
+            host.replaceChildren(...previous);
+            return result;
+        });
+        assert.match(expired.text, /Vencida/);
+        assert.match(expired.text, /venceu em 10\/10\/2026/);
+        assert.equal(expired.accept, 0);
         const proposalDownloadPromise = page.waitForEvent('download');
         await page.getByRole('button', { name: 'Baixar PDF' }).click();
         assert.match((await proposalDownloadPromise).suggestedFilename(), /^proposta-11(?:-v1)?\.pdf$/);
