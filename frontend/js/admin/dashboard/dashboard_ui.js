@@ -26,6 +26,7 @@ const PENDENCIAS = [
     ["falhas_processamento_tag", "prévia com falha no processamento da tag", "prévias com falha no processamento da tag", "section-producoes", "Ver prévias", "danger"],
     ["pagamentos_em_conciliacao", "pagamento que exige conciliação", "pagamentos que exigem conciliação", "section-financeiro", "Conciliar pagamentos", "danger"],
     ["entregas_aguardando_aprovacao", "entrega aguardando aprovação", "entregas aguardando aprovação", "section-producoes", "Revisar entregas", "warning"],
+    ["propostas_expiradas", "proposta vencida sem resposta", "propostas vencidas sem resposta", "section-orcamentos", "Reabrir propostas", "warning"],
 ];
 
 function element(tag, className, content) {

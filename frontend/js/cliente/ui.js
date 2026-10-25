@@ -427,7 +427,16 @@ const PROPOSAL_STATUS = Object.freeze({
     recusada: { label: "Recusada", variant: "neutral" },
 });
 
+function validityDate(value) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime())
+        ? date.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+        : "data a confirmar";
+}
+
 function proposalBadge(proposal) {
+    // AUD6-S05-001: a sent proposal past its validity can no longer be accepted.
+    if (proposal.expirada) return element("span", "badge badge-neutral", "Vencida");
     const info = PROPOSAL_STATUS[proposal.status] || { label: "Indisponível", variant: "neutral" };
     return element("span", `badge badge-${info.variant}`, info.label);
 }
@@ -460,7 +469,7 @@ export function renderProposalSummary(proposals, onOpen) {
     const section = document.getElementById("client-proposal-summary");
     const list = document.getElementById("client-proposal-actions");
     list.replaceChildren();
-    const pending = proposals.filter(item => item.status === "enviada");
+    const pending = proposals.filter(item => item.status === "enviada" && !item.expirada);
     section.classList.toggle("hidden", !pending.length);
     pending.slice(0, 3).forEach(item => list.append(proposalCard(item, onOpen)));
 }
@@ -539,7 +548,11 @@ export function renderProposalDetail(proposal, handlers) {
         download.addEventListener("click", () => handlers.onDownload(proposal, download));
         actions.append(download);
     }
-    if (proposal.status === "enviada") {
+    if (proposal.status === "enviada" && proposal.expirada) {
+        actions.append(element("p", "client-proposal-expired",
+            `Esta proposta venceu em ${validityDate(proposal.valida_ate)}. Fale com o estúdio para receber uma versão atualizada.`));
+    } else if (proposal.status === "enviada") {
+        if (proposal.valida_ate) actions.append(element("p", "client-proposal-validity", `Válida até ${validityDate(proposal.valida_ate)}.`));
         const refuse = element("button", "btn-outline", "Recusar");
         refuse.type = "button";
         refuse.addEventListener("click", () => handlers.onRefuse(proposal, refuse));

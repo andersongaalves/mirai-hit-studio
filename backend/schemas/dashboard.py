@@ -28,6 +28,8 @@ class DashboardAttention(BaseModel):
     falhas_processamento_tag: int = Field(ge=0)
     pagamentos_em_conciliacao: int = Field(ge=0)
     entregas_aguardando_aprovacao: int = Field(ge=0)
+    # AUD6-S05-001: sent proposals past the 10-day validity, waiting to be reopened.
+    propostas_expiradas: int = Field(ge=0, default=0)
 
 
 class DashboardActivity(BaseModel):
