@@ -17,6 +17,7 @@ const dashboard = {
         falhas_processamento_tag: 6,
         pagamentos_em_conciliacao: 7,
         entregas_aguardando_aprovacao: 8,
+        propostas_expiradas: 2,
     },
     recent_activity: [{ tipo: 'proposta_enviada', titulo: '<img src=x onerror=alert(1)>', data: '2026-09-13T12:00:00Z', secao: 'section-orcamentos' }],
 };
@@ -83,7 +84,8 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#dashboard-metrics .dashboard-kpi').count(), 5);
         assert.match(await page.locator('#dashboard-metrics').textContent(), /4/);
         assert.equal(await page.locator('#dashboard-pipeline li').count(), 4);
-        assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 8);
+        assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 9);
+        assert.match(await page.locator('#dashboard-attention').textContent(), /2 propostas vencidas sem resposta/);
         assert.match(await page.locator('#dashboard-attention').textContent(), /1 produção atrasada/);
         assert.match(await page.locator('#dashboard-attention').textContent(), /3 solicitações de produção para análise/);
         const failures = page.locator('#dashboard-attention .dashboard-tag-failures');
@@ -123,6 +125,7 @@ async function staticResponse(route) {
             solicitacoes_producao: 0, beats_em_revisao: 0,
             portfolio_em_revisao: 0, falhas_processamento_tag: 0,
             pagamentos_em_conciliacao: 0, entregas_aguardando_aprovacao: 0,
+            propostas_expiradas: 0,
         };
         dashboard.recent_activity = [];
         await page.evaluate(() => window.mostrarDashboard());

@@ -250,12 +250,69 @@ def _validar_cliente(model, budget, *, cliente_id, versao):
         )
 
 
+def _validar_prazo(model):
+    # AUD6-S05-001: the PDF promises 10 days; after that the client asks for an updated version.
+    from core import proposta_validade
+
+    if proposta_validade.expirada(model.status, model.enviada_em):
+        limite = proposta_validade.valida_ate(model.enviada_em)
+        raise service.PropostaConflito(
+            f"Esta proposta venceu em {limite:%d/%m/%Y}. Peça ao estúdio uma versão atualizada."
+        )
+
+
+def reabrir_expirada(db, proposta_id, actor=None, request_id=None):
+    """Expired proposal back to draft: the next send freezes current values and restarts the 10 days."""
+    from core import proposta_validade
+
+    try:
+        model, budget = _carregar(db, proposta_id)
+        if not proposta_validade.expirada(model.status, model.enviada_em):
+            raise service.PropostaConflito("Somente proposta enviada e vencida pode ser reaberta.")
+        if getattr(model, "finalidade", "producao") == "creditos":
+            raise service.PropostaConflito(
+                "Proposta de créditos vencida precisa ser refeita a partir de um novo orçamento."
+            )
+        if (
+            financial_service.buscar_por_proposta(db, model.id) is not None
+            or crud_producao.buscar_por_orcamento(db, model.orcamento_id) is not None
+        ):
+            raise service.PropostaConflito(
+                "Esta proposta possui operações comerciais e requer conciliação."
+            )
+        old_version = model.versao
+        model.status = Status.RASCUNHO.value
+        model.versao = old_version + 1
+        model.enviada_em = None
+        model.snapshot_economico = None
+        model.snapshot_congelado_em = None
+        model.pdf_path, model.pdf_sha256, model.gerada_em = None, None, None
+        budget.status = OrcamentoStatus.EM_ANALISE.value
+        db.flush()
+        audit_service.record(
+            db,
+            actor=actor,
+            action="proposal.reopened_expired",
+            entity_type="proposal",
+            entity_id=model.id,
+            metadata={"old_status": Status.ENVIADA.value, "new_status": model.status},
+            request_id=request_id,
+        )
+        response = service._resposta(model)
+        db.commit()
+        return response
+    except Exception:
+        db.rollback()
+        raise
+
+
 def aceitar_cliente(db, proposta_id, *, cliente_id, versao, actor, request_id=None):
     if not producao_liberacao_service.pipeline_v2_habilitada():
         raise service.PropostaNaoEncontrada("Proposta nao encontrada.")
     try:
         model, budget = _carregar(db, proposta_id)
         _validar_cliente(model, budget, cliente_id=cliente_id, versao=versao)
+        _validar_prazo(model)
         response = _aprovar_carregada(
             db,
             model,
