@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { expectAccessPage, signIn } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 
 (async () => {
@@ -141,19 +142,19 @@ const root = path.resolve(__dirname, '..');
         assert.ok(await page.getByText('Solicitação de orçamento enviada.', { exact: true }).count());
         assert.deepEqual(errors, []);
 
-        await page.goto('http://localhost:4173/admin.html');
-        await page.waitForFunction(() => typeof window.fazerLogin === 'function');
-        await page.locator('#username').fill('teste');
-        await page.locator('#password').fill('synthetic-password');
+        // AUD6-S02-003: the panel has no login form; sign in through /acesso.
         calls.length = 0;
-        await page.evaluate(() => Promise.all([window.fazerLogin(), window.fazerLogin()]));
+        await signIn(page, { next: '/admin.html', username: 'teste' });
+        await page.waitForFunction(() => document.getElementById('lista-servicos')?.textContent.includes('Servico teste'));
+        await page.waitForTimeout(100);
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /audit-logs', 'GET /clientes', 'GET /config', 'GET /config/portfolio-segments', 'GET /config/portfolio-segments', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos/admin', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores'];
-        assert.deepEqual(calls.filter(call => call.startsWith('GET')).sort(), expected);
+        const expected = ['GET /admin/audio-tag', 'GET /audit-logs', 'GET /clientes', 'GET /combos', 'GET /config', 'GET /config/portfolio-segments', 'GET /config/portfolio-segments', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos/admin', 'GET /projetos/envios/admin', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores', 'GET /usuarios/produtores'];
+        const entryCalls = () => calls.filter(call => call.startsWith('GET') && call !== 'GET /auth/me').sort();
+        assert.deepEqual(entryCalls(), expected);
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));
-        assert.equal(calls.filter(call => call.startsWith('GET')).length, expected.length);
+        assert.equal(entryCalls().length, expected.length);
         assert.equal(await page.locator('#cfg_desconto').inputValue(), '10');
         for (const value of ['0', '15', '-1', '101']) {
             await page.locator('#cfg_desconto').evaluate((el, value) => { el.value = value; }, value);
@@ -172,11 +173,12 @@ const root = path.resolve(__dirname, '..');
         await page.waitForTimeout(100);
         assert.deepEqual(calls.sort(), ['GET /auth/me', ...expected].sort());
         const registrations = await page.evaluate(() => ({ ...window.testRegistrations }));
-        await page.evaluate(() => window.fazerLogout());
-        assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), true);
+        await expectAccessPage(page, () => page.evaluate(() => window.fazerLogout()));
         calls.length = 0;
-        await page.evaluate(() => window.fazerLogin());
-        assert.deepEqual(calls.filter(call => call.startsWith('GET')).sort(), expected);
+        await signIn(page, { next: '/admin.html', username: 'teste' });
+        await page.waitForFunction(() => document.getElementById('lista-servicos')?.textContent.includes('Servico teste'));
+        await page.waitForTimeout(100);
+        assert.deepEqual(calls.filter(call => call.startsWith('GET') && call !== 'GET /auth/me').sort(), expected);
         assert.deepEqual(await page.evaluate(() => window.testRegistrations), registrations);
         assert.deepEqual(errors, []);
         if (process.env.PAYLOAD_OUTPUT) await fs.writeFile(process.env.PAYLOAD_OUTPUT, JSON.stringify(payloads));

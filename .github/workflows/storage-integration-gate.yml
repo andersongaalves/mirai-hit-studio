@@ -267,6 +267,24 @@ jobs:
                   node frontend/tests/portal_notifications.cjs
                   node frontend/tests/production_stages_admin.cjs
                   node frontend/tests/image_crop.cjs
+                  # APL-S12-01: suites that previously ran only by hand.
+                  node frontend/tests/admin_foundation.cjs
+                  node frontend/tests/ai_chat.cjs
+                  node frontend/tests/ai_inbox.cjs
+                  node frontend/tests/analytics.cjs
+                  node frontend/tests/auditoria.cjs
+                  node frontend/tests/checkout_routing.cjs
+                  node frontend/tests/clientes.cjs
+                  node frontend/tests/creators.cjs
+                  node frontend/tests/flows.cjs
+                  node frontend/tests/media_games.cjs
+                  node frontend/tests/newsletter_admin.cjs
+                  node frontend/tests/newsletter_public.cjs
+                  node frontend/tests/public_navigation.cjs
+                  node frontend/tests/security.cjs
+                  node frontend/tests/seo_content_h2.cjs
+                  node frontend/tests/seo_technical.cjs
+                  node frontend/tests/style_architecture.cjs
 
             - name: Prove lifecycle and migration safety gates
               working-directory: backend

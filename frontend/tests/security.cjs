@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { stayWithoutSession } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 (async () => {
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' });
@@ -21,7 +22,8 @@ const root = path.resolve(__dirname, '..');
             }
             return route.fulfill({ json: [] });
         });
-        await page.goto('http://localhost:4173/admin.html');
+        await stayWithoutSession(page);
+        await page.goto('http://localhost:4173/admin.html', { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => typeof window.fazerLogout === 'function');
         const result = await page.evaluate(async () => {
             const security = await import('/js/utils/security.js');
