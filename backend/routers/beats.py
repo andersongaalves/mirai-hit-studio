@@ -18,7 +18,7 @@ from fastapi import (
     Request,
     UploadFile,
 )
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import ValidationError
 from schemas.beat import (
     BeatAdminAction,
@@ -129,6 +129,11 @@ def client_multitrack(beat_id: int, db: Db, user: Client):
     delivery = beat_service.multitrack_delivery(db, beat_id, user)
     if delivery["type"] == "link":
         return {"type": "link", "url": delivery["url"]}
+    if delivery["type"] == "download":
+        return JSONResponse(
+            {"type": "download", "url": delivery["url"], "filename": delivery["filename"]},
+            headers={"Cache-Control": "private, no-store"},
+        )
     return Response(
         delivery["contents"],
         media_type=delivery["mime"],
@@ -144,6 +149,11 @@ def client_purchased_file(beat_id: int, kind: str, db: Db, user: Client):
     delivery = beat_service.purchased_file(db, beat_id, kind, user)
     if delivery["type"] == "link":
         return {"type": "link", "url": delivery["url"]}
+    if delivery["type"] == "download":
+        return JSONResponse(
+            {"type": "download", "url": delivery["url"], "filename": delivery["filename"]},
+            headers={"Cache-Control": "private, no-store"},
+        )
     return Response(
         delivery["contents"],
         media_type=delivery["mime"],

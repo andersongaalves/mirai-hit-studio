@@ -262,12 +262,20 @@ class PropostaResponse(Contract):
     aprovada_em: datetime | None
     created_at: datetime | None
     updated_at: datetime | None
+    # AUD6-S05-001: derived from enviada_em; never stored.
+    valida_ate: datetime | None = None
+    expirada: bool = False
 
     @classmethod
     def from_orm_model(cls, proposta):
         mapping = {"itens": "itens_json", "pagamentos": "pagamentos_json", "totais": "totais_json"}
         data = {name: getattr(proposta, mapping.get(name, name)) for name in cls.model_fields
-                if name not in ("snapshot_economico", "finalidade", "contrato_creditos")}
+                if name not in ("snapshot_economico", "finalidade", "contrato_creditos", "valida_ate", "expirada")}
+        from core import proposta_validade
+
+        status = getattr(proposta.status, "value", proposta.status)
+        data["valida_ate"] = proposta_validade.valida_ate(proposta.enviada_em) if status == "enviada" else None
+        data["expirada"] = proposta_validade.expirada(status, proposta.enviada_em)
         data["finalidade"] = getattr(proposta, "finalidade", None) or "producao"
         data["contrato_creditos"] = getattr(proposta, "contrato_creditos", None)
         # Optional 5.05 field: lightweight doubles without the column still serialize.

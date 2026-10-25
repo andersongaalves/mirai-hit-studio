@@ -37,6 +37,7 @@ export const salvarProposta = (id, payload) => request(`/propostas/${id}`, {
 export const gerarDocumento = id => request(`/propostas/${id}/gerar-documento`, { method: "POST" });
 export const enviarProposta = id => request(`/propostas/${id}/enviar`, { method: "POST" });
 export const aprovarProposta = id => request(`/propostas/${id}/aprovar`, { method: "POST" });
+export const reabrirProposta = id => request(`/propostas/${id}/reabrir`, { method: "POST" });
 
 export const buscarClassificacao = async id => (await responseFor(`/propostas/${id}/classificacao`)).json();
 export const classificarProposta = async (id, payload) => (await responseFor(`/propostas/${id}/classificacao`, {

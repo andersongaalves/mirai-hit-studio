@@ -35,12 +35,22 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         response = None
         path = request.url.path.rstrip("/")
+        # Scanner probes get a plain 404; repeated probes or floods get a temporary block.
+        if path != "/health":
+            from core.protecao import protecao
+
+            decision, retry = protecao.avaliar(request.client.host if request.client else "unknown", path)
+            if decision == "varredura":
+                response = JSONResponse({"detail": "Not Found"}, status_code=404)
+            elif decision in ("excesso", "bloqueado"):
+                response = JSONResponse({"detail": "Muitas requisições. Aguarde alguns minutos."}, status_code=429,
+                                        headers={"Retry-After": str(retry)})
         limit = LIMITS.get(path) if request.method == "POST" else None
         if request.method == "POST" and CHECKOUT_PAYMENT_PATH.fullmatch(path):
             limit = ("checkout_payment", 8, 300)
         elif request.method == "GET" and CHECKOUT_RESUME_PATH.fullmatch(path):
             limit = ("checkout_resume", 12, 60)
-        if limit:
+        if limit and response is None:
             try:
                 action, count, window = limit
                 allowed, retry = await run_in_threadpool(

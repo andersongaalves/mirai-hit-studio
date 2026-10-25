@@ -15,6 +15,7 @@ import { carregarDashboard } from "./dashboard/dashboard.js";
 import { initUsuarios } from "./usuarios/usuarios.js";
 import { initNewsletterAdmin } from "./newsletter/newsletter.js";
 import { initAuditoria } from "./auditoria/auditoria.js";
+import { initUso } from "./uso/uso.js";
 import { initFinanceiro } from "./financeiro/financeiro.js";
 import { initInbox } from "./inbox/inbox.js";
 import { initBeats } from "./beats.js";
@@ -38,6 +39,7 @@ const loaders = [
 const sectionLoaders = {
     "section-inbox": initInbox,
     "section-beats": initBeats,
+    "section-uso": initUso,
 };
 
 function focusHeading(container) {
