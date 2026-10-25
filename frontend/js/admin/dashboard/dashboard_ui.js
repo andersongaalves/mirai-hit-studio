@@ -4,17 +4,17 @@ import { formatarDataDashboard } from "./dashboard_utils.js";
 
 const METRICAS = [
     ["clientes_ativos", "Clientes ativos", "neutral"],
-    ["orcamentos_abertos", "Orcamentos em aberto", "info"],
-    ["propostas_aguardando_decisao", "Propostas aguardando decisao", "warning"],
-    ["producoes_ativas", "Producoes ativas", "info"],
-    ["producoes_atrasadas", "Producoes atrasadas", "danger"],
+    ["orcamentos_abertos", "Orçamentos em aberto", "info"],
+    ["propostas_aguardando_decisao", "Propostas aguardando decisão", "warning"],
+    ["producoes_ativas", "Produções ativas", "info"],
+    ["producoes_atrasadas", "Produções atrasadas", "danger"],
 ];
 
 const PIPELINE = [
-    ["orcamentos_abertos", "Orcamentos em aberto"],
+    ["orcamentos_abertos", "Orçamentos em aberto"],
     ["propostas_enviadas", "Propostas enviadas"],
     ["propostas_aprovadas", "Propostas aprovadas"],
-    ["producoes_ativas", "Producoes ativas"],
+    ["producoes_ativas", "Produções ativas"],
 ];
 
 const PENDENCIAS = [
@@ -110,11 +110,15 @@ function renderAtencao(data) {
         if (quantidade <= 0) return [];
         const item = element("div", `dashboard-attention-item dashboard-attention-item--${variante}`);
         item.append(element("span", `admin-badge admin-badge--${variante}`, `${quantidade} ${quantidade === 1 ? singular : plural}`));
-        item.append(criarLink(secao, acao));
+        const link = criarLink(secao, acao);
+        if (campo === "pagamentos_em_conciliacao") {
+            link.addEventListener("click", () => document.dispatchEvent(new CustomEvent("financeiro:conciliacao", { detail: { status: "pending" } })));
+        }
+        item.append(link);
         return [item];
     });
     if (items.length === 0) {
-        renderAdminState(host, "success", "Nenhuma acao pendente no momento.");
+        renderAdminState(host, "success", "Nenhuma ação pendente no momento.");
         return;
     }
     host.replaceChildren(...items);
@@ -124,7 +128,7 @@ function renderAtividade(data) {
     const host = document.getElementById("dashboard-activity");
     if (!host) return;
     if (!data.recent_activity.length) {
-        renderAdminState(host, "empty", "Ainda nao ha atividade recente.");
+        renderAdminState(host, "empty", "Ainda não há atividade recente.");
         return;
     }
     const list = element("ul", "dashboard-activity-list");
@@ -147,7 +151,7 @@ export function renderDashboardError(onRetry) {
     renderAdminState(
         document.getElementById("dashboard-content"),
         "error",
-        "Nao foi possivel carregar o dashboard.",
+        "Não foi possível carregar o dashboard.",
         { onRetry },
     );
 }

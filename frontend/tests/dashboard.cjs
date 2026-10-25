@@ -42,6 +42,7 @@ async function staticResponse(route) {
     const errors = [];
     let dashboardFailure = false;
     let tagRetries = 0;
+    const financeQueries = [];
     page.on('pageerror', error => errors.push(error.message));
     await context.route('**/*', async route => {
         const request = route.request();
@@ -69,12 +70,17 @@ async function staticResponse(route) {
             tagRetries++;
             return route.fulfill({ json: { estado: 'pendente' } });
         }
+        if (url.pathname === '/financeiro/resumo') return route.fulfill({ json: { valor_a_receber: '0.00', valor_recebido: '0.00', cobrancas_parciais: 0, pagamentos_em_atencao: 7, total_cobrancas: 0 } });
+        if (url.pathname === '/financeiro/cobrancas') {
+            financeQueries.push(url.searchParams.get('reconciliation_status') || '');
+            return route.fulfill({ json: { items: [], total: 0, page: 1, page_size: 20, pages: 1 } });
+        }
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
     try {
         await signIn(page, { next: '/admin.html', username: 'admin', password: 'synthetic-password' });
-        await page.waitForSelector('.dashboard-kpi');
-        assert.equal(await page.locator('.dashboard-kpi').count(), 5);
+        await page.waitForSelector('#dashboard-metrics .dashboard-kpi');
+        assert.equal(await page.locator('#dashboard-metrics .dashboard-kpi').count(), 5);
         assert.match(await page.locator('#dashboard-metrics').textContent(), /4/);
         assert.equal(await page.locator('#dashboard-pipeline li').count(), 4);
         assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 8);
@@ -104,6 +110,11 @@ async function staticResponse(route) {
         await page.evaluate(() => window.mostrarDashboard());
         await page.locator('#dashboard-attention').getByRole('button', { name: 'Revisar beats' }).click();
         assert.equal(await page.locator('#section-beats').isVisible(), true);
+        await page.evaluate(() => window.mostrarDashboard());
+        await page.locator('#dashboard-attention').getByRole('button', { name: 'Conciliar pagamentos' }).click();
+        assert.equal(await page.locator('#section-financeiro').isVisible(), true);
+        await page.waitForFunction(() => document.getElementById('financeiro-reconciliation-filter')?.value === 'pending');
+        assert.equal(financeQueries.at(-1), 'pending');
 
         dashboard.metrics = { clientes_ativos: 0, orcamentos_abertos: 0, propostas_aguardando_decisao: 0, producoes_ativas: 0, producoes_atrasadas: 0 };
         dashboard.pipeline = { orcamentos_abertos: 0, propostas_enviadas: 0, propostas_aprovadas: 0, producoes_ativas: 0 };
@@ -116,13 +127,13 @@ async function staticResponse(route) {
         dashboard.recent_activity = [];
         await page.evaluate(() => window.mostrarDashboard());
         await page.waitForFunction(() => document.querySelector('#dashboard-metrics')?.textContent.includes('0'));
-        assert.equal(await page.locator('.admin-success').textContent(), 'Nenhuma acao pendente no momento.');
-        assert.equal(await page.locator('#dashboard-activity .admin-empty').textContent(), 'Ainda nao ha atividade recente.');
+        assert.equal(await page.locator('.admin-success').textContent(), 'Nenhuma ação pendente no momento.');
+        assert.equal(await page.locator('#dashboard-activity .admin-empty').textContent(), 'Ainda não há atividade recente.');
 
         dashboardFailure = true;
         await page.evaluate(() => window.mostrarDashboard());
         await page.waitForSelector('#dashboard-content .admin-error');
-        assert.equal(await page.locator('#dashboard-content .admin-error').textContent(), 'Nao foi possivel carregar o dashboard.Tentar novamente');
+        assert.equal(await page.locator('#dashboard-content .admin-error').textContent(), 'Não foi possível carregar o dashboard.Tentar novamente');
         for (const width of [320, 375, 390, 414, 768, 1024, 1440]) {
             await page.setViewportSize({ width, height: 800 });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);

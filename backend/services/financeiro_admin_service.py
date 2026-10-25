@@ -143,6 +143,9 @@ def _filters(query, *, search, status, reconciliation_status, date_from, date_to
         query = query.where(CobrancaModel.status == status)
     if reconciliation_status == "clear":
         query = query.where(~CobrancaModel.pagamentos.any(PagamentoModel.reconciliation_status.isnot(None)))
+    elif reconciliation_status == "pending":
+        # Fila de conciliacao: qualquer pagamento que ainda exige decisao do Admin.
+        query = query.where(CobrancaModel.pagamentos.any(PagamentoModel.reconciliation_status.isnot(None)))
     elif reconciliation_status:
         query = query.where(
             CobrancaModel.pagamentos.any(

@@ -455,6 +455,17 @@ def review(db, beat_id, payload, actor):
         raise HTTPException(409, "Beat vendido nao pode ser revisado.")
     if payload.decisao == "rejeitar" and not payload.motivo.strip():
         raise HTTPException(422, "Informe o motivo da rejeicao.")
+    # AUD6-S04-003: a beat promised to a client is not rejected silently.
+    if payload.decisao == "rejeitar" and db.scalar(
+        select(BeatLicencaModel.id).where(
+            BeatLicencaModel.beat_id == beat_id,
+            BeatLicencaModel.status.in_(("reservada", "adquirida")),
+        )
+    ):
+        raise HTTPException(
+            409,
+            "Este beat tem licença reservada ou vendida. Libere a reserva antes de rejeitar.",
+        )
     model.status = "aprovado" if payload.decisao == "aprovar" else "rejeitado"
     model.motivo_rejeicao = (
         None if payload.decisao == "aprovar" else payload.motivo.strip()
