@@ -122,6 +122,13 @@ function renderizarEtapas() {
     });
 }
 
+function linkEntity(id, entityId, open) {
+    const button = document.getElementById(id);
+    if (!button) return;
+    button.classList.toggle("hidden", !Number.isInteger(entityId));
+    button.onclick = Number.isInteger(entityId) ? () => { open().catch(() => {}); } : null;
+}
+
 function renderizarResumo() {
     setText("prod_id", producaoAtual.id ? `Produção #${producaoAtual.id}` : "");
     setText("prod_titulo", producaoAtual.titulo);
@@ -134,6 +141,18 @@ function renderizarResumo() {
         producaoAtual.produtor_nome
             || (producaoAtual.produtor_id ? `Usuário #${producaoAtual.produtor_id}` : ""),
     );
+    // AUD6-S09-002: client and producer open their own pages.
+    const { cliente_id: clienteId, produtor_id: produtorId } = producaoAtual;
+    linkEntity("prod_cliente_abrir", clienteId, async () => {
+        fecharModalProducao();
+        await window.mostrarSecao?.("section-clientes");
+        const { abrirCliente } = await import("../clientes/clientes.js");
+        await abrirCliente(clienteId);
+    });
+    linkEntity("prod_produtor_abrir", produtorId, async () => {
+        const { openProdutorResumo } = await import("../produtor_resumo.js");
+        await openProdutorResumo(produtorId);
+    });
     setText(
         "prod_orcamento",
         producaoAtual.orcamento_id ? `Orçamento #${producaoAtual.orcamento_id}` : "",

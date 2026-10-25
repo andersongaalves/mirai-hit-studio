@@ -126,6 +126,7 @@ class ProducaoResponse(BaseModel):
     proposta_id: int | None = None
     proposta_numero: str | None = None
     cliente_email: str | None = None
+    cliente_id: int | None = None
     observacoes: str
     etapas: str
     prazo_entrega: datetime | None
