@@ -17,6 +17,17 @@ const PIPELINE = [
     ["producoes_ativas", "Producoes ativas"],
 ];
 
+const PENDENCIAS = [
+    ["producoes_atrasadas", "produção atrasada", "produções atrasadas", "section-producoes", "Ver produções", "danger"],
+    ["propostas_aguardando_decisao", "proposta aguardando decisão", "propostas aguardando decisão", "section-orcamentos", "Ver propostas", "warning"],
+    ["solicitacoes_producao", "solicitação de produção para análise", "solicitações de produção para análise", "section-orcamentos", "Ver solicitações", "warning"],
+    ["beats_em_revisao", "beat aguardando revisão", "beats aguardando revisão", "section-beats", "Revisar beats", "warning"],
+    ["portfolio_em_revisao", "projeto de portfólio aguardando revisão", "projetos de portfólio aguardando revisão", "section-portfolio", "Revisar portfólio", "warning"],
+    ["falhas_processamento_tag", "prévia com falha no processamento da tag", "prévias com falha no processamento da tag", "section-producoes", "Ver prévias", "danger"],
+    ["pagamentos_em_conciliacao", "pagamento que exige conciliação", "pagamentos que exigem conciliação", "section-financeiro", "Conciliar pagamentos", "danger"],
+    ["entregas_aguardando_aprovacao", "entrega aguardando aprovação", "entregas aguardando aprovação", "section-producoes", "Revisar entregas", "warning"],
+];
+
 function element(tag, className, content) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -94,19 +105,14 @@ function renderPipeline(data) {
 function renderAtencao(data) {
     const host = document.getElementById("dashboard-attention");
     if (!host) return;
-    const items = [];
-    if (data.attention.producoes_atrasadas > 0) {
-        const item = element("div", "dashboard-attention-item dashboard-attention-item--danger");
-        item.append(element("span", "admin-badge admin-badge--danger", `${data.attention.producoes_atrasadas} producoes atrasadas`));
-        item.append(criarLink("section-producoes", "Ver producoes"));
-        items.push(item);
-    }
-    if (data.attention.propostas_aguardando_decisao > 0) {
-        const item = element("div", "dashboard-attention-item");
-        item.append(element("span", "admin-badge admin-badge--warning", `${data.attention.propostas_aguardando_decisao} propostas aguardando decisao`));
-        item.append(criarLink("section-orcamentos", "Ver orcamentos"));
-        items.push(item);
-    }
+    const items = PENDENCIAS.flatMap(([campo, singular, plural, secao, acao, variante]) => {
+        const quantidade = Number(data.attention[campo]) || 0;
+        if (quantidade <= 0) return [];
+        const item = element("div", `dashboard-attention-item dashboard-attention-item--${variante}`);
+        item.append(element("span", `admin-badge admin-badge--${variante}`, `${quantidade} ${quantidade === 1 ? singular : plural}`));
+        item.append(criarLink(secao, acao));
+        return [item];
+    });
     if (items.length === 0) {
         renderAdminState(host, "success", "Nenhuma acao pendente no momento.");
         return;

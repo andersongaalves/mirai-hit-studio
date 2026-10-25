@@ -93,7 +93,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S09-01 | S09-001 | P2 | Pendencias completas no dashboard (solicitacoes, beats e portfolio em revisao, falha de tag, conciliacao, entregas) | Codigo | Proposto | - |
+| APL-S09-01 | S09-001 | P2 | Pendencias completas no dashboard (solicitacoes, beats e portfolio em revisao, falha de tag, conciliacao, entregas) | Codigo | Em revisao | #107 |
 | APL-S09-02 | S09-002 | P2 | Paginas centrais de cliente e produtor; links contextuais entre entidades | Codigo (grande) | Proposto | - |
 | APL-S09-03 | S09-003, 004, 005 | P3 | Dashboard sem blocos repetidos; carregar secoes sob demanda; textos com acento e erros humanos | Codigo/texto | Proposto | - |
 | APL-S09-04 | S09-006 | P3 | Busca global | Codigo | Proposto | - |
@@ -152,7 +152,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 | 1 | Seguranca de sessao | APL-S02-01 | Publicado (PR #96, 24/10/2026) |
 | 2 | Integridade comercial e financeira | APL-S06-01, APL-S06-02, APL-S10-01, APL-S10-02, APL-S03-01 (+ APL-S10-04) | Publicado (PRs #97, #98, #99, 24/10/2026) |
 | 3 | Entrada e conta | APL-S02-02, APL-S02-03, APL-S02-07 + APL-S12-03, APL-S02-08, APL-S02-09, APL-S02-10 | Publicado (PRs #102, #103 e #105; concluido em 25/10/2026) |
-| 4 | Visibilidade da operacao | APL-S09-01, APL-S11-01, APL-S08-02, APL-S10-03, APL-S04-01 | Proposto |
+| 4 | Visibilidade da operacao | APL-S09-01, APL-S11-01, APL-S08-02, APL-S10-03, APL-S04-01 | Em andamento (#107) |
 | 5 | Confiabilidade e CI | APL-S12-01, APL-S12-02, APL-S12-04, APL-S06-03 | Proposto |
 | 6 | Experiencia dos portais | APL-S07-01, APL-S02-12, APL-S08-01, APL-S02-04 (apos decisao), APL-S07-03, APL-S07-04, APL-S08-03 | Proposto |
 | 7 | Conformidade e decisoes | APL-S01-01, APL-S05-01, APL-S02-05, APL-S02-06, APL-S02-11 | Decisao |
@@ -173,6 +173,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 25/10/2026 | APL-S09-01 | PR #107 aberto: dashboard passa a reunir solicitacoes, revisoes de beats e portfolio, falhas de tag, conciliacoes e entregas aguardando aprovacao; cadeias de teste ficam fora das contagens | Validar CI e integrar sem misturar os demais setores do Lote 4 |
 | 25/10/2026 | Lote 3 concluido | #105 publicou APL-S12-03 e a parte restante de APL-S02-07 no SHA `4ab947b51d2febe0d08ddcd54810e565c2d98c74`. Migration `b5d7f9a1c328` ja estava aplicada no Supabase. Gate `40189023647`, evidencia Storage `40189744411`, dry-run `40189876701` e publicacao `40189945225` aprovados; Render, Cloudflare Pages e smoke de producao verdes. Ref. `CTRL-20261025-R6-LOTE3`; Commercial V2 permaneceu `true` | Iniciar Lote 4 por APL-S09-01 |
 | 24/10/2026 | Lote 3 (parcial) | #102: entrada unica pelo /acesso (paineis sem login proprio, next validado por papel, "Continuar" com sessao existente, aviso de sessao expirada, textos de acesso, ativacao entra direto) e 27 suites de navegador migradas; #103: conta de cliente em Usuarios, nome de exibicao nos portais, /auth/me minimo, hash ficticio no login. Publicacao `40147407737` (main `8592ff4`), ref. CTRL-20261024-R5-LOTE3, sem migration | APL-S12-03 |
 | 24/10/2026 | Publicacao Lotes 1 e 2 | PRs #95-#99 mesclados (main `7e5b961`). Migration `a4c6e8f0b217` aplicada no Supabase; o DDL de `f3c5d7e9a102` ja existia em producao e so faltava a marca de versao. Evidencia de Storage `40135306198`, dry-run `40135395145`, publicacao `40135448716` (Render, Cloudflare Pages e smoke verdes), ref. CTRL-20261024-R4-ETAPA07 | Lote 3 |

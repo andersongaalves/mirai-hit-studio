@@ -8,7 +8,16 @@ const root = path.resolve(__dirname, '..');
 const dashboard = {
     metrics: { clientes_ativos: 4, orcamentos_abertos: 3, propostas_aguardando_decisao: 2, producoes_ativas: 5, producoes_atrasadas: 1 },
     pipeline: { orcamentos_abertos: 3, propostas_enviadas: 2, propostas_aprovadas: 1, producoes_ativas: 5 },
-    attention: { producoes_atrasadas: 1, propostas_aguardando_decisao: 2 },
+    attention: {
+        producoes_atrasadas: 1,
+        propostas_aguardando_decisao: 2,
+        solicitacoes_producao: 3,
+        beats_em_revisao: 4,
+        portfolio_em_revisao: 5,
+        falhas_processamento_tag: 6,
+        pagamentos_em_conciliacao: 7,
+        entregas_aguardando_aprovacao: 8,
+    },
     recent_activity: [{ tipo: 'proposta_enviada', titulo: '<img src=x onerror=alert(1)>', data: '2026-09-13T12:00:00Z', secao: 'section-orcamentos' }],
 };
 
@@ -43,6 +52,11 @@ async function staticResponse(route) {
         if (url.pathname === '/dashboard') return route.fulfill(dashboardFailure
             ? { status: 500, json: { detail: 'Falha controlada' } }
             : { json: dashboard });
+        if (url.pathname === '/admin/beats') return route.fulfill({ json: [] });
+        if (url.pathname === '/admin/beats/configuracao') return route.fulfill({ json: {
+            capa_mb: 10, mp3_mb: 50, wav_mb: 100, multitrack_mb: 100,
+            total_mb: 260, multitrack_mode: 'arquivo',
+        } });
         if (['/config', '/servicos', '/projetos/admin', '/orcamentos', '/producoes', '/clientes', '/usuarios'].includes(url.pathname)) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
@@ -55,6 +69,9 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.dashboard-kpi').count(), 5);
         assert.match(await page.locator('#dashboard-metrics').textContent(), /4/);
         assert.equal(await page.locator('#dashboard-pipeline li').count(), 4);
+        assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 8);
+        assert.match(await page.locator('#dashboard-attention').textContent(), /1 produção atrasada/);
+        assert.match(await page.locator('#dashboard-attention').textContent(), /3 solicitações de produção para análise/);
         const attentionBeforePipeline = await page.evaluate(() =>
             Boolean(document.getElementById('dashboard-attention').compareDocumentPosition(document.getElementById('dashboard-pipeline')) & Node.DOCUMENT_POSITION_FOLLOWING));
         assert.equal(attentionBeforePipeline, true);
@@ -67,12 +84,20 @@ async function staticResponse(route) {
         }
         assert.equal(await page.locator('#dashboard-activity img, #dashboard-activity script').count(), 0);
         assert.match(await page.locator('#dashboard-activity').textContent(), /<img src=x/);
-        await page.locator('#dashboard-attention').getByRole('button', { name: 'Ver producoes' }).click();
+        await page.locator('#dashboard-attention').getByRole('button', { name: 'Ver produções' }).click();
         assert.equal(await page.locator('#section-producoes').isVisible(), true);
+        await page.evaluate(() => window.mostrarDashboard());
+        await page.locator('#dashboard-attention').getByRole('button', { name: 'Revisar beats' }).click();
+        assert.equal(await page.locator('#section-beats').isVisible(), true);
 
         dashboard.metrics = { clientes_ativos: 0, orcamentos_abertos: 0, propostas_aguardando_decisao: 0, producoes_ativas: 0, producoes_atrasadas: 0 };
         dashboard.pipeline = { orcamentos_abertos: 0, propostas_enviadas: 0, propostas_aprovadas: 0, producoes_ativas: 0 };
-        dashboard.attention = { producoes_atrasadas: 0, propostas_aguardando_decisao: 0 };
+        dashboard.attention = {
+            producoes_atrasadas: 0, propostas_aguardando_decisao: 0,
+            solicitacoes_producao: 0, beats_em_revisao: 0,
+            portfolio_em_revisao: 0, falhas_processamento_tag: 0,
+            pagamentos_em_conciliacao: 0, entregas_aguardando_aprovacao: 0,
+        };
         dashboard.recent_activity = [];
         await page.evaluate(() => window.mostrarDashboard());
         await page.waitForFunction(() => document.querySelector('#dashboard-metrics')?.textContent.includes('0'));
