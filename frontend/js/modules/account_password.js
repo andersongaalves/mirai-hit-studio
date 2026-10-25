@@ -1,4 +1,4 @@
-import { authFetch, getCurrentUser, renovarSessao } from "../admin/auth.js";
+import { authFetch, getCurrentUser, logout, renovarSessao } from "../admin/auth.js";
 
 // AUD6-S02-004: every account changes its own password with the current one.
 // The backend ends every other session and returns a new token for this tab.
@@ -37,7 +37,8 @@ export function startAccountPassword(user) {
     const account = document.querySelector(admin ? ".admin-topbar__actions" : ".producer-account");
     if (!account || !user?.id) return;
 
-    const button = element("button", "Alterar senha", admin ? "btn-small account-password-button" : "btn-outline account-password-button");
+    // AUD6-S02-012: one "Minha conta" entry for profile, password, sessions and help.
+    const button = element("button", "Minha conta", admin ? "btn-small account-password-button" : "btn-outline account-password-button");
     button.type = "button";
     button.setAttribute("aria-haspopup", "dialog");
     account.insertBefore(button, account.lastElementChild);
@@ -45,13 +46,26 @@ export function startAccountPassword(user) {
     const dialog = element("dialog", "", "portal-dialog account-password-dialog");
     dialog.setAttribute("aria-labelledby", "account-password-title");
     const header = element("header");
-    const title = element("h2", "Alterar senha");
+    const title = element("h2", "Minha conta");
     title.id = "account-password-title";
     const close = element("button", "Fechar");
     close.type = "button";
     close.addEventListener("click", () => dialog.close());
     header.append(title, close);
+    const shownName = user.nome_exibicao?.trim() || user.username;
+    const profile = element("section", "", "account-password__everywhere account-profile");
+    const login = shownName === user.username ? "" : ` (login: ${user.username})`;
+    profile.append(element("p", `Conectado como ${shownName}${login}.`, "account-password__help"));
+    if (user.role === "produtor") {
+        const edit = element("a", "Editar meu perfil e minha tag", "account-profile__link");
+        edit.href = "/produtor/perfil";
+        edit.addEventListener("click", () => dialog.close());
+        profile.append(edit);
+    }
+    const passwordTitle = element("h3", "Alterar senha");
+    passwordTitle.id = "account-password-section-title";
     const form = element("form", "", "account-password__form");
+    form.setAttribute("aria-labelledby", "account-password-section-title");
     form.noValidate = false;
     const current = passwordField("account-password-current", "Senha atual", "current-password");
     const next = passwordField("account-password-new", "Nova senha (8 a 72 caracteres)", "new-password");
@@ -62,7 +76,43 @@ export function startAccountPassword(user) {
     const submit = element("button", "Salvar nova senha", "btn-cta");
     submit.type = "submit";
     form.append(current.wrapper, next.wrapper, confirm.wrapper, help, status, submit);
-    dialog.append(header, form);
+    // AUD6-S02-006: end every session (lost phone, shared computer), this one too.
+    const everywhere = element("section", "", "account-password__everywhere");
+    everywhere.setAttribute("aria-labelledby", "account-everywhere-title");
+    const everywhereTitle = element("h3", "Sair de todos os aparelhos");
+    everywhereTitle.id = "account-everywhere-title";
+    const everywhereHelp = element("p", "Use se perdeu um aparelho ou entrou em um computador de outra pessoa. Você também sai desta aba.", "account-password__help");
+    const everywhereStatus = element("p", "", "account-everywhere__status");
+    everywhereStatus.setAttribute("role", "status");
+    const everywhereButton = element("button", "Sair de todos os aparelhos", "btn-outline");
+    everywhereButton.type = "button";
+    everywhereButton.addEventListener("click", async () => {
+        if (!window.confirm("Sair da conta em todos os aparelhos, inclusive neste?")) return;
+        everywhereButton.disabled = true;
+        everywhereStatus.textContent = "Encerrando sessões...";
+        try {
+            const response = await authFetch("/auth/sair-de-todos", { method: "POST" });
+            if (!response.ok) {
+                everywhereStatus.textContent = "Não foi possível encerrar as sessões agora.";
+                return;
+            }
+            everywhereStatus.textContent = "Pronto. Todos os aparelhos saíram da conta.";
+            logout();
+        } catch {
+            everywhereStatus.textContent = "Não foi possível encerrar as sessões agora.";
+        } finally {
+            everywhereButton.disabled = false;
+        }
+    });
+    everywhere.append(everywhereTitle, everywhereHelp, everywhereStatus, everywhereButton);
+    const helpSection = element("section", "", "account-password__everywhere");
+    helpSection.append(element("h3", "Ajuda"));
+    const helpText = element("p", "Dúvidas sobre a conta? Escreva para ", "account-password__help");
+    const mail = element("a", "contato@miraihitstudio.com.br");
+    mail.href = "mailto:contato@miraihitstudio.com.br";
+    helpText.append(mail, document.createTextNode("."));
+    helpSection.append(helpText);
+    dialog.append(header, profile, passwordTitle, form, everywhere, helpSection);
     document.body.append(dialog);
 
     form.addEventListener("submit", async event => {
@@ -104,6 +154,7 @@ export function startAccountPassword(user) {
     button.addEventListener("click", () => {
         form.reset();
         status.textContent = "";
+        everywhereStatus.textContent = "";
         dialog.showModal();
         current.input.focus();
     });

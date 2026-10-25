@@ -4,6 +4,8 @@ const ACTION_LABELS = {
     "user.deactivated": "Usuário desativado",
     "user.reactivated": "Usuário reativado",
     "user.password_reset": "Senha redefinida",
+    "user.password_changed": "Senha alterada pelo próprio usuário",
+    "user.sessions_revoked": "Saiu de todos os aparelhos",
     "proposal.sent": "Proposta enviada",
     "proposal.approved": "Proposta aprovada",
     "production.status_changed": "Status da produção alterado",

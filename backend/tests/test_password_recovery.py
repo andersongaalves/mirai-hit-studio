@@ -148,15 +148,24 @@ async def check():
             assert (await client.get('/auth/me', headers=headers)).status_code == 401
             fresh = {'Authorization': 'Bearer ' + changed.json()['access_token']}
             assert (await client.get('/auth/me', headers=fresh)).json()['username'] == 'producer-rec'
+            # AUD6-S02-006: "Sair de todos os aparelhos" also ends the session that asked for it.
+            other = await client.post('/auth/login', json={'username': 'producer-rec', 'password': 'changed-producer-pass'})
+            other_headers = {'Authorization': 'Bearer ' + other.json()['access_token']}
+            assert (await client.post('/auth/sair-de-todos')).status_code == 401
+            revoked = await client.post('/auth/sair-de-todos', headers=fresh)
+            assert revoked.status_code == 204 and revoked.content == b''
+            assert (await client.get('/auth/me', headers=fresh)).status_code == 401
+            assert (await client.get('/auth/me', headers=other_headers)).status_code == 401
 network_guard.stop()
 asyncio.run(check())
 
 with Session(engine) as db:
     user = db.query(UsuarioModel).filter_by(username='producer-rec').one()
     assert verify_password('changed-producer-pass', user.password_hash)
-    assert user.reset_token_hash is None and user.auth_version == 2
+    assert user.reset_token_hash is None and user.auth_version == 3
     actions = [row.action for row in db.query(AuditLogModel).all()]
     assert 'user.password_recovered' in actions and 'user.password_changed' in actions
+    assert 'user.sessions_revoked' in actions
 ''')
 
     def test_generic_response_rotation_delivery_failure_and_eligibility(self):
