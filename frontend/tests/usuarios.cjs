@@ -100,7 +100,9 @@ async function staticResponse(route) {
 
     try {
         await signIn(page, { next: '/admin.html', username: 'admin', password: 'admin-pass' });
-        await page.waitForSelector('.usuarios-table tbody tr', { state: 'attached' });
+        // AUD6-S09-004: Users is loaded when the section opens, not at sign-in.
+        await page.locator('[data-admin-target="section-usuarios"]').waitFor();
+        assert.equal(await page.locator('.usuarios-table tbody tr').count(), 0);
         assert.equal(await page.locator('[data-admin-target="section-usuarios"]').isVisible(), true);
         await page.locator('[data-admin-target="section-usuarios"]').click();
         await page.waitForSelector('.usuarios-table tbody tr', { state: 'visible' });
