@@ -99,6 +99,11 @@
                                     <label for="whatsapp">WhatsApp <span>(opcional)</span></label>
                                     <input type="tel" id="whatsapp" name="whatsapp" maxlength="30" autocomplete="tel" inputmode="tel" />
                                 </div>
+                                <!-- AUD6-S03-002: campo isca; pessoas não veem nem alcançam pelo teclado. -->
+                                <div class="quote-trap" aria-hidden="true">
+                                    <label for="contato_site">Site da empresa</label>
+                                    <input type="text" id="contato_site" name="contato_site" maxlength="200" tabindex="-1" autocomplete="off" />
+                                </div>
                             </fieldset>
                         </div>
                         <div id="quote-submit-status" class="quote-status hidden" role="status" aria-live="polite"></div>

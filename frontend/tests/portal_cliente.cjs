@@ -388,6 +388,13 @@ async function staticResponse(route) {
         });
         assert.match(human[0], /^Estamos conferindo um pagamento/);
         assert.deepEqual(human.slice(1), ['Projeto não encontrado.', 'Falha padrão.', 'Falha padrão.', 'Mensagem já clara.']);
+        // AUD6-S07-001: section shortcuts, with the pending payment reachable from the top.
+        const sections = page.getByRole('navigation', { name: 'Seções do projeto' });
+        assert.deepEqual(await sections.getByRole('button').allTextContents(), ['Visão geral', 'Arquivos', 'Mensagens', 'Pagamento pendente']);
+        await page.locator('#project-section-overview').getByRole('button', { name: 'Ver pagamento' }).click();
+        await page.waitForFunction(() => document.activeElement?.closest('#project-section-payment'));
+        await sections.getByRole('button', { name: 'Arquivos' }).click();
+        await page.waitForFunction(() => document.activeElement?.closest('#project-section-files'));
 
         // Roadmap 5.14: the held delivery shows its state and the payment link, never a download.
         const heldFile = page.locator('.producer-file').filter({ hasText: 'master-final.wav' });

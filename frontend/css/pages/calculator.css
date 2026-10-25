@@ -290,3 +290,12 @@
     .total-price { font-size: 2.2rem; }
 }
 .service-limits { display: grid; gap: var(--space-1); margin: var(--space-3) 0 0; padding-left: var(--space-5); color: var(--color-text-secondary); }
+
+/* AUD6-S03-002: campo isca fora da área visível. */
+.quote-trap {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}

@@ -88,6 +88,8 @@ export function initOrcamento() {
 
                 selecao: obterSelecao(),
             };
+            const trap = $("contato_site")?.value.trim();
+            if (trap) payload.contato_site = trap;
 
             try {
                 enviando = true;

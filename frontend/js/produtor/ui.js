@@ -283,12 +283,16 @@ export function renderDetail(production, files, handlers) {
         ));
     }
     if (action) {
-        const actions = element("div", "producer-detail__actions");
+        // AUD6-S08-005: the overall action sits with the production summary and says
+        // that it covers the whole production; each stage keeps its own buttons.
+        const actions = element("div", "producer-detail__actions producer-detail__actions--overall");
+        actions.append(element("p", "producer-detail__actions-note",
+            "Andamento da produção completa. Para uma etapa, use os botões dentro dela."));
         const button = element("button", "btn-cta", action.label);
         button.type = "button";
         button.addEventListener("click", () => handlers.onStatus(production.id, action.status, button));
         actions.append(button);
-        detail.append(actions);
+        overview.append(actions);
     }
     const messagesSlot = element("div");
     messagesSlot.id = "production-messages-slot";
