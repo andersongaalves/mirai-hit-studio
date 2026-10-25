@@ -362,6 +362,21 @@ async function staticResponse(route) {
         assert.equal(await pixPage.locator('#copy-pix').textContent(), 'Código copiado');
         assert.equal(await pixPage.locator('#pix-code').inputValue(), pixCode(), 'the displayed copy-and-paste code is unchanged');
         assert.equal(await pixPage.evaluate(() => navigator.clipboard.readText()), decodedQr);
+        // AUD6-S06-005: backend wording for operators becomes buyer-facing guidance.
+        const human = await pixPage.evaluate(async () => {
+            const { humanCheckoutMessage } = await import('/js/checkout.js');
+            return [
+                humanCheckoutMessage('Pagamento em processamento requer conciliacao.', 409),
+                humanCheckoutMessage('Checkout temporariamente indisponivel.', 503),
+                humanCheckoutMessage('qualquer', 429),
+                humanCheckoutMessage('A reserva deste beat expirou ou foi liberada. Solicite a licença novamente no catálogo.', 409),
+            ];
+        });
+        assert.match(human[0], /Estamos conferindo/);
+        assert.doesNotMatch(human.join(' '), /conciliacao|indisponivel/);
+        assert.match(human[1], /temporariamente indisponível/);
+        assert.match(human[2], /Muitas tentativas/);
+        assert.match(human[3], /reserva deste beat expirou/);
         assert.equal(await pixPage.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
         const recoveredPage = await context.newPage();
         await recoveredPage.goto(`http://localhost:4173/checkout/${tokenL}`);

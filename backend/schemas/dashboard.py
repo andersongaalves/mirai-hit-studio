@@ -22,6 +22,12 @@ class DashboardPipeline(BaseModel):
 class DashboardAttention(BaseModel):
     producoes_atrasadas: int = Field(ge=0)
     propostas_aguardando_decisao: int = Field(ge=0)
+    solicitacoes_producao: int = Field(ge=0)
+    beats_em_revisao: int = Field(ge=0)
+    portfolio_em_revisao: int = Field(ge=0)
+    falhas_processamento_tag: int = Field(ge=0)
+    pagamentos_em_conciliacao: int = Field(ge=0)
+    entregas_aguardando_aprovacao: int = Field(ge=0)
 
 
 class DashboardActivity(BaseModel):

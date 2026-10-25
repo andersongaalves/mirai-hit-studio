@@ -1,6 +1,6 @@
 # Auditoria setorial - S09 Administracao operacional
 
-Status do setor: **DIAGNOSTICADO**. Mudancas derivadas: [Etapa 07](../ETAPA_07_APLICACAO_AUDITORIA.md).
+Status do setor: **EM APLICACAO**. Mudancas derivadas: [Etapa 07](../ETAPA_07_APLICACAO_AUDITORIA.md).
 
 ## 1. Baseline
 
@@ -31,7 +31,7 @@ Status do setor: **DIAGNOSTICADO**. Mudancas derivadas: [Etapa 07](../ETAPA_07_A
 
 | ID | Sev. | Categoria | Achado | Status |
 | --- | --- | --- | --- | --- |
-| AUD6-S09-001 | P2 | 5.4 / 4.8 | "Requer atencao" so mostra producoes atrasadas e propostas sem resposta; demais pendencias exigem visitar cada secao | Aberto |
+| AUD6-S09-001 | P2 | 5.4 / 4.8 | "Requer atencao" so mostra producoes atrasadas e propostas sem resposta; demais pendencias exigem visitar cada secao | Em revisao (#107) |
 | AUD6-S09-002 | P2 | 5.4 / 5.5 | Nao ha pagina central de cliente ou produtor nem links entre entidades (cliente -> propostas, producoes, cobrancas, creditos) | Aberto |
 | AUD6-S09-003 | P3 | 4.3 | Dashboard repete os mesmos numeros em tres blocos (metricas, atencao e pipeline) | Aberto |
 | AUD6-S09-004 | P3 | 4.10 | Ao entrar, o Admin carrega servicos, portfolio e configuracoes junto com o dashboard; uma falha gera alertas de secoes que o usuario nem abriu | Aberto |
