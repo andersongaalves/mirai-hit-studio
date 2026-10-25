@@ -180,6 +180,9 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'GET') {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
+        if (url.pathname === '/portal/produtor/audio-tag' && request.method() === 'GET') {
+            return route.fulfill({ json: { tag_id: null, nome: null, padrao_disponivel: true, versao: 0 } });
+        }
         if (url.pathname === '/portal/produtor/catalogo-beats' && request.method() === 'GET') {
             return route.fulfill({ json: [{ id: 81, produtor_id: 3, produtor: 'Outro Produtor', titulo: 'Beat publicado', descricao: '', bpm: 92, tonalidade: 'C', generos: 'R&B', preco_lease: '80.00', preco_exclusivo: '450.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
@@ -242,8 +245,18 @@ async function staticResponse(route) {
         assert.equal(await page.locator('.producer-metric').count(), 5);
         assert.match(await page.locator('#producer-metrics').textContent(), /Produções ativas2/);
         assert.match(await page.locator('#producer-metrics').textContent(), /Em revisão1/);
-        await page.getByRole('link', { name: 'Beats' }).click();
+        // AUD6-S08-001: no own tag yet, so the dashboard points to "Meu perfil".
+        const tagNotice = page.locator('#producer-tag-notice');
+        await tagNotice.waitFor();
+        assert.match(await tagNotice.textContent(), /ainda não cadastrou sua tag.*tag padrão da Mirai/);
+        assert.equal(await page.getByRole('link', { name: 'Minha tag', exact: true }).count(), 0);
+        assert.equal(await tagNotice.getByRole('link', { name: 'Cadastrar minha tag' }).getAttribute('href'), '/produtor/perfil');
+        assert.equal(await page.getByRole('link', { name: 'Catálogo', exact: true }).count(), 0, 'the catalog lives inside Beats');
+        const nav = page.locator('#producer-navigation');
+        await nav.getByRole('link', { name: 'Beats', exact: true }).click();
         await page.waitForURL('**/produtor/beats');
+        assert.equal(await nav.getByRole('link', { name: 'Beats', exact: true }).getAttribute('aria-current'), 'page');
+        assert.equal(await page.locator('#producer-beats').getByRole('link', { name: 'Meus beats' }).getAttribute('aria-current'), 'page');
         await page.waitForSelector('#producer-beats-list .producer-card');
         assert.match(await page.locator('#producer-beats-list').textContent(), /<Beat seguro>/);
         assert.equal(await page.locator('#producer-beats-list script, #producer-beats-list img').count(), 0);
@@ -253,8 +266,10 @@ async function staticResponse(route) {
             element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
         )), true, 'producer beat content must fit inside the square');
         assert.match(await page.locator('#producer-beats-list').textContent(), /Producer A/);
-        await page.getByRole('link', { name: 'Catálogo' }).click();
+        await page.locator('#producer-beats').getByRole('link', { name: 'Catálogo' }).click();
         await page.waitForURL('**/produtor/catalogo');
+        assert.equal(await nav.getByRole('link', { name: 'Beats', exact: true }).getAttribute('aria-current'), 'page');
+        assert.equal(await page.locator('#producer-catalog').getByRole('link', { name: 'Catálogo' }).getAttribute('aria-current'), 'page');
         await page.waitForSelector('#producer-catalog-list .producer-card');
         assert.match(await page.locator('#producer-catalog-list').textContent(), /Outro Produtor/);
         assert.equal(
@@ -263,7 +278,8 @@ async function staticResponse(route) {
             'catalog only exposes preview player controls',
         );
         assert.doesNotMatch(await page.locator('#producer-catalog-list').textContent(), /Comprar|Solicitar/);
-        await page.getByRole('link', { name: 'Beats' }).click();
+        await page.locator('#producer-catalog').getByRole('link', { name: 'Meus beats' }).click();
+        await page.waitForURL('**/produtor/beats');
         await page.getByLabel('Título').fill('Novo beat');
         await page.locator('#producer-beat-form [name="preco_lease"]').fill('120');
         await page.locator('#producer-beat-form [name="capa"]').setInputFiles({ name: 'capa.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64') });
