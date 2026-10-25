@@ -3,7 +3,12 @@ from core.security import create_access_token, get_password_hash, verify_passwor
 from crud import crud_usuario
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, status
-from schemas.usuario import LoginRequest, LoginResponse, SessaoUsuarioResponse
+from schemas.usuario import (
+    LoginRequest,
+    LoginResponse,
+    SenhaPropriaUpdate,
+    SessaoUsuarioResponse,
+)
 from services import rate_limit_service
 from sqlalchemy.orm import Session
 
@@ -61,3 +66,24 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "user": SessaoUsuarioResponse.from_user(usuario),
     }
+
+
+PASSWORD_CHANGE_FAILURES = 5
+
+
+@router.post("/senha", response_model=LoginResponse, response_model_exclude_none=True)
+def trocar_senha(data: SenhaPropriaUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    # AUD6-S02-004: the current password proves it is the owner; every other session ends.
+    from services import conta_interna_service
+
+    key = f"password-change:{user.id}"
+    locked, retry = rate_limit_service.blocked(db, "login_account", key, PASSWORD_CHANGE_FAILURES)
+    if locked:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, TOO_MANY, headers={"Retry-After": str(retry)})
+    try:
+        updated = conta_interna_service.trocar_senha(db, user.id, data.senha_atual, data.nova_senha)
+    except conta_interna_service.SenhaAtualIncorreta:
+        rate_limit_service.hit(db, "login_account", key, PASSWORD_CHANGE_FAILURES, ACCOUNT_WINDOW_SECONDS)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Senha atual incorreta.") from None
+    access_token = create_access_token({"sub": updated.username, "av": updated.auth_version, "uid": updated.id})
+    return {"access_token": access_token, "token_type": "bearer", "user": SessaoUsuarioResponse.from_user(updated)}

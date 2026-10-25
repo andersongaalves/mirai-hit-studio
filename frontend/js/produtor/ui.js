@@ -42,10 +42,17 @@ function productionCard(production, onOpen) {
 export function showView(name) {
     document.querySelectorAll(".producer-view").forEach(view => view.classList.add("hidden"));
     document.getElementById(`producer-${name}`)?.classList.remove("hidden");
+    // AUD6-S08-001: "Beats" is one area with two tabs (Meus beats, Catálogo).
     document.querySelectorAll("[data-route]").forEach(link => {
-        const current = link.dataset.route === name || (name === "detail" && link.dataset.route === "producoes");
+        const current = link.dataset.route === name
+            || (name === "detail" && link.dataset.route === "producoes")
+            || (name === "catalog" && link.dataset.route === "beats");
         if (current) link.setAttribute("aria-current", "page");
         else link.removeAttribute("aria-current");
+    });
+    document.querySelectorAll("[data-route-tab]").forEach(tab => {
+        if (tab.dataset.routeTab === name) tab.setAttribute("aria-current", "page");
+        else tab.removeAttribute("aria-current");
     });
 }
 

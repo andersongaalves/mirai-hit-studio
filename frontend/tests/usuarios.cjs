@@ -64,7 +64,7 @@ async function staticResponse(route) {
         if (url.pathname === '/usuarios' && request.method() === 'POST') {
             if (duplicate) return route.fulfill({ status: 409, json: { detail: 'Nome de usuario ja cadastrado.' } });
             const payload = request.postDataJSON();
-            assert.deepEqual(Object.keys(payload).sort(), ['nome_exibicao', 'painel_beats', 'password', 'role', 'username']);
+            assert.deepEqual(Object.keys(payload).sort(), ['email', 'nome_exibicao', 'painel_beats', 'password', 'role', 'username']);
             createdDisplayNames.push(payload.nome_exibicao);
             const created = { id: 4, username: payload.username, nome_exibicao: payload.nome_exibicao, role: payload.role,
                 painel_beats: payload.painel_beats, is_admin: payload.role === 'admin', ativo: true, created_at: now, updated_at: now };

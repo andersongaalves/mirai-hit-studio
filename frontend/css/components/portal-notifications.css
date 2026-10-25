@@ -28,7 +28,7 @@
     border-radius: 4px;
     font-size: 12px;
 }
-.portal-notifications-dialog {
+:is(.portal-notifications-dialog, .portal-dialog) {
     width: min(560px, calc(100% - 32px));
     max-height: calc(100dvh - 48px);
     margin: auto;
@@ -39,16 +39,16 @@
     border-radius: 8px;
     overflow: auto;
 }
-.portal-notifications-dialog::backdrop { background: rgb(0 0 0 / 65%); }
-.portal-notifications-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.portal-notifications-dialog h2 { font-size: 20px; margin: 0; }
-.portal-notifications-dialog ul,
+:is(.portal-notifications-dialog, .portal-dialog)::backdrop { background: rgb(0 0 0 / 65%); }
+:is(.portal-notifications-dialog, .portal-dialog) header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+:is(.portal-notifications-dialog, .portal-dialog) h2 { font-size: 20px; margin: 0; }
+:is(.portal-notifications-dialog, .portal-dialog) ul,
 .portal-notifications-new ul { margin: 12px 0; padding: 0; list-style: none; }
-.portal-notifications-dialog li { display: grid; gap: 6px; padding: 14px 0; border-bottom: 1px solid #334155; }
-.portal-notifications-dialog time { font-size: 12px; color: #b8c9d8; }
-.portal-notifications-dialog a,
+:is(.portal-notifications-dialog, .portal-dialog) li { display: grid; gap: 6px; padding: 14px 0; border-bottom: 1px solid #334155; }
+:is(.portal-notifications-dialog, .portal-dialog) time { font-size: 12px; color: #b8c9d8; }
+:is(.portal-notifications-dialog, .portal-dialog) a,
 .portal-notifications-new a { color: #67e8f9; overflow-wrap: anywhere; }
-.portal-notifications-dialog button,
+:is(.portal-notifications-dialog, .portal-dialog) button,
 .portal-notifications-new button { padding: 8px 12px; color: #edf4fa; background: transparent; border: 1px solid #64748b; border-radius: 4px; cursor: pointer; }
 .portal-notifications-new { position: relative; padding: 16px; margin-bottom: 20px; border-left: 3px solid #00ccef; background: #102331; }
 .portal-notifications-new > p { margin: 0 76px 12px 0; font-weight: 600; }
@@ -58,5 +58,13 @@
 .producer-account:has(.portal-notifications-button) { flex-wrap: wrap; gap: 12px; }
 .admin-topbar__actions .portal-notifications-button { width: 44px; height: 44px; flex-basis: 44px; }
 .portal-notifications-button:focus-visible,
-.portal-notifications-dialog :focus-visible,
+:is(.portal-notifications-dialog, .portal-dialog) :focus-visible,
 .portal-notifications-new :focus-visible { outline: 2px solid #f5d0fe; outline-offset: 3px; }
+
+/* AUD6-S02-004: troca da própria senha. */
+.account-password__form { display: grid; gap: 14px; margin-top: 16px; }
+.account-password__field { display: grid; gap: 6px; font-size: 14px; }
+.account-password__field input { min-height: 44px; padding: 10px 12px; color: #edf4fa; background: #06121e; border: 1px solid #64748b; border-radius: 4px; font: inherit; }
+.account-password__help { margin: 0; color: #b8c9d8; font-size: 13px; }
+.account-password__status { margin: 0; min-height: 20px; color: #67e8f9; }
+.account-password-dialog .btn-cta { justify-self: start; }

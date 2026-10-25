@@ -30,6 +30,7 @@ function payload() {
             password: field("usuario-password").value,
             role: field("usuario-role").value,
             painel_beats: field("usuario-painel-beats").checked,
+            email: field("usuario-email").value.trim() || null,
         };
     }
     const update = {
@@ -38,11 +39,13 @@ function payload() {
         role: field("usuario-role").value,
         ativo: field("usuario-ativo").checked,
         painel_beats: field("usuario-painel-beats").checked,
+        email: field("usuario-email").value.trim() || null,
     };
     // AUD6-S02-005: a client account keeps its role and client link; only name and access change here.
     if (current.role === "cliente") {
         delete update.role;
         delete update.painel_beats;
+        delete update.email;
     }
     return update;
 }
@@ -60,6 +63,8 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     field("usuario-role").value = usuario?.role || "produtor";
     field("usuario-ativo").checked = usuario?.ativo ?? true;
     field("usuario-painel-beats").checked = usuario?.painel_beats ?? false;
+    field("usuario-email").value = usuario?.email || "";
+    field("usuario-email-field").classList.toggle("hidden", client);
     field("usuario-password").value = "";
     field("usuario-new-password").value = "";
     field("usuario-username").disabled = self;

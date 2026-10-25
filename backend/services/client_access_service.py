@@ -438,8 +438,13 @@ def prepare_password_recovery(
             request_id=request_id,
         )
         if user is None:
+            # AUD6-S02-004: studio accounts recover through the e-mail registered by the studio.
+            from services import conta_interna_service
+
+            internal = conta_interna_service.preparar_recuperacao(
+                db, email, token_pair=_token(), request_id=request_id)
             db.commit()
-            return _generic_recovery_response(), None
+            return _generic_recovery_response(), internal
 
         raw_token, token_hash = _token()
         now = _now()
@@ -529,6 +534,11 @@ def _deliver_password_recovery(db: Session, delivery: dict):
 
 
 def deliver_password_recovery_job(delivery: dict):
+    if delivery.get("kind") == "interna":
+        from services import conta_interna_service
+
+        conta_interna_service.entregar_recuperacao(delivery)
+        return
     with SessionLocal() as db:
         _deliver_password_recovery(db, delivery)
 
@@ -546,7 +556,12 @@ def request_password_recovery(
         request_id,
     )
     if delivery is not None:
-        _deliver_password_recovery(db, delivery)
+        if delivery.get("kind") == "interna":
+            from services import conta_interna_service
+
+            conta_interna_service.entregar_recuperacao(delivery)
+        else:
+            _deliver_password_recovery(db, delivery)
     return response
 
 
@@ -580,6 +595,12 @@ def reset_password(
             .execution_options(populate_existing=True)
         )
         if access is None:
+            from services import conta_interna_service
+
+            internal = conta_interna_service.redefinir_por_token(
+                db, _hash(data.token), data.password, request_id=request_id)
+            if internal:
+                return internal
             raise ClientAccessInvalid("Link invalido ou indisponivel.")
         access_id = access.id
         if access.token_finalidade != "recuperacao":

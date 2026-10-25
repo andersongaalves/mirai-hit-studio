@@ -30,6 +30,8 @@ class UsuarioModel(Base):
             name="ck_usuarios_auth_version_nao_negativa",
         ),
         UniqueConstraint("cliente_id", name="uq_usuarios_cliente_id"),
+        # AUD6-S02-004: only studio accounts keep an e-mail here; clients use their client record.
+        CheckConstraint("email IS NULL OR role IN ('admin', 'produtor')", name="ck_usuarios_email_interno"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -40,6 +42,11 @@ class UsuarioModel(Base):
     nome_exibicao = Column(String(80), nullable=True)
 
     password_hash = Column(String(255), nullable=False)
+
+    # AUD6-S02-004: recovery e-mail and one-time reset token for studio accounts.
+    email = Column(String(150), nullable=True)
+    reset_token_hash = Column(String(64), nullable=True)
+    reset_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     auth_version = Column(Integer, default=0, server_default="0", nullable=False)
 
@@ -72,3 +79,5 @@ class UsuarioModel(Base):
 
 # AUD6-S02-006: "Ana" and "ana" are the same login.
 Index("uq_usuarios_username_lower", func.lower(UsuarioModel.username), unique=True)
+Index("uq_usuarios_email_lower", func.lower(UsuarioModel.email), unique=True)
+Index("uq_usuarios_reset_token_hash", UsuarioModel.reset_token_hash, unique=True)
