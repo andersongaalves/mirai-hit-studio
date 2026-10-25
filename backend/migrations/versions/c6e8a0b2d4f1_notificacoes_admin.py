@@ -66,11 +66,14 @@ def upgrade():
                                   copy_from=_sqlite_table(extended=False)) as batch:
             batch.drop_constraint("ck_portal_notificacao_papel", type_="check")
             batch.drop_constraint("ck_portal_notificacao_contexto", type_="check")
-            for name, table in NEW_COLUMNS:
-                batch.add_column(sa.Column(
-                    name, sa.Integer(), sa.ForeignKey(f"{table}.id", ondelete="CASCADE"), nullable=True))
+            for name, _ in NEW_COLUMNS:
+                batch.add_column(sa.Column(name, sa.Integer(), nullable=True))
             batch.create_check_constraint("ck_portal_notificacao_papel", NEW_ROLES)
             batch.create_check_constraint("ck_portal_notificacao_contexto", NEW_CONTEXT)
+        # Batch mode cannot add unnamed foreign keys; a second rebuild from the full definition adds them.
+        with op.batch_alter_table("portal_notificacoes", recreate="always",
+                                  copy_from=_sqlite_table(extended=True)):
+            pass
         for name, _ in NEW_COLUMNS:
             op.create_index(f"ix_portal_notificacoes_{name}", "portal_notificacoes", [name])
         return
