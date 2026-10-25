@@ -94,6 +94,10 @@ assert blocks['Cloudinary']['itens'][0] == {'rotulo': 'Créditos do mês', 'usad
 cloudflare = blocks['Cloudflare']
 assert cloudflare['status'] == 'ok' and cloudflare['itens'][0]['usado'] == 1024  # latest R2 sample per bucket
 assert any('Tráfego do site indisponível' in aviso for aviso in cloudflare['avisos'])
+guard = blocks['Proteção contra robôs']
+assert guard['status'] == 'ok' and [entry['unidade'] for entry in guard['itens']] == ['numero'] * 4
+assert all(isinstance(entry['usado'], int) for entry in guard['itens'])
+assert 'reinício do servidor' in guard['itens'][-1]['detalhe']
 
 uso._cache.update(at=0.0, data=None)
 os.environ.pop('CLOUDFLARE_API_TOKEN')

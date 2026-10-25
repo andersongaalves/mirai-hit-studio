@@ -187,11 +187,26 @@ def _cloudflare():
     return _bloco("Cloudflare", itens=itens, avisos=avisos)
 
 
+def _protecao():
+    """AUD6-S12 (camada 1): what the API refused since the last restart."""
+    from core.protecao import protecao
+
+    dados = protecao.resumo()
+    desde = datetime.fromtimestamp(dados["desde"], timezone(timedelta(hours=-3))).strftime("%d/%m %H:%M")
+    detalhe = f"Contagem desde o último reinício do servidor ({desde}, horário de Brasília)."
+    return _bloco("Proteção contra robôs", itens=[
+        {"rotulo": "Varreduras de endereços suspeitos recusadas", "usado": dados["varreduras"], "unidade": "numero"},
+        {"rotulo": "Pedidos recusados por excesso", "usado": dados["excesso"], "unidade": "numero"},
+        {"rotulo": "Pedidos de endereços bloqueados", "usado": dados["bloqueadas"], "unidade": "numero"},
+        {"rotulo": "Endereços bloqueados agora", "usado": dados["ips_bloqueados"], "unidade": "numero", "detalhe": detalhe},
+    ])
+
+
 def carregar(db, *, atualizar=False):
     if not atualizar and _cache["data"] is not None and time.monotonic() - _cache["at"] < CACHE_SECONDS:
         return _cache["data"]
     blocos = []
-    for funcao in (_memoria, lambda: _supabase(db), _cloudinary, _cloudflare):
+    for funcao in (_memoria, lambda: _supabase(db), _cloudinary, _cloudflare, _protecao):
         try:
             blocos.append(funcao())
         except Exception:
