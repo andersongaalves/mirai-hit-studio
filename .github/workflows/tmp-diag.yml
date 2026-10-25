@@ -58,5 +58,5 @@ jobs:
                   set +e
                   python -m unittest discover -s tests -p test_orcamento_preco.py -v > out.txt 2>&1
                   code=$?
-                  grep -n -A40 "^ERROR\|^FAIL\|Traceback" out.txt | head -c 7000 | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
+                  grep -A6 'File "<string>"' out.txt | head -c 5000 | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
                   exit $code
