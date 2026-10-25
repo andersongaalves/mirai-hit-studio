@@ -41,6 +41,7 @@ async function staticResponse(route) {
     const page = await context.newPage();
     const errors = [];
     let dashboardFailure = false;
+    let tagRetries = 0;
     page.on('pageerror', error => errors.push(error.message));
     await context.route('**/*', async route => {
         const request = route.request();
@@ -61,6 +62,13 @@ async function staticResponse(route) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
         if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
+        if (url.pathname === '/admin/audio-tag/previas/falhas') return route.fulfill({ json: [
+            { arquivo_id: 41, arquivo_nome: '<b>mix.wav</b>', producao_id: 3, producao_titulo: 'Single Aurora', created_at: '2026-10-20T12:00:00Z' },
+        ] });
+        if (url.pathname === '/admin/audio-tag/previas/41/reprocessar' && request.method() === 'POST') {
+            tagRetries++;
+            return route.fulfill({ json: { estado: 'pendente' } });
+        }
         return route.fulfill({ status: 404, json: { detail: 'Not found' } });
     });
     try {
@@ -72,6 +80,13 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 8);
         assert.match(await page.locator('#dashboard-attention').textContent(), /1 produção atrasada/);
         assert.match(await page.locator('#dashboard-attention').textContent(), /3 solicitações de produção para análise/);
+        const failures = page.locator('#dashboard-attention .dashboard-tag-failures');
+        await failures.waitFor();
+        assert.match(await failures.textContent(), /Single Aurora · <b>mix\.wav<\/b>/);
+        assert.equal(await failures.locator('b').count(), 0);
+        await failures.getByRole('button', { name: 'Reprocessar a tag de <b>mix.wav</b>' }).click();
+        await page.waitForFunction(() => document.querySelector('.dashboard-tag-failures')?.textContent.includes('na fila para reprocessar'));
+        assert.equal(tagRetries, 1);
         const attentionBeforePipeline = await page.evaluate(() =>
             Boolean(document.getElementById('dashboard-attention').compareDocumentPosition(document.getElementById('dashboard-pipeline')) & Node.DOCUMENT_POSITION_FOLLOWING));
         assert.equal(attentionBeforePipeline, true);

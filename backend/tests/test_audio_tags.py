@@ -178,8 +178,12 @@ class AudioTagTests(unittest.TestCase):
             async def retry():
                 async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
                     endpoint = f'/admin/audio-tag/previas/{file_id}/reprocessar'
+                    assert (await api.get('/admin/audio-tag/previas/falhas',headers=bearer('producer-a'))).status_code == 403
+                    pending = (await api.get('/admin/audio-tag/previas/falhas',headers=bearer('admin'))).json()
+                    assert [(row['arquivo_id'], row['arquivo_nome'], row['producao_id']) for row in pending] == [(file_id, 'mix.wav', 1)], pending
                     assert (await api.post(endpoint,headers=bearer('producer-a'))).status_code == 403
                     assert (await api.post(endpoint,headers=bearer('admin'))).json()['estado'] == 'pendente'
+                    assert (await api.get('/admin/audio-tag/previas/falhas',headers=bearer('admin'))).json() == []
             asyncio.run(retry())
             assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args: b'tagged')
             with Session(engine) as db:

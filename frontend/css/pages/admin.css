@@ -1869,3 +1869,11 @@
 .usuario-display-name { display: block; }
 .usuario-login-name { display: block; color: var(--color-text-secondary); font-size: var(--font-size-small); }
 .producao-repasse-alerta { color: var(--color-warning); margin: var(--space-1, 4px) 0 0; }
+
+/* AUD6-S08-002: falhas de tag com reprocessamento direto do dashboard. */
+.dashboard-tag-failures { margin-top: var(--space-3); padding-top: var(--space-3); border-top: var(--border-subtle); }
+.dashboard-tag-failures__title { margin: 0 0 var(--space-2); color: var(--color-text-secondary); font-size: var(--font-size-small); font-weight: 700; }
+.dashboard-tag-failures__list { display: grid; gap: var(--space-2); padding: 0; margin: 0; list-style: none; }
+.dashboard-tag-failures__item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+.dashboard-tag-failures__text { min-width: 0; overflow-wrap: anywhere; }
+.dashboard-tag-failures__error { flex-basis: 100%; color: var(--color-danger); font-size: var(--font-size-small); }
