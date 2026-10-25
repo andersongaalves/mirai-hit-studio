@@ -290,6 +290,31 @@ with Session(engine) as db:
     assert beat.status == 'vendido' and beat.ativo is False
     assert license.status == 'adquirida' and license.adquirida_em is not None
     assert beat_service._available_files(beat, license.tipo) == ['mp3', 'wav', 'multitrack']
+    # AUD6-S06-003: R2 files leave through a signed link; the API never loads them.
+    from types import SimpleNamespace
+    from fastapi import HTTPException
+    from services.producao_arquivo_storage import ProducaoArquivoIntegridadeError
+    class SignedStorage:
+        def __init__(self, result): self.result, self.calls, self.reads = result, [], 0
+        def download_link(self, reference, **kwargs):
+            self.calls.append((reference, kwargs))
+            if isinstance(self.result, Exception): raise self.result
+            return self.result
+        def read(self, reference): self.reads += 1; return b'not-the-recorded-bytes'
+    client = SimpleNamespace(cliente_id=91)
+    signed = SignedStorage('https://signed.example.test/contrato.wav')
+    with patch.object(beat_service, 'new_production_file_storage', return_value=signed):
+        delivery = beat_service.purchased_file(db, beat.id, 'wav', client)
+    assert delivery == {'type': 'download', 'url': 'https://signed.example.test/contrato.wav', 'filename': 'contrato.wav'}
+    assert signed.calls == [(beat.wav_ref, {'filename': 'contrato.wav', 'content_type': 'audio/wav', 'sha256': 'c' * 64})]
+    assert signed.reads == 0
+    for result in (None, ProducaoArquivoIntegridadeError('x')):
+        fallback = SignedStorage(result)
+        with patch.object(beat_service, 'new_production_file_storage', return_value=fallback):
+            try: beat_service.purchased_file(db, beat.id, 'mp3', client)
+            except HTTPException as error: assert error.status_code == 409
+            else: raise AssertionError('changed file was delivered')
+        assert fallback.reads == (1 if result is None else 0)
 """)
 
 

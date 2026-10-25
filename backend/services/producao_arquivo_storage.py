@@ -26,6 +26,10 @@ class ProducaoArquivoStorageError(Exception):
     pass
 
 
+class ProducaoArquivoIntegridadeError(ProducaoArquivoStorageError):
+    """The stored object no longer matches the hash recorded at upload."""
+
+
 class SupabaseProducaoArquivoStorage:
     """Immutable object adapter. Authorization is enforced before this layer."""
 
@@ -245,6 +249,33 @@ class ProductionFileStorage:
             return adapter.read(reference)
         except StorageError as exc:
             raise ProducaoArquivoStorageError(str(exc)) from None
+
+    def download_link(self, value, *, filename, content_type, sha256, expires_seconds=120):
+        """AUD6-S06-003: signed R2 link instead of loading the file in the API.
+
+        Returns None when the object is not in R2 or has no recorded hash, so the
+        caller falls back to reading and checking the bytes itself.
+        """
+        from services.storage.contracts import StorageError
+
+        adapter, reference = self._resolve(value)
+        if reference.provider != "r2":
+            return None
+        try:
+            metadata = adapter.stat(reference)
+            if not metadata.sha256:
+                return None
+            if metadata.sha256 != sha256:
+                raise ProducaoArquivoIntegridadeError("Integridade do arquivo invalida.")
+            signed = adapter.presign_get(
+                reference,
+                expires_seconds=expires_seconds,
+                filename=filename,
+                content_type=content_type,
+            )
+        except StorageError as exc:
+            raise ProducaoArquivoStorageError(str(exc)) from None
+        return signed.url
 
     def delete(self, value):
         from services.storage.contracts import StorageError

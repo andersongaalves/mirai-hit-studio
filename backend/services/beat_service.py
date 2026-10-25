@@ -12,6 +12,7 @@ from models.enums.financeiro import CobrancaStatus, PagamentoStatus
 from schemas.beat import BeatCreate
 from services import audio_tag_service, audit_service, beat_upload_config_service
 from services.producao_arquivo_storage import (
+    ProducaoArquivoIntegridadeError,
     ProducaoArquivoStorageError,
     new_production_file_storage,
 )
@@ -410,15 +411,30 @@ def purchased_file(db, beat_id, kind, actor):
         if kind == "mp3"
         else (beat.wav_ref, beat.wav_sha256, "audio/wav", "wav")
     )
-    contents = new_production_file_storage("previa").read(reference)
+    return _deliver(
+        reference, expected_hash, mime, _download_name(beat, "", extension),
+        "Integridade do arquivo adquirido invalida.",
+    )
+
+
+def _deliver(reference, expected_hash, mime, filename, integrity_message):
+    """AUD6-S06-003: R2 files go straight to the browser through a short signed
+    link; other storages still pass through the API with the hash check."""
+    storage = new_production_file_storage("previa")
+    link = getattr(storage, "download_link", None)
+    if link is not None:
+        try:
+            url = link(reference, filename=filename, content_type=mime, sha256=expected_hash)
+        except ProducaoArquivoIntegridadeError:
+            raise HTTPException(409, integrity_message) from None
+        except ProducaoArquivoStorageError:
+            raise HTTPException(503, "Arquivo temporariamente indisponível.") from None
+        if url:
+            return {"type": "download", "url": url, "filename": filename}
+    contents = storage.read(reference)
     if hashlib.sha256(contents).hexdigest() != expected_hash:
-        raise HTTPException(409, "Integridade do arquivo adquirido invalida.")
-    return {
-        "type": "file",
-        "contents": contents,
-        "mime": mime,
-        "filename": _download_name(beat, "", extension),
-    }
+        raise HTTPException(409, integrity_message)
+    return {"type": "file", "contents": contents, "mime": mime, "filename": filename}
 
 
 def multitrack_delivery(db, beat_id, actor):
@@ -441,16 +457,13 @@ def multitrack_delivery(db, beat_id, actor):
         return {"type": "link", "url": beat.multitrack_url}
     if not beat.multitrack_ref or not beat.multitrack_sha256:
         raise HTTPException(409, "O multitrack adquirido ainda não está disponível.")
-    contents = new_production_file_storage("previa").read(beat.multitrack_ref)
-    if hashlib.sha256(contents).hexdigest() != beat.multitrack_sha256:
-        raise HTTPException(409, "Integridade do multitrack inválida.")
     extension = "rar" if beat.multitrack_mime == "application/vnd.rar" else "zip"
-    return {
-        "type": "file",
-        "contents": contents,
-        "mime": beat.multitrack_mime or "application/octet-stream",
-        "filename": _download_name(beat, "-multitrack", extension),
-    }
+    return _deliver(
+        beat.multitrack_ref, beat.multitrack_sha256,
+        beat.multitrack_mime or "application/octet-stream",
+        _download_name(beat, "-multitrack", extension),
+        "Integridade do multitrack inválida.",
+    )
 
 
 def review(db, beat_id, payload, actor):
