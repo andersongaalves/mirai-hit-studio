@@ -53,9 +53,10 @@ with Session(engine) as db:
         'itens', 'totais', 'politica_pagamento', 'condicoes',
         'documento_disponivel', 'situacao_comercial', 'cobranca_status',
         'enviada_em', 'aprovada_em', 'created_at', 'updated_at',
-        'finalidade', 'contrato_creditos', 'valida_ate', 'expirada',
+        'finalidade', 'contrato_creditos', 'valida_ate', 'expirada', 'mudancas',
     }
     assert listed[0]['expirada'] is False and listed[0]['valida_ate'] is not None
+    assert listed[0]['mudancas'] is None  # AUD6-S05-002: nothing to compare on a first send
     assert listed[0]['finalidade'] == 'producao' and listed[0]['contrato_creditos'] is None
     assert listed[0]['status'] == 'enviada'
     assert listed[0]['situacao_comercial'] == 'aguardando_aceite'
