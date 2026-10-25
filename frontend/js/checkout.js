@@ -56,6 +56,29 @@ function authenticatedPath(path) {
     return path;
 }
 
+// AUD6-S06-005: the backend speaks to operators; the buyer sees what happened and what to do.
+const HUMAN_MESSAGES = [
+    [/requer conciliacao|diverge da cobranca/i, "Estamos conferindo um pagamento desta cobrança. Aguarde alguns minutos antes de tentar de novo; se continuar, fale com o estúdio."],
+    [/^Ja existe um pagamento em processamento/i, "Já existe um pagamento em andamento para esta cobrança. Aguarde a confirmação ou use o Pix que já foi gerado."],
+    [/^Opcao de pagamento indisponivel/i, "Esta forma de pagamento não está disponível para esta cobrança."],
+    [/^Esta proposta exige pagamento integral/i, "Esta proposta só aceita o pagamento integral."],
+    [/^Somente o saldo restante esta disponivel/i, "A entrada já foi paga; agora falta só o saldo restante."],
+    [/^O saldo fica disponivel apos a entrada aprovada/i, "O saldo fica disponível depois que a entrada for aprovada."],
+    [/^Nao existe pagamento em processamento/i, "Não há pagamento em andamento para retomar."],
+    [/^Nao existe Pix pendente para cancelar/i, "Não há Pix pendente para cancelar."],
+    [/^Pagamento por cartao indisponivel/i, "O pagamento com cartão está indisponível no momento. Tente o Pix."],
+];
+
+export function humanCheckoutMessage(detail, status) {
+    if (status === 429) return "Muitas tentativas seguidas. Aguarde um pouco e tente de novo.";
+    const match = HUMAN_MESSAGES.find(([pattern]) => pattern.test(detail || ""));
+    if (match) return match[1];
+    if (status >= 500 || /indisponivel/i.test(detail || "")) {
+        return "O pagamento está temporariamente indisponível. Tente novamente em alguns minutos.";
+    }
+    return detail || "Não foi possível concluir a operação.";
+}
+
 async function api(path, options = {}) {
     const endpoint = state.proposalId ? authenticatedPath(path) : path;
     const response = state.proposalId
@@ -67,7 +90,7 @@ async function api(path, options = {}) {
             const body = await response.json();
             if (typeof body.detail === "string") message = body.detail;
         } catch {}
-        const error = new Error(message);
+        const error = new Error(humanCheckoutMessage(message, response.status));
         error.status = response.status;
         throw error;
     }
