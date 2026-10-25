@@ -56,11 +56,11 @@ jobs:
               shell: bash
               run: |
                   set +e
-                  for pattern in test_storage_core.py test_producao_r2_storage.py test_portfolio_image_storage.py test_portfolio_audio_storage_core.py test_storage_lifecycle.py test_storage_migration.py test_storage_preflight.py test_storage_environment_guard.py test_production_release_guard.py test_production_release_workflow.py test_storage_evidence.py test_storage_provider_smoke.py test_ci_postgres_workflows.py test_portfolio_mix_comparison.py; do
+                  for pattern in test_portfolio_mix_comparison.py; do
                     python -m unittest discover -s tests -p "$pattern" > out.txt 2>&1
                     if [ $? -ne 0 ]; then
                       echo "::error::DIAG FILE $pattern"
-                      python3 -c "t=open('out.txt').read(); i=t.find('Traceback'); print(t[i:i+3000])" | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
+                      python3 -c "t=open('out.txt').read(); i=t.rfind('Error'); print(t[max(0,i-2500):i+400])" | tr '\n' ' ' | fold -w 900 | while read -r line; do echo "::error::DIAG $line"; done
                       break
                     fi
                   done
