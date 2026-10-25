@@ -6,6 +6,7 @@ import test_bootstrap_database as isolated
 
 from services.producao_arquivo_storage import (
     FILE_TYPE_SCOPE,
+    ProducaoArquivoIntegridadeError,
     ProducaoArquivoStorageError,
     ProductionFileStorage,
     new_production_file_storage,
@@ -23,6 +24,38 @@ from services.storage.contracts import (
 from services.storage.legacy import SupabaseProductionAdapter
 from services.storage.memory import InMemoryStorage
 from services.storage.registry import StorageRegistry
+
+
+class R2Registry:
+    """AUD6-S06-003: a real R2 adapter over a mocked transport (no network)."""
+
+    def __init__(self, sha256):
+        import httpx
+        from services.storage.r2 import R2Storage
+
+        self.requests = []
+
+        def handler(request):
+            self.requests.append(request)
+            headers = {"content-length": "9", "content-type": "audio/mpeg"}
+            if sha256:
+                headers["x-amz-meta-sha256"] = sha256
+            return httpx.Response(200 if request.method == "HEAD" else 500, headers=headers)
+
+        self.adapter = R2Storage(
+            scope=StorageScope.PRODUCTION_TEMP,
+            account_id="a" * 32,
+            access_key_id="test-access-key",
+            secret_access_key="server-only-r2-secret",
+            bucket="production-temp",
+            transport=httpx.MockTransport(handler),
+        )
+
+    def storage_for(self, scope):
+        return self.adapter
+
+    def storage_for_reference(self, scope, reference):
+        return self.adapter
 
 
 class FakeRegistry:
@@ -115,6 +148,33 @@ class ProductionFileStorageTests(unittest.TestCase):
         self.assertEqual(storage.read(reference), b"ID3synthetic")
         storage.delete(reference)
         self.assertEqual(registry.adapters[StorageScope.PRODUCTION_TEMP].objects, {})
+
+    def test_r2_download_link_is_signed_checked_and_never_reads_the_body(self):
+        reference = "r2://production-temp/production-temp/opaque.mp3"
+        good = "c" * 64
+        registry = R2Registry(good)
+        storage = ProductionFileStorage(StorageScope.PRODUCTION_TEMP, registry=registry)
+        url = storage.download_link(reference, filename="meu-beat.mp3", content_type="audio/mpeg", sha256=good)
+        self.assertTrue(url.startswith("https://" + "a" * 32 + ".r2.cloudflarestorage.com/production-temp/"))
+        self.assertIn("X-Amz-Expires=120", url)
+        self.assertIn("response-content-disposition=attachment%3B%20filename%3D%22meu-beat.mp3%22", url)
+        self.assertIn("response-content-type=audio%2Fmpeg", url)
+        self.assertIn("X-Amz-Signature=", url)
+        self.assertNotIn("server-only-r2-secret", url)
+        self.assertEqual([request.method for request in registry.requests], ["HEAD"])
+
+        with self.assertRaises(ProducaoArquivoIntegridadeError):
+            storage.download_link(reference, filename="meu-beat.mp3", content_type="audio/mpeg", sha256="d" * 64)
+        unhashed = ProductionFileStorage(StorageScope.PRODUCTION_TEMP, registry=R2Registry(None))
+        self.assertIsNone(unhashed.download_link(reference, filename="meu-beat.mp3", content_type="audio/mpeg", sha256=good))
+        with self.assertRaises(ProducaoArquivoStorageError):
+            storage.download_link(reference, filename="../x.mp3", content_type="audio/mpeg", sha256=good)
+
+    def test_non_r2_objects_keep_the_server_side_download(self):
+        registry = FakeRegistry()
+        storage = ProductionFileStorage(StorageScope.PRODUCTION_TEMP, registry=registry)
+        reference = storage.save(b"ID3synthetic", "audio/mpeg")
+        self.assertIsNone(storage.download_link(reference, filename="a.mp3", content_type="audio/mpeg", sha256="c" * 64))
 
     def test_legacy_raw_supabase_key_remains_readable_and_deletable(self):
         raw_key = "arquivos/" + "a" * 32 + "/" + "b" * 32

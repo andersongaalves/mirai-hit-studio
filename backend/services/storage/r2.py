@@ -25,6 +25,7 @@ from .contracts import (
     StorageScope,
     StorageUnavailable,
     StorageUploadError,
+    StorageValidationError,
     StoredObject,
     coerce_reference,
     validate_object_key,
@@ -289,6 +290,7 @@ class R2Storage(StorageAdapter):
         *,
         expires_seconds: int,
         required_headers: Mapping[str, str] | None = None,
+        query: Mapping[str, str] | None = None,
     ) -> PresignedRequest:
         self._validate_expiration(expires_seconds)
         path = self._path(key)
@@ -305,6 +307,7 @@ class R2Storage(StorageAdapter):
             "X-Amz-Date": amz_date,
             "X-Amz-Expires": expires_seconds,
             "X-Amz-SignedHeaders": signed_names,
+            **(query or {}),
         }
         canonical_query = self._encode_query(parameters)
         canonical_headers = "".join(f"{name}:{headers[name]}\n" for name in sorted(headers))
@@ -338,9 +341,31 @@ class R2Storage(StorageAdapter):
             headers=returned_headers,
         )
 
-    def presign_get(self, reference: ObjectReference | str, *, expires_seconds: int = 300) -> PresignedRequest:
+    def presign_get(
+        self,
+        reference: ObjectReference | str,
+        *,
+        expires_seconds: int = 300,
+        filename: str | None = None,
+        content_type: str | None = None,
+    ) -> PresignedRequest:
+        """AUD6-S06-003: a short signed GET so large files skip the API's memory.
+
+        The optional response overrides are part of the signature, so the browser
+        saves the file under its public name and type, and nothing is cached.
+        """
         reference = self._validated_reference(reference)
-        return self._presign("GET", reference.key, expires_seconds=expires_seconds)
+        query = {}
+        if filename is not None:
+            if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,120}", filename):
+                raise StorageValidationError("Nome de arquivo invalido para download.")
+            query["response-content-disposition"] = f'attachment; filename="{filename}"'
+            query["response-cache-control"] = "private, no-store"
+        if content_type is not None:
+            if not re.fullmatch(r"[a-z]+/[a-z0-9.+-]+", content_type):
+                raise StorageValidationError("Tipo de arquivo invalido para download.")
+            query["response-content-type"] = content_type
+        return self._presign("GET", reference.key, expires_seconds=expires_seconds, query=query)
 
     def presign_put(
         self,

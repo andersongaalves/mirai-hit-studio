@@ -16,3 +16,35 @@
     text-decoration: underline;
     text-underline-offset: 3px;
 }
+
+/* AUD6-S02-011: aviso antes de a sessão expirar. */
+.session-expiry-warning {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    max-width: 560px;
+    margin-left: auto;
+    padding: 14px 16px;
+    color: #edf4fa;
+    background: #102331;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
+}
+.session-expiry-warning p { flex: 1 1 260px; margin: 0; }
+.session-expiry-warning button {
+    min-height: 44px;
+    padding: 8px 14px;
+    color: inherit;
+    background: transparent;
+    border: 1px solid #64748b;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+}

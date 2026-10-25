@@ -166,6 +166,9 @@ class AudioTagTests(unittest.TestCase):
             with Session(engine) as db:
                 job = db.get(PreviaTagJobModel,file_id)
                 assert job.estado == 'erro' and job.object_key is None
+                from models import PortalNotificacaoModel
+                assert db.query(PortalNotificacaoModel).filter_by(
+                    tipo='admin_falha_tag', arquivo_id=file_id, papel='admin').count() == 1
                 assert original_key in storage.objects
                 model = db.get(ProducaoArquivoModel,file_id)
                 assert not model.visivel_cliente
@@ -312,7 +315,7 @@ class AudioTagTests(unittest.TestCase):
     def test_additive_migration_roundtrip(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
-assert bootstrap(engine) == 'b5d7f9a1c328'
+assert bootstrap(engine) == 'd8f0b2c4e6a3'
 assert 'audio_tags' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'd7f9a1c3e568')
 assert 'audio_tags' not in inspect(engine).get_table_names()

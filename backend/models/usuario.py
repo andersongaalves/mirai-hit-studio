@@ -5,6 +5,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
@@ -67,3 +68,7 @@ class UsuarioModel(Base):
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+# AUD6-S02-006: "Ana" and "ana" are the same login.
+Index("uq_usuarios_username_lower", func.lower(UsuarioModel.username), unique=True)

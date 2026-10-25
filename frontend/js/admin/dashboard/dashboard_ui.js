@@ -2,19 +2,15 @@ import { renderAdminState } from "../ui.js";
 import { formatarDataDashboard } from "./dashboard_utils.js";
 
 
+// AUD6-S09-003: one row of indicators that follows the commercial pipeline, and
+// one list of pending work. Late productions and proposals waiting for a decision
+// live only under "Requer atenção", so no number is shown twice.
 const METRICAS = [
-    ["clientes_ativos", "Clientes ativos", "neutral"],
-    ["orcamentos_abertos", "Orçamentos em aberto", "info"],
-    ["propostas_aguardando_decisao", "Propostas aguardando decisão", "warning"],
-    ["producoes_ativas", "Produções ativas", "info"],
-    ["producoes_atrasadas", "Produções atrasadas", "danger"],
-];
-
-const PIPELINE = [
-    ["orcamentos_abertos", "Orçamentos em aberto"],
-    ["propostas_enviadas", "Propostas enviadas"],
-    ["propostas_aprovadas", "Propostas aprovadas"],
-    ["producoes_ativas", "Produções ativas"],
+    ["metrics", "clientes_ativos", "Clientes ativos", "neutral"],
+    ["pipeline", "orcamentos_abertos", "Orçamentos em aberto", "info"],
+    ["pipeline", "propostas_enviadas", "Propostas enviadas", "info"],
+    ["pipeline", "propostas_aprovadas", "Propostas aprovadas", "info"],
+    ["pipeline", "producoes_ativas", "Produções ativas", "info"],
 ];
 
 const PENDENCIAS = [
@@ -26,6 +22,7 @@ const PENDENCIAS = [
     ["falhas_processamento_tag", "prévia com falha no processamento da tag", "prévias com falha no processamento da tag", "section-producoes", "Ver prévias", "danger"],
     ["pagamentos_em_conciliacao", "pagamento que exige conciliação", "pagamentos que exigem conciliação", "section-financeiro", "Conciliar pagamentos", "danger"],
     ["entregas_aguardando_aprovacao", "entrega aguardando aprovação", "entregas aguardando aprovação", "section-producoes", "Revisar entregas", "warning"],
+    ["propostas_expiradas", "proposta vencida sem resposta", "propostas vencidas sem resposta", "section-orcamentos", "Reabrir propostas", "warning"],
 ];
 
 function element(tag, className, content) {
@@ -47,19 +44,11 @@ function criarEstruturaDashboard() {
     if (!content || document.getElementById("dashboard-metrics")) return;
     const metricsSection = element("section");
     metricsSection.setAttribute("aria-labelledby", "dashboard-metrics-title");
-    const metricsTitle = element("h2", "admin-visually-hidden", "Indicadores operacionais");
+    const metricsTitle = element("h2", "admin-visually-hidden", "Clientes e pipeline comercial");
     metricsTitle.id = "dashboard-metrics-title";
     const metrics = element("div", "dashboard-kpi-grid");
     metrics.id = "dashboard-metrics";
     metricsSection.append(metricsTitle, metrics);
-
-    const pipelineSection = element("section", "dashboard-section");
-    pipelineSection.setAttribute("aria-labelledby", "dashboard-pipeline-title");
-    const pipelineTitle = element("h2", "", "Pipeline comercial");
-    pipelineTitle.id = "dashboard-pipeline-title";
-    const pipeline = element("ol", "dashboard-pipeline");
-    pipeline.id = "dashboard-pipeline";
-    pipelineSection.append(pipelineTitle, pipeline);
 
     const attentionSection = element("section", "dashboard-section");
     attentionSection.setAttribute("aria-labelledby", "dashboard-attention-title");
@@ -76,29 +65,18 @@ function criarEstruturaDashboard() {
     const activity = element("div");
     activity.id = "dashboard-activity";
     activitySection.append(activityTitle, activity);
-    content.replaceChildren(metricsSection, attentionSection, pipelineSection, activitySection);
+    content.replaceChildren(metricsSection, attentionSection, activitySection);
 }
 
 function renderMetricas(data) {
     const host = document.getElementById("dashboard-metrics");
     if (!host) return;
-    host.replaceChildren(...METRICAS.map(([campo, titulo, variante]) => {
+    host.replaceChildren(...METRICAS.map(([grupo, campo, titulo, variante]) => {
         const card = element("article", `dashboard-kpi dashboard-kpi--${variante}`);
         const label = element("p", "dashboard-kpi__label", titulo);
-        const value = element("strong", "dashboard-kpi__value", String(data.metrics[campo] ?? 0));
+        const value = element("strong", "dashboard-kpi__value", String(data[grupo]?.[campo] ?? 0));
         card.append(label, value);
         return card;
-    }));
-}
-
-function renderPipeline(data) {
-    const host = document.getElementById("dashboard-pipeline");
-    if (!host) return;
-    host.replaceChildren(...PIPELINE.map(([campo, titulo]) => {
-        const item = element("li", "dashboard-pipeline__item");
-        item.append(element("span", "dashboard-pipeline__label", titulo));
-        item.append(element("strong", "dashboard-pipeline__value", String(data.pipeline[campo] ?? 0)));
-        return item;
     }));
 }
 
@@ -161,7 +139,6 @@ export function renderDashboard(data) {
     if (!content) return;
     criarEstruturaDashboard();
     renderMetricas(data);
-    renderPipeline(data);
     renderAtencao(data);
     renderAtividade(data);
 }

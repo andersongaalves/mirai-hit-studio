@@ -4,6 +4,7 @@ import hashlib
 import io
 import logging
 import math
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -116,8 +117,38 @@ def preparar(db, *, actor, file_type, mime_type, data):
             "reserva_bytes": math.ceil(seconds * 24000) + 512 * 1024}
 
 
+# AUD6-S12-002: the tag runs inside the web process, so ffmpeg yields CPU to the API.
+FFMPEG_NICE = 15
+MAX_ORIGINAL_BYTES = 50 * 1024 * 1024
+_despertar = None
+
+
+def _baixa_prioridade():
+    try:
+        os.nice(FFMPEG_NICE)
+    except OSError:
+        pass
+
+
+def registrar_despertador(callback):
+    """The worker loop registers how to wake up when a preview is queued."""
+    global _despertar
+    _despertar = callback
+
+
+def sinalizar_fila():
+    if _despertar is not None:
+        try:
+            _despertar()
+        except Exception:
+            logger.warning("audio_tag_worker_wake_failed")
+
+
 def mixar(original, tag, intervalo, volume):
     from imageio_ffmpeg import get_ffmpeg_exe
+
+    if len(original) > MAX_ORIGINAL_BYTES:
+        raise RuntimeError("audio_original_too_large")
 
     with TemporaryDirectory(prefix="mirai-audio-tag-") as directory:
         folder = Path(directory)
@@ -134,7 +165,8 @@ def mixar(original, tag, intervalo, volume):
                 "-protocol_whitelist", "file,pipe", "-i", str(stamp), "-filter_complex", graph,
                 "-map", "[out]", "-map_metadata", "-1", "-c:a", "libmp3lame", "-b:a", "192k",
                 "-t", "1800", "-fs", str(50 * 1024 * 1024), "-y", str(output),
-            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120, check=False)
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120, check=False,
+                preexec_fn=_baixa_prioridade if os.name == "posix" else None)
             if result.returncode != 0 or not output.exists():
                 raise RuntimeError("audio_render_failed")
             content = output.read_bytes()
@@ -193,6 +225,14 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
                         logger.error("audio_tag_compensation_failed file_id=%s", arquivo_id)
                 if job is not None and job.estado == "pendente":
                     job.estado = "erro"
+                    try:
+                        # AUD6-S08-002: the studio hears about the failure; the job state never depends on it.
+                        with db.begin_nested():
+                            failed = db.get(ProducaoArquivoModel, arquivo_id)
+                            if failed is not None:
+                                portal_notificacao_service.falha_tag(db, failed)
+                    except Exception:
+                        logger.warning("audio_tag_failure_notice_failed file_id=%s", arquivo_id)
                     db.commit()
                 logger.warning("audio_tag_processing_failed file_id=%s", arquivo_id)
             return False

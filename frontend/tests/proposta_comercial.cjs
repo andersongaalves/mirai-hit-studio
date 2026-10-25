@@ -63,6 +63,10 @@ const root = path.resolve(__dirname, '..');
                 }
                 if (url.pathname.endsWith('/acesso-cliente')) return route.fulfill({ json: clientAccess });
                 const action = url.pathname.split('/').pop();
+                if (action === 'reabrir') {
+                    Object.assign(proposal, { status: 'rascunho', expirada: false, valida_ate: null, enviada_em: null, versao: proposal.versao + 1 });
+                    return route.fulfill({ json: proposal });
+                }
                 if (['enviar', 'aprovar'].includes(action)) {
                     await new Promise(resolve => setTimeout(resolve, 150));
                     if (failure === action) return route.fulfill({ status: 503, json: { detail: 'Falha sintetica comercial' } });
@@ -249,6 +253,20 @@ const root = path.resolve(__dirname, '..');
         assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 390, JSON.stringify(bounds));
         await page.screenshot({path:path.join(require('node:os').tmpdir(),'mirai-pr26-classificacao-mobile.png')});
         await page.getByRole('button',{name:'Cancelar',exact:true}).click();
+        // AUD6-S05-001: an expired proposal offers "Reabrir para atualizar" and returns to draft.
+        await page.evaluate(() => window.fecharEditorProposta());
+        Object.assign(proposal, { status: 'enviada', expirada: true, valida_ate: '2026-09-22T23:59:59-03:00', aprovada_em: null });
+        await page.evaluate(async id => (await import('/js/admin/propostas/propostas.js')).abrirEditorProposta({ id }), budget.id);
+        const reopen = page.locator('#btn-reabrir-proposta');
+        await reopen.waitFor({ state: 'visible' });
+        assert.match(await page.locator('#proposta-status').textContent(), /vencida em 22\/09\/2026/);
+        const versionBefore = proposal.versao;
+        page.once('dialog', dialog => dialog.accept());
+        await reopen.click();
+        await page.waitForFunction(async () => (await import('/js/admin/propostas/proposta_state.js')).propostaState.proposta?.status === 'rascunho');
+        assert.equal(calls.filter(call => call.endsWith('/reabrir')).length, 1);
+        assert.equal(proposal.versao, versionBefore + 1);
+        assert.equal(await reopen.isHidden(), true);
         assert.deepEqual(errors, []);
         console.log('PASS: send/approve guards, dirty, confirmations, failures, double-submit, state, CRM reload and production availability.');
     } finally { await browser.close(); }

@@ -145,16 +145,32 @@ const root = path.resolve(__dirname, '..');
         // AUD6-S02-003: the panel has no login form; sign in through /acesso.
         calls.length = 0;
         await signIn(page, { next: '/admin.html', username: 'teste' });
-        await page.waitForFunction(() => document.getElementById('lista-servicos')?.textContent.includes('Servico teste'));
-        await page.waitForTimeout(100);
+        // AUD6-S09-004: signing in loads only the dashboard; each section loads when opened.
+        const openAndLoad = async () => {
+            await page.locator('#dashboard-metrics .dashboard-kpi').first().waitFor();
+            await page.waitForTimeout(100);
+        };
+        await openAndLoad();
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
-        assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        const expected = ['GET /admin/audio-tag', 'GET /audit-logs', 'GET /clientes', 'GET /combos', 'GET /config', 'GET /config/portfolio-segments', 'GET /config/portfolio-segments', 'GET /dashboard', 'GET /financeiro/cobrancas', 'GET /financeiro/resumo', 'GET /newsletter/campaigns', 'GET /newsletter/subscribers', 'GET /orcamentos', 'GET /producoes', 'GET /projetos/admin', 'GET /projetos/envios/admin', 'GET /servicos', 'GET /usuarios', 'GET /usuarios/produtores', 'GET /usuarios/produtores'];
-        const entryCalls = () => calls.filter(call => call.startsWith('GET') && call !== 'GET /auth/me').sort();
+        const expected = ['GET /dashboard'];
+        // The notification bell polls on its own schedule; it is checked apart from the entry loads.
+        const entryCalls = () => calls.filter(call => call.startsWith('GET') && !['GET /auth/me', 'GET /admin/notificacoes'].includes(call)).sort();
         assert.deepEqual(entryCalls(), expected);
+        assert.ok(calls.includes('GET /admin/notificacoes'));
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));
+        await page.waitForTimeout(100);
         assert.equal(entryCalls().length, expected.length);
+        await page.locator('[data-admin-target="section-servicos"]').first().click();
+        await page.waitForFunction(() => document.getElementById('lista-servicos')?.textContent.includes('Servico teste'));
+        assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
+        assert.deepEqual(entryCalls(), ['GET /combos', 'GET /dashboard', 'GET /servicos']);
+        await page.evaluate(() => window.mostrarDashboard());
+        await page.locator('[data-admin-target="section-servicos"]').first().click();
+        await page.waitForTimeout(100);
+        assert.equal(entryCalls().filter(call => call === 'GET /servicos').length, 1, 'a section loads only on its first visit');
+        await page.locator('[data-admin-target="section-custos"]').first().click();
+        await page.waitForFunction(() => document.getElementById('cfg_desconto')?.value === '10');
         assert.equal(await page.locator('#cfg_desconto').inputValue(), '10');
         for (const value of ['0', '15', '-1', '101']) {
             await page.locator('#cfg_desconto').evaluate((el, value) => { el.value = value; }, value);
@@ -169,16 +185,14 @@ const root = path.resolve(__dirname, '..');
         assert.match(errors.pop(), /^Error: Informe um número válido para desconto\./);
         calls.length = 0;
         await page.reload();
-        await page.waitForFunction(() => document.getElementById('lista-servicos').textContent.includes('Servico teste'));
-        await page.waitForTimeout(100);
-        assert.deepEqual(calls.sort(), ['GET /auth/me', ...expected].sort());
+        await openAndLoad();
+        assert.deepEqual(calls.filter(call => call !== 'GET /admin/notificacoes').sort(), ['GET /auth/me', ...expected].sort());
         const registrations = await page.evaluate(() => ({ ...window.testRegistrations }));
         await expectAccessPage(page, () => page.evaluate(() => window.fazerLogout()));
         calls.length = 0;
         await signIn(page, { next: '/admin.html', username: 'teste' });
-        await page.waitForFunction(() => document.getElementById('lista-servicos')?.textContent.includes('Servico teste'));
-        await page.waitForTimeout(100);
-        assert.deepEqual(calls.filter(call => call.startsWith('GET') && call !== 'GET /auth/me').sort(), expected);
+        await openAndLoad();
+        assert.deepEqual(entryCalls(), expected);
         assert.deepEqual(await page.evaluate(() => window.testRegistrations), registrations);
         assert.deepEqual(errors, []);
         if (process.env.PAYLOAD_OUTPUT) await fs.writeFile(process.env.PAYLOAD_OUTPUT, JSON.stringify(payloads));

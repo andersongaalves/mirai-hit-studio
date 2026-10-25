@@ -24,6 +24,7 @@ import { resetInbox } from "./inbox/inbox.js";
 import { resetBuilder } from "./builder/builder.js";
 import { initializeAdminShell, resetAdminShell } from "./admin_shell.js";
 import { closeAllAdminModals } from "./admin_modal.js";
+import { startPortalNotifications } from "../modules/portal_notifications.js";
 
 function expose(name, callback) {
     window[name] = callback;
@@ -41,6 +42,8 @@ async function initializeAdmin() {
     if (Auth.getToken() !== token) return;
     if (sessaoInicializada === token && inicializacao) return inicializacao;
     sessaoInicializada = token;
+    const user = Auth.getCurrentUser?.();
+    if (user) startPortalNotifications(user);
     inicializacao = Dashboard.inicializarDashboard().catch((error) => {
         sessaoInicializada = null;
         inicializacao = null;
@@ -118,6 +121,19 @@ expose("novoCliente", Clientes.novoCliente);
 expose("fecharModalCliente", Clientes.closeClienteModal);
 
 expose("salvarConfiguracoesExtras", Config.salvarConfiguracoesExtras);
+
+// AUD6-S02-007: no inline handlers, so the enforced CSP does not need 'unsafe-inline' for scripts.
+const ADMIN_ACTIONS = new Set([
+    "fazerLogout", "abrirEditorServico", "adicionarParametroBloco", "salvarServico", "fecharEditorServico",
+    "novoProjeto", "salvarConfiguracoesExtras", "novoCliente", "fecharModalProjeto", "salvarProjeto",
+    "fecharModalOrcamento", "fecharEditorProposta", "fecharModalCliente", "fecharModalProducao",
+]);
+document.addEventListener("click", event => {
+    const control = event.target.closest?.("[data-admin-action]");
+    const action = control?.dataset.adminAction;
+    if (!action || !ADMIN_ACTIONS.has(action) || control.disabled) return;
+    window[action]?.();
+});
 
 document.addEventListener("DOMContentLoaded", async () => {
     try {

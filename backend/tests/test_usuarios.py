@@ -121,6 +121,9 @@ async def check():
             me = await client.get('/auth/me', headers={'Authorization': 'Bearer ' + login.json()['access_token']})
             assert set(me.json()) == expected[username], me.json()
         assert me.json()['cliente_id'] == 7 and 'is_test' not in me.json()
+        # AUD6-S02-006: letter case does not matter at login; the session keeps the stored login.
+        upper = await client.post('/auth/login', json={'username': 'ADMIN', 'password': 'admin-pass'})
+        assert upper.status_code == 200 and upper.json()['user']['username'] == 'admin', upper.text
         checked = []
         real = auth_module.verify_password
         with patch.object(auth_module, 'verify_password', side_effect=lambda plain, hashed: checked.append(hashed) or real(plain, hashed)):
@@ -157,6 +160,9 @@ async def check():
 
         assert (await client.post('/usuarios', headers=bearer('admin'), json={
             'username':'novo_usuario', 'password':'other-password', 'role':'produtor',
+        })).status_code == 409
+        assert (await client.post('/usuarios', headers=bearer('admin'), json={
+            'username':'Novo_Usuario', 'password':'other-password', 'role':'produtor',
         })).status_code == 409
         assert (await client.post('/usuarios', headers=bearer('admin'), json={
             'username':'blocked', 'password':'short', 'role':'produtor',

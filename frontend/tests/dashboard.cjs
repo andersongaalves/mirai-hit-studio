@@ -17,6 +17,7 @@ const dashboard = {
         falhas_processamento_tag: 6,
         pagamentos_em_conciliacao: 7,
         entregas_aguardando_aprovacao: 8,
+        propostas_expiradas: 2,
     },
     recent_activity: [{ tipo: 'proposta_enviada', titulo: '<img src=x onerror=alert(1)>', data: '2026-09-13T12:00:00Z', secao: 'section-orcamentos' }],
 };
@@ -63,6 +64,13 @@ async function staticResponse(route) {
             return route.fulfill({ json: url.pathname === '/config' ? {} : [] });
         }
         if (url.pathname === '/usuarios/produtores') return route.fulfill({ json: [] });
+        if (url.pathname === '/admin/notificacoes') return route.fulfill({ json: {
+            itens: [{ id: 9, tipo: 'admin_beat_revisao', texto: 'Um beat foi enviado para revisão.', url: '/admin.html#section-beats', created_at: '2026-10-25T12:00:00Z', vista_em: null }],
+            nao_vistas: 1, tem_mais: false,
+        } });
+        if (url.pathname === '/admin/notificacoes/vistas') return route.fulfill({ json: [
+            { id: 9, tipo: 'admin_beat_revisao', texto: 'Um beat foi enviado para revisão.', url: '/admin.html#section-beats', created_at: '2026-10-25T12:00:00Z', vista_em: '2026-10-25T12:01:00Z' },
+        ] });
         if (url.pathname === '/admin/audio-tag/previas/falhas') return route.fulfill({ json: [
             { arquivo_id: 41, arquivo_nome: '<b>mix.wav</b>', producao_id: 3, producao_titulo: 'Single Aurora', created_at: '2026-10-20T12:00:00Z' },
         ] });
@@ -82,8 +90,13 @@ async function staticResponse(route) {
         await page.waitForSelector('#dashboard-metrics .dashboard-kpi');
         assert.equal(await page.locator('#dashboard-metrics .dashboard-kpi').count(), 5);
         assert.match(await page.locator('#dashboard-metrics').textContent(), /4/);
-        assert.equal(await page.locator('#dashboard-pipeline li').count(), 4);
-        assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 8);
+        // AUD6-S09-003: one indicator row (pipeline) and one pending list, no repeats.
+        assert.equal(await page.locator('#dashboard-pipeline').count(), 0);
+        const kpiText = await page.locator('#dashboard-metrics').textContent();
+        assert.match(kpiText, /Propostas enviadas/);
+        assert.doesNotMatch(kpiText, /atrasad|aguardando decisão/);
+        assert.equal(await page.locator('#dashboard-attention .dashboard-attention-item').count(), 9);
+        assert.match(await page.locator('#dashboard-attention').textContent(), /2 propostas vencidas sem resposta/);
         assert.match(await page.locator('#dashboard-attention').textContent(), /1 produção atrasada/);
         assert.match(await page.locator('#dashboard-attention').textContent(), /3 solicitações de produção para análise/);
         const failures = page.locator('#dashboard-attention .dashboard-tag-failures');
@@ -93,9 +106,9 @@ async function staticResponse(route) {
         await failures.getByRole('button', { name: 'Reprocessar a tag de <b>mix.wav</b>' }).click();
         await page.waitForFunction(() => document.querySelector('.dashboard-tag-failures')?.textContent.includes('na fila para reprocessar'));
         assert.equal(tagRetries, 1);
-        const attentionBeforePipeline = await page.evaluate(() =>
-            Boolean(document.getElementById('dashboard-attention').compareDocumentPosition(document.getElementById('dashboard-pipeline')) & Node.DOCUMENT_POSITION_FOLLOWING));
-        assert.equal(attentionBeforePipeline, true);
+        const attentionBeforeActivity = await page.evaluate(() =>
+            Boolean(document.getElementById('dashboard-attention').compareDocumentPosition(document.getElementById('dashboard-activity')) & Node.DOCUMENT_POSITION_FOLLOWING));
+        assert.equal(attentionBeforeActivity, true);
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });
@@ -105,6 +118,15 @@ async function staticResponse(route) {
         }
         assert.equal(await page.locator('#dashboard-activity img, #dashboard-activity script').count(), 0);
         assert.match(await page.locator('#dashboard-activity').textContent(), /<img src=x/);
+        // AUD6-S11-001: the Admin has its own inbox; a notice opens the matching section.
+        const bell = page.locator('.admin-topbar__actions .portal-notifications-button');
+        await bell.waitFor();
+        const notice = page.locator('.portal-notifications-new a', { hasText: 'Um beat foi enviado para revisão.' });
+        await notice.waitFor();
+        assert.equal(await notice.getAttribute('href'), '/admin.html#section-beats');
+        await notice.click();
+        assert.equal(await page.locator('#section-beats').isVisible(), true);
+        await page.evaluate(() => window.mostrarDashboard());
         await page.locator('#dashboard-attention').getByRole('button', { name: 'Ver produções' }).click();
         assert.equal(await page.locator('#section-producoes').isVisible(), true);
         await page.evaluate(() => window.mostrarDashboard());
@@ -123,6 +145,7 @@ async function staticResponse(route) {
             solicitacoes_producao: 0, beats_em_revisao: 0,
             portfolio_em_revisao: 0, falhas_processamento_tag: 0,
             pagamentos_em_conciliacao: 0, entregas_aguardando_aprovacao: 0,
+            propostas_expiradas: 0,
         };
         dashboard.recent_activity = [];
         await page.evaluate(() => window.mostrarDashboard());
