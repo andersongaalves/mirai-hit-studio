@@ -237,7 +237,8 @@ claimed = api.post('/admin/notificacoes/vistas', headers=ADMIN, json={'ids': ids
 assert claimed.status_code == 200 and len(claimed.json()) == 1, claimed.text
 assert api.get('/admin/notificacoes', headers=ADMIN).json()['nao_vistas'] == 0
 with Session(engine) as db:
-    assert db.query(PortalNotificacaoModel).filter_by(orcamento_id=real_id).one().papel == 'admin'
+    rows = db.query(PortalNotificacaoModel).filter_by(orcamento_id=real_id).all()
+    assert rows and {row.papel for row in rows} == {'admin'}  # one per active admin
 ''')
 
     def test_additive_migration_roundtrip_does_not_backfill(self):
