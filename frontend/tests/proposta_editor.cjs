@@ -62,6 +62,8 @@ const root = path.resolve(__dirname, '..');
                         response.id = id + 100;
                         response.orcamento_id = id;
                         response.cliente_snapshot.orcamento.id = id;
+                        // AUD6-S05-002: a reopened draft carries the differences from the sent version.
+                        response.mudancas = { versao_anterior: 1, itens: [], total: { antes: '100.00', depois: '120.00' }, campos_alterados: ['descricao'] };
                         saved.set(id, response);
                     }
                     return route.fulfill({ json: saved.get(id) });
@@ -133,6 +135,10 @@ const root = path.resolve(__dirname, '..');
         assert.equal(await page.locator('#proposta_numero').inputValue(), fixture.numero);
         assert.equal(await page.locator('#proposta_numero').getAttribute('readonly'), '');
         assert.match(await page.locator('#proposta-status').textContent(), /rascunho.*Versão 1/);
+        const changes = await page.locator('#proposta-mudancas-host').textContent();
+        assert.match(changes, /Diferenças em relação à versão 1 enviada ao cliente/);
+        assert.match(changes, /Total: de R\$\s*100,00 para R\$\s*120,00/);
+        assert.match(changes, /Texto revisado: Descrição/);
         assert.equal((await state()).dirty, false);
         await page.locator('#proposta_descricao').fill('Descricao persistida');
         assert.equal((await state()).dirty, true);

@@ -1892,6 +1892,12 @@
 .uso-bar--warning .uso-bar__fill { background: var(--color-warning); }
 .uso-bar--danger .uso-bar__fill { background: var(--color-danger); }
 
+/* AUD6-S05-002: what changed since the version sent before. */
+.proposta-mudancas { margin: 16px 0; padding: 12px 16px; border: 1px solid var(--color-accent, #22d3ee); border-radius: 8px; background: rgba(34, 211, 238, .06); }
+.proposta-mudancas__title { margin: 0 0 8px; font-size: 1rem; }
+.proposta-mudancas__list { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
+.proposta-mudancas__item { overflow-wrap: anywhere; }
+.proposta-mudancas__item--removido { text-decoration: none; opacity: .85; }
 /* AUD6-S09-002: client and producer pages and the links that open them. */
 .entity-link { margin-left: 8px; }
 .entity-link.hidden { display: none; }

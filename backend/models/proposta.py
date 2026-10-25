@@ -124,6 +124,10 @@ class PropostaModel(Base):
         nullable=True,
     )
 
+    # AUD6-S05-002: the last version the client saw, kept when an expired proposal
+    # returns to draft, so the editor and the portal can show what changed.
+    envio_anterior = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+
     pdf_path = Column(
         String(500),
         nullable=True,

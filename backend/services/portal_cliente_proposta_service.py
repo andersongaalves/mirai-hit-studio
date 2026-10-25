@@ -111,6 +111,8 @@ def _project(model):
         "enviada_em": proposal.enviada_em,
         "valida_ate": proposal.valida_ate,
         "expirada": proposal.expirada,
+        # AUD6-S05-002: only for a re-sent proposal; a draft never reaches the client.
+        "mudancas": proposal.mudancas if proposal.status != "rascunho" else None,
         "aprovada_em": proposal.aprovada_em,
         "created_at": proposal.created_at,
         "updated_at": proposal.updated_at,

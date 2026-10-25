@@ -178,7 +178,7 @@ class PortfolioCreditosTests(unittest.TestCase):
         isolated.BootstrapTests().run_case('''
 from alembic import command
 from sqlalchemy import inspect
-assert bootstrap(engine) == 'e1a3c5d7f9b2'
+assert bootstrap(engine) == 'f2b4d6e8a0c3'
 assert 'projeto_creditos' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'f3b5d7a9c124')
 assert 'projeto_creditos' not in inspect(engine).get_table_names()
