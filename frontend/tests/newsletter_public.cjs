@@ -38,7 +38,7 @@ async function staticResponse(route) {
         });
         await page.goto("http://localhost:4173/index.html");
         await page.waitForSelector("#newsletter-form");
-        await page.getByRole("button", { name: "Aceitar metricas" }).click();
+        await page.getByRole("button", { name: "Aceitar métricas" }).click();
         await page.locator("#newsletter-email").fill("private@example.com");
         await page.locator("#newsletter-form").evaluate(form => form.requestSubmit());
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === "event" && item[1] === "newsletter_subscribe"));
