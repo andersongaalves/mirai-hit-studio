@@ -1,9 +1,10 @@
 import { authFetch } from "../admin/auth.js";
+import { humanClientMessage } from "./messages.js";
 
 async function responseData(response, fallback) {
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-        const error = new Error(typeof data?.detail === "string" ? data.detail : fallback);
+        const error = new Error(humanClientMessage(data?.detail, fallback));
         error.status = response.status;
         throw error;
     }
@@ -81,7 +82,7 @@ export async function baixarProposta(id) {
     const response = await authFetch(`/portal/cliente/propostas/${id}/documento`);
     if (!response.ok) {
         const data = await response.json().catch(() => null);
-        const error = new Error(typeof data?.detail === "string" ? data.detail : "Documento indisponível.");
+        const error = new Error(humanClientMessage(data?.detail, "Documento indisponível."));
         error.status = response.status;
         throw error;
     }
@@ -138,7 +139,7 @@ export async function baixarArquivo(id) {
     const response = await authFetch(`/portal/cliente/arquivos/${id}/conteudo`);
     if (!response.ok) {
         const data = await response.json().catch(() => null);
-        throw new Error(typeof data?.detail === "string" ? data.detail : "Não foi possível acessar o arquivo.");
+        throw new Error(humanClientMessage(data?.detail, "Não foi possível acessar o arquivo."));
     }
     const blob = await response.blob();
     const disposition = response.headers.get("content-disposition") || "";
