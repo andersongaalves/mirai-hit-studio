@@ -432,12 +432,20 @@ with Session(engine) as db:
     beat = make_beat(db)
     first = accepted(db, 1, beat, 'exclusivo', '500', 'm1')
     license = license_of(db, first.id)
+    # AUD6-S04-003: rejecting while a client holds the reservation is refused.
+    from schemas.beat import BeatReview
+    try: beat_service.review(db, beat.id, BeatReview(decisao='rejeitar', motivo='Qualidade'), admin)
+    except HTTPException as error: assert error.status_code == 409 and 'reserva' in error.detail
+    else: raise AssertionError('rejected a reserved beat')
+    db.rollback()
     released = beat_service.release_reservation(db, license.id, 'Cliente desistiu', admin)
     assert released['status'] == 'cancelada' and released['motivo_cancelamento'] == 'admin'
     try: beat_service.release_reservation(db, license.id, 'De novo', admin)
     except HTTPException as error: assert error.status_code == 409
     else: raise AssertionError('released twice')
     assert [item['id'] for item in beat_service.client_list(db)] == [beat.id]
+    rejected = beat_service.review(db, beat.id, BeatReview(decisao='rejeitar', motivo='Qualidade'), admin)
+    assert rejected['status'] == 'rejeitado'
     entry = db.query(AuditLogModel).filter_by(action='beat.licenca.liberada').one()
     assert entry.actor_user_id == 1
     assert entry.metadata_json == {'beat_id': beat.id, 'proposal_id': first.id, 'reason': 'Cliente desistiu'}
