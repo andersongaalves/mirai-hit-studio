@@ -265,12 +265,15 @@ class PropostaResponse(Contract):
     # AUD6-S05-001: derived from enviada_em; never stored.
     valida_ate: datetime | None = None
     expirada: bool = False
+    # AUD6-S05-002: differences from the last version sent (None when nothing to compare).
+    mudancas: dict | None = None
 
     @classmethod
     def from_orm_model(cls, proposta):
         mapping = {"itens": "itens_json", "pagamentos": "pagamentos_json", "totais": "totais_json"}
         data = {name: getattr(proposta, mapping.get(name, name)) for name in cls.model_fields
-                if name not in ("snapshot_economico", "finalidade", "contrato_creditos", "valida_ate", "expirada")}
+                if name not in ("snapshot_economico", "finalidade", "contrato_creditos", "valida_ate", "expirada",
+                                "mudancas")}
         from core import proposta_validade
 
         status = getattr(proposta.status, "value", proposta.status)
@@ -282,4 +285,12 @@ class PropostaResponse(Contract):
         data["snapshot_economico"] = getattr(proposta, "snapshot_economico", None)
         if data["totais"] == {}:
             data["totais"] = None  # Not calculated yet, not an authoritative zero.
-        return cls.model_validate(data)
+        response = cls.model_validate(data)
+        anterior = getattr(proposta, "envio_anterior", None)
+        if isinstance(anterior, dict) and anterior:
+            from core import proposta_mudancas
+
+            response = response.model_copy(update={
+                "mudancas": proposta_mudancas.comparar(anterior, response.model_dump(mode="json")),
+            })
+        return response

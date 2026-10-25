@@ -338,6 +338,37 @@ async function staticResponse(route) {
             host.replaceChildren(...previous);
             return result;
         });
+        // AUD6-S05-002: a re-sent proposal says what changed since the previous version.
+        const changed = await page.evaluate(async () => {
+            const ui = await import('/js/cliente/ui.js');
+            const host = document.getElementById('client-proposal-detail-content');
+            const previous = [...host.childNodes];
+            ui.renderProposalDetail({
+                id: 98, numero: 'P-98', versao: 3, status: 'enviada', expirada: false, valida_ate: null,
+                objeto: 'Revisada', servico: 'Mix', descricao: '', condicoes: '', itens: [], totais: { total: '1350.00' },
+                politica_pagamento: 'integral', documento_disponivel: false, finalidade: 'producao',
+                mudancas: {
+                    versao_anterior: 2, campos_alterados: ['condicoes'], total: { antes: '1200.00', depois: '1350.00' },
+                    itens: [
+                        { tipo: 'alterado', descricao: '<b>Mixagem</b>', antes: { quantidade: '1', valor_unitario: '1000.00', desconto: '0' }, depois: { quantidade: '1', valor_unitario: '1100.00', desconto: '0' } },
+                        { tipo: 'adicionado', descricao: 'Ajuste extra', depois: { quantidade: '1', valor_unitario: '150.00', desconto: '0' } },
+                        { tipo: 'removido', descricao: 'Master', antes: { quantidade: '1', valor_unitario: '100.00', desconto: '0' } },
+                    ],
+                },
+            }, { onDownload() {}, onRefuse() {}, onAccept() {} });
+            const box = host.querySelector('.proposta-mudancas');
+            const result = { text: box?.textContent || '', bold: box?.querySelectorAll('b').length, items: box?.querySelectorAll('li').length };
+            host.replaceChildren(...previous);
+            return result;
+        });
+        assert.match(changed.text, /O que mudou desde a versão 2/);
+        assert.match(changed.text, /<b>Mixagem<\/b>: de 1 × R\$\s*1\.000,00 para 1 × R\$\s*1\.100,00/);
+        assert.match(changed.text, /Novo item: Ajuste extra/);
+        assert.match(changed.text, /Item retirado: Master/);
+        assert.match(changed.text, /Total: de R\$\s*1\.200,00 para R\$\s*1\.350,00/);
+        assert.match(changed.text, /Texto revisado: Condições/);
+        assert.equal(changed.bold, 0);
+        assert.equal(changed.items, 5);
         assert.match(expired.text, /Vencida/);
         assert.match(expired.text, /venceu em 10\/10\/2026/);
         assert.equal(expired.accept, 0);

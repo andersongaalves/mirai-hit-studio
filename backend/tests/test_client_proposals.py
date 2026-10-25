@@ -159,10 +159,25 @@ with Session(engine) as db:
         pass
     else:
         raise AssertionError('draft reopened twice')
+    # AUD6-S05-002: the reopened draft keeps the sent version for comparison.
+    draft = service.buscar(db, proposal.id)
+    assert draft.mudancas is None  # nothing edited yet
+    previous_items = [item.model_dump(mode='json') for item in draft.itens]
+    service.atualizar(db, proposal.id, PropostaUpdate(
+        itens=previous_items + [{'descricao': 'Ajuste extra', 'quantidade': 1, 'valor_unitario': '150', 'desconto': 0}],
+        condicoes=draft.condicoes + ' Revisada.'))
+    edited = service.buscar(db, proposal.id)
+    assert edited.mudancas['versao_anterior'] == old_version, edited.mudancas
+    assert [(item['tipo'], item['descricao']) for item in edited.mudancas['itens']] == [('adicionado', 'Ajuste extra')]
+    assert edited.mudancas['campos_alterados'] == ['condicoes']
+    assert portal_proposals.list_for_client(db, client.id) == []
     with patch.object(resend.Emails, 'send', return_value={'id':'proposal-message-2'}):
         commercial.enviar(db, proposal.id)
     current = db.get(PropostaModel, proposal.id)
     assert current.status == 'enviada' and current.snapshot_economico is not None
+    seen = portal_proposals.list_for_client(db, client.id)[0]['mudancas']
+    assert seen['versao_anterior'] == old_version and float(seen['itens'][0]['depois']['valor_unitario']) == 150, seen
+    assert float(seen['total']['depois']) - float(seen['total']['antes']) == 150
     accepted = portal_proposals.accept(db, proposal.id, client.id, current.versao, user, 'client-on-time')
     assert accepted['status'] == 'aceita'
 ''')

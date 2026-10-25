@@ -106,6 +106,7 @@ class PropostaClienteResponse(BaseModel):
     enviada_em: datetime
     valida_ate: datetime | None = None
     expirada: bool = False
+    mudancas: dict | None = None  # AUD6-S05-002
     aprovada_em: datetime | None
     created_at: datetime | None
     updated_at: datetime | None

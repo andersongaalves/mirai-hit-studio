@@ -281,6 +281,10 @@ def reabrir_expirada(db, proposta_id, actor=None, request_id=None):
                 "Esta proposta possui operações comerciais e requer conciliação."
             )
         old_version = model.versao
+        # AUD6-S05-002: keep what the client saw for the comparison on the next send.
+        from core import proposta_mudancas
+
+        model.envio_anterior = proposta_mudancas.foto(service._resposta(model).model_dump(mode="json"))
         model.status = Status.RASCUNHO.value
         model.versao = old_version + 1
         model.enviada_em = None

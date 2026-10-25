@@ -1,3 +1,4 @@
+import { renderMudancas } from "../modules/proposta_mudancas.js";
 import {
     FINAL_STATUSES,
     deadlineState,
@@ -567,7 +568,8 @@ export function renderProposalDetail(proposal, handlers) {
         payment.setAttribute("data-authenticated-checkout", "true");
         actions.append(payment);
     }
-    detail.append(title, meta, description, conditions, items, actions);
+    const changes = renderMudancas(proposal.mudancas, { money: formatMoney });
+    detail.append(...[title, meta, changes, description, conditions, items, actions].filter(Boolean));
     root.append(detail);
 }
 
