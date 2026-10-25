@@ -9,9 +9,9 @@ implementado sem autorizacao do responsavel.
 | Campo | Estado atual |
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
-| Lote atual | Lotes 1 e 2 publicados; proximo: Lote 3 |
+| Lote atual | Lote 3 parcialmente publicado (falta APL-S12-03 + limite por login) |
 | Item em andamento | - |
-| Proxima acao | Iniciar o Lote 3 (entrada e conta) e responder as decisoes pendentes da secao 5 |
+| Proxima acao | APL-S12-03: limitador persistente (login por IP e por login, orcamento, newsletter); depois Lote 4 |
 | Ultima atualizacao | 24/10/2026 |
 
 ## 2. Regras
@@ -39,15 +39,15 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | APL-S02-01 | 001, 002 | P1 | Sessao vinculada ao id da conta (`uid`); renomear, desativar ou mudar papel encerra as sessoes | Codigo | Publicado | #96 |
-| APL-S02-02 | 003, 010, 013 | P2 | Entrada unica: paineis redirecionam a `/acesso?next=`; `next` validado por papel; remover logins antigos (inclui Enter e placeholder do Admin); `/acesso` com sessao valida oferece continuar | Codigo + testes de navegador | Proposto | - |
-| APL-S02-03 | 005 | P2 | Admin > Usuarios: conta de cliente editavel (papel somente leitura, filtro "Cliente", link para o cadastro do cliente) | Codigo | Proposto | - |
+| APL-S02-02 | 003, 010, 013 | P2 | Entrada unica: paineis redirecionam a `/acesso?next=`; `next` validado por papel; remover logins antigos (inclui Enter e placeholder do Admin); `/acesso` com sessao valida oferece continuar | Codigo + testes de navegador | Publicado | #102 |
+| APL-S02-03 | 005 | P2 | Admin > Usuarios: conta de cliente editavel (papel somente leitura, filtro "Cliente", link para o cadastro do cliente) | Codigo | Publicado | #103 |
 | APL-S02-04 | 004 | P2 | Troca da propria senha (senha atual + nova, encerra outras sessoes, auditoria); texto de recuperacao para produtores e equipe | Codigo; **Decisao**: produtores passam a ter e-mail para recuperacao? | Decisao | - |
 | APL-S02-05 | 006 | P2 | Login sem diferenciar maiusculas; unicidade por `lower(username)` (dados atuais sem colisao) | Migration; **Decisao** | Decisao | - |
 | APL-S02-06 | 007 | P2 | Aplicar a CSP (sair do Report-Only) e "Sair de todos os dispositivos" | Codigo + S12; **Decisao** sobre a CSP | Decisao | - |
-| APL-S02-07 | 008, 009 | P3 | Hash ficticio para login inexistente; limite de login por IP e por login em `auth_rate_limits` | Codigo | Proposto | - |
-| APL-S02-08 | 011 | P3 | Portais exibem o nome de exibicao em vez do login | Codigo | Proposto | - |
-| APL-S02-09 | 012 | P3 | `/auth/me` e login com campos minimos por papel | Codigo | Proposto | - |
-| APL-S02-10 | 014 | P3 | Textos das telas de acesso (Privacidade como link, placeholder da senha, peso de "Esqueci minha senha", login apos ativacao, link expirado) | Codigo/texto | Proposto | - |
+| APL-S02-07 | 008, 009 | P3 | Hash ficticio para login inexistente; limite de login por IP e por login em `auth_rate_limits` | Codigo | Em correcao | #103 (hash ficticio); limite por login com APL-S12-03 |
+| APL-S02-08 | 011 | P3 | Portais exibem o nome de exibicao em vez do login | Codigo | Publicado | #103 |
+| APL-S02-09 | 012 | P3 | `/auth/me` e login com campos minimos por papel | Codigo | Publicado | #103 |
+| APL-S02-10 | 014 | P3 | Textos das telas de acesso (Privacidade como link, placeholder da senha, peso de "Esqueci minha senha", login apos ativacao, link expirado) | Codigo/texto | Publicado | #102 |
 | APL-S02-11 | 015 | P3 | Aviso antes de expirar e renovacao da sessao em uso | **Decisao**: duracao e refresh | Decisao | - |
 | APL-S02-12 | Centralizacao 5.1 | P3 | Menu da conta (perfil, seguranca e senha, sair, sair de todos os dispositivos, ajuda) | Codigo; depende de 04, 06, 08 | Proposto | - |
 
@@ -151,7 +151,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 | --- | --- | --- | --- |
 | 1 | Seguranca de sessao | APL-S02-01 | Publicado (PR #96, 24/10/2026) |
 | 2 | Integridade comercial e financeira | APL-S06-01, APL-S06-02, APL-S10-01, APL-S10-02, APL-S03-01 (+ APL-S10-04) | Publicado (PRs #97, #98, #99, 24/10/2026) |
-| 3 | Entrada e conta | APL-S02-02, APL-S02-03, APL-S02-07 + APL-S12-03, APL-S02-08, APL-S02-09, APL-S02-10 | Proposto |
+| 3 | Entrada e conta | APL-S02-02, APL-S02-03, APL-S02-07 + APL-S12-03, APL-S02-08, APL-S02-09, APL-S02-10 | Parcial: #102 e #103 publicados em 24/10/2026; falta APL-S12-03 |
 | 4 | Visibilidade da operacao | APL-S09-01, APL-S11-01, APL-S08-02, APL-S10-03, APL-S04-01 | Proposto |
 | 5 | Confiabilidade e CI | APL-S12-01, APL-S12-02, APL-S12-04, APL-S06-03 | Proposto |
 | 6 | Experiencia dos portais | APL-S07-01, APL-S02-12, APL-S08-01, APL-S02-04 (apos decisao), APL-S07-03, APL-S07-04, APL-S08-03 | Proposto |
@@ -173,6 +173,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 24/10/2026 | Lote 3 (parcial) | #102: entrada unica pelo /acesso (paineis sem login proprio, next validado por papel, "Continuar" com sessao existente, aviso de sessao expirada, textos de acesso, ativacao entra direto) e 27 suites de navegador migradas; #103: conta de cliente em Usuarios, nome de exibicao nos portais, /auth/me minimo, hash ficticio no login. Publicacao `40147407737` (main `8592ff4`), ref. CTRL-20261024-R5-LOTE3, sem migration | APL-S12-03 |
 | 24/10/2026 | Publicacao Lotes 1 e 2 | PRs #95-#99 mesclados (main `7e5b961`). Migration `a4c6e8f0b217` aplicada no Supabase; o DDL de `f3c5d7e9a102` ja existia em producao e so faltava a marca de versao. Evidencia de Storage `40135306198`, dry-run `40135395145`, publicacao `40135448716` (Render, Cloudflare Pages e smoke verdes), ref. CTRL-20261024-R4-ETAPA07 | Lote 3 |
 | 24/10/2026 | Lote 2 | PRs #97 (S06: prazo da reserva de beat, liberar reserva, reembolso revoga licenca, devolver ao catalogo; migration `a4c6e8f0b217`), #98 (S10: anular Pix direto, motivo para repasse sem quitacao, trava de linha) e #99 (S03: preco do orcamento recalculado no servidor). Nao existe fluxo de cancelamento de proposta/cobranca; a reserva e liberada por prazo ou pelo Admin | Merge/publicacao dependem de autorizacao explicita |
 | 24/10/2026 | Backlog completo | 12 setores diagnosticados; 49 itens em 8 lotes (2 P1 distintos, 26 P2 de origem); 6 decisoes pendentes | Autorizar merge/publicacao do PR #96 e o Lote 2 |
