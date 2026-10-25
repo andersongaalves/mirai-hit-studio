@@ -142,3 +142,12 @@
 
 /* AUD6-S02-003: panels only show this notice while sending the visitor to /acesso. */
 .producer-login.access-redirect { justify-items: start; gap: var(--space-4, 16px); }
+
+/* AUD6-S08-001: tabs inside "Beats" and the tag reminder on the dashboard. */
+.producer-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--space-4); border-bottom: 1px solid rgba(184, 201, 216, 0.25); }
+.producer-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-3); border-bottom: 2px solid transparent; color: var(--color-text-secondary); font: 600 14px/20px var(--font-texto); text-decoration: none; }
+.producer-tabs a[aria-current="page"] { border-bottom-color: var(--color-accent); color: var(--color-text-primary); }
+.producer-tabs a.hidden { display: none; }
+.producer-tag-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid rgba(250, 204, 21, 0.55); border-left: 3px solid #facc15; border-radius: var(--radius-sm); background: rgba(250, 204, 21, 0.08); color: var(--color-text-primary); font: 400 13px/20px var(--font-texto); }
+.producer-tag-notice p { margin: 0; }
+.producer-tag-notice.hidden { display: none; }
