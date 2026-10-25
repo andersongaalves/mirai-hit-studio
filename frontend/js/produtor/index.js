@@ -156,6 +156,37 @@ function renderRoute() {
     showView("dashboard");
 }
 
+// AUD6-S08-001: the tag lives in "Meu perfil"; the dashboard only points there when missing.
+async function loadTagNotice() {
+    const notice = document.getElementById("producer-tag-notice");
+    if (!notice) return;
+    let tag = null;
+    try {
+        tag = await api.obterTag();
+    } catch {
+        notice.classList.add("hidden");
+        return;
+    }
+    if (tag?.tag_id) {
+        notice.classList.add("hidden");
+        return;
+    }
+    const text = document.createElement("p");
+    text.textContent = tag?.padrao_disponivel
+        ? "Você ainda não cadastrou sua tag. Suas prévias usam a tag padrão da Mirai."
+        : "Você ainda não cadastrou sua tag. Sem ela, suas prévias não recebem tag.";
+    const link = document.createElement("a");
+    link.href = "/produtor/perfil";
+    link.className = "btn-outline";
+    link.textContent = "Cadastrar minha tag";
+    link.addEventListener("click", event => {
+        event.preventDefault();
+        navigate("/produtor/perfil");
+    });
+    notice.replaceChildren(text, link);
+    notice.classList.remove("hidden");
+}
+
 async function loadBeats() {
     showView("beats");
     const list = document.getElementById("producer-beats-list");
@@ -311,8 +342,10 @@ async function enterPortal() {
         return;
     }
     setCurrentUserId(user.id);
-    document.getElementById("producer-beats-link").classList.toggle("hidden", !user.painel_beats);
-    if (!user.painel_beats && route().view === "beats") history.replaceState({}, "", "/produtor");
+    // AUD6-S08-001: one "Beats" entry; producers with the beats panel land on their own beats.
+    document.getElementById("producer-beats-link").setAttribute("href", user.painel_beats ? "/produtor/beats" : "/produtor/catalogo");
+    document.querySelectorAll("[data-beats-panel]").forEach(tab => tab.classList.toggle("hidden", !user.painel_beats));
+    if (!user.painel_beats && route().view === "beats") history.replaceState({}, "", "/produtor/catalogo");
     // AUD6-S02-011: people are greeted by their display name, not their login.
     const shownName = user.nome_exibicao?.trim() || user.username;
     document.getElementById("producer-username").textContent = shownName;
@@ -342,6 +375,7 @@ async function enterPortal() {
         }
         filtersInitialized = true;
         renderRoute();
+        loadTagNotice();
         if (!payoutResult.ok || !stageResult.ok) {
             setAlert("Não foi possível carregar os repasses agora. As produções continuam disponíveis.", true);
         }
@@ -417,7 +451,7 @@ document.getElementById("producer-order").addEventListener("change", event => {
     renderRoute();
 });
 
-document.querySelectorAll("a[data-route]").forEach(link => link.addEventListener("click", event => {
+document.querySelectorAll("a[data-route], a[data-route-tab]").forEach(link => link.addEventListener("click", event => {
     event.preventDefault();
     navigate(link.getAttribute("href"));
 }));

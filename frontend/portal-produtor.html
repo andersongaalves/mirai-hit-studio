@@ -46,9 +46,8 @@
                         <a href="/produtor/producoes" data-route="producoes" aria-label="Minhas produções">Produções</a>
                         <a href="/produtor/financeiro" data-route="financeiro">Financeiro</a>
                         <a href="/produtor/portfolio" data-route="portfolio">Portfólio</a>
-                        <a href="/produtor/perfil" data-route="perfil">Minha tag</a>
-                        <a href="/produtor/catalogo" data-route="catalogo">Catálogo</a>
-                        <a id="producer-beats-link" class="hidden" href="/produtor/beats" data-route="beats">Beats</a>
+                        <a id="producer-beats-link" href="/produtor/catalogo" data-route="beats">Beats</a>
+                        <a href="/produtor/perfil" data-route="perfil">Meu perfil</a>
                     </nav>
 
                     <div class="producer-account">
@@ -75,6 +74,7 @@
                             </div>
                             <a class="btn-cta" href="/produtor/producoes" data-route="producoes">Ver produções</a>
                         </div>
+                        <div id="producer-tag-notice" class="producer-tag-notice hidden" role="status"></div>
                         <div id="producer-metrics" class="producer-metrics" aria-label="Resumo das produções"></div>
                         <section class="producer-section" aria-labelledby="deadlines-title">
                             <div class="producer-section__heading">
@@ -140,6 +140,7 @@
                         <div id="producer-audio-tag"></div>
                     </section>
                     <section id="producer-beats" class="producer-view hidden" aria-labelledby="producer-beats-title">
+                        <nav class="producer-tabs" aria-label="Beats"><a class="hidden" href="/produtor/beats" data-route-tab="beats" data-beats-panel>Meus beats</a><a href="/produtor/catalogo" data-route-tab="catalog">Catálogo</a></nav>
                         <div class="producer-page-heading"><div><p class="producer-eyebrow">Catálogo interno</p><h1 id="producer-beats-title">Meus beats</h1><p class="producer-lead">Envie beats com sua tag para revisão da Mirai.</p></div></div>
                         <form id="producer-beat-form" class="producer-upload beat-form beat-upload-panel">
                             <label class="beat-form__full">Título<input name="titulo" maxlength="160" required /></label>
@@ -161,6 +162,7 @@
                         </section>
                     </section>
                     <section id="producer-catalog" class="producer-view hidden" aria-labelledby="producer-catalog-title">
+                        <nav class="producer-tabs" aria-label="Beats"><a class="hidden" href="/produtor/beats" data-route-tab="beats" data-beats-panel>Meus beats</a><a href="/produtor/catalogo" data-route-tab="catalog">Catálogo</a></nav>
                         <div class="producer-page-heading"><div><p class="producer-eyebrow">Catálogo Mirai</p><h1 id="producer-catalog-title">Beats disponíveis</h1><p class="producer-lead">Ouça as prévias publicadas. Compras são exclusivas para clientes.</p></div></div>
                         <div id="producer-catalog-list" class="producer-list producer-beats-list"></div>
                     </section>
