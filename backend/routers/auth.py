@@ -4,12 +4,18 @@ from crud import crud_usuario
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.usuario import LoginRequest, LoginResponse, SessaoUsuarioResponse
+from services import rate_limit_service
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
 
 _DUMMY_HASH = None
+# AUD6-S02-009: failed passwords are also counted per login, so spreading attempts
+# over many addresses does not help. Unknown logins are counted the same way.
+ACCOUNT_FAILURES = 10
+ACCOUNT_WINDOW_SECONDS = 900
+TOO_MANY = "Muitas tentativas. Aguarde alguns minutos e tente novamente."
 
 
 def _dummy_hash():
@@ -28,6 +34,11 @@ def current_user(user=Depends(get_current_user)):
 @router.post("/login", response_model=LoginResponse, response_model_exclude_none=True)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
 
+    account_key = data.username.strip().lower()
+    locked, retry = rate_limit_service.blocked(db, "login_account", account_key, ACCOUNT_FAILURES)
+    if locked:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, TOO_MANY, headers={"Retry-After": str(retry)})
+
     usuario = crud_usuario.buscar_por_username(db, data.username)
     password_ok = verify_password(
         data.password,
@@ -35,6 +46,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     )
 
     if usuario is None or not usuario.ativo or not password_ok:
+        rate_limit_service.hit(db, "login_account", account_key, ACCOUNT_FAILURES, ACCOUNT_WINDOW_SECONDS)
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
