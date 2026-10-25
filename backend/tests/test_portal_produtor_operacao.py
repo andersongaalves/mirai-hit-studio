@@ -217,6 +217,22 @@ async def check():
             assert duplicate_replacement.status_code == 409
             assert len(storage.objects) == 3
 
+            # AUD6-S08-007: a version hidden from the producer cannot be built upon.
+            with Session(engine) as db:
+                db.get(ProducaoArquivoModel, second['id']).visivel_produtor = False
+                db.commit()
+            hidden_replacement = await client.post(
+                '/portal/produtor/producoes/1/arquivos',
+                headers=bearer('producer-a'),
+                data={'tipo':'previa', 'substitui_arquivo_id':str(second['id'])},
+                files={'arquivo':('preview-v3.mp3', b'ID3-preview-v3', 'audio/mpeg')},
+            )
+            assert hidden_replacement.status_code == 404
+            assert len(storage.objects) == 3
+            with Session(engine) as db:
+                db.get(ProducaoArquivoModel, second['id']).visivel_produtor = True
+                db.commit()
+
             listed = await client.get('/producoes/1/arquivos', headers=bearer('admin'))
             assert listed.status_code == 200 and len(listed.json()) == 3
             assert all('object_key' not in item for item in listed.json())

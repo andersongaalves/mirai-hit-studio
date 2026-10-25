@@ -168,6 +168,16 @@ function filesPanel(production, files, handlers) {
     input.type = "file";
     input.required = true;
     input.setAttribute("aria-label", "Arquivo para enviar");
+    // AUD6-S08-003: same Portuguese picker as the client portal, not the browser's own.
+    const filePicker = element("label", "producer-upload__picker");
+    const fileButton = element("span", "producer-upload__pick-button", "Escolher arquivo");
+    const fileName = element("span", "producer-upload__filename", "Nenhum arquivo selecionado");
+    fileName.title = fileName.textContent;
+    input.addEventListener("change", () => {
+        fileName.textContent = input.files[0]?.name || "Nenhum arquivo selecionado";
+        fileName.title = fileName.textContent;
+    });
+    filePicker.append(input, fileButton, fileName);
     const replaces = element("select");
     replaces.setAttribute("aria-label", "Versão substituída");
     const noReplacement = element("option", "", "Nova versão independente");
@@ -197,7 +207,7 @@ function filesPanel(production, files, handlers) {
     const quotaHint = element("p", "file-quota-hint hidden");
     quotaHint.dataset.quotaHint = "";
     quotaHint.setAttribute("aria-live", "polite");
-    form.append(type, input, replaces, quotaHint, note, submit);
+    form.append(type, filePicker, replaces, quotaHint, note, submit);
     form.addEventListener("submit", event => {
         event.preventDefault();
         if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value);
