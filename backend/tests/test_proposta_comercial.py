@@ -65,6 +65,40 @@ with Session(engine) as db:
     assert all(event.actor_user_id == actor.id for event in events)
 ''')
 
+    def test_zero_value_proposal_starts_production_without_charge(self):
+        # A courtesy or internal job (total R$ 0,00) is accepted without a charge;
+        # with the V2 pipeline the production starts right away.
+        self.run_case('''
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+with Session(engine) as db:
+    actor = db.get(UsuarioModel, 1)
+    p = service.criar_por_orcamento(db, 1)
+    p = service.atualizar(db, p.id, PropostaUpdate(objeto='Cortesia', itens=[
+        {'descricao':'Mix de cortesia', 'quantidade':1, 'valor_unitario':'300.00', 'desconto':'300.00'}]))
+    assert p.totais.total == 0
+    with patch.object(resend.Emails, 'send', return_value={'id':'zero-message'}):
+        commercial.enviar(db, p.id, actor, 'zero-send')
+    approved = commercial.aprovar(db, p.id, actor, 'zero-approve')
+    assert approved.status == 'aceita'
+    assert db.query(CobrancaModel).filter_by(proposta_id=p.id).count() == 0
+    production = crud_producao.buscar_por_orcamento(db, 1)
+    assert production is not None and production.titulo == 'Cortesia'
+    assert db.query(AuditLogModel).filter_by(action='production.released_without_charge').count() == 1
+    # Repeating the approval is idempotent: still no charge, one production.
+    commercial.aprovar(db, p.id, actor, 'zero-approve')
+    assert db.query(CobrancaModel).count() == 0
+    assert db.query(AuditLogModel).filter_by(action='production.released_without_charge').count() == 1
+
+    # Paid items keep generating the charge as before.
+    q = service.criar_por_orcamento(db, 2)
+    q = service.atualizar(db, q.id, PropostaUpdate(itens=[{'descricao':'Master', 'quantidade':1, 'valor_unitario':'100.00'}]))
+    with patch.object(resend.Emails, 'send', return_value={'id':'paid-message'}):
+        commercial.enviar(db, q.id, actor, 'paid-send')
+    commercial.aprovar(db, q.id, actor, 'paid-approve')
+    assert db.query(CobrancaModel).filter_by(proposta_id=q.id).count() == 1
+    assert crud_producao.buscar_por_orcamento(db, 2) is None  # waits for payment
+''')
+
     def test_email_failure_and_commit_failure_rollback(self):
         self.run_case('''
 with Session(engine) as db:

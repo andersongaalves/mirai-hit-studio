@@ -1,4 +1,5 @@
 import * as Notify from "../../utils/notifications.js";
+import { renderMudancas } from "../../modules/proposta_mudancas.js";
 import { $ } from "../../utils/dom.js";
 import { confirmarClassificacao } from "../classificacao.js";
 
@@ -250,9 +251,29 @@ function renderizarAbaAtiva() {
     atualizarStatusLocal();
 }
 
+const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+// AUD6-S05-002: a reopened proposal shows what differs from the version the client saw.
+function renderizarMudancas(status, proposta) {
+    const row = status?.parentElement;
+    if (!row) return;
+    let host = document.getElementById("proposta-mudancas-host");
+    if (!host) {
+        host = document.createElement("div");
+        host.id = "proposta-mudancas-host";
+        row.before(host);
+    }
+    const box = proposta?.mudancas ? renderMudancas(proposta.mudancas, {
+        money: value => BRL.format(Number(value) || 0),
+        titulo: `Diferenças em relação à versão ${proposta.mudancas.versao_anterior} enviada ao cliente`,
+    }) : null;
+    host.replaceChildren(...(box ? [box] : []));
+}
+
 function atualizarStatusLocal() {
     renderizarClassificacao();
     const status = $("proposta-status");
+    renderizarMudancas(status, propostaState.proposta);
     const { proposta, carregando, salvando, gerando, processando, dirty } = propostaState;
     const ocupado = carregando || salvando || gerando || processando;
     if (status) status.textContent = carregando ? "Carregando proposta..."

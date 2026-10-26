@@ -157,6 +157,22 @@ def _identity_clients(db: Session, email: str, telefone: str | None):
     return list(db.scalars(select(ClienteModel).where(or_(*clauses))))
 
 
+def _linkable_existing_client(db: Session, existing, email: str):
+    """The one existing client whose e-mail is exactly the one typed, with no portal access yet."""
+    if len(existing) != 1:
+        return None
+    client = existing[0]
+    if (
+        not client.ativo
+        or getattr(client, "is_test", False)
+        or normalizar_email(client.email or "") != email
+        or _user_for_client(db, client.id) is not None
+        or _access_for_client(db, client.id) is not None
+    ):
+        return None
+    return client
+
+
 def _generic_signup_response():
     return {"accepted": True, "message": SIGNUP_RESPONSE}
 
@@ -244,6 +260,36 @@ def request_signup(
             db.rollback()
             return _generic_signup_response()
         existing = _identity_clients(db, email, telefone)
+        linked = _linkable_existing_client(db, existing, email)
+        if linked is not None:
+            # A client created by the studio (budget, proposal) signs up with the same
+            # e-mail: the confirmation goes to that address and the account joins the
+            # existing record. Only the owner of the inbox can finish it.
+            now = _now()
+            raw_token, token_hash = _token()
+            access = ClienteAcessoModel(
+                cliente_id=linked.id,
+                email_normalizado=email,
+                origem="public_signup",
+                token_finalidade="verificacao",
+                token_hash=token_hash,
+                token_expires_at=now + INVITE_TTL,
+                privacy_accepted_at=now,
+                request_fingerprint_hash=_hash(f"source:{source_key}"),
+            )
+            db.add(access)
+            db.flush()
+            audit_service.record(
+                db,
+                actor=None,
+                action="client_access.signup_linked_existing",
+                entity_type="client_access",
+                entity_id=access.id,
+                metadata={"client_id": linked.id, "result": "pending_confirmation"},
+                request_id=request_id,
+            )
+            db.commit()
+            return _deliver_signup(db, linked, access.id, raw_token, token_hash, request_id)
         if existing:
             audit_service.record(
                 db,
@@ -438,8 +484,13 @@ def prepare_password_recovery(
             request_id=request_id,
         )
         if user is None:
+            # AUD6-S02-004: studio accounts recover through the e-mail registered by the studio.
+            from services import conta_interna_service
+
+            internal = conta_interna_service.preparar_recuperacao(
+                db, email, token_pair=_token(), request_id=request_id)
             db.commit()
-            return _generic_recovery_response(), None
+            return _generic_recovery_response(), internal
 
         raw_token, token_hash = _token()
         now = _now()
@@ -529,6 +580,11 @@ def _deliver_password_recovery(db: Session, delivery: dict):
 
 
 def deliver_password_recovery_job(delivery: dict):
+    if delivery.get("kind") == "interna":
+        from services import conta_interna_service
+
+        conta_interna_service.entregar_recuperacao(delivery)
+        return
     with SessionLocal() as db:
         _deliver_password_recovery(db, delivery)
 
@@ -546,7 +602,12 @@ def request_password_recovery(
         request_id,
     )
     if delivery is not None:
-        _deliver_password_recovery(db, delivery)
+        if delivery.get("kind") == "interna":
+            from services import conta_interna_service
+
+            conta_interna_service.entregar_recuperacao(delivery)
+        else:
+            _deliver_password_recovery(db, delivery)
     return response
 
 
@@ -580,6 +641,12 @@ def reset_password(
             .execution_options(populate_existing=True)
         )
         if access is None:
+            from services import conta_interna_service
+
+            internal = conta_interna_service.redefinir_por_token(
+                db, _hash(data.token), data.password, request_id=request_id)
+            if internal:
+                return internal
             raise ClientAccessInvalid("Link invalido ou indisponivel.")
         access_id = access.id
         if access.token_finalidade != "recuperacao":
@@ -1113,25 +1180,41 @@ def activate(db: Session, data: ClientInviteActivation, source_key: str, request
         raise
 
 
+def _linked_existing_accesses(db: Session, access_ids):
+    """Signups that joined a client the studio already had (never delete those clients)."""
+    if not access_ids:
+        return set()
+    from models import AuditLogModel
+
+    return set(db.scalars(select(AuditLogModel.entity_id).where(
+        AuditLogModel.action == "client_access.signup_linked_existing",
+        AuditLogModel.entity_type == "client_access",
+        AuditLogModel.entity_id.in_([str(item) for item in access_ids]),
+    )))
+
+
 def cleanup_expired(db: Session, *, before: datetime | None = None):
     cutoff = before or (_now() - timedelta(days=30))
-    pending_signup_client_ids = list(db.scalars(
-        select(ClienteAcessoModel.cliente_id).where(
+    pending_signups = db.execute(
+        select(ClienteAcessoModel.cliente_id, ClienteAcessoModel.id).where(
             ClienteAcessoModel.origem == "public_signup",
             ClienteAcessoModel.usuario_id.is_(None),
             ClienteAcessoModel.token_expires_at < cutoff,
         )
-    ))
+    ).all()
     deleted_limits = db.query(AuthRateLimitModel).filter(AuthRateLimitModel.expires_at < cutoff).delete()
     deleted_invites = db.query(ClienteAcessoModel).filter(
         ClienteAcessoModel.usuario_id.is_(None),
         ClienteAcessoModel.token_expires_at < cutoff,
     ).delete()
     deleted_clients = 0
-    for client_id in pending_signup_client_ids:
+    linked = _linked_existing_accesses(db, [access_id for _, access_id in pending_signups])
+    for client_id, access_id in pending_signups:
         client = db.get(ClienteModel, client_id)
         if (
             client is not None
+            # A signup linked to a client the studio already had never deletes that client.
+            and str(access_id) not in linked
             and not client.orcamentos
             and not client.cobrancas
             and client.usuario is None

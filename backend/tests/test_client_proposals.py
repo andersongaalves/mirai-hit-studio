@@ -53,9 +53,10 @@ with Session(engine) as db:
         'itens', 'totais', 'politica_pagamento', 'condicoes',
         'documento_disponivel', 'situacao_comercial', 'cobranca_status',
         'enviada_em', 'aprovada_em', 'created_at', 'updated_at',
-        'finalidade', 'contrato_creditos', 'valida_ate', 'expirada',
+        'finalidade', 'contrato_creditos', 'valida_ate', 'expirada', 'mudancas',
     }
     assert listed[0]['expirada'] is False and listed[0]['valida_ate'] is not None
+    assert listed[0]['mudancas'] is None  # AUD6-S05-002: nothing to compare on a first send
     assert listed[0]['finalidade'] == 'producao' and listed[0]['contrato_creditos'] is None
     assert listed[0]['status'] == 'enviada'
     assert listed[0]['situacao_comercial'] == 'aguardando_aceite'
@@ -159,10 +160,25 @@ with Session(engine) as db:
         pass
     else:
         raise AssertionError('draft reopened twice')
+    # AUD6-S05-002: the reopened draft keeps the sent version for comparison.
+    draft = service.buscar(db, proposal.id)
+    assert draft.mudancas is None  # nothing edited yet
+    previous_items = [item.model_dump(mode='json') for item in draft.itens]
+    service.atualizar(db, proposal.id, PropostaUpdate(
+        itens=previous_items + [{'descricao': 'Ajuste extra', 'quantidade': 1, 'valor_unitario': '150', 'desconto': 0}],
+        condicoes=draft.condicoes + ' Revisada.'))
+    edited = service.buscar(db, proposal.id)
+    assert edited.mudancas['versao_anterior'] == old_version, edited.mudancas
+    assert [(item['tipo'], item['descricao']) for item in edited.mudancas['itens']] == [('adicionado', 'Ajuste extra')]
+    assert edited.mudancas['campos_alterados'] == ['condicoes']
+    assert portal_proposals.list_for_client(db, client.id) == []
     with patch.object(resend.Emails, 'send', return_value={'id':'proposal-message-2'}):
         commercial.enviar(db, proposal.id)
     current = db.get(PropostaModel, proposal.id)
     assert current.status == 'enviada' and current.snapshot_economico is not None
+    seen = portal_proposals.list_for_client(db, client.id)[0]['mudancas']
+    assert seen['versao_anterior'] == old_version and float(seen['itens'][0]['depois']['valor_unitario']) == 150, seen
+    assert float(seen['total']['depois']) - float(seen['total']['antes']) == 150
     accepted = portal_proposals.accept(db, proposal.id, client.id, current.versao, user, 'client-on-time')
     assert accepted['status'] == 'aceita'
 ''')

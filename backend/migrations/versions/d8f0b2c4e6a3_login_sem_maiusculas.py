@@ -17,4 +17,4 @@ def upgrade():
 
 
 def downgrade():
-    op.execute("DROP INDEX uq_usuarios_username_lower")
+    op.execute("DROP INDEX IF EXISTS uq_usuarios_username_lower")

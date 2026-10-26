@@ -164,6 +164,16 @@ async def check():
         assert (await client.post('/usuarios', headers=bearer('admin'), json={
             'username':'Novo_Usuario', 'password':'other-password', 'role':'produtor',
         })).status_code == 409
+        # AUD6-S02-004: studio accounts get a recovery e-mail; one e-mail, one account.
+        with_email = await client.post('/usuarios', headers=bearer('admin'), json={
+            'username':'com_email', 'password':'new-password', 'role':'produtor', 'email':' Equipe@Example.com ',
+        })
+        assert with_email.status_code == 201 and with_email.json()['email'] == 'equipe@example.com', with_email.text
+        assert (await client.post('/usuarios', headers=bearer('admin'), json={
+            'username':'outro_email', 'password':'new-password', 'role':'produtor', 'email':'EQUIPE@example.com',
+        })).status_code == 409
+        cleared = await client.patch(f"/usuarios/{with_email.json()['id']}", headers=bearer('admin'), json={'email': ''})
+        assert cleared.status_code == 200 and cleared.json()['email'] is None, cleared.text
         assert (await client.post('/usuarios', headers=bearer('admin'), json={
             'username':'blocked', 'password':'short', 'role':'produtor',
         })).status_code == 422

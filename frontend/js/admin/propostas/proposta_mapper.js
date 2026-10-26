@@ -3,7 +3,7 @@ const campos = ["finalidade", "produtor_id", "objeto", "descricao", "itens", "pa
 const responseFields = ["id", "orcamento_id", "numero", "versao", "status",
     "cliente_snapshot", "totais", "pdf_path", "gerada_em", "enviada_em",
     "aprovada_em", "created_at", "updated_at", "snapshot_economico", "contrato_creditos",
-    "valida_ate", "expirada", ...campos];
+    "valida_ate", "expirada", "mudancas", ...campos];
 
 export function buildPropostaPayload(proposta) {
     const payload = {};

@@ -64,6 +64,15 @@ def _owned(db: Session, proposta_id: int, cliente_id: int):
     return model
 
 
+def _total_zero(model):
+    from decimal import Decimal, InvalidOperation
+
+    try:
+        return Decimal(str((model.totais_json or {}).get("total"))) == 0
+    except (InvalidOperation, TypeError, ValueError):
+        return False
+
+
 def _commercial_state(model):
     if model.status == PropostaStatus.ENVIADA.value:
         from core import proposta_validade
@@ -72,6 +81,8 @@ def _commercial_state(model):
     if model.status == PropostaStatus.RECUSADA.value:
         return "recusada"
     if model.cobranca is None:
+        if model.status == PropostaStatus.ACEITA.value and _total_zero(model):
+            return "sem_cobranca"  # zero-value proposal: nothing to pay
         return "aguardando_cobranca"
     if model.cobranca.status == "paga":
         return "pagamento_confirmado"
@@ -111,6 +122,8 @@ def _project(model):
         "enviada_em": proposal.enviada_em,
         "valida_ate": proposal.valida_ate,
         "expirada": proposal.expirada,
+        # AUD6-S05-002: only for a re-sent proposal; a draft never reaches the client.
+        "mudancas": proposal.mudancas if proposal.status != "rascunho" else None,
         "aprovada_em": proposal.aprovada_em,
         "created_at": proposal.created_at,
         "updated_at": proposal.updated_at,

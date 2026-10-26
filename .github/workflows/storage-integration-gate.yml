@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["d8f0b2c4e6a3"], heads
+                  assert heads == ["f2b4d6e8a0c3"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -214,6 +214,9 @@ jobs:
                     test_portfolio_envios.py \
                     test_audio_tags.py \
                     test_recursos.py \
+                    test_proposta_mudancas.py \
+                    test_busca_admin.py \
+                    test_produtor_resumo.py \
                     test_uso_infra.py \
                     test_protecao.py \
                     test_portfolio_taxonomy.py \
@@ -289,9 +292,12 @@ jobs:
                   node frontend/tests/seo_content_h2.cjs
                   node frontend/tests/seo_technical.cjs
                   node frontend/tests/style_architecture.cjs
+                  node frontend/tests/account_password.cjs
                   node frontend/tests/uso_infra.cjs
                   node frontend/tests/csp_enforced.cjs
                   node frontend/tests/session_expiry.cjs
+                  node frontend/tests/admin_search.cjs
+                  node frontend/tests/admin_entity_pages.cjs
                   # APL-S12-01: real proposal HTML/PDF from the backend feed the document suite.
                   (cd backend && PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout python -m unittest discover -s tests -p 'test_proposta_documento.py')
                   PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout node frontend/tests/proposta_documento.cjs
@@ -404,9 +410,18 @@ jobs:
                     backend/migrations/versions/b5d7f9a1c328_limites_persistentes.py \
                     backend/migrations/versions/c6e8a0b2d4f1_notificacoes_admin.py \
                     backend/migrations/versions/d8f0b2c4e6a3_login_sem_maiusculas.py \
+                    backend/migrations/versions/e1a3c5d7f9b2_email_contas_internas.py \
+                    backend/migrations/versions/f2b4d6e8a0c3_proposta_envio_anterior.py \
+                    backend/core/proposta_mudancas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
-                    backend/routers/auth.py
+                    backend/routers/auth.py \
+                    backend/services/busca_admin_service.py \
+                    backend/routers/busca_admin.py \
+                    backend/tests/test_busca_admin.py \
+                    backend/services/produtor_resumo_service.py \
+                    backend/routers/produtor_resumo.py \
+                    backend/tests/test_produtor_resumo.py
                   node --check frontend/js/admin/projetos.js
                   node --check frontend/tests/portfolio_admin.cjs
                   node --check frontend/tests/portal_produtor.cjs
@@ -467,7 +482,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic d8f0b2c4e6a3: passed"
+                    echo "- PostgreSQL 17 and Alembic f2b4d6e8a0c3: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"
