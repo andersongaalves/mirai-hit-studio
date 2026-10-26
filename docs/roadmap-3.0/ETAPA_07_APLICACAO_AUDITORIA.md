@@ -9,10 +9,10 @@ implementado sem autorizacao do responsavel.
 | Campo | Estado atual |
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
-| Lote atual | Lotes 4 a 8 concluidos (exceto APL-S01-01) |
+| Lote atual | Lotes 1 a 8 publicados |
 | Item em andamento | - |
-| Proxima acao | Revisao da Politica de Privacidade (#125) pelo responsavel; camada 2 contra robos (Cloudflare) quando autorizada; limpeza das branches pelo responsavel |
-| Ultima atualizacao | 25/10/2026 |
+| Proxima acao | Camada 2 contra robos (Cloudflare) quando autorizada; limpeza das branches pelo responsavel; acompanhar APL-S12-04 |
+| Ultima atualizacao | 26/10/2026 |
 
 ## 2. Regras
 
@@ -124,7 +124,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 
 | ID | Origem | Sev. | Mudanca | Tipo | Status | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| APL-S01-01 | S01-001 | P2 | Pagina de Politica de Privacidade e links (rodape, consentimento, cadastro, orcamento, newsletter) | **Decisao** (texto revisado pelo responsavel) | Em validacao | #125 (texto redigido; publica apos revisao do responsavel) |
+| APL-S01-01 | S01-001 | P2 | Pagina de Politica de Privacidade e links (rodape, consentimento, cadastro, orcamento, newsletter) | Codigo/texto (revisado e aprovado pelo responsavel em 26/10/2026) | Publicado | #125 |
 | APL-S01-02 | S01-002 | P3 | Area clicavel minima nos links de verticais do portfolio | Codigo | Publicado | #112 |
 
 ### S11 - IA e comunicacao ([diagnostico](auditoria/S11_IA_COMUNICACAO.md))
@@ -157,7 +157,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 | 4 | Visibilidade da operacao | APL-S09-01, APL-S11-01, APL-S08-02, APL-S10-03, APL-S04-01 | Publicado (R8) |
 | 5 | Confiabilidade e CI | APL-S12-01, APL-S12-02, APL-S12-04, APL-S06-03 | Publicado (R8); APL-S12-04 em observacao |
 | 6 | Experiencia dos portais | APL-S07-01, APL-S02-12, APL-S08-01, APL-S02-04 (apos decisao), APL-S07-03, APL-S07-04, APL-S08-03 | Publicado (R8) |
-| 7 | Conformidade e decisoes | APL-S01-01, APL-S05-01, APL-S02-05, APL-S02-06, APL-S02-11 | Publicado (R8), exceto APL-S01-01 em revisao |
+| 7 | Conformidade e decisoes | APL-S01-01, APL-S05-01, APL-S02-05, APL-S02-06, APL-S02-11 | Publicado (R8 e R10) |
 | 8 | Refinamentos | Demais P3 (S04-02, S06-04, S06-05, S07-02, S07-05, S08-04, S09-02 a 05, S10-04, S01-02, S03-02, S05-02, S12-05) | Publicado (R7/R8) |
 
 ## 5. Decisoes
@@ -169,13 +169,15 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 | APL-S02-06 | Aplicar a CSP | (a) aplicada; `/checkout` segue em Report-Only |
 | APL-S02-11 | Duracao da sessao | (a) 60 min com aviso |
 | APL-S05-01 | Validade de 10 dias | (a) status "expirada" e reenvio |
-| APL-S01-01 | Politica de Privacidade | Texto redigido (controlador, e-mail e cidade; sem CPF); publica apos revisao |
+| APL-S01-01 | Politica de Privacidade | Texto redigido (controlador, e-mail e cidade; sem CPF), aprovado pelo responsavel em 26/10/2026 |
 | APL-S12-02 | Worker de tag | Manter no processo web, contido; sem servico novo |
 
 ## 6. Historico
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 26/10/2026 | APL-S01-01 (R10) | #125 publicado no SHA `49146c65e74174aad133b8255cbc94342799a84a`: pagina `/privacidade` (LGPD, sem CPF) e links no rodape, consentimento de metricas, cadastro, orcamento e newsletter; pagina sob a CSP aplicada. Gate `40325731923`, evidencia Storage `40328133137`, dry-run `40328320168` e publicacao `40328423258`. Ref. `CTRL-20261026-R10-PRIVACIDADE`; sem migration; Commercial V2 `true` | - |
+| 26/10/2026 | Pedido do responsavel (R9) | #143 publicado no SHA `8706b264956c1ebdc24531420183a8e6aeb95b4a`: proposta de valor zero e aceita sem cobranca e a producao comeca no aceite (creditos e beats seguem exigindo valor). Gate `40251031352`, evidencia Storage `40252318763`, dry-run `40252423354` e publicacao `40252487307`. Ref. `CTRL-20261026-R9-VALOR-ZERO`; sem migration | - |
 | 25/10/2026 | Lotes 4 a 8 e decisoes (R8) | PRs #123, #124, #126-#141 (exceto #125) publicados no SHA `07c346e2d942378137139dca965cc93a1f826fe9`: notificacoes do Admin e beat revisado (#124), login sem maiusculas (#126), validade da proposta (#127), e-mail das contas internas e troca de senha (#128), aviso de sessao (#129), CSP aplicada (#130), aba Uso (#131), protecao contra varredura (#132), download direto do R2 (#133), menu Minha conta e sair de todos (#134), dashboard enxuto e secoes sob demanda (#135), busca global (#136), suites restantes no gate (#137), comparacao de versoes (#138), Beats unico (#139), pagina do produtor e links (#140), cadastro com e-mail de cliente existente recebe a confirmacao (#141, incidente do mesmo dia), worker contido (#123). Migrations `c6e8a0b2d4f1`, `d8f0b2c4e6a3`, `e1a3c5d7f9b2` e `f2b4d6e8a0c3` aplicadas no Supabase antes da publicacao. Gate `40246783227`, evidencia Storage `40248089894`, dry-run `40248198223` e publicacao `40248256757` aprovados. Ref. `CTRL-20261025-R8-ETAPA07-DECISOES`; Commercial V2 permaneceu `true` | Revisao da Politica de Privacidade (#125) |
 | 25/10/2026 | Lotes 4 a 8 (sem migration) | PRs #107-#121 publicados no SHA `ee2f6b34c4c5af57c9769112426353d59e9d21cf`: pendencias do dashboard (#107), fila de conciliacao (#113), falhas de tag com Reprocessar (#114), detalhe do projeto por secoes (#120), mensagens claras no checkout e no portal (#108, #121), catalogo sem campos internos e limite diario (#109), refinamentos do produtor (#110, #118), beat reservado nao pode ser rejeitado (#111), alvos de toque (#112), `/config` sem 500 e acentos (#115), 18 suites a mais no gate (#112, #116), README (#117), campo isca (#119). Sem migration. Gate `40205419764`, evidencia Storage `40206403229`, dry-run `40206510344` e publicacao `40206565321` aprovados. Ref. `CTRL-20261025-R7-ETAPA07-LOTES4A8`; Commercial V2 permaneceu `true` | APL-S11-01/APL-S04-01 com migration autorizada; restante de APL-S09-03 e APL-S12-01 |
 | 25/10/2026 | APL-S09-01 | PR #107 aberto: dashboard passa a reunir solicitacoes, revisoes de beats e portfolio, falhas de tag, conciliacoes e entregas aguardando aprovacao; cadeias de teste ficam fora das contagens | Validar CI e integrar sem misturar os demais setores do Lote 4 |
