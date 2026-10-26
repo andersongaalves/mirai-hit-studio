@@ -12,6 +12,7 @@ const pages = {
     '/': '/index.html', '/artists': '/artists.html', '/creators': '/creators.html', '/media-games': '/media-games.html',
     '/portfolio': '/portfolio.html', '/orcamento': '/calculadora.html', '/acesso': '/acesso.html', '/cadastro': '/cadastro.html',
     '/recuperar-senha': '/recuperar-senha.html', '/redefinir-senha': '/redefinir-senha.html', '/ativar': '/ativar.html',
+    '/privacidade': '/privacidade.html',
 };
 const users = {
     admin: { id: 1, username: 'admin', role: 'admin', is_admin: true, ativo: true },

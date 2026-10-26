@@ -12,6 +12,7 @@ const aliases = {
     '/media-games': '/media-games.html',
     '/portfolio': '/portfolio.html',
     '/orcamento': '/calculadora.html',
+    '/privacidade': '/privacidade.html',
     [`/checkout/${checkoutToken}`]: '/checkout.html',
 };
 const contentTypes = {
@@ -67,7 +68,7 @@ function apiResponse(route) {
         const page = await context.newPage();
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
-        const publicPaths = ['/', '/artists', '/creators', '/media-games', '/portfolio', '/orcamento'];
+        const publicPaths = ['/', '/artists', '/creators', '/media-games', '/portfolio', '/orcamento', '/privacidade'];
         const allPaths = [...publicPaths, `/checkout/${checkoutToken}`];
         const widths = [320, 360, 375, 390, 414, 768, 1024, 1280, 1440];
 

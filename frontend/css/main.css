@@ -7,6 +7,16 @@
 @import url("notifications.css");
 @import url("consent.css");
 
+/* APL-S01-01: links para a Política de Privacidade dentro de textos e formulários. */
+.privacy-link {
+    display: inline-block;
+    min-height: 24px;
+    padding-block: 2px;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 /* AUD6-S02-011: aviso antes de a sessão expirar. */
 .session-expiry-warning {
     position: fixed;

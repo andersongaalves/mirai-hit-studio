@@ -1,0 +1,15 @@
+/* APL-S01-01: Política de Privacidade, leitura longa e confortável. */
+.privacy-policy__content { max-width: 760px; }
+.privacy-policy h1 { margin-bottom: var(--space-2, 8px); }
+.privacy-policy h2 { margin-top: var(--space-6, 40px); font-size: 1.3rem; }
+.privacy-policy p,
+.privacy-policy li { line-height: 1.7; color: var(--color-text-secondary, #c7d2dd); }
+.privacy-policy strong { color: var(--color-text-primary, #edf4fa); }
+.privacy-policy ul { padding-left: 1.2rem; }
+.privacy-policy li + li { margin-top: 8px; }
+.privacy-policy a { display: inline-block; min-height: 24px; padding-block: 2px; color: var(--color-accent, #00d4ff); text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.privacy-policy__updated { font-size: 0.9rem; }
+.privacy-policy__toc { margin: var(--space-5, 32px) 0; padding: var(--space-4, 24px); border: 1px solid rgb(148 163 184 / 35%); border-radius: 8px; }
+.privacy-policy__toc ol { margin: 0; padding-left: 1.2rem; columns: 2 240px; }
+.privacy-policy__toc a { display: inline-block; min-height: 24px; padding-block: 2px; }
+.privacy-policy section { scroll-margin-top: 96px; }

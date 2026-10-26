@@ -46,13 +46,13 @@ async function staticResponse(route) {
         await page.waitForSelector('#analytics-consent-dialog');
         assert.equal(analyticsRequests.length, 0);
         assert.equal(await page.evaluate(async () => (await import('/js/analytics.js')).track('view_service', { service_id: 7, email: 'blocked@example.com' })), false);
-        await page.getByRole('button', { name: 'Recusar metricas' }).click();
+        await page.getByRole('button', { name: 'Recusar métricas' }).click();
         assert.equal(await page.evaluate(() => localStorage.getItem('mirai.analytics_consent.v1')), 'rejected');
         assert.equal(analyticsRequests.length, 0);
 
         await page.getByRole('button', { name: 'Privacidade' }).click();
         await page.evaluate(() => history.replaceState({}, '', '/checkout/private-reference-must-not-leak'));
-        await page.getByRole('button', { name: 'Aceitar metricas' }).click();
+        await page.getByRole('button', { name: 'Aceitar métricas' }).click();
         await page.waitForFunction(() => window.dataLayer?.some(item => item[0] === 'event' && item[1] === 'page_view'), null, { timeout: 5000 });
         await page.waitForTimeout(50);
         assert.equal(await page.evaluate(() => localStorage.getItem('mirai.analytics_consent.v1')), 'accepted');
@@ -94,7 +94,7 @@ async function staticResponse(route) {
         const leadEvents = await page.evaluate(() => window.dataLayer.filter(item => item[0] === 'event' && item[1] === 'generate_lead'));
         assert.deepEqual(leadEvents, [['event', 'generate_lead', { service_id: 7 }]]);
         await page.getByRole('button', { name: 'Privacidade' }).click();
-        await page.getByRole('button', { name: 'Recusar metricas' }).click();
+        await page.getByRole('button', { name: 'Recusar métricas' }).click();
         assert.equal(await page.evaluate(async () => (await import('/js/analytics.js')).track('view_service', { service_id: 7 })), false);
 
         const noProvider = await context.newPage();
