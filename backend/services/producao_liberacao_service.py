@@ -160,3 +160,30 @@ def avaliar_cobranca_bloqueada(
         request_id=request_id,
     )
     return producao
+
+
+def liberar_sem_cobranca(db: Session, proposta, *, actor=None, request_id: str | None = None):
+    """A zero-value proposal (courtesy, internal work) starts production on acceptance.
+
+    No charge is created: there is nothing to pay. Idempotent per budget.
+    """
+    existente = crud_producao.buscar_por_orcamento(db, proposta.orcamento_id)
+    if existente is not None:
+        return existente
+    producao = crud_producao.criar_sem_commit(
+        db,
+        dados_producao(proposta_service._resposta(proposta)),
+    )
+    producao_etapa_service.instanciar(db, producao, proposta)
+    cota_arquivo_service.instanciar(db, producao, proposta)
+    politica_service.instanciar(db, producao, proposta)
+    audit_service.record(
+        db,
+        actor=actor,
+        action="production.released_without_charge",
+        entity_type="production",
+        entity_id=producao.id,
+        metadata={"proposal_id": proposta.id, "result": "created"},
+        request_id=request_id,
+    )
+    return producao

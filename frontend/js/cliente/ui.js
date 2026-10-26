@@ -562,7 +562,9 @@ export function renderProposalDetail(proposal, handlers) {
         accept.addEventListener("click", () => handlers.onAccept(proposal, accept));
         actions.append(refuse, accept);
     }
-    if (proposal.status === "aceita" && !["paga", "cancelada"].includes(proposal.cobranca_status)) {
+    if (proposal.status === "aceita" && proposal.situacao_comercial === "sem_cobranca") {
+        actions.append(element("p", "client-proposal-validity", "Proposta sem valor a pagar. O estúdio já pode iniciar o projeto."));
+    } else if (proposal.status === "aceita" && !["paga", "cancelada"].includes(proposal.cobranca_status)) {
         const payment = element("a", "btn-cta", "Ir para pagamento");
         payment.href = `/checkout?proposta=${encodeURIComponent(proposal.id)}`;
         payment.setAttribute("data-authenticated-checkout", "true");
