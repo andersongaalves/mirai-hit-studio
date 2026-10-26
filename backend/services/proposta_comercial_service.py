@@ -141,6 +141,20 @@ def enviar(db, proposta_id, actor=None, request_id=None):
         raise
 
 
+def _criada_diretamente(db, producao):
+    """Production created by the Admin without a proposal ("Nova produção")."""
+    from models import AuditLogModel
+    from sqlalchemy import select
+
+    return db.scalar(
+        select(AuditLogModel.id).where(
+            AuditLogModel.action == "production.created_directly",
+            AuditLogModel.entity_type == "production",
+            AuditLogModel.entity_id == str(producao.id),
+        ).limit(1)
+    ) is not None
+
+
 def _sem_valor(model):
     """Zero-value proposal: accepted without a charge (see _validar_sem_valor)."""
     resposta = service._resposta(model)
@@ -186,13 +200,29 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
         raise service.PropostaConflito("Somente proposta enviada pode ser aprovada.")
     if budget.status != OrcamentoStatus.PROPOSTA_ENVIADA.value:
         raise service.PropostaConflito("Status do orcamento incompativel com a aprovacao.")
-    if crud_producao.buscar_por_orcamento(db, model.orcamento_id):
+    producao_direta = crud_producao.buscar_por_orcamento(db, model.orcamento_id)
+    if producao_direta is not None and not _criada_diretamente(db, producao_direta):
         raise service.PropostaConflito(
             "Ja existe producao para este orcamento; requer conciliacao."
         )
     # Proposals sent before 5.05 get their snapshot at acceptance, without blocking it.
     snapshots.congelar(db, model, origem="aceite", estrito=False)
-    if not pipeline_v2:
+    if producao_direta is not None:
+        # A production the Admin created directly for this budget: the proposal
+        # becomes its contract (stages, quotas and policies when it has none yet).
+        producao_etapa_service.instanciar(db, producao_direta, model)
+        cota_arquivo_service.instanciar(db, producao_direta, model)
+        politica_service.instanciar(db, producao_direta, model)
+        audit_service.record(
+            db,
+            actor=actor,
+            action="production.linked_to_proposal",
+            entity_type="production",
+            entity_id=producao_direta.id,
+            metadata={"proposal_id": model.id, "orcamento_id": model.orcamento_id},
+            request_id=request_id,
+        )
+    elif not pipeline_v2:
         producao = crud_producao.criar_sem_commit(
             db,
             _dados_producao(service._resposta(model)),

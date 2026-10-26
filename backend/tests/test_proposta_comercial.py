@@ -99,6 +99,45 @@ with Session(engine) as db:
     assert crud_producao.buscar_por_orcamento(db, 2) is None  # waits for payment
 ''')
 
+    def test_proposal_for_directly_created_production_links_instead_of_failing(self):
+        # The Admin created the production first ("Nova produção") and the proposal later:
+        # approving it links the proposal to that production instead of blocking.
+        self.run_case('''
+from services import audit_service
+from models import ProducaoModel
+config.settings.COMMERCIAL_PIPELINE_V2_ENABLED = True
+with Session(engine) as db:
+    actor = db.get(UsuarioModel, 1)
+    direct = ProducaoModel(titulo='Direta', cliente='Cliente Teste', servico='Mixagem', orcamento_id=1,
+                           status='em_producao', etapas='[]')
+    other = ProducaoModel(titulo='Sem origem', cliente='Cliente Teste', servico='Mixagem', orcamento_id=2,
+                          status='em_producao', etapas='[]')
+    db.add_all([direct, other]); db.flush()
+    audit_service.record(db, actor=actor, action='production.created_directly', entity_type='production',
+                         entity_id=direct.id, metadata={'orcamento_id': 1})
+    db.commit()
+    for budget_id in (1, 2):
+        p = service.criar_por_orcamento(db, budget_id)
+        service.atualizar(db, p.id, PropostaUpdate(itens=[{'descricao':'Mix', 'quantidade':1, 'valor_unitario':'200.00'}]))
+        with patch.object(resend.Emails, 'send', return_value={'id': f'direct-{budget_id}'}):
+            commercial.enviar(db, p.id, actor, f'direct-send-{budget_id}')
+    first = service.buscar_por_orcamento(db, 1)
+    approved = commercial.aprovar(db, first.id, actor, 'direct-approve')
+    assert approved.status == 'aceita'
+    assert db.query(ProducaoModel).filter_by(orcamento_id=1).count() == 1
+    assert db.get(ProducaoModel, direct.id).status == 'em_producao'  # the running work is kept
+    assert db.query(CobrancaModel).filter_by(proposta_id=first.id).count() == 1
+    assert db.query(AuditLogModel).filter_by(action='production.linked_to_proposal', entity_id=str(direct.id)).count() == 1
+    # A production with no known origin still needs a human decision.
+    second = service.buscar_por_orcamento(db, 2)
+    try:
+        commercial.aprovar(db, second.id, actor, 'other-approve')
+    except service.PropostaConflito as error:
+        assert 'requer conciliacao' in str(error)
+    else:
+        raise AssertionError('unknown production was linked')
+''')
+
     def test_email_failure_and_commit_failure_rollback(self):
         self.run_case('''
 with Session(engine) as db:
