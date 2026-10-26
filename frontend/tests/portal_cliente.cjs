@@ -369,6 +369,23 @@ async function staticResponse(route) {
         assert.match(changed.text, /Texto revisado: Condições/);
         assert.equal(changed.bold, 0);
         assert.equal(changed.items, 5);
+        // Zero-value proposal: accepted with nothing to pay, so no payment button.
+        const free = await page.evaluate(async () => {
+            const ui = await import('/js/cliente/ui.js');
+            const host = document.getElementById('client-proposal-detail-content');
+            const previous = [...host.childNodes];
+            ui.renderProposalDetail({
+                id: 97, numero: 'P-97', versao: 1, status: 'aceita', expirada: false, valida_ate: null,
+                objeto: 'Cortesia', servico: 'Mix', descricao: '', condicoes: '', itens: [], totais: { total: '0.00' },
+                politica_pagamento: 'integral', documento_disponivel: false, finalidade: 'producao',
+                situacao_comercial: 'sem_cobranca', cobranca_status: null,
+            }, { onDownload() {}, onRefuse() {}, onAccept() {} });
+            const result = { text: host.textContent, pay: host.querySelectorAll('a[href^="/checkout"]').length };
+            host.replaceChildren(...previous);
+            return result;
+        });
+        assert.match(free.text, /Proposta sem valor a pagar/);
+        assert.equal(free.pay, 0);
         assert.match(expired.text, /Vencida/);
         assert.match(expired.text, /venceu em 10\/10\/2026/);
         assert.equal(expired.accept, 0);

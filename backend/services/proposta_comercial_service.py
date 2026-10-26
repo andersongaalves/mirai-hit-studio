@@ -141,8 +141,25 @@ def enviar(db, proposta_id, actor=None, request_id=None):
         raise
 
 
+def _sem_valor(model):
+    """Zero-value proposal: accepted without a charge (see _validar_sem_valor)."""
+    resposta = service._resposta(model)
+    return service.calcular_totais(resposta.itens).total == 0
+
+
+def _validar_sem_valor(model):
+    # Beats and credit packages always need a payment to be confirmed.
+    if getattr(model, "finalidade", "producao") == "creditos":
+        raise service.PropostaInvalida("Proposta de créditos precisa de valor maior que zero.")
+    if any((item or {}).get("beat_id") for item in model.itens_json or []):
+        raise service.PropostaInvalida("Proposta com beat precisa de valor maior que zero.")
+
+
 def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
     pipeline_v2 = producao_liberacao_service.pipeline_v2_habilitada()
+    sem_valor = _sem_valor(model)
+    if sem_valor:
+        _validar_sem_valor(model)
     if getattr(model, "finalidade", "producao") == "creditos" and not pipeline_v2:
         raise service.PropostaConflito("Compra de creditos indisponivel sem a pipeline comercial V2.")
     if model.status == Status.ACEITA.value:
@@ -151,6 +168,9 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
                 raise service.PropostaConflito(
                     "Proposta aceita sem producao; requer conciliacao."
                 )
+            if sem_valor:
+                producao_liberacao_service.liberar_sem_cobranca(db, model, actor=actor, request_id=request_id)
+                return service._resposta(model)
             try:
                 financial_service.criar_para_proposta(
                     db,
@@ -180,16 +200,17 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
         producao_etapa_service.instanciar(db, producao, model)
         cota_arquivo_service.instanciar(db, producao, model)  # 5.09
         politica_service.instanciar(db, producao, model)  # 5.10
-    try:
-        financial_service.criar_para_proposta(
-            db,
-            model,
-            cliente_id=budget.cliente_id,
-        )
-    except financial_service.FinanceiroInvalido as error:
-        raise service.PropostaInvalida(str(error)) from None
-    except financial_service.FinanceiroConflito as error:
-        raise service.PropostaConflito(str(error)) from None
+    if not sem_valor:
+        try:
+            financial_service.criar_para_proposta(
+                db,
+                model,
+                cliente_id=budget.cliente_id,
+            )
+        except financial_service.FinanceiroInvalido as error:
+            raise service.PropostaInvalida(str(error)) from None
+        except financial_service.FinanceiroConflito as error:
+            raise service.PropostaConflito(str(error)) from None
     from services import beat_service
     try:
         beat_service.reserve_for_proposal(db, model, budget.cliente_id)
@@ -199,6 +220,9 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
     model.aprovada_em = datetime.now(timezone.utc)
     budget.status = OrcamentoStatus.APROVADO.value
     db.flush()
+    if sem_valor and pipeline_v2:
+        # Nothing to pay: production starts now, without a charge.
+        producao_liberacao_service.liberar_sem_cobranca(db, model, actor=actor, request_id=request_id)
     if getattr(model, "finalidade", "producao") == "creditos":
         charge = financial_service.buscar_por_proposta(db, model.id)
         try:
