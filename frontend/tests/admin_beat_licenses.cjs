@@ -21,6 +21,10 @@ const beats = () => [
           cancelada_em: '2026-10-22T10:00:00+00:00', motivo_cancelamento: 'pagamento_revertido' },
     ] },
     { ...base, id: 9, titulo: 'Sem licenca', status: 'revisao', pode_voltar_ao_catalogo: false, licencas: [] },
+    { ...base, id: 10, titulo: 'Vendido', status: 'aprovado', pode_voltar_ao_catalogo: false, licencas: [
+        { id: 33, tipo: 'lease_mp3', status: 'adquirida', proposta_id: 14, expira_em: null, adquirida_em: '2026-10-23T10:00:00+00:00',
+          cancelada_em: null, motivo_cancelamento: null },
+    ] },
 ];
 
 (async () => {
@@ -37,6 +41,8 @@ const beats = () => [
             if (url.origin === 'http://localhost:8000') {
                 if (url.pathname === '/admin/beats' && req.method() === 'GET') return route.fulfill({ json: beats() });
                 if (url.pathname === '/admin/beats/configuracao') return route.fulfill({ json: CONFIG });
+                if (url.pathname === '/admin/beats/licencas/33/contrato') return route.fulfill({ body: '%PDF-synthetic', contentType: 'application/pdf',
+                    headers: { 'content-disposition': "attachment; filename*=UTF-8''vendido-contrato-lease-mp3.pdf", 'access-control-expose-headers': 'Content-Disposition' } });
                 if (req.method() === 'POST' && /^\/admin\/beats\//.test(url.pathname)) {
                     posts.push({ path: url.pathname, body: req.postDataJSON() });
                     return route.fulfill({ json: {} });
@@ -69,7 +75,7 @@ const beats = () => [
         });
         const cards = page.locator('#admin-beats-list .admin-beat-card');
         await cards.first().waitFor();
-        assert.equal(await cards.count(), 3);
+        assert.equal(await cards.count(), 4);
         const reserved = cards.filter({ hasText: 'Reservado' });
         const text = await reserved.locator('.admin-beat-licenses').innerText();
         assert.match(text, /Exclusivo · Reservada · proposta #12 · reservada até/);
@@ -92,6 +98,13 @@ const beats = () => [
         await page.waitForTimeout(150);
         assert.deepEqual(posts.shift(), { path: '/admin/beats/8/voltar-ao-catalogo', body: { motivo: 'Reembolso confirmado' } });
         assert.equal(await cards.filter({ hasText: 'Reservado' }).getByRole('button', { name: 'Devolver ao catálogo' }).count(), 0);
+
+        // Only an acquired (paid) license offers the contract.
+        assert.equal(await cards.filter({ hasText: 'Reservado' }).getByRole('button', { name: 'Baixar contrato' }).count(), 0);
+        assert.equal(await cards.filter({ hasText: 'Reembolsado' }).getByRole('button', { name: 'Baixar contrato' }).count(), 0);
+        const contractDownload = page.waitForEvent('download');
+        await cards.filter({ hasText: 'Vendido' }).getByRole('button', { name: 'Baixar contrato' }).click();
+        assert.equal((await contractDownload).suggestedFilename(), 'vendido-contrato-lease-mp3.pdf');
 
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
         assert.equal(overflow, false);

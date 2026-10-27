@@ -237,7 +237,11 @@ async function loadBeatCatalog() {
             const producer = document.createElement("p"); producer.textContent = beat.produtor;
             const meta = document.createElement("p"); meta.textContent = `${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.tonalidade ? `${beat.tonalidade} · ` : ""}${beat.generos || "Sem gênero"}`;
             const prices = document.createElement("p"); prices.className = "beat-card__prices"; prices.textContent = [["MP3", beat.preco_lease], ["WAV", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
-            content.append(title, producer, meta, prices, beatPreview(() => api.ouvirBeat(beat.id)));
+            if (beat.vendido) {
+                card.classList.add("beat-card--sold");
+                const sold = document.createElement("span"); sold.className = "beat-card__sold"; sold.textContent = "Vendido";
+                content.append(title, producer, meta, sold);
+            } else content.append(title, producer, meta, prices, beatPreview(() => api.ouvirBeat(beat.id)));
             if (beat.capa_url) {
                 const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; card.append(cover);
             } else {

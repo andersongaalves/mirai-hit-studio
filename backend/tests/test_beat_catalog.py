@@ -190,7 +190,26 @@ async def check():
             assert purchased.status_code == 200 and purchased.json() == released.json()
             acquired = await api.get('/portal/cliente/beats/adquiridos', headers=bearer('client-a'))
             assert acquired.status_code == 200 and acquired.json()[0]['beat_id'] == beat_id
-            assert acquired.json()[0]['arquivos'] == ['multitrack']
+            # The multitrack license also releases the MP3 (this beat has no WAV).
+            assert acquired.json()[0]['arquivos'] == ['mp3', 'multitrack']
+            assert (await api.get(f'/portal/cliente/beats/{beat_id}/arquivo/mp3', headers=bearer('client-a'))).status_code == 200
+            assert (await api.get(f'/portal/cliente/beats/{beat_id}/arquivo/wav', headers=bearer('client-a'))).status_code == 404
+            # The lease contract is released with the files and stays on the purchased beat.
+            license_id = acquired.json()[0]['licenca_id']
+            contract = await api.get(f'/portal/cliente/beats/licencas/{license_id}/contrato', headers=bearer('client-a'))
+            assert contract.status_code == 200, contract.text
+            assert contract.content.startswith(b'%PDF-') and contract.headers['content-type'] == 'application/pdf'
+            assert 'contrato-multitrack.pdf' in contract.headers['content-disposition']
+            from io import BytesIO
+            from pypdf import PdfReader
+            text = ''.join(page.extract_text() for page in PdfReader(BytesIO(contract.content)).pages)
+            assert 'Beat (Lease)' in text and 'Link privado' in text and 'Multitrack' in text and 'MHS-BEAT-' in text, text[:400]
+            with Session(engine) as db:
+                db.add(UsuarioModel(id=60, username='client-b', password_hash='unused', role='cliente', is_admin=False, ativo=True, cliente_id=2))
+                db.commit()
+            assert (await api.get(f'/portal/cliente/beats/licencas/{license_id}/contrato', headers=bearer('client-b'))).status_code == 404
+            assert (await api.get(f'/admin/beats/licencas/{license_id}/contrato', headers=bearer('admin'))).status_code == 200
+            assert (await api.get(f'/admin/beats/licencas/{license_id}/contrato', headers=bearer('client-a'))).status_code == 403
 asyncio.run(check())
 """)
 
@@ -295,6 +314,22 @@ with Session(engine) as db:
     assert beat.status == 'vendido' and beat.ativo is False
     assert license.status == 'adquirida' and license.adquirida_em is not None
     assert beat_service._available_files(beat, license.tipo) == ['mp3', 'wav', 'multitrack']
+    assert beat_service._available_files(beat, 'multitrack') == ['mp3', 'wav', 'multitrack']
+    assert beat_service._available_files(beat, 'lease_wav') == ['wav']
+    # Exclusive contract: generated only for the acquired license.
+    from io import BytesIO
+    from pypdf import PdfReader
+    from services import beat_contrato_service
+    pdf, filename = beat_contrato_service.gerar(db, license.id, cliente_id=91)
+    text = ''.join(page.extract_text() for page in PdfReader(BytesIO(pdf)).pages)
+    assert 'Exclusiva de Beat' in text and 'Contrato' in text and '(Lease)' not in text, text[:400]
+    assert filename == 'contrato-contrato-exclusivo.pdf'
+    try:
+        beat_contrato_service.gerar(db, license.id, cliente_id=92)
+    except beat_contrato_service.ContratoNaoEncontrado:
+        pass
+    else:
+        raise AssertionError('another client got the contract')
     # AUD6-S06-003: R2 files leave through a signed link; the API never loads them.
     from types import SimpleNamespace
     from fastapi import HTTPException
@@ -437,6 +472,11 @@ with Session(engine) as db:
     charge, payment = pay(db, first.id, '500')
     db.refresh(beat); db.refresh(license)
     assert license.status == 'adquirida' and beat.status == 'vendido'
+    # Sold with exclusivity: stays in the catalog as "Vendido", without prices.
+    sold = beat_service.client_list(db)
+    assert [item['id'] for item in sold] == [beat.id] and sold[0]['vendido'] is True
+    assert all(sold[0][key] is None for key in ('preco_lease', 'preco_wav', 'preco_multitrack', 'preco_exclusivo'))
+    assert 'status' not in sold[0] and 'produtor_id' not in sold[0]
     payment.status = PagamentoStatus.REEMBOLSADO.value
     financial_service.sincronizar_status(charge)
     producao_liberacao_service.avaliar_cobranca_bloqueada(db, charge)
