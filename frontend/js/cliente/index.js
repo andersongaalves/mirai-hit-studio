@@ -290,6 +290,7 @@ async function loadBeats() {
                 const button = document.createElement("button"); button.className = "btn-outline"; button.type = "button";
                 const idempotencyKey = crypto.randomUUID();
                 button.textContent = `${label} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price)}`;
+                if (kind === "multitrack") button.title = "Inclui o multitrack, o WAV e o MP3.";
                 button.onclick = async () => {
                     button.disabled = true;
                     try {

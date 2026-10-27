@@ -190,7 +190,10 @@ async def check():
             assert purchased.status_code == 200 and purchased.json() == released.json()
             acquired = await api.get('/portal/cliente/beats/adquiridos', headers=bearer('client-a'))
             assert acquired.status_code == 200 and acquired.json()[0]['beat_id'] == beat_id
-            assert acquired.json()[0]['arquivos'] == ['multitrack']
+            # The multitrack license also releases the MP3 (this beat has no WAV).
+            assert acquired.json()[0]['arquivos'] == ['mp3', 'multitrack']
+            assert (await api.get(f'/portal/cliente/beats/{beat_id}/arquivo/mp3', headers=bearer('client-a'))).status_code == 200
+            assert (await api.get(f'/portal/cliente/beats/{beat_id}/arquivo/wav', headers=bearer('client-a'))).status_code == 404
             # The lease contract is released with the files and stays on the purchased beat.
             license_id = acquired.json()[0]['licenca_id']
             contract = await api.get(f'/portal/cliente/beats/licencas/{license_id}/contrato', headers=bearer('client-a'))
@@ -311,6 +314,8 @@ with Session(engine) as db:
     assert beat.status == 'vendido' and beat.ativo is False
     assert license.status == 'adquirida' and license.adquirida_em is not None
     assert beat_service._available_files(beat, license.tipo) == ['mp3', 'wav', 'multitrack']
+    assert beat_service._available_files(beat, 'multitrack') == ['mp3', 'wav', 'multitrack']
+    assert beat_service._available_files(beat, 'lease_wav') == ['wav']
     # Exclusive contract: generated only for the acquired license.
     from io import BytesIO
     from pypdf import PdfReader

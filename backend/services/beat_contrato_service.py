@@ -30,7 +30,7 @@ FORMATOS = {
     "lease": "MP3",
     "lease_mp3": "MP3",
     "lease_wav": "WAV",
-    "multitrack": "Multitrack (stems)",
+    "multitrack": "MP3, WAV e multitrack (stems)",
     "exclusivo": "MP3, WAV e multitrack (stems)",
 }
 

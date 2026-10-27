@@ -367,7 +367,8 @@ def _available_files(beat, license_type):
         "lease": ("mp3",),
         "lease_mp3": ("mp3",),
         "lease_wav": ("wav",),
-        "multitrack": ("multitrack",),
+        # The multitrack license also delivers the MP3 and the WAV.
+        "multitrack": ("mp3", "wav", "multitrack"),
         "exclusivo": ("mp3", "wav", "multitrack"),
     }.get(license_type, ())
     available = []
