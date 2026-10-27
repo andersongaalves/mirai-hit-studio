@@ -49,6 +49,14 @@ export async function baixarBeat(id, kind) {
     return { type: "file", blob: await response.blob(), filename };
 }
 
+export async function baixarContratoBeat(licencaId) {
+    const response = await authFetch(`/portal/cliente/beats/licencas/${licencaId}/contrato`);
+    if (!response.ok) return responseData(response, "Não foi possível baixar o contrato.");
+    const disposition = response.headers.get("content-disposition") || "";
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    return { blob: await response.blob(), filename: encoded ? decodeURIComponent(encoded) : `contrato-${licencaId}.pdf` };
+}
+
 export async function obterProposta(id) {
     return responseData(
         await authFetch(`/portal/cliente/propostas/${id}`),

@@ -214,7 +214,10 @@ async function staticResponse(route) {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
         if (url.pathname === '/portal/cliente/beats/adquiridos') {
-            return route.fulfill({ json: [{ beat_id: 72, titulo: '<Comprado>', arquivos: ['wav'] }] });
+            return route.fulfill({ json: [{ beat_id: 72, licenca_id: 81, licenca: 'lease_wav', titulo: '<Comprado>', arquivos: ['wav'] }] });
+        }
+        if (url.pathname === '/portal/cliente/beats/licencas/81/contrato') {
+            return route.fulfill({ body: '%PDF-synthetic', contentType: 'application/pdf', headers: { 'content-disposition': "attachment; filename*=UTF-8''comprado-contrato-lease-wav.pdf", 'access-control-expose-headers': 'Content-Disposition' } });
         }
         if (url.pathname === '/portal/cliente/beats/72/arquivo/wav') {
             return route.fulfill({ json: { type: 'download', url: 'https://signed.example.test/r2/horizonte.wav?X-Amz-Signature=synthetic', filename: 'horizonte.wav' } });
@@ -299,6 +302,10 @@ async function staticResponse(route) {
         const signedDownload = page.waitForEvent('download');
         await page.getByRole('button', { name: 'Baixar WAV' }).click();
         assert.equal((await signedDownload).suggestedFilename(), 'horizonte.wav');
+        assert.match(await page.locator('#client-acquired-beats-section').textContent(), /Licença: Lease WAV/);
+        const contractDownload = page.waitForEvent('download');
+        await page.getByRole('button', { name: 'Baixar contrato' }).click();
+        assert.equal((await contractDownload).suggestedFilename(), 'comprado-contrato-lease-wav.pdf');
         assert.equal(new URL(page.url()).pathname, '/cliente/explorar');
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
         await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);

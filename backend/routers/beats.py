@@ -164,6 +164,41 @@ def client_purchased_file(beat_id: int, kind: str, db: Db, user: Client):
     )
 
 
+def _contract_response(db, licenca_id, cliente_id=None):
+    from urllib.parse import quote
+
+    from services import beat_contrato_service
+    from services.documento_storage import DocumentoIndisponivel
+
+    try:
+        content, filename = beat_contrato_service.gerar(db, licenca_id, cliente_id=cliente_id)
+    except beat_contrato_service.ContratoNaoEncontrado:
+        raise HTTPException(404, "Contrato não encontrado.") from None
+    except DocumentoIndisponivel:
+        raise HTTPException(503, "Contrato temporariamente indisponível.") from None
+    return Response(
+        content,
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename, safe='')}",
+        },
+    )
+
+
+@router.get("/portal/cliente/beats/licencas/{licenca_id}/contrato")
+def client_beat_contract(licenca_id: int, db: Db, user: Client):
+    # Released with the files: only for a paid (acquired) license of this client.
+    if user.cliente_id is None:
+        raise HTTPException(404, "Contrato não encontrado.")
+    return _contract_response(db, licenca_id, user.cliente_id)
+
+
+@router.get("/admin/beats/licencas/{licenca_id}/contrato")
+def admin_beat_contract(licenca_id: int, db: Db, user: Admin):
+    return _contract_response(db, licenca_id)
+
+
 @router.post("/portal/cliente/beats/{beat_id}/solicitar", status_code=201)
 def request_beat(
     beat_id: int,

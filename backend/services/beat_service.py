@@ -351,6 +351,7 @@ def acquired_multitracks(db, actor):
     return [
         {
             "beat_id": beat.id,
+            "licenca_id": license.id,  # contract download
             "titulo": beat.titulo,
             "licenca": license.tipo,
             "adquirida_em": license.adquirida_em,

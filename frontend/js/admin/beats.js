@@ -128,6 +128,25 @@ function licensesSection(beat, message) {
             release.onclick = () => adminAction(`/admin/beats/licencas/${license.id}/liberar`, "Motivo para liberar a reserva:", release, message);
             item.append(release);
         }
+        if (license.status === "adquirida") {
+            const contract = document.createElement("button");
+            contract.type = "button"; contract.className = "btn-small"; contract.textContent = "Baixar contrato";
+            contract.onclick = async () => {
+                contract.disabled = true;
+                try {
+                    const response = await authFetch(`/admin/beats/licencas/${license.id}/contrato`);
+                    if (!response.ok) throw new Error("Não foi possível baixar o contrato.");
+                    const encoded = (response.headers.get("content-disposition") || "").match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+                    const url = URL.createObjectURL(await response.blob());
+                    const link = document.createElement("a");
+                    link.href = url; link.download = encoded ? decodeURIComponent(encoded) : `contrato-${license.id}.pdf`;
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 30000);
+                } catch (error) { message.textContent = error.message; }
+                finally { contract.disabled = false; }
+            };
+            item.append(contract);
+        }
         list.append(item);
     }
     section.append(heading, list);

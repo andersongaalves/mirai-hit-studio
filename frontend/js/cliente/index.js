@@ -260,7 +260,21 @@ async function loadBeats() {
                 };
                 actions.append(button);
             }
-            card.append(title, actions); return card;
+            // The license contract is released with the files and stays here.
+            if (Number.isInteger(item.licenca_id)) {
+                const contract = document.createElement("button"); contract.type = "button"; contract.className = "btn-outline";
+                contract.textContent = "Baixar contrato";
+                contract.onclick = async () => {
+                    contract.disabled = true;
+                    try { saveBlob(await api.baixarContratoBeat(item.licenca_id)); }
+                    catch (error) { setAlert(error.message, true); }
+                    finally { contract.disabled = false; }
+                };
+                actions.append(contract);
+            }
+            const license = document.createElement("p");
+            license.textContent = `Licença: ${{ lease: "Lease MP3", lease_mp3: "Lease MP3", lease_wav: "Lease WAV", multitrack: "Lease Multitrack", exclusivo: "Exclusiva" }[item.licenca] || item.licenca}`;
+            card.append(title, license, actions); return card;
         }));
         list.replaceChildren(...beats.map(beat => {
             const card = document.createElement("article"); card.className = "producer-card beat-card client-beat-card";
