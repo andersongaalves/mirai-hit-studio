@@ -184,7 +184,8 @@ async function staticResponse(route) {
             return route.fulfill({ json: { tag_id: null, nome: null, padrao_disponivel: true, versao: 0 } });
         }
         if (url.pathname === '/portal/produtor/catalogo-beats' && request.method() === 'GET') {
-            return route.fulfill({ json: [{ id: 81, produtor_id: 3, produtor: 'Outro Produtor', titulo: 'Beat publicado', descricao: '', bpm: 92, tonalidade: 'C', generos: 'R&B', preco_lease: '80.00', preco_exclusivo: '450.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
+            return route.fulfill({ json: [{ id: 81, produtor_id: 3, produtor: 'Outro Produtor', titulo: 'Beat publicado', descricao: '', bpm: 92, tonalidade: 'C', generos: 'R&B', preco_lease: '80.00', preco_exclusivo: '450.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() },
+                { id: 82, produtor: 'Outro Produtor', titulo: 'Beat exclusivo', descricao: '', bpm: 88, tonalidade: null, generos: 'Trap', preco_lease: null, preco_wav: null, preco_multitrack: null, preco_exclusivo: null, created_at: new Date().toISOString(), vendido: true }] });
         }
         if (url.pathname === '/portal/produtor/beats/configuracao' && request.method() === 'GET') {
             return route.fulfill({ json: { limits: { capa_mb: 10, mp3_mb: 1, wav_mb: 50, multitrack_mb: 50, multitrack_mode: 'arquivo' }, ready: true, message: '' } });
@@ -278,6 +279,9 @@ async function staticResponse(route) {
             'catalog only exposes preview player controls',
         );
         assert.doesNotMatch(await page.locator('#producer-catalog-list').textContent(), /Comprar|Solicitar/);
+        const soldBeat = page.locator('#producer-catalog-list .beat-card--sold');
+        assert.match(await soldBeat.textContent(), /Beat exclusivo.*Vendido/s);
+        assert.equal(await soldBeat.locator('.beat-preview, .beat-card__prices').count(), 0);
         await page.locator('#producer-catalog').getByRole('link', { name: 'Meus beats' }).click();
         await page.waitForURL('**/produtor/beats');
         await page.getByLabel('Título').fill('Novo beat');

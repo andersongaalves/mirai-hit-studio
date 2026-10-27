@@ -283,6 +283,16 @@ async function loadBeats() {
             let cover = null;
             if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; }
             const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
+            if (beat.vendido) {
+                // Sold with exclusivity: shown as sold, without preview or purchase.
+                card.classList.add("beat-card--sold");
+                const sold = document.createElement("span"); sold.className = "beat-card__sold"; sold.textContent = "Vendido";
+                content.append(title, author, sold);
+                if (cover) card.append(cover);
+                else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
+                card.append(content);
+                return card;
+            }
             const audio = beatPreview(() => api.ouvirBeat(beat.id));
             const actions = document.createElement("div"); actions.className = "producer-card__footer";
             for (const [kind, label, price] of [[beat.formato_novo ? "lease_mp3" : "lease", "MP3 lease", beat.preco_lease], ["lease_wav", "WAV lease", beat.preco_wav], ["multitrack", "Multitrack", beat.preco_multitrack], ["exclusivo", "Exclusivo", beat.preco_exclusivo]]) {

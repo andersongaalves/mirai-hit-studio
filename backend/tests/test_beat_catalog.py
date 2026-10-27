@@ -472,6 +472,11 @@ with Session(engine) as db:
     charge, payment = pay(db, first.id, '500')
     db.refresh(beat); db.refresh(license)
     assert license.status == 'adquirida' and beat.status == 'vendido'
+    # Sold with exclusivity: stays in the catalog as "Vendido", without prices.
+    sold = beat_service.client_list(db)
+    assert [item['id'] for item in sold] == [beat.id] and sold[0]['vendido'] is True
+    assert all(sold[0][key] is None for key in ('preco_lease', 'preco_wav', 'preco_multitrack', 'preco_exclusivo'))
+    assert 'status' not in sold[0] and 'produtor_id' not in sold[0]
     payment.status = PagamentoStatus.REEMBOLSADO.value
     financial_service.sincronizar_status(charge)
     producao_liberacao_service.avaliar_cobranca_bloqueada(db, charge)

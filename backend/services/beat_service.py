@@ -323,7 +323,28 @@ def client_list(db):
         active = reserved.get(row.id, [])
         if "exclusivo" in active:
             continue
-        result.append(_public_response(_response(db, row, exclusive_available=not active)))
+        item = _public_response(_response(db, row, exclusive_available=not active))
+        item["vendido"] = False
+        result.append(item)
+    # A beat sold with an exclusive license stays in the catalog as "Vendido":
+    # no prices, no preview and no purchase (those routes require "aprovado").
+    sold = db.scalars(
+        select(BeatModel)
+        .where(
+            BeatModel.status == "vendido",
+            BeatModel.id.in_(
+                select(BeatLicencaModel.beat_id).where(
+                    BeatLicencaModel.tipo == "exclusivo",
+                    BeatLicencaModel.status == "adquirida",
+                )
+            ),
+        )
+        .order_by(BeatModel.created_at.desc())
+    ).all()
+    for row in sold:
+        item = _public_response(_response(db, row, exclusive_available=False))
+        item.update(preco_lease=None, preco_wav=None, preco_multitrack=None, preco_exclusivo=None, vendido=True)
+        result.append(item)
     return result
 
 

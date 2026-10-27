@@ -211,7 +211,10 @@ async function staticResponse(route) {
             return route.fulfill(portalSettings ? { json: { portal: 'cliente', versao: 4, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
         }
         if (url.pathname === '/portal/cliente/beats') {
-            return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
+            return route.fulfill({ json: [
+                { id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString(), vendido: false },
+                { id: 73, produtor: '<Producer>', titulo: '<Vendido>', descricao: '', bpm: 90, tonalidade: null, generos: 'Boom bap', preco_lease: null, preco_wav: null, preco_multitrack: null, preco_exclusivo: null, created_at: new Date().toISOString(), vendido: true },
+            ] });
         }
         if (url.pathname === '/portal/cliente/beats/adquiridos') {
             return route.fulfill({ json: [{ beat_id: 72, licenca_id: 81, licenca: 'lease_wav', titulo: '<Comprado>', arquivos: ['wav'] }] });
@@ -298,6 +301,10 @@ async function staticResponse(route) {
         assert.match(await page.locator('#client-beats').textContent(), /Catálogo de beats/);
         await page.waitForSelector('#client-beats-list .producer-card');
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
+        const soldCard = page.locator('#client-beats-list .beat-card--sold');
+        assert.equal(await soldCard.count(), 1);
+        assert.match(await soldCard.textContent(), /<Vendido>.*Vendido/s);
+        assert.equal(await soldCard.locator('button, audio').count(), 0, 'sold beat offers no preview or purchase');
         assert.equal(await page.locator('#client-acquired-beats-section').isVisible(), true);
         const signedDownload = page.waitForEvent('download');
         await page.getByRole('button', { name: 'Baixar WAV' }).click();
@@ -309,9 +316,9 @@ async function staticResponse(route) {
         assert.equal(new URL(page.url()).pathname, '/cliente/explorar');
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
         await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);
-        const beatBox = await page.locator('#client-beats-list .beat-card').boundingBox();
+        const beatBox = await page.locator('#client-beats-list .beat-card').first().boundingBox();
         assert.ok(Math.abs(beatBox.width - beatBox.height) < 2, 'client beat card must remain square');
-        assert.equal(await page.locator('#client-beats-list .client-beat-card__content').evaluate(element => (
+        assert.equal(await page.locator('#client-beats-list .client-beat-card__content').first().evaluate(element => (
             element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
         )), true, 'client beat content must fit inside the square');
         await page.getByRole('button', { name: /MP3 lease/ }).click();
