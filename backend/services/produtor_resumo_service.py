@@ -45,6 +45,7 @@ def carregar(db, produtor_id, *, agora=None):
             "nome_exibicao": produtor.nome_exibicao,
             "ativo": bool(produtor.ativo),
             "painel_beats": bool(produtor.painel_beats),
+            "especialidades": [item for item in (produtor.especialidades or "").split(",") if item],
         },
         "contagens": {
             "producoes_ativas": len(ativas),

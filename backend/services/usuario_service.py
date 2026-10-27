@@ -3,7 +3,7 @@ from crud import crud_usuario
 from models.cliente import ClienteModel
 from models.projeto_credito import ProjetoCreditoModel
 from models.usuario import UsuarioModel
-from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioUpdate
+from schemas.usuario import UsuarioCreate, UsuarioPasswordUpdate, UsuarioUpdate, especialidades_lista
 from services import audit_service
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -61,6 +61,18 @@ def _validar_email(db: Session, *, role: str, email: str | None, usuario_id: int
         raise UsuarioConflito("Este e-mail pertence a um cliente; use outro para a conta interna.")
 
 
+def _perfil_produtor(role: str, especialidades, cpf):
+    """Specialties belong to producers; the CPF is asked only of beatmakers."""
+    if role != "produtor":
+        return None, None
+    especialidades = list(especialidades or [])
+    if "beatmaker" not in especialidades:
+        cpf = None
+    elif not cpf:
+        raise UsuarioInvalido("Informe o CPF do beatmaker (usado nos contratos de beat).")
+    return ",".join(especialidades) or None, cpf
+
+
 def _buscar(db: Session, usuario_id: int):
     usuario = crud_usuario.buscar_por_id(db, usuario_id)
     if not usuario:
@@ -85,6 +97,8 @@ def criar(db: Session, dados: UsuarioCreate, ator, request_id: str | None = None
     password = payload.pop("password")
     _validar_vinculo_cliente(db, role=role, cliente_id=payload.get("cliente_id"))
     _validar_email(db, role=role, email=payload.get("email"))
+    payload["especialidades"], payload["cpf"] = _perfil_produtor(
+        role, payload.get("especialidades"), payload.get("cpf"))
     try:
         usuario = crud_usuario.criar_sem_commit(db, {
             **payload,
@@ -121,7 +135,7 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
     old_active = usuario.ativo
     old_display = usuario.nome_exibicao
     old_username = usuario.username
-    old_username = usuario.username
+    old_profile = (usuario.especialidades, usuario.cpf)
     payload = dados.model_dump(exclude_unset=True)
     if "username" in payload and crud_usuario.username_em_uso(db, payload["username"], usuario.id):
         raise UsuarioConflito("Nome de usuario ja cadastrado.")
@@ -134,6 +148,13 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
         raise UsuarioInvalido("Painel de beats permitido apenas para produtores.")
     if proximo_role != "produtor":
         payload["painel_beats"] = False
+    if {"especialidades", "cpf", "role"} & payload.keys():
+        payload["especialidades"], payload["cpf"] = _perfil_produtor(
+            proximo_role,
+            payload["especialidades"] if payload.get("especialidades") is not None
+            else especialidades_lista(usuario.especialidades),
+            payload["cpf"] if "cpf" in payload else usuario.cpf,
+        )
     if usuario.is_test and (proximo_role == "admin" or payload.get("username", usuario.username).strip().lower() == "yonda"):
         raise UsuarioConflito("Conta de teste exige reversao validada antes de assumir identidade protegida.")
     proximo_ativo = payload.get("ativo", usuario.ativo)
@@ -190,7 +211,14 @@ def atualizar(db: Session, usuario_id: int, dados: UsuarioUpdate, ator, request_
                 "new_role": usuario.role,
                 "old_active": old_active,
                 "new_active": usuario.ativo,
-                **({"changed_keys": "nome_exibicao"} if usuario.nome_exibicao != old_display else {}),
+                # Names of the changed fields only; never the CPF itself.
+                **({"changed_keys": ",".join(changed)} if (changed := [
+                    key for key, changed_value in (
+                        ("nome_exibicao", usuario.nome_exibicao != old_display),
+                        ("especialidades", usuario.especialidades != old_profile[0]),
+                        ("cpf", usuario.cpf != old_profile[1]),
+                    ) if changed_value
+                ]) else {}),
             },
             request_id=request_id,
         )

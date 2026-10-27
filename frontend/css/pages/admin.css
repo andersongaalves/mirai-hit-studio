@@ -1308,6 +1308,20 @@
     gap: var(--space-2);
 }
 
+.usuario-especialidades {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.usuario-especialidades legend { padding: 0; margin-bottom: var(--space-2); }
+.usuario-especialidades label { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }
+.usuario-especialidades.hidden { display: none; }
+
 .usuario-modal-actions {
     justify-content: flex-end;
     margin-top: var(--space-5);

@@ -244,5 +244,51 @@ with engine.connect() as connection:
 ''')
 
 
+    def test_producer_specialties_and_beatmaker_cpf(self):
+        self.run_case(r'''
+from models import AuditLogModel
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        admin = bearer('admin')
+        base = {'password':'new-password', 'role':'produtor'}
+        # The CPF is asked only of beatmakers.
+        missing = await client.post('/usuarios', headers=admin, json={**base, 'username':'bm', 'especialidades':['beatmaker']})
+        assert missing.status_code == 422 and 'CPF' in missing.json()['detail'], missing.text
+        invalid = await client.post('/usuarios', headers=admin, json={**base, 'username':'bm', 'especialidades':['beatmaker'], 'cpf':'111.111.111-11'})
+        assert invalid.status_code == 422
+        assert (await client.post('/usuarios', headers=admin, json={**base, 'username':'bm', 'especialidades':['dj']})).status_code == 422
+        created = await client.post('/usuarios', headers=admin, json={**base, 'username':'bm', 'especialidades':['mixagem', 'beatmaker'], 'cpf':'529.982.247-25'})
+        assert created.status_code == 201, created.text
+        assert created.json()['especialidades'] == ['beatmaker', 'mixagem'] and created.json()['cpf'] == '52998224725'
+        identifier = created.json()['id']
+        # Lists only say the CPF is on file; the number stays in the detail.
+        listed = [item for item in (await client.get('/usuarios', headers=admin)).json() if item['id'] == identifier][0]
+        assert listed['cpf_cadastrado'] is True and 'cpf' not in listed
+        producers = (await client.get('/usuarios/produtores', headers=admin)).json()
+        assert all('cpf' not in item for item in producers)
+        assert (await client.get(f'/usuarios/{identifier}', headers=admin)).json()['cpf'] == '52998224725'
+        assert (await client.get(f'/usuarios/{identifier}', headers=bearer('produtor'))).status_code == 403
+        # A mixing engineer has no CPF: dropping "beatmaker" removes it.
+        mixer = await client.patch(f'/usuarios/{identifier}', headers=admin, json={'especialidades':['mixagem', 'masterizacao']})
+        assert mixer.status_code == 200 and mixer.json()['cpf'] is None and mixer.json()['especialidades'] == ['mixagem', 'masterizacao']
+        ignored = await client.post('/usuarios', headers=admin, json={**base, 'username':'mix', 'especialidades':['mixagem'], 'cpf':'52998224725'})
+        assert ignored.status_code == 201 and ignored.json()['cpf'] is None
+        # Back to beatmaker requires the CPF again.
+        assert (await client.patch(f'/usuarios/{identifier}', headers=admin, json={'especialidades':['beatmaker']})).status_code == 422
+        again = await client.patch(f'/usuarios/{identifier}', headers=admin, json={'especialidades':['beatmaker'], 'cpf':'52998224725'})
+        assert again.status_code == 200 and again.json()['cpf'] == '52998224725'
+        # Unrelated edits keep the profile; other roles have none.
+        assert (await client.patch(f'/usuarios/{identifier}', headers=admin, json={'nome_exibicao':'BM'})).json()['especialidades'] == ['beatmaker']
+        admin_user = await client.post('/usuarios', headers=admin, json={**base, 'username':'adm2', 'role':'admin', 'especialidades':['beatmaker'], 'cpf':'52998224725'})
+        assert admin_user.status_code == 201 and admin_user.json()['especialidades'] == [] and admin_user.json()['cpf'] is None
+        # The session never carries the CPF.
+        me = (await client.get('/auth/me', headers=bearer('bm'))).json()
+        assert 'cpf' not in me
+    with Session(engine) as db:
+        metadata = [str(row.metadata_json) for row in db.query(AuditLogModel).all()]
+        assert not any('52998224725' in item for item in metadata)
+asyncio.run(check())
+''')
+
 if __name__ == "__main__":
     unittest.main()

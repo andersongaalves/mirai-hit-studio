@@ -18,6 +18,18 @@ export function statusBadge(usuario) {
 }
 
 
+export const ESPECIALIDADES = { beatmaker: "Beatmaker", mixagem: "Engenheiro de mixagem", masterizacao: "Engenheiro de masterização" };
+
+
+// Producer specialties, plus a warning when a beatmaker still lacks the CPF for contracts.
+export function specialtyBadges(usuario) {
+    const list = usuario.role === "produtor" ? (usuario.especialidades || []) : [];
+    const badges = list.map((item) => textElement("span", ESPECIALIDADES[item] || item, "badge badge-neutral"));
+    if (list.includes("beatmaker") && !usuario.cpf_cadastrado) badges.push(textElement("span", "CPF pendente", "badge badge-warning"));
+    return badges;
+}
+
+
 export function roleBadge(usuario) {
     return textElement(
         "span",

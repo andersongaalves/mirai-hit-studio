@@ -51,7 +51,7 @@ function render(data) {
     close.addEventListener("click", closeProdutorResumo);
     header.append(title, close);
     const meta = element("p", "admin-entity-dialog__meta",
-        `Login ${data.produtor.username} · ${data.produtor.ativo ? "ativo" : "inativo"}${data.produtor.painel_beats ? " · painel de beats" : ""}`);
+        `Login ${data.produtor.username} · ${data.produtor.ativo ? "ativo" : "inativo"}${data.produtor.painel_beats ? " · painel de beats" : ""}${(data.produtor.especialidades || []).length ? ` · ${data.produtor.especialidades.map(item => ({ beatmaker: "Beatmaker", mixagem: "Engenheiro de mixagem", masterizacao: "Engenheiro de masterização" })[item] || item).join(", ")}` : ""}`);
     const counts = element("dl", "admin-entity-dialog__counts");
     const c = data.contagens;
     for (const [label, value] of [

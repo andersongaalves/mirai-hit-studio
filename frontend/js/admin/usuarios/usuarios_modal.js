@@ -22,6 +22,22 @@ function displayName() {
 }
 
 
+function specialties() {
+    return [...document.querySelectorAll('input[name="usuario-especialidade"]:checked')].map((input) => input.value);
+}
+
+
+function cpf() {
+    return field("usuario-cpf").value.replace(/\D/g, "") || null;
+}
+
+
+function formatCpf(value) {
+    const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
+    return digits.replace(/^(\d{3})(\d)/, "$1.$2").replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d{1,2})$/, ".$1-$2");
+}
+
+
 function payload() {
     if (!current) {
         return {
@@ -31,6 +47,8 @@ function payload() {
             role: field("usuario-role").value,
             painel_beats: field("usuario-painel-beats").checked,
             email: field("usuario-email").value.trim() || null,
+            especialidades: specialties(),
+            cpf: cpf(),
         };
     }
     const update = {
@@ -40,12 +58,16 @@ function payload() {
         ativo: field("usuario-ativo").checked,
         painel_beats: field("usuario-painel-beats").checked,
         email: field("usuario-email").value.trim() || null,
+        especialidades: specialties(),
+        cpf: cpf(),
     };
     // AUD6-S02-005: a client account keeps its role and client link; only name and access change here.
     if (current.role === "cliente") {
         delete update.role;
         delete update.painel_beats;
         delete update.email;
+        delete update.especialidades;
+        delete update.cpf;
     }
     return update;
 }
@@ -64,6 +86,10 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     field("usuario-ativo").checked = usuario?.ativo ?? true;
     field("usuario-painel-beats").checked = usuario?.painel_beats ?? false;
     field("usuario-email").value = usuario?.email || "";
+    const chosen = new Set(usuario?.especialidades || []);
+    document.querySelectorAll('input[name="usuario-especialidade"]').forEach((input) => { input.checked = chosen.has(input.value); });
+    field("usuario-cpf").value = formatCpf(usuario?.cpf);
+    field("usuario-cpf").oninput = () => { field("usuario-cpf").value = formatCpf(field("usuario-cpf").value); };
     field("usuario-email-field").classList.toggle("hidden", client);
     field("usuario-password").value = "";
     field("usuario-new-password").value = "";
@@ -83,9 +109,17 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
     const syncBeatPermission = () => {
         const producer = field("usuario-role").value === "produtor";
         field("usuario-beats-field").classList.toggle("hidden", !producer);
+        field("usuario-especialidades-field").classList.toggle("hidden", !producer);
         if (!producer) field("usuario-painel-beats").checked = false;
+        if (!producer) document.querySelectorAll('input[name="usuario-especialidade"]').forEach((input) => { input.checked = false; });
+        // The CPF is asked only of beatmakers.
+        const beatmaker = producer && specialties().includes("beatmaker");
+        field("usuario-cpf-field").classList.toggle("hidden", !beatmaker);
+        field("usuario-cpf").required = beatmaker;
+        if (!beatmaker) field("usuario-cpf").value = "";
     };
     field("usuario-role").onchange = syncBeatPermission;
+    document.querySelectorAll('input[name="usuario-especialidade"]').forEach((input) => { input.onchange = syncBeatPermission; });
     syncBeatPermission();
 
     const save = field("usuario-save");
@@ -93,6 +127,7 @@ export function openUsuarioModal(usuario = null, handlers = {}) {
         const required = current
             ? ["usuario-username", "usuario-role"]
             : ["usuario-username", "usuario-role", "usuario-password"];
+        if (field("usuario-cpf").required) required.push("usuario-cpf");
         if (save.disabled || !onSave || !valid(...required)) return;
         save.disabled = true;
         try {

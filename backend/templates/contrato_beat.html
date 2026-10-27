@@ -25,9 +25,12 @@ li { margin: 0 0 3pt; }
 
 <table><tr>
 <td width="50%"><p><strong>Licenciante</strong></p>
-<p>Mirai Hit Studio, em nome do produtor autor do beat</p>
+{% if produtor_cpf %}<p>{{ produtor }}, produtor autor do beat</p>
+<p>CPF {{ produtor_cpf }}</p>
+<p>Representado comercialmente por Mirai Hit Studio</p>
+{% else %}<p>Mirai Hit Studio, em nome do produtor autor do beat</p>
 <p>Produtor: {{ produtor }}</p>
-<p>contato@miraihitstudio.com.br · Juazeiro (BA)</p></td>
+{% endif %}<p>contato@miraihitstudio.com.br · Juazeiro (BA)</p></td>
 <td width="50%"><p><strong>Licenciado</strong></p>
 {% for line in cliente_nome|linhas(45) %}<p>{{ line }}</p>{% endfor %}
 {% for line in cliente_email|linhas(45) %}<p>{{ line }}</p>{% endfor %}</td>

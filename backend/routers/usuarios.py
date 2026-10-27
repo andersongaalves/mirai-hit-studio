@@ -5,6 +5,7 @@ from schemas.proposta import PropostaClassificacaoUpdate
 from schemas.usuario import (
     UsuarioCreate,
     UsuarioPasswordUpdate,
+    UsuarioDetalheResponse,
     UsuarioResponse,
     UsuarioUpdate,
 )
@@ -43,7 +44,7 @@ def listar_produtores_ativos(
     return usuario_service.listar(db, ativo=True, role="produtor")
 
 
-@router.get("/{usuario_id}", response_model=UsuarioResponse)
+@router.get("/{usuario_id}", response_model=UsuarioDetalheResponse)
 def obter_usuario(
     usuario_id: int,
     db: Session = Depends(get_db),
@@ -55,7 +56,7 @@ def obter_usuario(
         _erro(error)
 
 
-@router.post("", response_model=UsuarioResponse, status_code=201)
+@router.post("", response_model=UsuarioDetalheResponse, status_code=201)
 def criar_usuario(
     dados: UsuarioCreate,
     request: Request,
@@ -68,7 +69,7 @@ def criar_usuario(
         _erro(error)
 
 
-@router.patch("/{usuario_id}", response_model=UsuarioResponse)
+@router.patch("/{usuario_id}", response_model=UsuarioDetalheResponse)
 def atualizar_usuario(
     usuario_id: int,
     dados: UsuarioUpdate,
