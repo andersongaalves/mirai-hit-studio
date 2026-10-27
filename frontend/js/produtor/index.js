@@ -108,6 +108,8 @@ async function openDetail(id) {
             onStatus: updateStatus,
             onUpload: uploadFile,
             onDownload: downloadFile,
+            onListen: listenFile,
+            onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
         });
         showView("detail");
         loadMessages(production, files);
@@ -265,6 +267,8 @@ async function updateStatus(id, status, button) {
                 onStatus: updateStatus,
                 onUpload: uploadFile,
                 onDownload: downloadFile,
+                onListen: listenFile,
+                onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
             });
             loadMessages(updated, files);
             loadStages(updated);
@@ -287,6 +291,12 @@ function saveBlob({ blob, filename }) {
     link.click();
     // Revoking synchronously can cancel the download in some browsers.
     setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+// Listen in the page: the tagged preview or the original upload.
+async function listenFile(file, versao) {
+    const { blob } = await api.baixarArquivo(file.id, { versao, ouvir: true });
+    return blob;
 }
 
 async function downloadFile(id, button) {

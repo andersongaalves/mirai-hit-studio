@@ -330,10 +330,23 @@ def get_for_client(db, file_id, client_id):
     return model
 
 
-def read(model, storage=None, *, client=False):
+def read(model, storage=None, *, client=False, versao=None):
+    """File bytes. Clients get the tagged preview by default; studio users the original.
+
+    versao="processada" asks for the tagged preview, versao="original" for the
+    uploaded file (routers decide who may ask for which).
+    """
     storage = storage or new_production_file_storage(model.tipo)
-    job = getattr(model, "tag_processamento", None) if client else None
-    if client and getattr(model, "original_restrito", False) and job is None:
+    tag_job = getattr(model, "tag_processamento", None)
+    if versao == "processada":
+        if tag_job is None:
+            raise ProducaoArquivoUnavailable("Este arquivo nao tem versao processada.")
+        job = tag_job
+    elif versao == "original":
+        job = None
+    else:
+        job = tag_job if client else None
+    if client and versao is None and getattr(model, "original_restrito", False) and job is None:
         raise ProducaoArquivoUnavailable("Previa em processamento.")
     if job is not None and job.estado != "pronto":
         raise ProducaoArquivoUnavailable("Previa em processamento. Tente novamente em instantes.")
@@ -351,6 +364,28 @@ def read(model, storage=None, *, client=False):
         )
         raise ProducaoArquivoUnavailable("Integridade do arquivo nao confirmada.")
     return content
+
+
+def update_note(db, *, model, actor, note, request_id=None):
+    """The producer edits the note of a file they sent (for example, a preview)."""
+    if model.remetente_usuario_id != getattr(actor, "id", None):
+        raise ProducaoArquivoConflict("So quem enviou o arquivo pode editar a observacao.")
+    cleaned = _normalize_note(note)
+    if cleaned == model.observacao:
+        return model
+    model.observacao = cleaned
+    audit_service.record(
+        db,
+        actor=actor,
+        action="production.file_note_changed",
+        entity_type="production_file",
+        entity_id=model.id,
+        metadata={"production_id": model.producao_id, "tipo": model.tipo},
+        request_id=request_id,
+    )
+    db.commit()
+    db.refresh(model)
+    return model
 
 
 def update_visibility(db, *, model, actor, producer, client, request_id=None):

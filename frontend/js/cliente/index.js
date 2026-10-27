@@ -423,10 +423,10 @@ async function refuseProposal(proposal, button) {
     }
 }
 
-async function playPreview(file, player, button) {
+async function playPreview(file, player, button, versao = null) {
     button.disabled = true;
     try {
-        const { blob } = await api.baixarArquivo(file.id);
+        const { blob } = await api.baixarArquivo(file.id, { versao, ouvir: true });
         const url = URL.createObjectURL(blob);
         objectUrls.add(url);
         const media = document.createElement(file.mime_type.startsWith("video/") ? "video" : "audio");

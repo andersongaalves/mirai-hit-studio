@@ -143,8 +143,12 @@ export async function enviarArquivo(producaoId, arquivo, tipo, substituiId = nul
     );
 }
 
-export async function baixarArquivo(id) {
-    const response = await authFetch(`/portal/cliente/arquivos/${id}/conteudo`);
+export async function baixarArquivo(id, { versao = null, ouvir = false } = {}) {
+    const query = new URLSearchParams();
+    if (versao) query.set("versao", versao);
+    if (ouvir) query.set("ouvir", "true");
+    const suffix = query.size ? `?${query}` : "";
+    const response = await authFetch(`/portal/cliente/arquivos/${id}/conteudo${suffix}`);
     if (!response.ok) {
         const data = await response.json().catch(() => null);
         throw new Error(humanClientMessage(data?.detail, "Não foi possível acessar o arquivo."));

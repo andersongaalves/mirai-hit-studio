@@ -1,3 +1,4 @@
+import { controlesOuvir, opcoesEstudio, podeOuvir } from "../modules/ouvir_arquivo.js";
 import { deadlineState, filterAndSort, formatDate, nextAction, parseEtapas, statusInfo, summarize } from "./utils.js";
 
 let currentUserId = null;
@@ -128,16 +129,63 @@ export function renderList(productions, filters, onOpen) {
     items.forEach(item => list.append(productionCard(item, onOpen)));
 }
 
-function fileItem(file, onDownload) {
+function fileItem(file, handlers) {
+    const onDownload = handlers.onDownload;
     const item = element("li", "producer-file");
     const info = element("div");
     info.append(
         element("strong", "", file.nome_exibicao),
         element("span", "", `${file.tipo} · versão ${file.versao} · ${Math.ceil(file.tamanho_bytes / 1024)} KB`),
     );
-    if (file.observacao) {
-        const author = file.remetente_usuario_id === currentUserId ? "Sua observação" : "Observação";
-        info.append(element("p", "file-note", `${author}: ${file.observacao}`));
+    const own = file.remetente_usuario_id === currentUserId;
+    const note = element("p", "file-note");
+    const showNote = () => {
+        note.textContent = file.observacao ? `${own ? "Sua observação" : "Observação"}: ${file.observacao}` : "";
+        note.hidden = !file.observacao;
+    };
+    showNote();
+    info.append(note);
+    if (own && handlers.onEditNote) {
+        // The producer can fix or complete the note of a file they sent.
+        const edit = element("button", "btn-outline btn-small", file.observacao ? "Editar observação" : "Adicionar observação");
+        edit.type = "button";
+        const form = element("form", "file-note-form");
+        form.hidden = true;
+        const label = element("label", "", "Observação");
+        const text = element("textarea");
+        text.maxLength = 1000;
+        text.rows = 3;
+        label.append(text);
+        const save = element("button", "btn-cta btn-small", "Salvar");
+        save.type = "submit";
+        const cancel = element("button", "btn-outline btn-small", "Cancelar");
+        cancel.type = "button";
+        form.append(label, save, cancel);
+        const close = () => { form.hidden = true; edit.hidden = false; };
+        edit.addEventListener("click", () => {
+            text.value = file.observacao || "";
+            form.hidden = false;
+            edit.hidden = true;
+            text.focus();
+        });
+        cancel.addEventListener("click", close);
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+            save.disabled = true;
+            try {
+                const updated = await handlers.onEditNote(file, text.value.trim());
+                file.observacao = updated?.observacao ?? null;
+                showNote();
+                edit.textContent = file.observacao ? "Editar observação" : "Adicionar observação";
+                close();
+                setAlert("Observação salva.");
+            } catch (error) {
+                setAlert(error.message, true);
+            } finally {
+                save.disabled = false;
+            }
+        });
+        info.append(edit, form);
     }
     if (file.tipo === "previa") {
         info.append(element(
@@ -152,6 +200,13 @@ function fileItem(file, onDownload) {
     button.type = "button";
     button.addEventListener("click", () => onDownload(file.id, button));
     item.append(info, button);
+    if (handlers.onListen && podeOuvir(file) && file.processamento_tag !== "pendente") {
+        info.append(controlesOuvir(file, {
+            opcoes: opcoesEstudio(file),
+            load: versao => handlers.onListen(file, versao),
+            onError: error => setAlert(error.message, true),
+        }));
+    }
     return item;
 }
 
@@ -160,7 +215,7 @@ function filesPanel(production, files, handlers) {
     panel.append(element("h2", "", "Arquivos"));
     const list = element("ul", "producer-file-list");
     if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo disponível."));
-    else files.forEach(file => list.append(fileItem(file, handlers.onDownload)));
+    else files.forEach(file => list.append(fileItem(file, handlers)));
     panel.append(list);
 
     const form = element("form", "producer-upload");

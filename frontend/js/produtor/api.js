@@ -81,8 +81,12 @@ async function baixar(url, fallback) {
     return { blob, filename: encoded ? decodeURIComponent(encoded) : "arquivo" };
 }
 
-export function baixarArquivo(id) {
-    return baixar(`/portal/produtor/arquivos/${id}/conteudo`, "Não foi possível baixar o arquivo.");
+export function baixarArquivo(id, { versao = null, ouvir = false } = {}) {
+    const query = new URLSearchParams();
+    if (versao) query.set("versao", versao);
+    if (ouvir) query.set("ouvir", "true");
+    const suffix = query.size ? `?${query}` : "";
+    return baixar(`/portal/produtor/arquivos/${id}/conteudo${suffix}`, "Não foi possível acessar o arquivo.");
 }
 
 export function baixarComprovante(id) {
@@ -168,4 +172,11 @@ export async function listarCotas(producaoId) {
 // AUD6-S08-001: tag state for the dashboard notice (secondary; failures are ignored).
 export async function obterTag() {
     return responseData(await authFetch("/portal/produtor/audio-tag"), "Não foi possível carregar sua tag.");
+}
+
+export async function editarObservacao(id, observacao) {
+    return responseData(await authFetch(`/portal/produtor/arquivos/${id}/observacao`, {
+        method: "PATCH",
+        body: JSON.stringify({ observacao: observacao || null }),
+    }), "Não foi possível salvar a observação.");
 }
