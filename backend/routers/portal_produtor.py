@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -13,7 +13,7 @@ from models.portal_produtor import ProducaoArquivoModel
 from models.usuario import UsuarioModel
 from schemas.portal_produtor import ProducaoProdutorResponse
 from schemas.producao import ProducaoStatusUpdate
-from schemas.producao_arquivo import ProducaoArquivoResponse
+from schemas.producao_arquivo import ProducaoArquivoObservacaoRequest, ProducaoArquivoResponse
 from schemas.repasse_produtor import RepasseProdutorResponse
 from services import audit_service, politica_service, producao_arquivo_service, repasse_produtor_service
 from services.producao_arquivo_storage import MAX_FILE_SIZE
@@ -188,22 +188,52 @@ async def enviar_arquivo(
         raise _file_error(exc) from None
 
 
-@router.get("/arquivos/{arquivo_id}/conteudo")
-def baixar_arquivo(
+@router.patch("/arquivos/{arquivo_id}/observacao", response_model=ProducaoArquivoResponse)
+def editar_observacao(
     arquivo_id: int,
+    payload: ProducaoArquivoObservacaoRequest,
+    request: Request,
     db: Db,
     user: CurrentProducer,
 ):
     try:
         model = producao_arquivo_service.get_for_producer(db, arquivo_id, user.id)
-        content = producao_arquivo_service.read(model)
+        return producao_arquivo_service.update_note(
+            db,
+            model=model,
+            actor=user,
+            note=payload.observacao,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except producao_arquivo_service.ProducaoArquivoError as exc:
+        db.rollback()
+        raise _file_error(exc) from None
+
+
+@router.get("/arquivos/{arquivo_id}/conteudo")
+def baixar_arquivo(
+    arquivo_id: int,
+    db: Db,
+    user: CurrentProducer,
+    versao: Literal["original", "processada"] | None = None,
+    ouvir: bool = False,
+):
+    try:
+        model = producao_arquivo_service.get_for_producer(db, arquivo_id, user.id)
+        content = producao_arquivo_service.read(model, versao=versao)
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
-    filename = quote(model.nome_exibicao, safe="")
+    processada = versao == "processada"
+    name = (model.nome_exibicao.rsplit(".", 1)[0] + ".mp3") if processada else model.nome_exibicao
+    filename = quote(name, safe="")
+    disposition = "inline" if ouvir else "attachment"
     return Response(
         content,
-        media_type=model.mime_type,
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+        media_type="audio/mpeg" if processada else model.mime_type,
+        headers={
+            "Content-Disposition": f"{disposition}; filename*=UTF-8''{filename}",
+            "Cache-Control": "private, no-store",
+        },
     )
 
 

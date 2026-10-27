@@ -80,6 +80,7 @@ class ProducaoArquivoClienteResponse(BaseModel):
     enviado_por_mim: bool
     observacao: str | None = None
     processamento_tag: str | None = None
+    original_disponivel: bool = False
     # 5.14: final delivery ready but held until the balance is paid.
     bloqueado_pagamento: bool = False
     created_at: datetime

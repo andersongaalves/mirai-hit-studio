@@ -162,6 +162,18 @@ function fileItem(file, handlers) {
         play.type = "button";
         play.addEventListener("click", () => handlers.onPreview(file, player, play));
         actions.append(play);
+        // The untagged original is released together with the final delivery.
+        if (file.original_disponivel) {
+            const original = element("button", "btn-outline", "Ouvir sem tag");
+            original.type = "button";
+            original.addEventListener("click", () => handlers.onPreview(file, player, original, "original"));
+            actions.append(original);
+        }
+    } else if (!file.bloqueado_pagamento && /^(audio|video)\//.test(file.mime_type)) {
+        const listen = element("button", "btn-outline", "Ouvir");
+        listen.type = "button";
+        listen.addEventListener("click", () => handlers.onPreview(file, player, listen));
+        actions.append(listen);
     }
     if (file.bloqueado_pagamento) {
         // 5.14: the final delivery is ready but only released after the balance is paid.

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 from core.dependencies import require_client
@@ -86,6 +86,8 @@ def _client_file(model, user_id, entrega_bloqueada=False):
         "enviado_por_mim": model.remetente_usuario_id == user_id,
         "observacao": model.observacao,
         "bloqueado_pagamento": bool(entrega_bloqueada and model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL),
+        # The untagged original of a preview is released together with the final delivery.
+        "original_disponivel": bool(job is not None and not entrega_bloqueada),
         "created_at": model.created_at,
         "updated_at": model.updated_at,
     }
@@ -364,7 +366,10 @@ def listar_meus_arquivos(producao_id: int, db: Db, user: CurrentClient):
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
     bloqueada = False
-    if any(model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL for model in models):
+    if any(
+        model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL or getattr(model, "tag_processamento", None) is not None
+        for model in models
+    ):
         bloqueada = portal_cliente_service.entrega_bloqueada(
             db, portal_cliente_service.buscar_producao(db, producao_id, user.cliente_id))
     return [_client_file(model, user.id, bloqueada) for model in models]
@@ -418,23 +423,38 @@ async def enviar_material(
 
 
 @router.get("/arquivos/{arquivo_id}/conteudo")
-def baixar_meu_arquivo(arquivo_id: int, db: Db, user: CurrentClient):
+def baixar_meu_arquivo(
+    arquivo_id: int,
+    db: Db,
+    user: CurrentClient,
+    versao: Literal["original", "processada"] | None = None,
+    ouvir: bool = False,
+):
     try:
         model = producao_arquivo_service.get_for_client(db, arquivo_id, user.cliente_id)
-        if model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL and portal_cliente_service.entrega_bloqueada(
-            db, portal_cliente_service.buscar_producao(db, model.producao_id, user.cliente_id)
-        ):
+        bloqueada = None
+        if model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL or versao == "original":
+            bloqueada = portal_cliente_service.entrega_bloqueada(
+                db, portal_cliente_service.buscar_producao(db, model.producao_id, user.cliente_id)
+            )
+        if model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL and bloqueada:
             raise HTTPException(status_code=402, detail=portal_cliente_service.MENSAGEM_ENTREGA_BLOQUEADA)
-        content = producao_arquivo_service.read(model, client=True)
+        if versao == "original" and getattr(model, "tag_processamento", None) is not None and bloqueada:
+            # The untagged preview follows the same rule as the final delivery.
+            raise HTTPException(status_code=402, detail="A versão sem tag é liberada junto com a entrega final.")
+        content = producao_arquivo_service.read(model, client=True, versao=versao)
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
     metadata = _client_file(model, user.id)
-    filename = quote(metadata["nome_exibicao"], safe="")
+    original = versao == "original" and getattr(model, "tag_processamento", None) is not None
+    name = model.nome_exibicao if original else metadata["nome_exibicao"]
+    filename = quote(name, safe="")
+    disposition = "inline" if ouvir else "attachment"
     return Response(
         content,
-        media_type=metadata["mime_type"],
+        media_type=model.mime_type if original else metadata["mime_type"],
         headers={
-            "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+            "Content-Disposition": f"{disposition}; filename*=UTF-8''{filename}",
             "Cache-Control": "private, no-store",
         },
     )
