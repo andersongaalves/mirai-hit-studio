@@ -56,6 +56,11 @@ class UsuarioModel(Base):
     is_test = Column(Boolean, default=False, server_default=false(), nullable=False)
     painel_beats = Column(Boolean, default=False, server_default=false(), nullable=False)
 
+    # Producer specialties, comma separated (beatmaker, mixagem, masterizacao).
+    especialidades = Column(String(100), nullable=True)
+    # Only beatmakers: licensor of the beat contracts. Digits only; admin-only data.
+    cpf = Column(String(11), nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     role = Column(String(30), default="admin", nullable=False)

@@ -37,6 +37,7 @@ async function staticResponse(route) {
     const calls = [];
     let duplicate = false;
     let listFailure = false;
+    const createdProfiles = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('dialog', dialog => dialog.accept());
     await context.route('**/*', async route => {
@@ -64,10 +65,12 @@ async function staticResponse(route) {
         if (url.pathname === '/usuarios' && request.method() === 'POST') {
             if (duplicate) return route.fulfill({ status: 409, json: { detail: 'Nome de usuario ja cadastrado.' } });
             const payload = request.postDataJSON();
-            assert.deepEqual(Object.keys(payload).sort(), ['email', 'nome_exibicao', 'painel_beats', 'password', 'role', 'username']);
+            assert.deepEqual(Object.keys(payload).sort(), ['cpf', 'email', 'especialidades', 'nome_exibicao', 'painel_beats', 'password', 'role', 'username']);
             createdDisplayNames.push(payload.nome_exibicao);
+            createdProfiles.push({ especialidades: payload.especialidades, cpf: payload.cpf });
             const created = { id: 4, username: payload.username, nome_exibicao: payload.nome_exibicao, role: payload.role,
-                painel_beats: payload.painel_beats, is_admin: payload.role === 'admin', ativo: true, created_at: now, updated_at: now };
+                painel_beats: payload.painel_beats, is_admin: payload.role === 'admin', ativo: true, created_at: now, updated_at: now,
+                especialidades: payload.especialidades, cpf: payload.cpf, cpf_cadastrado: Boolean(payload.cpf) };
             users.push(created);
             return route.fulfill({ status: 201, json: created });
         }
@@ -126,10 +129,24 @@ async function staticResponse(route) {
         await page.locator('#usuario-nome-exibicao').fill('  Novo   Produtor ');
         await page.locator('#usuario-password').fill('secure-password');
         await page.locator('#usuario-painel-beats').check();
+        // The CPF is asked only of beatmakers.
+        assert.equal(await page.locator('#usuario-cpf-field').isVisible(), false);
+        await page.getByRole('checkbox', { name: 'Engenheiro de mixagem', exact: true }).check();
+        assert.equal(await page.locator('#usuario-cpf-field').isVisible(), false);
+        await page.getByRole('checkbox', { name: 'Beatmaker', exact: true }).check();
+        assert.equal(await page.locator('#usuario-cpf-field').isVisible(), true);
+        await page.locator('#usuario-save').click();
+        await page.waitForTimeout(150);
+        assert.equal(users.length, 3, 'a beatmaker without CPF is not saved');
+        await page.locator('#usuario-cpf').pressSequentially('52998224725');
+        assert.equal(await page.locator('#usuario-cpf').inputValue(), '529.982.247-25');
         await page.locator('#usuario-save').click();
         await page.waitForFunction(() => document.getElementById('modal-usuario').classList.contains('hidden'));
         assert.equal(users.length, 4);
         assert.equal(users[3].painel_beats, true);
+        assert.deepEqual(createdProfiles, [{ especialidades: ['beatmaker', 'mixagem'], cpf: '52998224725' }]);
+        await page.waitForFunction(() => [...document.querySelectorAll('.usuarios-table tbody tr')]
+            .some(row => row.textContent.includes('Beatmaker') && row.textContent.includes('Engenheiro de mixagem')));
         // Display name is independent from the login and shown first in the list.
         assert.deepEqual(createdDisplayNames, ['Novo Produtor']);
         await page.waitForFunction(() => [...document.querySelectorAll('.usuarios-table tbody tr')]
@@ -137,10 +154,15 @@ async function staticResponse(route) {
 
         const edit = page.locator('.usuarios-table tbody tr').filter({ hasText: 'novo' }).getByRole('button', {name:'Abrir usuario novo',exact:true});
         await edit.click();
+        await page.waitForFunction(() => document.getElementById('usuario-cpf').value === '529.982.247-25');
+        // Leaving "Beatmaker" hides and clears the CPF.
+        await page.getByRole('checkbox', { name: 'Beatmaker', exact: true }).uncheck();
+        assert.equal(await page.locator('#usuario-cpf-field').isVisible(), false);
         await page.locator('#usuario-ativo').uncheck();
         await page.locator('#usuario-save').click();
         await page.waitForFunction(() => document.getElementById('modal-usuario').classList.contains('hidden'));
         assert.equal(users[3].ativo, false);
+        assert.deepEqual([patches.at(-1).body.especialidades, patches.at(-1).body.cpf], [['mixagem'], null]);
         const row = page.locator('.usuarios-table tbody tr').filter({hasText:'novo'});
         const before = calls.filter(c => c.endsWith('/classificacao')).length;
         await row.getByRole('button',{name:'Classificar como teste',exact:true}).click();

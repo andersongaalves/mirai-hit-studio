@@ -1460,6 +1460,16 @@
                                 <label id="usuario-beats-field" class="usuario-active-field">
                                     <input id="usuario-painel-beats" type="checkbox" /> Painel de beats
                                 </label>
+                                <fieldset id="usuario-especialidades-field" class="admin-form-field usuario-especialidades">
+                                    <legend>Especialidades</legend>
+                                    <label><input type="checkbox" name="usuario-especialidade" value="beatmaker" /> Beatmaker</label>
+                                    <label><input type="checkbox" name="usuario-especialidade" value="mixagem" /> Engenheiro de mixagem</label>
+                                    <label><input type="checkbox" name="usuario-especialidade" value="masterizacao" /> Engenheiro de masterização</label>
+                                </fieldset>
+                                <label id="usuario-cpf-field" class="admin-form-field hidden">CPF do beatmaker
+                                    <input id="usuario-cpf" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" />
+                                    <span class="admin-field-help">Obrigatório para beatmakers: identifica o licenciante nos contratos de beat. Visível só para o Admin e no contrato entregue ao comprador.</span>
+                                </label>
                             </div>
                             <p id="usuario-client-help" class="admin-field-help hidden">Conta de acesso de um cliente. O papel não muda por esta tela; o nome de exibição e o acesso podem. <button id="usuario-open-client" type="button" class="btn-small">Abrir cadastro do cliente</button></p>
                             <p id="usuario-self-help" class="admin-field-help hidden">Sua própria conta não pode ter acesso, papel ou nome de usuário alterados por esta tela; o nome de exibição pode.</p>

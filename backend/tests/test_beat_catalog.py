@@ -204,6 +204,7 @@ async def check():
             from pypdf import PdfReader
             text = ''.join(page.extract_text() for page in PdfReader(BytesIO(contract.content)).pages)
             assert 'Beat (Lease)' in text and 'Link privado' in text and 'Multitrack' in text and 'MHS-BEAT-' in text, text[:400]
+            assert 'CPF' not in text  # producer without CPF on file
             with Session(engine) as db:
                 db.add(UsuarioModel(id=60, username='client-b', password_hash='unused', role='cliente', is_admin=False, ativo=True, cliente_id=2))
                 db.commit()
@@ -320,9 +321,13 @@ with Session(engine) as db:
     from io import BytesIO
     from pypdf import PdfReader
     from services import beat_contrato_service
+    from models import UsuarioModel
+    db.get(UsuarioModel, 1).cpf = '52998224725'; db.commit()
     pdf, filename = beat_contrato_service.gerar(db, license.id, cliente_id=91)
     text = ''.join(page.extract_text() for page in PdfReader(BytesIO(pdf)).pages)
     assert 'Exclusiva de Beat' in text and 'Contrato' in text and '(Lease)' not in text, text[:400]
+    # The beatmaker CPF identifies the licensor.
+    assert 'CPF 529.982.247-25' in text and 'Representado comercialmente' in text, text[:600]
     assert filename == 'contrato-contrato-exclusivo.pdf'
     try:
         beat_contrato_service.gerar(db, license.id, cliente_id=92)

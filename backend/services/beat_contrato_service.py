@@ -63,6 +63,9 @@ def gerar(db, licenca_id, *, cliente_id=None):
     if beat is None or client is None:
         raise ContratoNaoEncontrado("Contrato não encontrado.")
     producer_name = (getattr(producer, "nome_exibicao", None) or getattr(producer, "username", None) or "Mirai Hit Studio")
+    # The beatmaker CPF identifies the licensor; it appears only in this private contract.
+    cpf = getattr(producer, "cpf", None) or ""
+    producer_cpf = f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}" if len(cpf) == 11 and cpf.isdigit() else None
     try:
         logo = "data:image/png;base64," + base64.b64encode(
             (ROOT / "frontend" / "assets" / "logo_proposta.png").read_bytes()).decode("ascii")
@@ -76,6 +79,7 @@ def gerar(db, licenca_id, *, cliente_id=None):
             valor=license.valor,
             beat_titulo=beat.titulo,
             produtor=producer_name,
+            produtor_cpf=producer_cpf,
             cliente_nome=client.nome,
             cliente_email=client.email or "-",
             limites=LIMITES_LEASE,

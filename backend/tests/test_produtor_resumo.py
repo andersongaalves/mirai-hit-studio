@@ -58,7 +58,7 @@ async def check():
         assert (await client.get('/admin/produtores/2/resumo', headers=bearer('ana.produtora', 2))).status_code == 403
         assert (await client.get('/admin/produtores/1/resumo', headers=bearer('admin', 1))).status_code == 404
         data = (await client.get('/admin/produtores/2/resumo', headers=bearer('admin', 1))).json()
-        assert data['produtor'] == {'id': 2, 'username': 'ana.produtora', 'nome_exibicao': 'Ana Beats', 'ativo': True, 'painel_beats': True}
+        assert data['produtor'] == {'id': 2, 'username': 'ana.produtora', 'nome_exibicao': 'Ana Beats', 'ativo': True, 'painel_beats': True, 'especialidades': []}
         assert data['contagens'] == {'producoes_ativas': 2, 'producoes_atrasadas': 1, 'producoes_finalizadas': 1,
                                      'beats_em_revisao': 1, 'beats_aprovados': 2, 'beats_vendidos': 1, 'beats_rejeitados': 0}
         assert [(p['id'], p['atrasada']) for p in data['producoes']] == [(2, False), (1, True), (3, False)]

@@ -12,6 +12,37 @@ from pydantic import (
 )
 
 UsuarioRole = Literal["admin", "produtor", "cliente"]
+Especialidade = Literal["beatmaker", "mixagem", "masterizacao"]
+ESPECIALIDADES = ("beatmaker", "mixagem", "masterizacao")
+
+
+def validar_cpf(value: str | None) -> str | None:
+    """Digits only, with valid check digits; blank means none."""
+    if value is None:
+        return None
+    digits = "".join(char for char in value if char.isdigit())
+    if not digits:
+        return None
+    if len(digits) != 11 or len(set(digits)) == 1:
+        raise ValueError("cpf_invalido")
+    for size in (9, 10):
+        total = sum(int(digit) * weight for digit, weight in zip(digits[:size], range(size + 1, 1, -1)))
+        if (total * 10 % 11) % 10 != int(digits[size]):
+            raise ValueError("cpf_invalido")
+    return digits
+
+
+def normalizar_especialidades(value):
+    if value is None:
+        return None
+    chosen = set(value)
+    return [item for item in ESPECIALIDADES if item in chosen]
+
+
+def especialidades_lista(value):
+    if isinstance(value, str):
+        return [item for item in value.split(",") if item in ESPECIALIDADES]
+    return list(value or [])
 
 
 def validar_username(value: str) -> str:
@@ -65,6 +96,19 @@ class UsuarioCreate(BaseModel):
     painel_beats: StrictBool = False
     # AUD6-S02-004: recovery e-mail for studio accounts (admin and producers).
     email: EmailStr | None = Field(default=None, max_length=150)
+    especialidades: list[Especialidade] = Field(default_factory=list, max_length=3)
+    # Required only for beatmakers (licensor of the beat contracts).
+    cpf: str | None = Field(default=None, max_length=20)
+
+    @field_validator("especialidades")
+    @classmethod
+    def especialidades_validas(cls, value):
+        return normalizar_especialidades(value)
+
+    @field_validator("cpf")
+    @classmethod
+    def cpf_valido(cls, value):
+        return validar_cpf(value)
 
     @field_validator("email", mode="before")
     @classmethod
@@ -109,6 +153,18 @@ class UsuarioUpdate(BaseModel):
     painel_beats: StrictBool | None = None
     # Null or blank removes the recovery e-mail.
     email: EmailStr | None = Field(default=None, max_length=150)
+    especialidades: list[Especialidade] | None = Field(default=None, max_length=3)
+    cpf: str | None = Field(default=None, max_length=20)
+
+    @field_validator("especialidades")
+    @classmethod
+    def especialidades_validas(cls, value):
+        return normalizar_especialidades(value)
+
+    @field_validator("cpf")
+    @classmethod
+    def cpf_valido(cls, value):
+        return validar_cpf(value)
 
     @field_validator("email", mode="before")
     @classmethod
@@ -171,10 +227,31 @@ class UsuarioResponse(BaseModel):
     painel_beats: bool = False
     cliente_id: int | None
     email: str | None = None
+    especialidades: list[str] = []
+    # Lists only say whether the CPF is on file; the number stays in the detail.
+    cpf_cadastrado: bool = False
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator("especialidades", mode="before")
+    @classmethod
+    def especialidades_csv(cls, value):
+        return especialidades_lista(value)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def marcar_cpf(cls, value, handler):
+        result = handler(value)
+        result.cpf_cadastrado = bool(getattr(value, "cpf", None) or (value.get("cpf") if isinstance(value, dict) else None))
+        return result
+
+
+class UsuarioDetalheResponse(UsuarioResponse):
+    """Admin detail of one account: includes the beatmaker CPF."""
+
+    cpf: str | None = None
 
 
 class SessaoUsuarioResponse(BaseModel):

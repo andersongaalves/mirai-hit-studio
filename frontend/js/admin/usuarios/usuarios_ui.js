@@ -1,5 +1,5 @@
 import { renderAdminState } from "../ui.js";
-import { actionButton, roleBadge, statusBadge, textElement } from "./usuarios_dom.js";
+import { actionButton, roleBadge, specialtyBadges, statusBadge, textElement } from "./usuarios_dom.js";
 import { classificarConta } from "./usuarios.js";
 
 function classificationButton(user) {
@@ -61,7 +61,7 @@ function tableView(usuarios, onOpen) {
         const role = document.createElement("td");
         const status = document.createElement("td");
         const action = textElement("td", "", "admin-table__cell--actions");
-        role.appendChild(roleBadge(usuario));
+        role.append(roleBadge(usuario), ...specialtyBadges(usuario));
         status.appendChild(statusBadge(usuario));
         action.appendChild(actionButton(usuario, onOpen));
         const tableOverview = overviewButton(usuario);
@@ -84,7 +84,7 @@ function cardView(usuarios, onOpen) {
         const meta = textElement("div", "", "admin-entity-card__meta");
         const actions = textElement("div", "", "admin-entity-card__actions");
         header.append(nameCell("strong", usuario), statusBadge(usuario));
-        meta.appendChild(roleBadge(usuario));
+        meta.append(roleBadge(usuario), ...specialtyBadges(usuario));
         actions.appendChild(actionButton(usuario, onOpen));
         const cardOverview = overviewButton(usuario);
         if (cardOverview) actions.appendChild(cardOverview);
