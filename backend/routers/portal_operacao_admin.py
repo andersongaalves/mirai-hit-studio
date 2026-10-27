@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -134,17 +134,25 @@ def download_file(
     arquivo_id: int,
     db: Db,
     user: CurrentAdmin,
+    versao: Literal["original", "processada"] | None = None,
+    ouvir: bool = False,
 ):
     try:
         model = producao_arquivo_service.get_for_admin(db, producao_id, arquivo_id)
-        content = producao_arquivo_service.read(model)
+        content = producao_arquivo_service.read(model, versao=versao)
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
-    filename = quote(model.nome_exibicao, safe="")
+    processada = versao == "processada"
+    name = (model.nome_exibicao.rsplit(".", 1)[0] + ".mp3") if processada else model.nome_exibicao
+    filename = quote(name, safe="")
+    disposition = "inline" if ouvir else "attachment"
     return Response(
         content,
-        media_type=model.mime_type,
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+        media_type="audio/mpeg" if processada else model.mime_type,
+        headers={
+            "Content-Disposition": f"{disposition}; filename*=UTF-8''{filename}",
+            "Cache-Control": "private, no-store",
+        },
     )
 
 

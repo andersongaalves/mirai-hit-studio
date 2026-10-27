@@ -60,6 +60,8 @@ let productions = [
         updated_at: new Date(now - 3600000).toISOString(),
     },
 ];
+const noteEdits = [];
+const listens = [];
 let files = [{
     id: 9, producao_id: 1, remetente_usuario_id: 1, tipo: 'material',
     nome_exibicao: '<img src=x>.pdf', mime_type: 'application/pdf', tamanho_bytes: 1024,
@@ -211,7 +213,15 @@ async function staticResponse(route) {
         if (/^\/portal\/produtor\/repasses\/\d+\/comprovante$/.test(url.pathname)) {
             return route.fulfill({ body: 'receipt', headers: { 'content-disposition': "attachment; filename*=UTF-8''comprovante.pdf" } });
         }
+        const noteEdit = url.pathname.match(/^\/portal\/produtor\/arquivos\/(\d+)\/observacao$/);
+        if (noteEdit && request.method() === 'PATCH') {
+            const file = files.find(item => item.id === Number(noteEdit[1]));
+            noteEdits.push(request.postDataJSON());
+            file.observacao = request.postDataJSON().observacao;
+            return route.fulfill({ json: file });
+        }
         if (/^\/portal\/produtor\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
+            listens.push(url.search);
             return route.fulfill({ body: 'file', headers: { 'content-disposition': "attachment; filename*=UTF-8''arquivo.pdf" } });
         }
         const fileList = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)\/arquivos$/);
@@ -339,6 +349,28 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').first().textContent(), /<img src=x>/);
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Não compartilhada com o cliente/);
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Sua observação: Primeira ideia <i>sem master<\/i>/);
+        // The producer edits the note of their own preview; studio files have no edit button.
+        const own = page.locator('.producer-file').filter({ hasText: 'historical.mp3' });
+        assert.equal(await page.locator('.producer-file').first().getByRole('button', { name: /observação/ }).count(), 0);
+        await own.getByRole('button', { name: 'Editar observação' }).click();
+        await own.getByLabel('Observação').fill('Segunda ideia, voz mais alta');
+        await own.getByRole('button', { name: 'Salvar' }).click();
+        await page.waitForFunction(() => /Sua observação: Segunda ideia, voz mais alta/.test(
+            [...document.querySelectorAll('.producer-file')].find(item => item.textContent.includes('historical.mp3'))?.textContent || ''));
+        assert.deepEqual(noteEdits, [{ observacao: 'Segunda ideia, voz mais alta' }]);
+        // Listen in the page without saving a file.
+        await own.getByRole('button', { name: 'Ouvir' }).click();
+        await own.locator('audio.ouvir-arquivo__media').waitFor({ state: 'attached' });
+        assert.ok(listens.includes('?ouvir=true'), JSON.stringify(listens));
+        const studio = await page.evaluate(async () => {
+            const module = await import('/js/modules/ouvir_arquivo.js');
+            return [module.opcoesEstudio({ processamento_tag: 'pronto' }), module.opcoesEstudio({ processamento_tag: null }),
+                module.podeOuvir({ mime_type: 'application/pdf' })];
+        });
+        assert.deepEqual(studio, [
+            [{ versao: 'processada', rotulo: 'Ouvir com tag' }, { versao: 'original', rotulo: 'Ouvir original' }],
+            [{ versao: null, rotulo: 'Ouvir' }], false,
+        ]);
         assert.equal(await page.locator('.file-note i').count(), 0);
         // Roadmap 5.06: contract stages replace the legacy checklist; producers send to review, never conclude.
         await page.waitForSelector('#production-stages-panel .production-stages');

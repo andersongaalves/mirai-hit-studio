@@ -1,3 +1,4 @@
+import { controlesOuvir, opcoesEstudio, podeOuvir } from "../../modules/ouvir_arquivo.js";
 import * as Notify from "../../utils/notifications.js";
 import * as API from "./producoes_api.js";
 import { messagesPanel } from "../../modules/production_messages.js";
@@ -89,6 +90,13 @@ function renderFiles() {
         producerCheck.onchange = update;
         clientCheck.onchange = update;
         actions.append(producer, client, download);
+        if (podeOuvir(file) && file.processamento_tag !== "pendente") {
+            info.append(controlesOuvir(file, {
+                opcoes: opcoesEstudio(file),
+                load: async versao => (await API.baixarArquivo(productionId, file.id, { versao, ouvir: true })).blob,
+                onError: error => Notify.error(error.message || "Não foi possível tocar o áudio."),
+            }));
+        }
         row.append(info, actions);
         root.append(row);
     });

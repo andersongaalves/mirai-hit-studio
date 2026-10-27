@@ -39,3 +39,9 @@ class ProducaoArquivoVisibilidadeRequest(BaseModel):
 
     visivel_produtor: bool
     visivel_cliente: bool
+
+
+class ProducaoArquivoObservacaoRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    observacao: str | None = Field(default=None, max_length=1000)

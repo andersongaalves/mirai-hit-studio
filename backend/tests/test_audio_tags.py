@@ -122,6 +122,33 @@ class AudioTagTests(unittest.TestCase):
                         assert delivered.headers['content-type'].startswith('audio/mpeg')
                         producer = await api.get(f'/portal/produtor/arquivos/{file_id}/conteudo', headers=bearer('producer-a'))
                         assert producer.content == original
+                        # The producer who sent the preview edits its note; nobody else can.
+                        edited = await api.patch(f'/portal/produtor/arquivos/{file_id}/observacao', headers=bearer('producer-a'),
+                                                 json={'observacao': '  Mix v2: voz mais alta  '})
+                        assert edited.status_code == 200 and edited.json()['observacao'] == 'Mix v2: voz mais alta', edited.text
+                        assert (await api.patch(f'/portal/produtor/arquivos/{file_id}/observacao', headers=bearer('producer-b'),
+                                                json={'observacao': 'x'})).status_code == 404
+                        assert (await api.patch(f'/portal/produtor/arquivos/{file_id}/observacao', headers=bearer('producer-a'),
+                                                json={'observacao': 'x', 'extra': 1})).status_code == 422
+                        cleared = await api.patch(f'/portal/produtor/arquivos/{file_id}/observacao', headers=bearer('producer-a'), json={'observacao': ''})
+                        assert cleared.json()['observacao'] is None
+                        # Listening in the page: studio users hear both versions, inline.
+                        tagged = await api.get(f'/portal/produtor/arquivos/{file_id}/conteudo?versao=processada&ouvir=true', headers=bearer('producer-a'))
+                        assert tagged.content == rendered and tagged.headers['content-disposition'].startswith('inline;')
+                        assert tagged.headers['content-type'].startswith('audio/mpeg')
+                        raw = await api.get(f'/portal/produtor/arquivos/{file_id}/conteudo?versao=original&ouvir=true', headers=bearer('producer-a'))
+                        assert raw.content == original and raw.headers['content-disposition'].startswith('inline;')
+                        # The client hears the untagged original only once the final delivery is released.
+                        from services import portal_cliente_service as client_service
+                        with patch.object(client_service, 'entrega_bloqueada', return_value=True):
+                            locked = await api.get(f'/portal/cliente/arquivos/{file_id}/conteudo?versao=original', headers=bearer('client-a'))
+                            assert locked.status_code == 402
+                            assert (await api.get('/portal/cliente/producoes/1/arquivos', headers=bearer('client-a'))).json()[0]['original_disponivel'] is False
+                        with patch.object(client_service, 'entrega_bloqueada', return_value=False):
+                            released = await api.get(f'/portal/cliente/arquivos/{file_id}/conteudo?versao=original&ouvir=true', headers=bearer('client-a'))
+                            assert released.status_code == 200 and released.content == original
+                            assert released.headers['content-disposition'].startswith('inline;')
+                            assert (await api.get('/portal/cliente/producoes/1/arquivos', headers=bearer('client-a'))).json()[0]['original_disponivel'] is True
                     listed = (await api.get('/portal/cliente/producoes/1/arquivos', headers=bearer('client-a'))).json()[0]
                     assert listed['sha256'] == hashlib.sha256(rendered).hexdigest() and listed['processamento_tag'] == 'pronto'
                     assert 'object_key' not in listed

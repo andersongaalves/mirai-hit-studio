@@ -114,8 +114,12 @@ export async function atualizarVisibilidadeArquivo(producaoId, arquivoId, payloa
     }), "Erro ao atualizar visibilidade.");
 }
 
-export async function baixarArquivo(producaoId, arquivoId) {
-    const response = await authFetch(`/producoes/${producaoId}/arquivos/${arquivoId}/conteudo`);
+export async function baixarArquivo(producaoId, arquivoId, { versao = null, ouvir = false } = {}) {
+    const query = new URLSearchParams();
+    if (versao) query.set("versao", versao);
+    if (ouvir) query.set("ouvir", "true");
+    const suffix = query.size ? `?${query}` : "";
+    const response = await authFetch(`/producoes/${producaoId}/arquivos/${arquivoId}/conteudo${suffix}`);
     if (!response.ok) return handleResponse(response, "Erro ao baixar arquivo.");
     const disposition = response.headers.get("content-disposition") || "";
     const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
