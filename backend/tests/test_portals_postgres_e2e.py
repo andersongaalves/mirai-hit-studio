@@ -1707,7 +1707,8 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         self.assertEqual(uploaded.json()['processamento_tag'], 'pendente')
         entered, release = Event(), Event()
 
-        def renderer(*args):
+        def renderer(*args, **controls):
+            self.assertEqual(controls["alvo_relativo_db"], -3.0)
             entered.set()
             if not release.wait(timeout=10):
                 raise RuntimeError('synthetic worker timeout')
