@@ -45,9 +45,10 @@ function formatRow(form, label, fileName, priceName, price, present, accept) {
 }
 
 function uploadSettings(config) {
-    const section = document.createElement("section");
-    section.className = "admin-card beat-upload-settings";
-    const title = document.createElement("h2"); title.textContent = "Limites de upload";
+    const section = document.createElement("details");
+    section.className = "admin-card beat-upload-settings admin-disclosure";
+    const title = document.createElement("summary"); title.textContent = "Configuração de arquivos";
+    const content = document.createElement("div"); content.className = "admin-disclosure__content";
     const help = document.createElement("p"); help.textContent = "Defina o limite por arquivo. O total configurado não pode ultrapassar 260 MB.";
     const form = document.createElement("form"); form.className = "beat-upload-settings__form";
     const fields = [
@@ -85,7 +86,8 @@ function uploadSettings(config) {
         } catch (error) { message.textContent = error.message; }
         finally { finish(); }
     });
-    section.append(title, help, form);
+    content.append(help, form);
+    section.append(title, content);
     return section;
 }
 
@@ -255,7 +257,15 @@ function beatCard(beat, config) {
     if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; content.append(reason); }
     summary.append(content);
     if (cover) summary.append(cover);
-    card.append(summary, form);
+    const editor = document.createElement("details");
+    editor.className = "admin-disclosure admin-beat-editor";
+    const editorTitle = document.createElement("summary");
+    editorTitle.textContent = "Revisar e editar";
+    const editorContent = document.createElement("div");
+    editorContent.className = "admin-disclosure__content";
+    editorContent.append(form);
+    editor.append(editorTitle, editorContent);
+    card.append(summary, editor);
     return card;
 }
 

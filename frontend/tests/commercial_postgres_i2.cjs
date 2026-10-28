@@ -1,5 +1,6 @@
 const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
+const { openAdminSection } = require('./support/access.cjs');
 
 const mode = process.env.I2_BROWSER_MODE;
 const frontendOrigin = "http://127.0.0.1:5500";
@@ -128,7 +129,8 @@ function result(value) { console.log(`I2_RESULT ${JSON.stringify(value)}`); }
             const loginResponse = await loginPromise;
             if (loginResponse.status() !== 200) throw new Error(`admin login failed: ${loginResponse.status()}`);
             await page.locator("#admin-area:not(.hidden)").waitFor();
-            await page.locator('[data-admin-target="section-financeiro"]').click();
+            await openAdminSection(page, 'section-financeiro');
+            await page.getByText("Filtros financeiros", { exact: true }).click();
             await page.locator("#financeiro-search").fill(process.env.I2_PROPOSAL);
             const responsePromise = page.waitForResponse(r => new URL(r.url()).pathname === "/financeiro/cobrancas" && r.url().includes(encodeURIComponent(process.env.I2_PROPOSAL)));
             await page.locator("#financeiro-apply-filters").click();
@@ -155,7 +157,7 @@ function result(value) { console.log(`I2_RESULT ${JSON.stringify(value)}`); }
             const loginResponse = await loginPromise;
             if (loginResponse.status() !== 200) throw new Error(`admin login failed: ${loginResponse.status()}`);
             await page.locator("#admin-area:not(.hidden)").waitFor();
-            await page.locator('[data-admin-target="section-orcamentos"]').click();
+            await openAdminSection(page, 'section-orcamentos');
             await page.locator("#orcamentos-search").fill(process.env.I2_NAME);
             const card = page.locator("#orcamentos-list .admin-list-item").first();
             await card.waitFor();

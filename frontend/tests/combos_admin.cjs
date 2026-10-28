@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const services = [
@@ -93,7 +93,7 @@ function store(id, body) {
     try {
         await signIn(page, { next: '/admin.html', username: 'admin' });
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
-        await page.locator('[data-admin-target="section-servicos"]').click();
+        await openAdminSection(page, 'section-servicos');
         const panel = page.locator('#combos-panel');
         await panel.locator('.combo-card').first().waitFor();
 

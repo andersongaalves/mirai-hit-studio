@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 const requests = [];
@@ -56,7 +56,8 @@ async function staticResponse(route) {
         });
 
         await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
-        await page.locator('[data-admin-target="section-auditoria"]').click();
+        await openAdminSection(page, 'section-auditoria');
+        await page.getByText("Filtros de auditoria", { exact: true }).click();
         await page.waitForSelector(".audit-table-view tbody tr");
         assert.equal(await page.locator("#audit-list img, #audit-list script").count(), 0);
         assert.match(await page.locator("#audit-list").textContent(), /<img src=x/);

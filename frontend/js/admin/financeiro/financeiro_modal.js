@@ -93,6 +93,8 @@ export function renderFinanceiroModal(detail, options) {
     const listVariant = window.matchMedia("(max-width: 768px)").matches
         ? ".financeiro-mobile-view"
         : ".financeiro-table-view";
+    const manualDetails = manualForm?.closest("details");
+    if (manualDetails) manualDetails.open = false;
     openAdminModal("modal-financeiro", {
         onRequestClose: closeFinanceiroModal,
         initialFocus: "#financeiro-close-modal",

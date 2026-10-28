@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const service = { id: 3, nome: 'Plano Start', subtitulo: '', valor_base: 1000, categoria: 'Mixagem', aplica_desconto: false, parametros: '', estrutura_servico: '{"intro":"","sections":[],"benefits":[]}' };
@@ -87,7 +87,7 @@ async function staticResponse(route) {
     try {
         await signIn(page, { next: '/admin.html', username: 'admin' });
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
-        await page.locator('[data-admin-target="section-servicos"]').click();
+        await openAdminSection(page, 'section-servicos');
         await page.locator('#section-servicos').getByRole('button', { name: 'Editar' }).click();
         await page.waitForSelector('.servico-etapa');
         assert.equal(await page.locator('#srv_credito_unidade').inputValue(), 'canal');

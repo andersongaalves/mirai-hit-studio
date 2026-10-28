@@ -8,6 +8,11 @@ const node = (tag, text, className = "") => {
     el.className = className;
     return el;
 };
+function disclosure(title, content, className = "") {
+    const details = node("details", "", `admin-disclosure ${className}`.trim());
+    details.append(node("summary", title), content);
+    return details;
+}
 async function data(response) {
     const body = await response.json().catch(() => null);
     if (!response.ok) throw new Error(typeof body?.detail === "string" ? body.detail : "Não foi possível atualizar a tag.");
@@ -71,8 +76,8 @@ function settingsForm(current) {
 }
 
 async function previewGenerator(root, form, feedback) {
-    const section = node("section", "", "audio-tag-preview-generator");
-    section.append(node("h3", "Testar nivelamento"), node("p", "Gere um MP3 temporário sem alterar o arquivo original nem os projetos."));
+    const content = node("div", "", "admin-disclosure__content audio-tag-preview-generator");
+    content.append(node("p", "Gere um MP3 temporário sem alterar o arquivo original nem os projetos."));
     const fields = node("div", "", "audio-tag-preview-generator__fields");
     const sourceLabel = node("label", "Áudio de origem");
     const source = node("select");
@@ -85,7 +90,8 @@ async function previewGenerator(root, form, feedback) {
     fields.append(sourceLabel, tagLabel);
     const generate = node("button", "Gerar prévia com estes controles", "btn-cta");
     generate.type = "button";
-    section.append(fields, generate);
+    content.append(fields, generate);
+    const section = disclosure("Gerar prévia de teste", content, "audio-tag-preview-disclosure");
     root.append(section);
     try {
         const options = await data(await authFetch("/admin/audio-tag/preview/opcoes"));
@@ -123,13 +129,13 @@ async function previewGenerator(root, form, feedback) {
                 const body = await response.json().catch(() => null);
                 throw new Error(body?.detail || "Não foi possível gerar a prévia.");
             }
-            cleanup(section);
-            section.querySelector("audio")?.remove();
+            cleanup(content);
+            content.querySelector("audio")?.remove();
             const player = node("audio");
             player.controls = true;
             player.preload = "metadata";
             player.src = URL.createObjectURL(await response.blob());
-            section.append(player);
+            content.append(player);
             feedback.textContent = "Prévia pronta. O arquivo é temporário e não foi salvo no projeto.";
         } catch (error) {
             feedback.textContent = error.message;
@@ -203,7 +209,7 @@ export async function loadAudioTag(root, { admin = false } = {}) {
                 upload.reset();
             } catch (error) { feedback.textContent = error.message; }
         };
-        root.append(upload);
+        root.append(disclosure(current.tag_id ? "Trocar tag padrão" : "Cadastrar tag padrão", upload, "audio-tag-upload-disclosure"));
         if (admin) {
             const form = settingsForm(current);
             form.append(node("p", "O modo automático mede áudio e tag. Se a medição não for possível, o sistema usa o volume fixo de fallback.", "admin-field-help"));
@@ -219,7 +225,9 @@ export async function loadAudioTag(root, { admin = false } = {}) {
                     if (root.dataset.serial === serial) await loadAudioTag(root, { admin });
                 } catch (error) { feedback.textContent = error.message; save.disabled = false; }
             };
-            root.append(form);
+            const settingsContent = node("div", "", "admin-disclosure__content");
+            settingsContent.append(form);
+            root.append(disclosure("Editar nivelamento", settingsContent, "audio-tag-settings-disclosure"));
             await previewGenerator(root, form, feedback);
         }
     } catch (error) {

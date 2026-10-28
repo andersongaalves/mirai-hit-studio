@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { signIn } = require('./support/access.cjs');
+const { openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml' };
@@ -47,7 +47,7 @@ const usage = {
         });
         await signIn(page, { next: '/admin.html', username: 'admin' });
         assert.equal(calls.length, 0, 'usage loads only when the section opens');
-        await page.locator('.admin-nav__item[data-admin-target="section-uso"]').click();
+        await openAdminSection(page, 'section-uso');
         const content = page.locator('#uso-content');
         await content.locator('.uso-card').first().waitFor();
         assert.equal(await content.locator('.uso-card').count(), 4);

@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { signIn } = require('./support/access.cjs');
+const { openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml' };
@@ -56,7 +56,7 @@ const production = {
             return route.fulfill({ json: [] });
         });
         await signIn(page, { next: '/admin.html', username: 'admin' });
-        await page.locator('.admin-nav__item[data-admin-target="section-usuarios"]').click();
+        await openAdminSection(page, 'section-usuarios');
         await page.getByRole('button', { name: 'Visão geral de Ana <b>Beats</b>' }).first().click();
         const dialog = page.getByRole('dialog', { name: 'Ana <b>Beats</b>' });
         await dialog.getByText('Produções ativas').waitFor();
