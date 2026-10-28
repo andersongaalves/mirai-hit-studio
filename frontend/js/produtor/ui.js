@@ -199,7 +199,20 @@ function fileItem(file, handlers) {
     const button = element("button", "btn-outline", "Baixar");
     button.type = "button";
     button.addEventListener("click", () => onDownload(file.id, button));
-    item.append(info, button);
+    const actions = element("div", "producer-file__actions");
+    actions.append(button);
+    if (
+        own
+        && file.tipo === "previa"
+        && !handlers.replacedIds?.has(file.id)
+        && handlers.onDelete
+    ) {
+        const remove = element("button", "btn-small btn-danger", "Excluir prévia");
+        remove.type = "button";
+        remove.addEventListener("click", () => handlers.onDelete(file, remove));
+        actions.append(remove);
+    }
+    item.append(info, actions);
     if (handlers.onListen && podeOuvir(file) && file.processamento_tag !== "pendente") {
         info.append(controlesOuvir(file, {
             opcoes: opcoesEstudio(file),
@@ -213,9 +226,11 @@ function fileItem(file, handlers) {
 function filesPanel(production, files, handlers) {
     const panel = element("section", "producer-files");
     panel.append(element("h2", "", "Arquivos"));
+    const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
+    const fileHandlers = { ...handlers, replacedIds: replaced };
     const list = element("ul", "producer-file-list");
     if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo disponível."));
-    else files.forEach(file => list.append(fileItem(file, handlers)));
+    else files.forEach(file => list.append(fileItem(file, fileHandlers)));
     panel.append(list);
 
     const form = element("form", "producer-upload");
@@ -246,7 +261,6 @@ function filesPanel(production, files, handlers) {
     noReplacement.value = "";
     replaces.append(noReplacement);
     // Offer only the newest version of the selected type; the backend rejects others.
-    const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
     const updateReplacementOptions = () => {
         replaces.replaceChildren(noReplacement);
         files

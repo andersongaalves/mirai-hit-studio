@@ -102,8 +102,11 @@ class AudioTagTests(unittest.TestCase):
                     assert (await api.get(f'/portal/cliente/arquivos/{file_id}/conteudo', headers=bearer('client-b'))).status_code == 404
                     await api.put('/admin/audio-tag', headers=bearer('admin'), json={**config,'versao':2,'volume_percentual':80})
                     rendered = b'synthetic-rendered-mp3'
-                    def renderer(source, tag, interval, volume):
+                    def renderer(source, tag, interval, volume, **controls):
                         assert source == original and interval == 10 and volume == 40
+                        assert controls == {'nivelamento_automatico': True, 'alvo_relativo_db': -3.0,
+                            'ganho_min_db': -40.0, 'ganho_max_db': 30.0,
+                            'silencio_lufs': -60.0, 'limiter_dbfs': -0.9}
                         return rendered
                     assert tags.processar_um(session_factory, storage=storage, renderer=renderer)
                     assert not tags.processar_um(session_factory, storage=storage, renderer=renderer)
@@ -170,6 +173,31 @@ class AudioTagTests(unittest.TestCase):
                     with Session(engine) as db:
                         assert db.get(PreviaTagJobModel,version2.json()['id']).tag_id == personal.json()['tag_id']
                         assert db.get(PreviaTagJobModel,file_id).tag_id == stamp.json()['tag_id']
+                        version2_key = db.get(ProducaoArquivoModel, version2.json()['id']).object_key
+                        first = db.get(ProducaoArquivoModel, file_id)
+                        first_keys = {first.object_key, first.tag_processamento.object_key}
+                        from models import ProducaoMensagemModel
+                        db.add(ProducaoMensagemModel(producao_id=1,autor_usuario_id=2,autor_papel='produtor',
+                            audiencia='todos',texto='Mensagem com anexo',arquivo_id=version2.json()['id']))
+                        db.commit()
+                    # Only the uploader can delete the latest preview. Version history is protected.
+                    with patch.object(files, 'new_production_file_storage', return_value=storage):
+                        assert (await api.delete(f'/portal/produtor/arquivos/{file_id}', headers=bearer('producer-a'))).status_code == 409
+                        second_id = version2.json()['id']
+                        assert (await api.delete(f'/portal/produtor/arquivos/{second_id}', headers=bearer('producer-b'))).status_code == 404
+                        assert (await api.delete(f'/portal/produtor/arquivos/{second_id}', headers=bearer('producer-a'))).status_code == 409
+                        with Session(engine) as db:
+                            db.query(ProducaoMensagemModel).filter_by(arquivo_id=second_id).delete()
+                            db.commit()
+                        assert (await api.delete(f'/portal/produtor/arquivos/{second_id}', headers=bearer('producer-a'))).status_code == 204
+                        assert version2_key in storage.deleted
+                        assert (await api.delete(f'/portal/produtor/arquivos/{file_id}', headers=bearer('producer-a'))).status_code == 204
+                    assert first_keys.issubset(set(storage.deleted))
+                    with Session(engine) as db:
+                        assert db.get(ProducaoArquivoModel, file_id) is None
+                        assert db.get(PreviaTagJobModel, file_id) is None
+                        from models import AuditLogModel
+                        assert db.query(AuditLogModel).filter_by(action='production.preview_deleted').count() == 2
             asyncio.run(check())
         ''')
 
@@ -215,7 +243,7 @@ class AudioTagTests(unittest.TestCase):
                     assert (await api.post(endpoint,headers=bearer('admin'))).json()['estado'] == 'pendente'
                     assert (await api.get('/admin/audio-tag/previas/falhas',headers=bearer('admin'))).json() == []
             asyncio.run(retry())
-            assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args: b'tagged')
+            assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args, **kwargs: b'tagged')
             with Session(engine) as db:
                 model = db.get(ProducaoArquivoModel,file_id)
                 storage.objects[model.tag_processamento.object_key] = b'tampered'
@@ -225,6 +253,53 @@ class AudioTagTests(unittest.TestCase):
                     pass
                 else:
                     raise AssertionError('integrity mismatch accepted')
+        ''')
+
+    def test_admin_preview_generator_uses_selected_tag_and_controls(self):
+        self.run_case('''
+            with Session(engine) as db:
+                admin = db.get(UsuarioModel,1)
+                first = tags.salvar(db,actor=admin,chave='studio',data=wav(frequency=700),filename='old.wav',mime_type='audio/wav',versao=0)
+                second = tags.salvar(db,actor=admin,chave='studio',data=wav(frequency=800),filename='current.wav',mime_type='audio/wav',versao=first['versao'])
+                production = db.get(ProducaoModel,1)
+                production.status = 'finalizado'
+                source_data = wav(2, frequency=200)
+                source = ProducaoArquivoModel(producao_id=1,remetente_usuario_id=2,tipo='entrega',nome_exibicao='final.wav',
+                    mime_type='audio/wav',tamanho_bytes=len(source_data),sha256=hashlib.sha256(source_data).hexdigest(),
+                    object_key='arquivos/'+'1'*32+'/'+'2'*32,grupo_versao='preview-source',versao=1,
+                    visivel_produtor=True,visivel_cliente=True,original_restrito=False)
+                db.add(source)
+                db.commit()
+                source_id = source.id
+            calls = []
+            def renderer(original, tag, interval, volume, **controls):
+                calls.append((original,tag,interval,volume,controls))
+                return b'temporary-mp3'
+            async def check():
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as api:
+                    options = await api.get('/admin/audio-tag/preview/opcoes',headers=bearer('admin'))
+                    assert options.status_code == 200, options.text
+                    body = options.json()
+                    assert any(item['type']=='arquivo' and item['id']==source_id for item in body['fontes'])
+                    assert {item['id'] for item in body['tags']} == {first['tag_id'],second['tag_id']}
+                    assert any(item['id']==first['tag_id'] and not item['atual'] for item in body['tags'])
+                    assert 'object_key' not in options.text and 'arquivos/' not in options.text
+                    payload={'source_type':'arquivo','source_id':source_id,'tag_id':first['tag_id'],
+                        'intervalo_segundos':17,'volume_percentual':22,'nivelamento_automatico':True,
+                        'alvo_relativo_db':-5,'ganho_min_db':-25,'ganho_max_db':15,'silencio_lufs':-50,'limiter_dbfs':-1.5}
+                    assert (await api.post('/admin/audio-tag/preview',headers=bearer('producer-a'),json=payload)).status_code == 403
+                    with patch.object(files,'read',return_value=source_data), patch.object(tags,'mixar',side_effect=renderer):
+                        preview = await api.post('/admin/audio-tag/preview',headers=bearer('admin'),json=payload)
+                    assert preview.status_code == 200 and preview.content == b'temporary-mp3'
+                    assert preview.headers['cache-control'] == 'private, no-store'
+                    assert calls[0][0] == source_data and calls[0][2:4] == (17,22)
+                    assert calls[0][4] == {'nivelamento_automatico':True,'alvo_relativo_db':-5.0,
+                        'ganho_min_db':-25.0,'ganho_max_db':15.0,'silencio_lufs':-50.0,'limiter_dbfs':-1.5}
+                    with Session(engine) as db:
+                        db.get(ProducaoModel,1).status='em_producao'
+                        db.commit()
+                    assert (await api.post('/admin/audio-tag/preview',headers=bearer('admin'),json=payload)).status_code == 404
+            asyncio.run(check())
         ''')
 
     def test_derivative_storage_is_reserved_without_extra_logical_files(self):
@@ -250,7 +325,7 @@ class AudioTagTests(unittest.TestCase):
                 else:
                     raise AssertionError('storage reservation exceeded quota')
             assert len(storage.objects) == 1
-            assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args: b'tagged')
+            assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args, **kwargs: b'tagged')
             with Session(engine) as db:
                 count,total = quotas._uso(db,1)['previa']
                 assert count == 1 and total == len(wav(1)) + len(b'tagged')
@@ -272,7 +347,7 @@ class AudioTagTests(unittest.TestCase):
                     raise RuntimeError('synthetic commit failure')
                 return original_commit(db)
             with patch.object(Session,'commit',fail_once):
-                assert not tags.processar_um(session_factory, storage=storage, renderer=lambda *args: b'tagged')
+                assert not tags.processar_um(session_factory, storage=storage, renderer=lambda *args, **kwargs: b'tagged')
             assert list(storage.objects) == [original_key]
             assert len(storage.deleted) == 1 and original_key not in storage.deleted
             with Session(engine) as db:
@@ -295,7 +370,7 @@ class AudioTagTests(unittest.TestCase):
                         mime_type='audio/wav', data=wav(), visible_to_client=True, visible_to_producer=True, storage=storage)
                 assert storage.objects[sent.object_key] == wav() and storage.deleted == []
                 assert sent.tag_processamento.estado == 'pendente'
-            assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args: b'tagged')
+            assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args, **kwargs: b'tagged')
         ''')
 
     def test_ambiguous_commit_never_deletes_a_committed_variant(self):
@@ -311,7 +386,7 @@ class AudioTagTests(unittest.TestCase):
                 original_commit(db)
                 raise RuntimeError('synthetic lost acknowledgement')
             with patch.object(Session,'commit',lost_ack):
-                assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args: b'tagged')
+                assert tags.processar_um(session_factory,storage=storage,renderer=lambda *args, **kwargs: b'tagged')
             with Session(engine) as db:
                 job = db.get(PreviaTagJobModel,file_id)
                 assert job.estado == 'pronto' and storage.objects[job.object_key] == b'tagged'
@@ -343,11 +418,13 @@ class AudioTagTests(unittest.TestCase):
         self.run_case('''
             import subprocess
             from imageio_ffmpeg import get_ffmpeg_exe
-            # Gain math: 40% puts the tag 3 dB below the audio; each doubling adds 6 dB; bounded.
-            assert tags.ganho_tag_db(-10, -30, 40) == 17.0
-            assert abs(tags.ganho_tag_db(-10, -30, 80) - 23.02) < 0.01
-            assert tags.ganho_tag_db(-10, -80, 40) == 30.0 and tags.ganho_tag_db(-10, 20, 1) == -40.0
-            assert tags.ganho_tag_db(None, -30, 40) is None and tags.ganho_tag_db(-10, None, 40) is None
+            # Gain math follows the configured relative dB target and explicit bounds.
+            assert tags.ganho_tag_db(-10, -30, -3) == 17.0
+            assert tags.ganho_tag_db(-10, -30, 3) == 23.0
+            assert tags.ganho_tag_db(-10, -80, -3) == 30.0
+            assert tags.ganho_tag_db(-10, 20, -3) == -33.0
+            assert tags.ganho_tag_db(-10, 20, -3, -20, 10) == -20.0
+            assert tags.ganho_tag_db(None, -30, -3) is None and tags.ganho_tag_db(-10, None, -3) is None
             with tags.TemporaryDirectory() as directory:
                 folder = tags.Path(directory)
                 (folder / 'beat.wav').write_bytes(wav(3, frequency=100, amplitude=20000))
@@ -376,13 +453,15 @@ class AudioTagTests(unittest.TestCase):
     def test_additive_migration_roundtrip(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
-assert bootstrap(engine) == 'a3c5e7f9b1d4'
+assert bootstrap(engine) == 'b4d6f8a0c2e5'
 assert 'audio_tags' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'd7f9a1c3e568')
 assert 'audio_tags' not in inspect(engine).get_table_names()
 assert 'original_restrito' not in {c['name'] for c in inspect(engine).get_columns('producao_arquivos')}
 command.upgrade(migration_config(), 'head')
 assert 'previa_tag_jobs' in inspect(engine).get_table_names()
+assert {'nivelamento_automatico','alvo_relativo_db','ganho_min_db','ganho_max_db','silencio_lufs','limiter_dbfs'} <= {
+    c['name'] for c in inspect(engine).get_columns('previa_tag_jobs')}
 ''')
 
 

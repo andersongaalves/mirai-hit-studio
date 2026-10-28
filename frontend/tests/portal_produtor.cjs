@@ -61,6 +61,7 @@ let productions = [
     },
 ];
 const noteEdits = [];
+const deletedFiles = [];
 const listens = [];
 let files = [{
     id: 9, producao_id: 1, remetente_usuario_id: 1, tipo: 'material',
@@ -220,6 +221,13 @@ async function staticResponse(route) {
             noteEdits.push(request.postDataJSON());
             file.observacao = request.postDataJSON().observacao;
             return route.fulfill({ json: file });
+        }
+        const fileDelete = url.pathname.match(/^\/portal\/produtor\/arquivos\/(\d+)$/);
+        if (fileDelete && request.method() === 'DELETE') {
+            const id = Number(fileDelete[1]);
+            deletedFiles.push(id);
+            files = files.filter(file => file.id !== id);
+            return route.fulfill({ status: 204 });
         }
         if (/^\/portal\/produtor\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
             listens.push(url.search);
@@ -428,6 +436,11 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Confirmar início' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         assert.equal(productions[0].status, 'em_producao');
+        page.once('dialog', dialog => dialog.accept());
+        await page.locator('.producer-file').filter({ hasText: 'historical.mp3' })
+            .getByRole('button', { name: 'Excluir prévia' }).click();
+        await page.waitForFunction(() => !document.body.textContent.includes('historical.mp3'));
+        assert.deepEqual(deletedFiles, [8]);
         if (process.env.VISUAL_OUTPUT) {
             for (const width of [390, 1440]) {
                 await page.setViewportSize({ width, height: 900 });

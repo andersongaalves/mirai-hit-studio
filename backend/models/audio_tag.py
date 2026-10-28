@@ -39,12 +39,24 @@ class AudioTagPerfilModel(Base):
     __table_args__ = (
         CheckConstraint("intervalo_segundos BETWEEN 10 AND 120", name="ck_audio_tag_intervalo"),
         CheckConstraint("volume_percentual BETWEEN 1 AND 100", name="ck_audio_tag_volume"),
+        CheckConstraint("alvo_relativo_db BETWEEN -30 AND 12", name="ck_audio_tag_alvo_relativo"),
+        CheckConstraint("ganho_min_db BETWEEN -60 AND 0", name="ck_audio_tag_ganho_min"),
+        CheckConstraint("ganho_max_db BETWEEN 0 AND 30", name="ck_audio_tag_ganho_max"),
+        CheckConstraint("ganho_min_db < ganho_max_db", name="ck_audio_tag_faixa_ganho"),
+        CheckConstraint("silencio_lufs BETWEEN -90 AND -20", name="ck_audio_tag_silencio"),
+        CheckConstraint("limiter_dbfs BETWEEN -12 AND -0.1", name="ck_audio_tag_limiter"),
         CheckConstraint("versao >= 1", name="ck_audio_tag_perfil_versao"),
     )
     chave = Column(String(40), primary_key=True)
     tag_id = Column(Integer, ForeignKey("audio_tags.id", ondelete="RESTRICT"), nullable=True)
     intervalo_segundos = Column(Integer, nullable=False, default=10, server_default="10")
     volume_percentual = Column(Integer, nullable=False, default=40, server_default="40")
+    nivelamento_automatico = Column(Boolean, nullable=False, default=True, server_default="true")
+    alvo_relativo_db = Column(Float, nullable=False, default=-3.0, server_default="-3")
+    ganho_min_db = Column(Float, nullable=False, default=-40.0, server_default="-40")
+    ganho_max_db = Column(Float, nullable=False, default=30.0, server_default="30")
+    silencio_lufs = Column(Float, nullable=False, default=-60.0, server_default="-60")
+    limiter_dbfs = Column(Float, nullable=False, default=-0.9, server_default="-0.9")
     versao = Column(Integer, nullable=False, default=1, server_default="1")
 
 
@@ -54,6 +66,12 @@ class PreviaTagJobModel(Base):
         CheckConstraint("estado IN ('pendente', 'pronto', 'erro')", name="ck_previa_tag_estado"),
         CheckConstraint("intervalo_segundos BETWEEN 10 AND 120", name="ck_previa_tag_intervalo"),
         CheckConstraint("volume_percentual BETWEEN 1 AND 100", name="ck_previa_tag_volume"),
+        CheckConstraint("alvo_relativo_db BETWEEN -30 AND 12", name="ck_previa_tag_alvo_relativo"),
+        CheckConstraint("ganho_min_db BETWEEN -60 AND 0", name="ck_previa_tag_ganho_min"),
+        CheckConstraint("ganho_max_db BETWEEN 0 AND 30", name="ck_previa_tag_ganho_max"),
+        CheckConstraint("ganho_min_db < ganho_max_db", name="ck_previa_tag_faixa_ganho"),
+        CheckConstraint("silencio_lufs BETWEEN -90 AND -20", name="ck_previa_tag_silencio"),
+        CheckConstraint("limiter_dbfs BETWEEN -12 AND -0.1", name="ck_previa_tag_limiter"),
         CheckConstraint("reserva_bytes BETWEEN 1 AND 52428800", name="ck_previa_tag_reserva"),
         CheckConstraint("(estado <> 'pronto') OR (object_key IS NOT NULL AND sha256 IS NOT NULL AND tamanho_bytes > 0)",
                         name="ck_previa_tag_resultado"),
@@ -62,6 +80,12 @@ class PreviaTagJobModel(Base):
     tag_id = Column(Integer, ForeignKey("audio_tags.id", ondelete="RESTRICT"), nullable=False)
     intervalo_segundos = Column(Integer, nullable=False)
     volume_percentual = Column(Integer, nullable=False)
+    nivelamento_automatico = Column(Boolean, nullable=False, default=True, server_default="true")
+    alvo_relativo_db = Column(Float, nullable=False, default=-3.0, server_default="-3")
+    ganho_min_db = Column(Float, nullable=False, default=-40.0, server_default="-40")
+    ganho_max_db = Column(Float, nullable=False, default=30.0, server_default="30")
+    silencio_lufs = Column(Float, nullable=False, default=-60.0, server_default="-60")
+    limiter_dbfs = Column(Float, nullable=False, default=-0.9, server_default="-0.9")
     reserva_bytes = Column(Integer, nullable=False)
     estado = Column(String(12), nullable=False, default="pendente", server_default="pendente")
     object_key = Column(String(180), nullable=True, unique=True)

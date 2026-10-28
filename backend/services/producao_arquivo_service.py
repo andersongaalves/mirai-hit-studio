@@ -4,9 +4,6 @@ import re
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from crud import crud_producao
 from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
@@ -18,6 +15,8 @@ from services.producao_arquivo_storage import (
     ProducaoArquivoStorageError,
     new_production_file_storage,
 )
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 PRODUCER_UPLOAD_TYPES = {"previa", "entrega"}
@@ -386,6 +385,88 @@ def update_note(db, *, model, actor, note, request_id=None):
     db.commit()
     db.refresh(model)
     return model
+
+
+def delete_preview_for_producer(db, *, file_id, actor, request_id=None, storage=None):
+    """Delete only the producer's latest preview and its exact private objects."""
+    from models import PreviaTagJobModel, ProducaoMensagemModel
+
+    actor_id = getattr(actor, "id", None)
+    model = (
+        db.query(ProducaoArquivoModel)
+        .join(ProducaoModel, ProducaoArquivoModel.producao_id == ProducaoModel.id)
+        .filter(
+            ProducaoArquivoModel.id == file_id,
+            ProducaoArquivoModel.visivel_produtor.is_(True),
+            crud_producao.acesso_produtor(actor_id),
+        )
+        .with_for_update()
+        .first()
+    )
+    if model is None:
+        raise ProducaoArquivoNotFound("Arquivo nao encontrado.")
+    if model.tipo != "previa" or model.remetente_usuario_id != actor_id:
+        raise ProducaoArquivoConflict("Somente a propria previa enviada pode ser excluida.")
+    if db.query(ProducaoArquivoModel.id).filter(
+        ProducaoArquivoModel.substitui_arquivo_id == model.id,
+    ).first():
+        raise ProducaoArquivoConflict("Esta previa possui uma versao posterior e deve permanecer no historico.")
+    if db.query(ProducaoMensagemModel.id).filter(
+        ProducaoMensagemModel.arquivo_id == model.id,
+    ).first():
+        raise ProducaoArquivoConflict("Esta previa esta vinculada a uma mensagem e deve permanecer no historico.")
+
+    job = (
+        db.query(PreviaTagJobModel)
+        .filter(PreviaTagJobModel.arquivo_id == model.id)
+        .with_for_update()
+        .first()
+    )
+    references = [model.object_key]
+    if job is not None and job.object_key:
+        references.append(job.object_key)
+    production_id = model.producao_id
+    audit_service.record(
+        db,
+        actor=actor,
+        action="production.preview_deleted",
+        entity_type="production_file",
+        entity_id=model.id,
+        request_id=request_id,
+    )
+    db.delete(model)
+    db.commit()
+
+    storage = storage or new_production_file_storage("previa")
+    cleanup_failed = False
+    for reference in dict.fromkeys(references):
+        try:
+            storage.delete(reference)
+        except ProducaoArquivoStorageError:
+            cleanup_failed = True
+            logger.error(
+                "production_preview_cleanup_failed production_id=%s file_id=%s",
+                production_id,
+                file_id,
+            )
+    if cleanup_failed:
+        try:
+            audit_service.record(
+                db,
+                actor=actor,
+                action="production.preview_cleanup_failed",
+                entity_type="production_file",
+                entity_id=file_id,
+                request_id=request_id,
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.error(
+                "production_preview_cleanup_audit_failed production_id=%s file_id=%s",
+                production_id,
+                file_id,
+            )
 
 
 def update_visibility(db, *, model, actor, producer, client, request_id=None):

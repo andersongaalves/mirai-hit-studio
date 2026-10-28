@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+from database import Base
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -15,12 +16,16 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from database import Base
-
 
 class ProducaoArquivoModel(Base):
     __tablename__ = "producao_arquivos"
-    tag_processamento = relationship("PreviaTagJobModel", uselist=False, lazy="selectin")
+    tag_processamento = relationship(
+        "PreviaTagJobModel",
+        uselist=False,
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
 
     @property
     def processamento_tag(self):
