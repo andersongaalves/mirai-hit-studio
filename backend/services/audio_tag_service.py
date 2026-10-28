@@ -5,6 +5,7 @@ import io
 import logging
 import math
 import os
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -144,6 +145,42 @@ def sinalizar_fila():
             logger.warning("audio_tag_worker_wake_failed")
 
 
+# Automatic tag level: the tag is matched to the loudness of each audio (EBU R128).
+# "volume_percentual" is the level relative to the audio: 40% (default) puts the tag
+# 3 dB below it; each doubling adds 6 dB (100% is about 5 dB above).
+NIVEL_REFERENCIA = 40
+NIVEL_REFERENCIA_DB = -3.0
+GANHO_MIN_DB, GANHO_MAX_DB = -40.0, 30.0
+SILENCIO_LUFS = -60.0
+_INTEGRADO = re.compile(r"\bI:\s+(-?\d+(?:\.\d+)?) LUFS")
+
+
+def medir_loudness(path):
+    """Integrated loudness in LUFS, or None when it cannot be measured (silence, error)."""
+    from imageio_ffmpeg import get_ffmpeg_exe
+
+    try:
+        result = subprocess.run([
+            get_ffmpeg_exe(), "-nostdin", "-hide_banner", "-loglevel", "info", "-threads", "1",
+            "-protocol_whitelist", "file,pipe", "-i", str(path), "-t", "1800",
+            "-af", "ebur128=framelog=quiet", "-f", "null", "-",
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=60, check=False,
+            preexec_fn=_baixa_prioridade if os.name == "posix" else None)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    found = _INTEGRADO.findall(result.stderr.decode("utf-8", "ignore")) if result.returncode == 0 else []
+    value = float(found[-1]) if found else None
+    return value if value is not None and value > SILENCIO_LUFS else None
+
+
+def ganho_tag_db(audio_lufs, tag_lufs, volume):
+    """Gain for the tag so it sits at the chosen level relative to the audio."""
+    if audio_lufs is None or tag_lufs is None:
+        return None
+    alvo = audio_lufs + NIVEL_REFERENCIA_DB + 20 * math.log10(volume / NIVEL_REFERENCIA)
+    return round(max(GANHO_MIN_DB, min(GANHO_MAX_DB, alvo - tag_lufs)), 2)
+
+
 def mixar(original, tag, intervalo, volume):
     from imageio_ffmpeg import get_ffmpeg_exe
 
@@ -155,8 +192,11 @@ def mixar(original, tag, intervalo, volume):
         source, stamp, output = folder / "source.audio", folder / "tag.audio", folder / "preview.mp3"
         source.write_bytes(original)
         stamp.write_bytes(tag)
+        ganho = ganho_tag_db(medir_loudness(source), medir_loudness(stamp), volume)
+        # Silent or unmeasurable audio keeps the previous fixed volume.
+        nivel = f"volume={ganho}dB,alimiter=limit=0.9:level=false" if ganho is not None else f"volume={volume / 100}"
         graph = (f"[1:a]aresample=48000,apad=whole_dur={intervalo},"
-                 f"aloop=loop=-1:size={intervalo * 48000},volume={volume / 100}[tag];"
+                 f"aloop=loop=-1:size={intervalo * 48000},{nivel}[tag];"
                  "[0:a][tag]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95:level=false[out]")
         try:
             result = subprocess.run([

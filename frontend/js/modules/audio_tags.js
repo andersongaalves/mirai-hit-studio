@@ -87,7 +87,7 @@ export async function loadAudioTag(root, { admin = false } = {}) {
         root.append(upload);
         if (admin) {
             const form = node("form", "", "portfolio-submission-form");
-            for (const [key, text, min, max] of [["intervalo_segundos", "Intervalo (segundos)", 10, 120], ["volume_percentual", "Volume da tag (%)", 1, 100]]) {
+            for (const [key, text, min, max] of [["intervalo_segundos", "Intervalo (segundos)", 10, 120], ["volume_percentual", "Nível da tag em relação ao áudio (%)", 1, 100]]) {
                 const label = node("label", text);
                 const input = node("input");
                 input.type = "number";
@@ -100,6 +100,8 @@ export async function loadAudioTag(root, { admin = false } = {}) {
                 label.append(input);
                 form.append(label);
             }
+            // The level is automatic: the tag follows the loudness of each beat or preview.
+            form.append(node("p", "Nivelamento automático: a tag acompanha o volume de cada beat ou prévia. 40% deixa a tag um pouco abaixo do áudio; 100% a deixa acima.", "admin-field-help"));
             const save = node("button", "Salvar parâmetros", "btn-outline");
             save.type = "submit";
             form.append(save);
