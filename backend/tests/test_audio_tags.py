@@ -22,13 +22,13 @@ with Session(engine) as db:
     db.add(UsuarioModel(id=5, username='client-b', password_hash='unused', role='cliente', is_admin=False, ativo=True, cliente_id=2))
     db.commit()
 
-def wav(seconds=0.3, frequency=1000):
+def wav(seconds=0.3, frequency=1000, amplitude=3000):
     output = io.BytesIO()
     with wave.open(output, 'wb') as sound:
         sound.setnchannels(1)
         sound.setsampwidth(2)
         sound.setframerate(22050)
-        sound.writeframes(b''.join(struct.pack('<h', int(3000 * math.sin(2 * math.pi * frequency * n / 22050)))
+        sound.writeframes(b''.join(struct.pack('<h', int(amplitude * math.sin(2 * math.pi * frequency * n / 22050)))
                                   for n in range(int(seconds * 22050))))
     return output.getvalue()
 class MemoryStorage:
@@ -337,6 +337,40 @@ class AudioTagTests(unittest.TestCase):
             assert energy(0.1,0.4) > 100 and energy(10.1,10.4) > 100
             assert energy(5,5.5) < 5
             assert original != tagged
+        ''')
+
+    def test_tag_level_follows_the_audio_loudness(self):
+        self.run_case('''
+            import subprocess
+            from imageio_ffmpeg import get_ffmpeg_exe
+            # Gain math: 40% puts the tag 3 dB below the audio; each doubling adds 6 dB; bounded.
+            assert tags.ganho_tag_db(-10, -30, 40) == 17.0
+            assert abs(tags.ganho_tag_db(-10, -30, 80) - 23.02) < 0.01
+            assert tags.ganho_tag_db(-10, -80, 40) == 30.0 and tags.ganho_tag_db(-10, 20, 1) == -40.0
+            assert tags.ganho_tag_db(None, -30, 40) is None and tags.ganho_tag_db(-10, None, 40) is None
+            with tags.TemporaryDirectory() as directory:
+                folder = tags.Path(directory)
+                (folder / 'beat.wav').write_bytes(wav(3, frequency=100, amplitude=20000))
+                (folder / 'silence.wav').write_bytes(wav(3, frequency=0))
+                loud = tags.medir_loudness(folder / 'beat.wav')
+                assert loud is not None and -15 < loud < -5, loud
+                assert tags.medir_loudness(folder / 'silence.wav') is None
+                assert tags.medir_loudness(folder / 'missing.wav') is None
+            # A quiet tag over a loud beat is raised to the beat level.
+            beat, quiet_tag = wav(12, frequency=100, amplitude=20000), wav(0.5, frequency=1000, amplitude=300)
+            def high_band(content):
+                with tags.TemporaryDirectory() as directory:
+                    filename = tags.Path(directory) / 'preview.mp3'
+                    filename.write_bytes(content)
+                    pcm = subprocess.run([get_ffmpeg_exe(), '-v','error','-i',str(filename),'-f','s16le','-ac','1','-ar','22050','pipe:1'],
+                        capture_output=True,check=True,timeout=30).stdout
+                samples = struct.unpack('<' + 'h' * (len(pcm)//2), pcm)
+                def energy(start, end):
+                    values = samples[int(start*22050):int(end*22050)]
+                    return sum(abs(values[i] - values[i-1]) for i in range(1, len(values)))/len(values)
+                return energy(0.1, 0.4), energy(5, 5.5)
+            with_tag, without_tag = high_band(tags.mixar(beat, quiet_tag, 10, 40))
+            assert with_tag > 3 * without_tag, (with_tag, without_tag)
         ''')
 
     def test_additive_migration_roundtrip(self):
