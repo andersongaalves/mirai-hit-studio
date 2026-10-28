@@ -110,6 +110,7 @@ async function openDetail(id) {
             onDownload: downloadFile,
             onListen: listenFile,
             onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
+            onDelete: deletePreview,
         });
         showView("detail");
         loadMessages(production, files);
@@ -269,6 +270,7 @@ async function updateStatus(id, status, button) {
                 onDownload: downloadFile,
                 onListen: listenFile,
                 onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
+                onDelete: deletePreview,
             });
             loadMessages(updated, files);
             loadStages(updated);
@@ -306,6 +308,20 @@ async function downloadFile(id, button) {
     } catch (error) {
         setAlert(error.message, true);
     } finally {
+        button.disabled = false;
+    }
+}
+
+async function deletePreview(file, button) {
+    if (!window.confirm(`Excluir a prévia "${file.nome_exibicao}"? Esta ação não pode ser desfeita.`)) return;
+    button.disabled = true;
+    setAlert();
+    try {
+        await api.excluirPrevia(file.id);
+        setAlert("Prévia excluída.");
+        await openDetail(file.producao_id);
+    } catch (error) {
+        setAlert(error.message, true);
         button.disabled = false;
     }
 }

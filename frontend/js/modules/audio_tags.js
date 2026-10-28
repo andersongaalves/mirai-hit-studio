@@ -20,6 +20,125 @@ function cleanup(root) {
     });
 }
 
+const CONTROL_FIELDS = [
+    ["intervalo_segundos", "Intervalo entre inserções (segundos)", 10, 120, 1],
+    ["volume_percentual", "Volume fixo de fallback (%)", 1, 100, 1],
+    ["alvo_relativo_db", "Nível da tag em relação ao áudio (dB)", -30, 12, 0.1],
+    ["ganho_min_db", "Ganho mínimo permitido (dB)", -60, 0, 0.1],
+    ["ganho_max_db", "Ganho máximo permitido (dB)", 0, 30, 0.1],
+    ["silencio_lufs", "Abaixo de qual nível considerar silêncio (LUFS)", -90, -20, 0.1],
+    ["limiter_dbfs", "Teto do limitador (dBFS)", -12, -0.1, 0.1],
+];
+
+function settingsPayload(form, version) {
+    const payload = { versao: version, nivelamento_automatico: form.elements.nivelamento_automatico.checked };
+    for (const [key] of CONTROL_FIELDS) payload[key] = Number(form.elements[key].value);
+    return payload;
+}
+
+function settingsForm(current) {
+    const form = node("form", "", "audio-tag-controls");
+    const automatic = node("label", "", "audio-tag-toggle");
+    const checkbox = node("input");
+    checkbox.type = "checkbox";
+    checkbox.name = "nivelamento_automatico";
+    checkbox.checked = current.nivelamento_automatico !== false;
+    automatic.append(checkbox, document.createTextNode(" Nivelamento automático por loudness (EBU R128)"));
+    form.append(automatic);
+    const grid = node("div", "", "audio-tag-controls__grid");
+    for (const [key, text, min, max, step] of CONTROL_FIELDS) {
+        const label = node("label", text);
+        const input = node("input");
+        input.type = "number";
+        input.name = key;
+        input.value = current[key];
+        input.min = min;
+        input.max = max;
+        input.step = step;
+        input.required = true;
+        label.append(input);
+        grid.append(label);
+    }
+    form.append(grid);
+    const sync = () => {
+        for (const name of ["alvo_relativo_db", "ganho_min_db", "ganho_max_db", "silencio_lufs"]) {
+            form.elements[name].disabled = !checkbox.checked;
+        }
+    };
+    checkbox.addEventListener("change", sync);
+    sync();
+    return form;
+}
+
+async function previewGenerator(root, form, feedback) {
+    const section = node("section", "", "audio-tag-preview-generator");
+    section.append(node("h3", "Testar nivelamento"), node("p", "Gere um MP3 temporário sem alterar o arquivo original nem os projetos."));
+    const fields = node("div", "", "audio-tag-preview-generator__fields");
+    const sourceLabel = node("label", "Áudio de origem");
+    const source = node("select");
+    source.required = true;
+    sourceLabel.append(source);
+    const tagLabel = node("label", "Tag aplicada");
+    const tag = node("select");
+    tag.required = true;
+    tagLabel.append(tag);
+    fields.append(sourceLabel, tagLabel);
+    const generate = node("button", "Gerar prévia com estes controles", "btn-cta");
+    generate.type = "button";
+    section.append(fields, generate);
+    root.append(section);
+    try {
+        const options = await data(await authFetch("/admin/audio-tag/preview/opcoes"));
+        source.append(new Option("Selecione um beat, prévia ou entrega", ""));
+        for (const item of options.fontes) {
+            const option = new Option(`${item.label} (${item.detail})`, `${item.type}:${item.id}`);
+            source.append(option);
+        }
+        tag.append(new Option("Selecione uma tag", ""));
+        for (const item of options.tags) {
+            tag.append(new Option(`${item.label}${item.atual ? " - atual" : " - histórica"}`, String(item.id)));
+        }
+        generate.disabled = !options.fontes.length || !options.tags.length;
+        if (generate.disabled) feedback.textContent = "Cadastre uma tag e mantenha ao menos um áudio elegível para testar.";
+    } catch (error) {
+        generate.disabled = true;
+        feedback.textContent = error.message;
+    }
+    generate.addEventListener("click", async () => {
+        if (!source.value || !tag.value || !form.reportValidity()) {
+            feedback.textContent = "Escolha o áudio, a tag e revise os controles.";
+            return;
+        }
+        const [source_type, source_id] = source.value.split(":");
+        generate.disabled = true;
+        feedback.textContent = "Gerando prévia...";
+        try {
+            const controls = settingsPayload(form, 0);
+            delete controls.versao;
+            const response = await authFetch("/admin/audio-tag/preview", {
+                method: "POST",
+                body: JSON.stringify({ ...controls, source_type, source_id: Number(source_id), tag_id: Number(tag.value) }),
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => null);
+                throw new Error(body?.detail || "Não foi possível gerar a prévia.");
+            }
+            cleanup(section);
+            section.querySelector("audio")?.remove();
+            const player = node("audio");
+            player.controls = true;
+            player.preload = "metadata";
+            player.src = URL.createObjectURL(await response.blob());
+            section.append(player);
+            feedback.textContent = "Prévia pronta. O arquivo é temporário e não foi salvo no projeto.";
+        } catch (error) {
+            feedback.textContent = error.message;
+        } finally {
+            generate.disabled = false;
+        }
+    });
+}
+
 export async function loadAudioTag(root, { admin = false } = {}) {
     if (!root) return;
     roots.add(root);
@@ -86,22 +205,8 @@ export async function loadAudioTag(root, { admin = false } = {}) {
         };
         root.append(upload);
         if (admin) {
-            const form = node("form", "", "portfolio-submission-form");
-            for (const [key, text, min, max] of [["intervalo_segundos", "Intervalo (segundos)", 10, 120], ["volume_percentual", "Nível da tag em relação ao áudio (%)", 1, 100]]) {
-                const label = node("label", text);
-                const input = node("input");
-                input.type = "number";
-                input.name = key;
-                input.value = current[key];
-                input.min = min;
-                input.max = max;
-                input.step = 1;
-                input.required = true;
-                label.append(input);
-                form.append(label);
-            }
-            // The level is automatic: the tag follows the loudness of each beat or preview.
-            form.append(node("p", "Nivelamento automático: a tag acompanha o volume de cada beat ou prévia. 40% deixa a tag um pouco abaixo do áudio; 100% a deixa acima.", "admin-field-help"));
+            const form = settingsForm(current);
+            form.append(node("p", "O modo automático mede áudio e tag. Se a medição não for possível, o sistema usa o volume fixo de fallback.", "admin-field-help"));
             const save = node("button", "Salvar parâmetros", "btn-outline");
             save.type = "submit";
             form.append(save);
@@ -109,14 +214,13 @@ export async function loadAudioTag(root, { admin = false } = {}) {
                 event.preventDefault();
                 if (save.disabled) return;
                 save.disabled = true;
-                const values = Object.fromEntries(new FormData(form));
                 try {
-                    await data(await authFetch(endpoint, { method: "PUT", body: JSON.stringify({ versao: current.versao,
-                        intervalo_segundos: Number(values.intervalo_segundos), volume_percentual: Number(values.volume_percentual) }) }));
+                    await data(await authFetch(endpoint, { method: "PUT", body: JSON.stringify(settingsPayload(form, current.versao)) }));
                     if (root.dataset.serial === serial) await loadAudioTag(root, { admin });
                 } catch (error) { feedback.textContent = error.message; save.disabled = false; }
             };
             root.append(form);
+            await previewGenerator(root, form, feedback);
         }
     } catch (error) {
         if (root.dataset.serial !== serial) return;

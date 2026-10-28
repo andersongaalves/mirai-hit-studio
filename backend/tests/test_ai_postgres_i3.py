@@ -62,7 +62,7 @@ class AIPostgresI3Tests(unittest.TestCase):
         if target(configured) != target(actual):
             raise RuntimeError("I.3 app database differs from authorized target")
         with engine.connect() as connection:
-            if connection.execute(text("select version_num from alembic_version")).scalar_one() != "a3c5e7f9b1d4":
+            if connection.execute(text("select version_num from alembic_version")).scalar_one() != "b4d6f8a0c2e5":
                 raise RuntimeError("I.3 database is not at expected head")
             required = {"ai_conversations", "ai_messages", "ai_email_threads", "ai_briefings", "ai_usage_events"}
             if not required <= set(inspect(connection).get_table_names()):

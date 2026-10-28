@@ -157,11 +157,11 @@ def _response(db, model, *, exclusive_available=True, include_base=False):
 def _tag(db, producer_id):
     own = audio_tag_service.perfil(db, f"producer:{producer_id}")
     studio = audio_tag_service.perfil(db, "studio")
-    profile = own if own and own.tag_id else studio
-    tag = db.get(AudioTagModel, profile.tag_id) if profile and profile.tag_id else None
+    tag_profile = own if own and own.tag_id else studio
+    tag = db.get(AudioTagModel, tag_profile.tag_id) if tag_profile and tag_profile.tag_id else None
     if tag is None:
         raise HTTPException(409, "Cadastre uma tag pessoal ou a tag padrao antes de enviar beats.")
-    return tag, profile
+    return tag, studio or tag_profile
 
 
 def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, archive=None, multitrack_url=None):
@@ -176,7 +176,8 @@ def create(db: Session, *, actor, payload: BeatCreate, mp3, cover, wav=None, arc
     _validate_files(db, payload, mp3, wav, archive, cover, multitrack_url=external)
     tag, profile = _tag(db, actor.id)
     tagged_mp3 = audio_tag_service.mixar(
-        mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
+        mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual,
+        **audio_tag_service.level_values(profile),
     )
     storage = new_production_file_storage("previa")
     image_storage = storage_for(StorageScope.PUBLIC_IMAGE)
@@ -555,7 +556,8 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover
     if mp3 is not None:
         tag, profile = _tag(db, model.produtor_id)
         tagged_mp3 = audio_tag_service.mixar(
-            mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual
+            mp3[0], tag.conteudo, profile.intervalo_segundos, profile.volume_percentual,
+            **audio_tag_service.level_values(profile),
         )
     storage = new_production_file_storage("previa")
     image_storage = storage_for(StorageScope.PUBLIC_IMAGE) if cover else None

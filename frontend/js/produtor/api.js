@@ -54,6 +54,14 @@ export async function enviarArquivo(producaoId, arquivo, tipo, substituiId = nul
     );
 }
 
+export async function excluirPrevia(id) {
+    const response = await authFetch(`/portal/produtor/arquivos/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(typeof data?.detail === "string" ? data.detail : "Não foi possível excluir a prévia.");
+    }
+}
+
 export async function listarRepasses() {
     return responseData(
         await authFetch("/portal/produtor/repasses"),

@@ -1,22 +1,29 @@
 from typing import Annotated, Literal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_producer
 from crud import crud_producao
 from database import get_db
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
 from models.usuario import UsuarioModel
 from schemas.portal_produtor import ProducaoProdutorResponse
 from schemas.producao import ProducaoStatusUpdate
-from schemas.producao_arquivo import ProducaoArquivoObservacaoRequest, ProducaoArquivoResponse
+from schemas.producao_arquivo import (
+    ProducaoArquivoObservacaoRequest,
+    ProducaoArquivoResponse,
+)
 from schemas.repasse_produtor import RepasseProdutorResponse
-from services import audit_service, politica_service, producao_arquivo_service, repasse_produtor_service
+from services import (
+    audit_service,
+    politica_service,
+    producao_arquivo_service,
+    repasse_produtor_service,
+)
 from services.producao_arquivo_storage import MAX_FILE_SIZE
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/portal/produtor", tags=["Portal do Produtor"])
 Db = Annotated[Session, Depends(get_db)]
@@ -208,6 +215,26 @@ def editar_observacao(
     except producao_arquivo_service.ProducaoArquivoError as exc:
         db.rollback()
         raise _file_error(exc) from None
+
+
+@router.delete("/arquivos/{arquivo_id}", status_code=204)
+def excluir_previa(
+    arquivo_id: int,
+    request: Request,
+    db: Db,
+    user: CurrentProducer,
+):
+    try:
+        producao_arquivo_service.delete_preview_for_producer(
+            db,
+            file_id=arquivo_id,
+            actor=user,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except producao_arquivo_service.ProducaoArquivoError as exc:
+        db.rollback()
+        raise _file_error(exc) from None
+    return Response(status_code=204)
 
 
 @router.get("/arquivos/{arquivo_id}/conteudo")

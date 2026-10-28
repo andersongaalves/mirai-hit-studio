@@ -22,6 +22,23 @@
 
 .producer-file .producer-file__shared { color: var(--color-accent); }
 
+.producer-file__actions {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+@media (max-width: 720px) {
+    .producer-file__actions {
+        display: grid !important;
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    .producer-file__actions button { width: 100%; }
+}
+
 .producer-client-contact {
     margin-top: var(--space-3);
     overflow-wrap: anywhere;

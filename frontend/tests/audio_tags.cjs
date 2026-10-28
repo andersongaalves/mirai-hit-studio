@@ -41,8 +41,11 @@ const root = path.resolve(__dirname, "..");
         const page = await context.newPage();
         const errors = [];
         const writes = [];
+        const previews = [];
         let conflict = false;
-        let state = { versao: 0, nome: null, tag_id: null, intervalo_segundos: 10, volume_percentual: 40, padrao_disponivel: false };
+        let state = { versao: 0, nome: null, tag_id: null, intervalo_segundos: 10, volume_percentual: 40,
+            nivelamento_automatico: true, alvo_relativo_db: -3, ganho_min_db: -40, ganho_max_db: 30,
+            silencio_lufs: -60, limiter_dbfs: -0.9, padrao_disponivel: false };
         page.on("pageerror", error => errors.push(error.message));
         await page.route("**/*", async route => {
             const req = route.request(), url = new URL(req.url());
@@ -57,6 +60,14 @@ const root = path.resolve(__dirname, "..");
             const user = { id: 1, username: "admin", role: "admin", is_admin: true, ativo: true };
             if (url.pathname === "/auth/login") return route.fulfill({ json: { access_token: "synthetic-only", user } });
             if (url.pathname === "/auth/me") return route.fulfill({ json: user });
+            if (url.pathname === "/admin/audio-tag/preview/opcoes") return route.fulfill({ json: {
+                fontes: [{ type: "beat", id: 7, label: "Beat - Horizonte", detail: "Beat #7 - aprovado" }],
+                tags: [{ id: 2, label: "Tag padrão da Mirai - mirai.wav", atual: true }],
+            } });
+            if (url.pathname === "/admin/audio-tag/preview" && req.method() === "POST") {
+                previews.push(req.postDataJSON());
+                return route.fulfill({ body: Buffer.from("synthetic-preview"), contentType: "audio/mpeg" });
+            }
             if (url.pathname === "/admin/audio-tag") {
                 if (req.method() === "PUT") {
                     writes.push(req.postDataJSON());
@@ -79,19 +90,35 @@ const root = path.resolve(__dirname, "..");
         await signIn(page, { next: "/admin.html", username: "admin", password: "synthetic-only" });
         await page.waitForFunction(() => document.getElementById("admin-area")?.classList.contains("hidden") === false);
         await page.evaluate(() => window.mostrarSecao("section-custos"));
-        await page.getByRole("tab", { name: "Portais", exact: true }).click();
-        await page.waitForFunction(() => document.getElementById("admin-config-portals-tab")?.getAttribute("aria-selected") === "true");
+        await page.getByRole("tab", { name: "Áudio e tags", exact: true }).click();
+        await page.waitForFunction(() => document.getElementById("admin-config-audio-tab")?.getAttribute("aria-selected") === "true");
         const panel = page.locator("#audio-tag-settings");
         await panel.getByText("Nenhuma tag cadastrada.", { exact: true }).waitFor();
         await panel.locator('[name="intervalo_segundos"]').fill("15");
         await panel.locator('[name="volume_percentual"]').fill("25");
+        await panel.locator('[name="alvo_relativo_db"]').fill("-4");
+        await panel.locator('[name="ganho_min_db"]').fill("-30");
+        await panel.locator('[name="ganho_max_db"]').fill("20");
+        await panel.locator('[name="silencio_lufs"]').fill("-55");
+        await panel.locator('[name="limiter_dbfs"]').fill("-1.2");
         const previousParameters = await panel.locator('form').nth(1).elementHandle();
         await panel.getByRole("button", { name: "Salvar parâmetros" }).click();
         await page.waitForFunction(form => !form.isConnected, previousParameters);
         await panel.getByRole("button", { name: "Salvar parâmetros" }).waitFor();
         assert.equal(await panel.locator('[name="intervalo_segundos"]').inputValue(), "15");
         assert.equal(await panel.locator('[name="volume_percentual"]').inputValue(), "25");
-        assert.deepEqual(writes[0], { versao: 0, intervalo_segundos: 15, volume_percentual: 25 });
+        assert.deepEqual(writes[0], { versao: 0, nivelamento_automatico: true, intervalo_segundos: 15,
+            volume_percentual: 25, alvo_relativo_db: -4, ganho_min_db: -30, ganho_max_db: 20,
+            silencio_lufs: -55, limiter_dbfs: -1.2 });
+        await panel.getByLabel("Áudio de origem").selectOption("beat:7");
+        await panel.getByLabel("Tag aplicada").selectOption("2");
+        await panel.getByRole("button", { name: "Gerar prévia com estes controles" }).click();
+        await panel.getByText("Prévia pronta. O arquivo é temporário e não foi salvo no projeto.", { exact: true }).waitFor();
+        assert.equal(await panel.locator("audio").count(), 1);
+        assert.equal(new URL(await panel.locator("audio").getAttribute("src")).protocol, "blob:");
+        assert.deepEqual(previews[0], { nivelamento_automatico: true, intervalo_segundos: 15,
+            volume_percentual: 25, alvo_relativo_db: -4, ganho_min_db: -30, ganho_max_db: 20,
+            silencio_lufs: -55, limiter_dbfs: -1.2, source_type: "beat", source_id: 7, tag_id: 2 });
         await panel.locator('input[type="file"]').setInputFiles({ name: "tag.wav", mimeType: "audio/wav", buffer: Buffer.from("synthetic-audio-boundary") });
         await panel.getByRole("button", { name: "Cadastrar tag" }).click();
         await panel.getByText("Tag sintética.wav", { exact: true }).waitFor();

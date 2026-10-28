@@ -1840,6 +1840,25 @@
 .combos-panel { display: grid; gap: var(--space-3); margin-top: var(--space-6); padding: var(--space-4); border: var(--border-subtle); border-radius: var(--radius-md); min-width: 0; }
 .combos-panel__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .combos-panel__header h2 { margin: 0; font-size: 1.25rem; }
+
+.audio-tag-controls,
+.audio-tag-preview-generator { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding-top: var(--space-5); border-top: var(--border-subtle); }
+.audio-tag-controls__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.audio-tag-controls__grid label,
+.audio-tag-preview-generator__fields label { display: grid; gap: var(--space-2); min-width: 0; }
+.audio-tag-controls__grid input,
+.audio-tag-preview-generator__fields select { width: 100%; min-height: 44px; }
+.audio-tag-toggle { display: flex; align-items: center; gap: var(--space-2); }
+.audio-tag-toggle input { width: 20px; height: 20px; }
+.audio-tag-preview-generator h3,
+.audio-tag-preview-generator p { margin: 0; }
+.audio-tag-preview-generator__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.audio-tag-preview-generator audio { width: min(100%, 680px); }
+
+@media (max-width: 720px) {
+    .audio-tag-controls__grid,
+    .audio-tag-preview-generator__fields { grid-template-columns: 1fr; }
+}
 .combos-list { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .combo-card { display: grid; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: var(--border-subtle); border-left: 3px solid var(--color-accent); border-radius: var(--radius-md); overflow-wrap: anywhere; }
 .combo-card--inativo { opacity: 0.7; border-left-color: var(--color-text-secondary); }

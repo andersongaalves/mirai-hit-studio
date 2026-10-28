@@ -23,6 +23,15 @@ from sqlalchemy.exc import IntegrityError
 logger = logging.getLogger(__name__)
 MAX_TAG_BYTES = 2 * 1024 * 1024
 TAG_MIMES = {"audio/mpeg", "audio/wav", "audio/x-wav"}
+LEVEL_DEFAULTS = {
+    "nivelamento_automatico": True,
+    "alvo_relativo_db": -3.0,
+    "ganho_min_db": -40.0,
+    "ganho_max_db": 30.0,
+    "silencio_lufs": -60.0,
+    "limiter_dbfs": -0.9,
+}
+LEVEL_FIELDS = tuple(LEVEL_DEFAULTS)
 
 
 def duracao(data, *, limite):
@@ -40,6 +49,13 @@ def perfil(db, chave):
     return db.get(AudioTagPerfilModel, chave)
 
 
+def level_values(source=None):
+    return {
+        key: getattr(source, key, default) if source is not None else default
+        for key, default in LEVEL_DEFAULTS.items()
+    }
+
+
 def resposta(db, chave):
     current = perfil(db, chave)
     studio = current if chave == "studio" else perfil(db, "studio")
@@ -51,6 +67,7 @@ def resposta(db, chave):
         "intervalo_segundos": studio.intervalo_segundos if studio else 10,
         "volume_percentual": studio.volume_percentual if studio else 40,
         "padrao_disponivel": bool(studio and studio.tag_id),
+        **level_values(studio),
     }
 
 
@@ -94,14 +111,139 @@ def configurar(db, actor, payload):
         current.versao += 1
     current.intervalo_segundos = payload.intervalo_segundos
     current.volume_percentual = payload.volume_percentual
+    for field in LEVEL_FIELDS:
+        setattr(current, field, getattr(payload, field))
     audit_service.record(db, actor=actor, action="audio_tag.settings_updated", entity_type="audio_tag_settings",
-                         entity_id=1, metadata={"interval": current.intervalo_segundos, "volume": current.volume_percentual})
+                         entity_id=1, metadata={"interval": current.intervalo_segundos,
+                                                "volume": current.volume_percentual, **level_values(current)})
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(409, "A configuracao foi alterada. Recarregue antes de salvar.") from None
     return resposta(db, "studio")
+
+
+def opcoes_preview(db):
+    from models import BeatModel, ProducaoArquivoModel, ProducaoModel, UsuarioModel
+
+    current_scopes = {}
+    for profile in db.scalars(select(AudioTagPerfilModel).where(AudioTagPerfilModel.tag_id.is_not(None))):
+        current_scopes.setdefault(profile.tag_id, []).append(profile.chave)
+    tags = []
+    for tag, owner in db.execute(
+        select(AudioTagModel, UsuarioModel)
+        .join(UsuarioModel, UsuarioModel.id == AudioTagModel.usuario_id)
+        .order_by(AudioTagModel.created_at.desc(), AudioTagModel.id.desc())
+    ):
+        scopes = current_scopes.get(tag.id, [])
+        if "studio" in scopes:
+            label = f"Tag padrao da Mirai - {tag.nome}"
+        else:
+            producer = owner.nome_exibicao or owner.username
+            label = f"{producer} - {tag.nome}"
+        tags.append({
+            "id": tag.id,
+            "label": label,
+            "nome": tag.nome,
+            "duracao": tag.duracao,
+            "atual": bool(scopes),
+            "created_at": tag.created_at,
+        })
+
+    sources = []
+    for beat in db.scalars(select(BeatModel).order_by(BeatModel.created_at.desc(), BeatModel.id.desc())):
+        sources.append({
+            "type": "beat",
+            "id": beat.id,
+            "label": f"Beat - {beat.titulo}",
+            "detail": f"Beat #{beat.id} - {beat.status}",
+        })
+    files = db.execute(
+        select(ProducaoArquivoModel, ProducaoModel)
+        .join(ProducaoModel, ProducaoModel.id == ProducaoArquivoModel.producao_id)
+        .where(
+            ProducaoModel.status.in_(("finalizado", "entregue")),
+            ProducaoArquivoModel.tipo.in_(("previa", "entrega")),
+            ProducaoArquivoModel.mime_type.like("audio/%"),
+        )
+        .order_by(ProducaoModel.id.desc(), ProducaoArquivoModel.created_at.desc(), ProducaoArquivoModel.id.desc())
+    ).all()
+    for file, production in files:
+        kind = "Previa" if file.tipo == "previa" else "Entrega"
+        sources.append({
+            "type": "arquivo",
+            "id": file.id,
+            "label": f"{kind} - {production.titulo} - {file.nome_exibicao}",
+            "detail": f"Producao #{production.id} - versao {file.versao}",
+        })
+    return {"fontes": sources, "tags": tags}
+
+
+def gerar_preview(db, actor, payload):
+    from models import BeatModel, ProducaoArquivoModel, ProducaoModel
+    from services import producao_arquivo_service
+    from services.producao_arquivo_storage import (
+        ProducaoArquivoStorageError,
+        new_production_file_storage,
+    )
+
+    tag = db.get(AudioTagModel, payload.tag_id)
+    if tag is None:
+        raise HTTPException(404, "Tag nao encontrada.")
+    if hashlib.sha256(tag.conteudo).hexdigest() != tag.sha256:
+        raise HTTPException(409, "Integridade da tag nao confirmada.")
+    try:
+        if payload.source_type == "beat":
+            source = db.get(BeatModel, payload.source_id)
+            if source is None:
+                raise HTTPException(404, "Beat nao encontrado.")
+            original = new_production_file_storage("previa").read(source.original_ref)
+            expected_sha = source.original_sha256
+        else:
+            source = db.scalar(
+                select(ProducaoArquivoModel)
+                .join(ProducaoModel, ProducaoModel.id == ProducaoArquivoModel.producao_id)
+                .where(
+                    ProducaoArquivoModel.id == payload.source_id,
+                    ProducaoModel.status.in_(("finalizado", "entregue")),
+                    ProducaoArquivoModel.tipo.in_(("previa", "entrega")),
+                    ProducaoArquivoModel.mime_type.like("audio/%"),
+                )
+            )
+            if source is None:
+                raise HTTPException(404, "Audio de producao nao encontrado.")
+            original = producao_arquivo_service.read(source, client=False, versao="original")
+            expected_sha = source.sha256
+    except HTTPException:
+        raise
+    except (ProducaoArquivoStorageError, producao_arquivo_service.ProducaoArquivoUnavailable):
+        raise HTTPException(503, "O audio selecionado esta temporariamente indisponivel.") from None
+    if hashlib.sha256(original).hexdigest() != expected_sha:
+        raise HTTPException(409, "Integridade do audio nao confirmada.")
+    controls = payload.model_dump(exclude={"source_type", "source_id", "tag_id", "intervalo_segundos", "volume_percentual"})
+    try:
+        output = mixar(
+            original,
+            tag.conteudo,
+            payload.intervalo_segundos,
+            payload.volume_percentual,
+            **controls,
+        )
+    except RuntimeError as error:
+        if str(error) == "audio_original_too_large":
+            raise HTTPException(422, "O audio selecionado excede o limite de 50 MB para esta previa.") from None
+        raise HTTPException(503, "Nao foi possivel gerar a previa agora.") from None
+    audit_service.record(
+        db,
+        actor=actor,
+        action="audio_tag.preview_generated",
+        entity_type=payload.source_type,
+        entity_id=payload.source_id,
+        metadata={"tag_id": tag.id, **controls},
+    )
+    db.commit()
+    return output
 
 
 def preparar(db, *, actor, file_type, mime_type, data):
@@ -115,7 +257,7 @@ def preparar(db, *, actor, file_type, mime_type, data):
     seconds = duracao(data, limite=1800)
     return {"tag_id": tag_id, "intervalo_segundos": studio.intervalo_segundos if studio else 10,
             "volume_percentual": studio.volume_percentual if studio else 40,
-            "reserva_bytes": math.ceil(seconds * 24000) + 512 * 1024}
+            "reserva_bytes": math.ceil(seconds * 24000) + 512 * 1024, **level_values(studio)}
 
 
 # AUD6-S12-002: the tag runs inside the web process, so ffmpeg yields CPU to the API.
@@ -146,16 +288,11 @@ def sinalizar_fila():
 
 
 # Automatic tag level: the tag is matched to the loudness of each audio (EBU R128).
-# "volume_percentual" is the level relative to the audio: 40% (default) puts the tag
-# 3 dB below it; each doubling adds 6 dB (100% is about 5 dB above).
-NIVEL_REFERENCIA = 40
-NIVEL_REFERENCIA_DB = -3.0
-GANHO_MIN_DB, GANHO_MAX_DB = -40.0, 30.0
-SILENCIO_LUFS = -60.0
+# The relative target, gain bounds and limiter are frozen with every queued job.
 _INTEGRADO = re.compile(r"\bI:\s+(-?\d+(?:\.\d+)?) LUFS")
 
 
-def medir_loudness(path):
+def medir_loudness(path, silencio_lufs=-60.0):
     """Integrated loudness in LUFS, or None when it cannot be measured (silence, error)."""
     from imageio_ffmpeg import get_ffmpeg_exe
 
@@ -170,18 +307,18 @@ def medir_loudness(path):
         return None
     found = _INTEGRADO.findall(result.stderr.decode("utf-8", "ignore")) if result.returncode == 0 else []
     value = float(found[-1]) if found else None
-    return value if value is not None and value > SILENCIO_LUFS else None
+    return value if value is not None and value > silencio_lufs else None
 
 
-def ganho_tag_db(audio_lufs, tag_lufs, volume):
+def ganho_tag_db(audio_lufs, tag_lufs, alvo_relativo_db=-3.0, ganho_min_db=-40.0, ganho_max_db=30.0):
     """Gain for the tag so it sits at the chosen level relative to the audio."""
     if audio_lufs is None or tag_lufs is None:
         return None
-    alvo = audio_lufs + NIVEL_REFERENCIA_DB + 20 * math.log10(volume / NIVEL_REFERENCIA)
-    return round(max(GANHO_MIN_DB, min(GANHO_MAX_DB, alvo - tag_lufs)), 2)
+    alvo = audio_lufs + alvo_relativo_db
+    return round(max(ganho_min_db, min(ganho_max_db, alvo - tag_lufs)), 2)
 
 
-def mixar(original, tag, intervalo, volume):
+def mixar(original, tag, intervalo, volume, **controls):
     from imageio_ffmpeg import get_ffmpeg_exe
 
     if len(original) > MAX_ORIGINAL_BYTES:
@@ -192,12 +329,22 @@ def mixar(original, tag, intervalo, volume):
         source, stamp, output = folder / "source.audio", folder / "tag.audio", folder / "preview.mp3"
         source.write_bytes(original)
         stamp.write_bytes(tag)
-        ganho = ganho_tag_db(medir_loudness(source), medir_loudness(stamp), volume)
-        # Silent or unmeasurable audio keeps the previous fixed volume.
-        nivel = f"volume={ganho}dB,alimiter=limit=0.9:level=false" if ganho is not None else f"volume={volume / 100}"
+        config = {**LEVEL_DEFAULTS, **{key: controls[key] for key in LEVEL_FIELDS if key in controls}}
+        ganho = None
+        if config["nivelamento_automatico"]:
+            ganho = ganho_tag_db(
+                medir_loudness(source, config["silencio_lufs"]),
+                medir_loudness(stamp, config["silencio_lufs"]),
+                config["alvo_relativo_db"],
+                config["ganho_min_db"],
+                config["ganho_max_db"],
+            )
+        limiter = round(10 ** (config["limiter_dbfs"] / 20), 6)
+        # Disabled leveling or unmeasurable audio uses the explicit fixed fallback.
+        nivel = f"volume={ganho}dB,alimiter=limit={limiter}:level=false" if ganho is not None else f"volume={volume / 100}"
         graph = (f"[1:a]aresample=48000,apad=whole_dur={intervalo},"
                  f"aloop=loop=-1:size={intervalo * 48000},{nivel}[tag];"
-                 "[0:a][tag]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95:level=false[out]")
+                 f"[0:a][tag]amix=inputs=2:duration=first:normalize=0,alimiter=limit={limiter}:level=false[out]")
         try:
             result = subprocess.run([
                 get_ffmpeg_exe(), "-nostdin", "-hide_banner", "-loglevel", "error", "-threads", "1", "-filter_complex_threads", "1",
@@ -236,7 +383,13 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
             if model.tipo != "previa" or hashlib.sha256(tag.conteudo).hexdigest() != tag.sha256:
                 raise RuntimeError("audio_tag_integrity")
             original = producao_arquivo_service.read(model, storage=storage)
-            content = renderer(original, tag.conteudo, job.intervalo_segundos, job.volume_percentual)
+            content = renderer(
+                original,
+                tag.conteudo,
+                job.intervalo_segundos,
+                job.volume_percentual,
+                **level_values(job),
+            )
             if not content or len(content) > job.reserva_bytes:
                 raise RuntimeError("audio_render_exceeds_reservation")
             provider = storage or new_production_file_storage("previa")

@@ -5,7 +5,7 @@ from database import get_db
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from models import AudioTagModel, AudioTagPerfilModel, PreviaTagJobModel
-from schemas.audio_tag import AudioTagSettings
+from schemas.audio_tag import AudioTagPreviewRequest, AudioTagSettings
 from services import audio_tag_service as service
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,6 +22,21 @@ def configuracao(db: Db, user=Depends(require_admin)):
 @router.put("/admin/audio-tag")
 def configurar(payload: AudioTagSettings, db: Db, user=Depends(require_admin)):
     return service.configurar(db, user, payload)
+
+
+@router.get("/admin/audio-tag/preview/opcoes")
+def opcoes_preview(db: Db, user=Depends(require_admin)):
+    return service.opcoes_preview(db)
+
+
+@router.post("/admin/audio-tag/preview")
+def gerar_preview(payload: AudioTagPreviewRequest, db: Db, user=Depends(require_admin)):
+    content = service.gerar_preview(db, user, payload)
+    return Response(
+        content,
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "private, no-store", "Content-Disposition": 'inline; filename="tag-preview.mp3"'},
+    )
 
 
 @router.get("/portal/produtor/audio-tag")

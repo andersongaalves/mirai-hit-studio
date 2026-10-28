@@ -53,6 +53,10 @@ ALLOWED_METADATA = {
     "reason",
     "charge_status", "production_status",
     "charge_old_status", "charge_new_status",
+    # S08: private audio-tag configuration and temporary preview diagnostics.
+    "scope", "version", "interval", "volume", "tag_id",
+    "nivelamento_automatico", "alvo_relativo_db", "ganho_min_db", "ganho_max_db",
+    "silencio_lufs", "limiter_dbfs",
 }
 
 

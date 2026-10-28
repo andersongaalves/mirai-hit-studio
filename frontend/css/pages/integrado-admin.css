@@ -114,6 +114,8 @@
 }
 
 @media (max-width: 767px) {
+    .integrado-admin__config-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .integrado-admin__config-tabs button { min-width: 0; padding-inline: 8px; white-space: normal; }
     .integrado-admin .dashboard-kpi-grid { grid-template-columns: 1fr; }
     .integrado-admin .admin-search { margin: 0 8px; }
     .integrado-admin .admin-search__results { position: fixed; top: var(--integrado-header-height); left: 8px; right: 8px; }
