@@ -243,6 +243,9 @@ async function staticResponse(route) {
             files.push({ ...files[0], id: 10, tipo: 'previa', nome_exibicao: 'preview.mp3', versao: 1, visivel_cliente: true });
             return route.fulfill({ status: 201, json: files.at(-1) });
         }
+        if (/^\/portal\/produtor\/producoes\/\d+\/entregas-finais$/.test(url.pathname) && request.method() === 'GET') {
+            return route.fulfill({ json: [] });
+        }
         const detail = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)$/);
         if (detail && request.method() === 'GET') {
             const item = productions.find(entry => entry.id === Number(detail[1]));
@@ -415,10 +418,21 @@ async function staticResponse(route) {
         assert.deepEqual(threadPosts[0], { texto: 'Nota interna para a equipe', audiencia: 'equipe', responde_a_id: null, arquivo_id: 9 });
         assert.match(await page.locator('.production-message--team').textContent(), /Interna/);
 
+        const finalDelivery = page.locator('details.final-delivery-disclosure').filter({ hasText: 'Enviar entrega final' });
+        assert.equal(await finalDelivery.getAttribute('open'), null);
+        await finalDelivery.getByText('Enviar entrega final', { exact: true }).click();
+        const category = finalDelivery.getByLabel('Tipo de entrega');
+        assert.deepEqual(await category.locator('option').allTextContents(), ['Instrumental', 'Outro tipo de entrega']);
+        assert.equal(await finalDelivery.getByText('Licença (PDF)').isVisible(), true);
+        await category.selectOption('outro');
+        assert.equal(await finalDelivery.getByText('WAV final').isVisible(), false);
+        assert.equal(await finalDelivery.getByText('Arquivo principal').isVisible(), true);
+        await finalDelivery.getByText('Enviar entrega final', { exact: true }).click();
+
+        await page.getByText('Enviar prévia', { exact: true }).click();
         await page.getByLabel('Observação para esta versão').fill('Mix com graves reduzidos');
         await page.getByLabel('Arquivo para enviar').setInputFiles({ name: 'preview.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from('preview') });
         await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Envio iniciado'));
         await page.getByRole('button', { name: /^Envios/ }).click();
         await page.waitForFunction(() => document.querySelector('.upload-tasks-dialog')?.textContent.includes('Concluído'));
         assert.equal(uploads, 1);
@@ -426,13 +440,10 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Fechar' }).click();
         await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')].some(item => item.textContent.includes('preview.mp3')));
         assert.match(await page.locator('.producer-file').filter({ hasText: 'preview.mp3' }).textContent(), /Compartilhada com o cliente/);
-        // AUD-S08-001: replacement options follow the selected type.
+        // AUD-S08-001: only previews use the loose-file replacement flow.
         const replacementValues = () => page.getByLabel('Versão substituída').locator('option')
             .evaluateAll(options => options.map(option => option.value));
         assert.deepEqual(await replacementValues(), ['', '8', '10']);
-        await page.getByLabel('Tipo de arquivo').selectOption('entrega');
-        assert.deepEqual(await replacementValues(), ['']);
-        await page.getByLabel('Tipo de arquivo').selectOption('previa');
         await page.getByRole('button', { name: 'Confirmar início' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         assert.equal(productions[0].status, 'em_producao');

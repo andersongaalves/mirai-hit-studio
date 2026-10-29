@@ -109,15 +109,13 @@ const QUOTAS = [
 
         // Portals: the hint follows the selected type and whether a new file or a new version is sent.
         await page.evaluate(([production, files, cotas]) => window.renderPortals(production, files, cotas), [PRODUCTION, FILES, QUOTAS]);
-        const producer = page.locator('#producer-detail-content form.producer-upload');
+        const producer = page.locator('#producer-detail-content form.producer-upload').filter({ has: page.getByLabel('Tipo de arquivo') });
+        await page.locator('#producer-detail-content details').filter({ hasText: 'Enviar prévia' }).locator('summary').click();
         const producerHint = producer.locator('[data-quota-hint]');
         assert.match(await producerHint.textContent(), /Cota do contrato: 1 de 1 arquivo\(s\).*Limite de arquivos atingido/);
         assert.equal(await producerHint.getAttribute('class'), 'file-quota-hint is-exhausted');
         await producer.getByLabel('Versão substituída').selectOption('11');
         assert.doesNotMatch(await producerHint.textContent(), /Limite de arquivos atingido/);
-        await producer.getByLabel('Tipo de arquivo').selectOption('entrega');
-        assert.equal(await producerHint.isVisible(), false);
-
         const client = page.locator('#client-detail-content form.producer-upload');
         const clientHint = client.locator('[data-quota-hint]');
         assert.equal(await clientHint.textContent(), 'Cota do contrato: 1 de 3 arquivo(s) · espaço 0,6 de 1 MB.');

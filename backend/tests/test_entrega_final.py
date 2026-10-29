@@ -60,6 +60,10 @@ def blocked():
 '''
 SETUP = SETUP.replace('from models import ProducaoEtapaModel,',
                       'from models import ProducaoArquivoModel, ProducaoEtapaModel,', 1)
+SETUP += '''
+from models import ProducaoEntregaFinalModel
+from services import producao_entrega_service
+'''
 
 
 class EntregaFinalTests(unittest.TestCase):
@@ -79,6 +83,86 @@ assert api.put('/servicos/1/politicas', headers=ADMIN, json={'entrega_final': 'n
 assert api.put('/servicos/1/politicas', headers=ADMIN, json={'entrega_final': 'liberada'}).status_code == 422
 assert api.put('/politicas/globais', headers=ADMIN, json={
     'base_versao': 0, 'politicas': liberada}).status_code == 422
+''')
+
+    def test_structured_instrumental_delivery_is_complete_private_and_payment_gated(self):
+        self.run_case('''
+payload = {
+    'request_id': '550e8400-e29b-41d4-a716-446655440000',
+    'categoria': 'instrumental',
+    'titulo': 'Instrumental final',
+    'multitrack_url': 'https://drive.example.test/private-delivery',
+    'observacao': 'Versao aprovada.',
+}
+files = {
+    'arquivo_principal': ('final.mp3', b'mp3-final', 'audio/mpeg'),
+    'wav': ('final.wav', b'wav-final', 'audio/wav'),
+    'licenca': ('licenca.pdf', b'%PDF-1.4 synthetic', 'application/pdf'),
+}
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    created = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
+                       headers=bearer('producer-a'), data=payload, files=files)
+assert created.status_code == 201, created.text
+delivery = created.json()
+assert delivery['categoria'] == 'instrumental'
+assert delivery['multitrack_disponivel'] is True and 'multitrack_url' not in delivery
+assert delivery['arquivo_principal']['nome_exibicao'] == 'final.mp3'
+assert delivery['wav_arquivo']['nome_exibicao'] == 'final.wav'
+assert delivery['licenca_arquivo']['nome_exibicao'] == 'licenca.pdf'
+with Session(engine) as db:
+    assert db.query(ProducaoEntregaFinalModel).count() == 1
+    assert db.query(ProducaoArquivoModel).filter_by(producao_id=PRODUCTION_ID, tipo='entrega').count() == 3
+
+# Idempotent retry returns the same package and does not duplicate objects.
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    retried = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
+                       headers=bearer('producer-a'), data=payload, files=files)
+assert retried.status_code == 201 and retried.json()['id'] == delivery['id']
+with Session(engine) as db:
+    assert db.query(ProducaoArquivoModel).filter_by(producao_id=PRODUCTION_ID, tipo='entrega').count() == 3
+changed_files = {**files, 'arquivo_principal': ('final.mp3', b'changed-mp3', 'audio/mpeg')}
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    conflict = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
+                        headers=bearer('producer-a'), data=payload, files=changed_files)
+assert conflict.status_code == 409
+with Session(engine) as db:
+    assert db.query(ProducaoArquivoModel).filter_by(producao_id=PRODUCTION_ID, tipo='entrega').count() == 3
+
+listed = api.get(f'/portal/cliente/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('client-a'))
+assert listed.status_code == 200 and listed.json()[0]['bloqueado_pagamento'] is False
+link = api.get(f"/portal/cliente/entregas-finais/{delivery['id']}/multitrack", headers=bearer('client-a'))
+assert link.status_code == 200 and link.json()['url'].startswith('https://drive.example.test/')
+
+with Session(engine) as db:
+    db.add(CobrancaModel(proposta_id=PROPOSAL_ID, cliente_id=1, valor_total=Decimal('100.00'), moeda='BRL', status='pendente'))
+    db.commit()
+blocked_list = api.get(f'/portal/cliente/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('client-a')).json()
+assert blocked_list[0]['bloqueado_pagamento'] is True
+assert api.get(f"/portal/cliente/entregas-finais/{delivery['id']}/multitrack", headers=bearer('client-a')).status_code == 402
+with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage):
+    assert api.get(f"/portal/cliente/arquivos/{delivery['licenca_arquivo']['id']}/conteudo",
+                   headers=bearer('client-a')).status_code == 402
+
+with Session(engine) as db:
+    db.add(ClienteModel(id=2, nome='Cliente B', email='b@example.test'))
+    db.add(UsuarioModel(id=7, username='client-b', password_hash='unused', role='cliente',
+                       is_admin=False, ativo=True, cliente_id=2))
+    db.commit()
+assert api.get(f'/portal/cliente/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('client-b')).status_code == 404
+assert api.get(f"/portal/cliente/entregas-finais/{delivery['id']}/multitrack", headers=bearer('client-b')).status_code == 404
+''')
+
+    def test_instrumental_requires_wav_multitrack_and_pdf_license(self):
+        self.run_case('''
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    invalid = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
+        headers=bearer('producer-a'),
+        data={'request_id':'550e8400-e29b-41d4-a716-446655440001','categoria':'instrumental','titulo':'Incompleta'},
+        files={'arquivo_principal':('final.mp3',b'mp3','audio/mpeg')})
+assert invalid.status_code == 422, invalid.text
+with Session(engine) as db:
+    assert db.query(ProducaoEntregaFinalModel).count() == 0
+    assert db.query(ProducaoArquivoModel).filter_by(tipo='entrega').count() == 0
 ''')
 
     def test_delivery_held_until_paid(self):

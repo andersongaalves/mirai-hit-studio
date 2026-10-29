@@ -165,9 +165,10 @@ async function openDetail(id) {
     setAlert();
     try {
         // Finance is secondary: its failure must not hide the project and its files.
-        const [production, files, financeResult] = await Promise.all([
+        const [production, files, deliveries, financeResult] = await Promise.all([
             api.obterProducao(id),
             api.listarArquivos(id),
+            api.listarEntregasFinais(id),
             api.obterFinanceiro(id).then(
                 value => ({ ok: true, value }),
                 () => ({ ok: false, value: finances.get(id) ?? { indisponivel: true } }),
@@ -176,10 +177,11 @@ async function openDetail(id) {
         const finance = financeResult.value;
         if (financeResult.ok) finances.set(id, finance);
         rememberProduction(production);
-        renderDetail(production, files, finance, {
+        renderDetail(production, files, deliveries, finance, {
             onUpload: uploadFile,
             onRefreshFiles: refreshFiles,
             onDownload: downloadFile,
+            onDeliveryLink: openDeliveryLink,
             onPreview: playPreview,
             uploadFeedback,
         });
@@ -378,6 +380,18 @@ async function downloadFile(id, button) {
     }
 }
 
+async function openDeliveryLink(delivery, button) {
+    button.disabled = true;
+    try {
+        const result = await api.obterLinkMultitrackEntrega(delivery.id);
+        window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+        setAlert(error.message, true);
+    } finally {
+        button.disabled = false;
+    }
+}
+
 async function downloadProposal(proposal, button) {
     button.disabled = true;
     try {
@@ -457,13 +471,17 @@ function uploadError(error) {
 async function refreshFiles(production, setFeedback) {
     if (route().view !== "detail" || route().id !== production.id) return;
     try {
-        const files = await api.listarArquivos(production.id);
+        const [files, deliveries] = await Promise.all([
+            api.listarArquivos(production.id),
+            api.listarEntregasFinais(production.id),
+        ]);
         if (route().view !== "detail" || route().id !== production.id) return;
         uploadFeedback = { kind: "success", message: uploadFeedback?.successMessage || "Lista atualizada." };
-        renderDetail(production, files, finances.get(production.id), {
+        renderDetail(production, files, deliveries, finances.get(production.id), {
             onUpload: uploadFile,
             onRefreshFiles: refreshFiles,
             onDownload: downloadFile,
+            onDeliveryLink: openDeliveryLink,
             onPreview: playPreview,
             uploadFeedback,
         });

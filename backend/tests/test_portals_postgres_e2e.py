@@ -95,7 +95,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         from main import app
         from routers.checkout import get_mercado_pago_client as public_provider
         from routers.portal_cliente import get_mercado_pago_client as portal_provider
-        from services import producao_arquivo_service
+        from services import producao_arquivo_service, producao_entrega_service
 
         actual = make_url(str(engine.url))
         def target(url):
@@ -133,6 +133,13 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         cls.stack.enter_context(
             patch.object(
                 producao_arquivo_service,
+                "new_production_file_storage",
+                return_value=cls.storage,
+            )
+        )
+        cls.stack.enter_context(
+            patch.object(
+                producao_entrega_service,
                 "new_production_file_storage",
                 return_value=cls.storage,
             )
@@ -191,6 +198,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             PreviaTagJobModel,
             ProducaoArquivoModel,
             ProducaoCotaArquivoModel,
+            ProducaoEntregaFinalModel,
             ProducaoEtapaAtribuicaoModel,
             ProducaoEtapaModel,
             ProducaoModel,
@@ -217,6 +225,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 PortfolioEnvioModel,
                 ProjetoModel,
                 RepasseProdutorModel,
+                ProducaoEntregaFinalModel,
                 ProducaoArquivoModel,
                 ProviderWebhookEventModel,
                 PagamentoModel,

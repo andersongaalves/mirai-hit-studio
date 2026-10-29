@@ -13,7 +13,7 @@ from .financeiro import CobrancaModel, PagamentoModel, ProviderWebhookEventModel
 from .ai import AIConversationModel, AIEmailThreadModel, AIMessageModel
 from .ai_briefing import AIBriefingModel
 from .ai_usage import AIUsageEventModel
-from .portal_produtor import ProducaoArquivoModel, RepasseProdutorModel
+from .portal_produtor import ProducaoArquivoModel, ProducaoEntregaFinalModel, RepasseProdutorModel
 from .client_access import AuthRateLimitModel, ClienteAcessoModel
 from .portal_config import PortalConfiguracaoModel
 from .producao_mensagem import ProducaoMensagemModel

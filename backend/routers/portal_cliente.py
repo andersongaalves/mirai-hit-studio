@@ -1,10 +1,12 @@
 from typing import Annotated, Literal
 from urllib.parse import quote
 
-from core.dependencies import require_client
-from database import get_db
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
+from sqlalchemy.orm import Session
+
+from core.dependencies import require_client
+from database import get_db
 from integrations.mercado_pago import (
     MercadoPagoClient,
     MercadoPagoError,
@@ -28,16 +30,17 @@ from schemas.portal_cliente import (
     PropostaClienteAction,
     PropostaClienteResponse,
 )
+from schemas.producao_entrega import ProducaoEntregaFinalResponse
 from services import (
     checkout_service,
     financial_service,
     portal_cliente_proposta_service,
     portal_cliente_service,
     producao_arquivo_service,
+    producao_entrega_service,
     producao_solicitacao_service,
 )
 from services.producao_arquivo_storage import MAX_FILE_SIZE
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/portal/cliente", tags=["Portal do Cliente"])
 Db = Annotated[Session, Depends(get_db)]
@@ -373,6 +376,31 @@ def listar_meus_arquivos(producao_id: int, db: Db, user: CurrentClient):
         bloqueada = portal_cliente_service.entrega_bloqueada(
             db, portal_cliente_service.buscar_producao(db, producao_id, user.cliente_id))
     return [_client_file(model, user.id, bloqueada) for model in models]
+
+
+@router.get("/producoes/{producao_id}/entregas-finais", response_model=list[ProducaoEntregaFinalResponse])
+def listar_minhas_entregas_finais(producao_id: int, db: Db, user: CurrentClient):
+    try:
+        production = portal_cliente_service.buscar_producao(db, producao_id, user.cliente_id)
+    except portal_cliente_service.ProducaoClienteNaoEncontrada:
+        raise HTTPException(status_code=404, detail="Producao nao encontrada.") from None
+    blocked = portal_cliente_service.entrega_bloqueada(db, production)
+    return producao_entrega_service.list_for_production(db, producao_id, blocked=blocked)
+
+
+@router.get("/entregas-finais/{entrega_id}/multitrack")
+def abrir_multitrack_entrega(entrega_id: int, db: Db, user: CurrentClient):
+    try:
+        model = producao_entrega_service.get(db, entrega_id)
+        production = portal_cliente_service.buscar_producao(db, model.producao_id, user.cliente_id)
+    except (producao_entrega_service.ProducaoEntregaError, portal_cliente_service.ProducaoClienteNaoEncontrada):
+        raise HTTPException(status_code=404, detail="Entrega final nao encontrada.") from None
+    if portal_cliente_service.entrega_bloqueada(db, production):
+        raise HTTPException(status_code=402, detail=portal_cliente_service.MENSAGEM_ENTREGA_BLOQUEADA)
+    try:
+        return {"url": producao_entrega_service.external_multitrack(model)}
+    except producao_entrega_service.ProducaoEntregaError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
 
 
 @router.post(
