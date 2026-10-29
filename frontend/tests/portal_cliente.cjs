@@ -524,6 +524,8 @@ async function staticResponse(route) {
         const packageCard = page.locator('.final-delivery-card').filter({ hasText: 'Instrumental aprovado' });
         assert.match(await packageCard.textContent(), /liberado após a quitação do saldo/);
         assert.equal(await packageCard.locator('button').count(), 0);
+        assert.equal(await packageCard.getByRole('link', { name: 'Pagar saldo e liberar' }).getAttribute('href'),
+            'https://miraihitstudio.com.br/checkout/11111111-1111-1111-1111-111111111111');
         assert.equal(await page.locator('.producer-file').filter({ hasText: 'licenca.pdf' }).count(), 0);
 
         // Roadmap 5.06: contract stages replace the legacy list, read-only and without values.

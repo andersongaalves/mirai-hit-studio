@@ -234,6 +234,12 @@ function finalDeliveryCard(delivery, handlers) {
     if (delivery.observacao) card.append(element("p", "file-note", delivery.observacao));
     if (delivery.bloqueado_pagamento) {
         card.append(element("p", "producer-help", "Este pacote será liberado após a quitação do saldo."));
+        const checkout = safeCheckoutUrl(handlers.finance);
+        if (checkout) {
+            const pay = element("a", "btn-cta", "Pagar saldo e liberar");
+            pay.href = checkout;
+            card.append(pay);
+        }
         return card;
     }
     const actions = element("div", "final-delivery-card__actions");

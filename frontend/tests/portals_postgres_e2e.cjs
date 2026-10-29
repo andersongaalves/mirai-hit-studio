@@ -76,6 +76,26 @@ function expectStatus(result, status, label) {
     return result.data;
 }
 
+function syntheticWav() {
+    const sampleRate = 8000;
+    const samples = Buffer.alloc(sampleRate / 10 * 2);
+    const wav = Buffer.alloc(44 + samples.length);
+    wav.write('RIFF', 0);
+    wav.writeUInt32LE(wav.length - 8, 4);
+    wav.write('WAVEfmt ', 8);
+    wav.writeUInt32LE(16, 16);
+    wav.writeUInt16LE(1, 20);
+    wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(sampleRate, 24);
+    wav.writeUInt32LE(sampleRate * 2, 28);
+    wav.writeUInt16LE(2, 32);
+    wav.writeUInt16LE(16, 34);
+    wav.write('data', 36);
+    wav.writeUInt32LE(samples.length, 40);
+    samples.copy(wav, 44);
+    return wav;
+}
+
 (async () => {
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1024, height: 850 } });
@@ -260,9 +280,16 @@ function expectStatus(result, status, label) {
         await finalDelivery.getByLabel('Arquivo principal').setInputFiles({
             name: 'entrega-browser.wav',
             mimeType: 'audio/wav',
-            buffer: Buffer.from('RIFF-browser-delivery'),
+            buffer: syntheticWav(),
         });
         await finalDelivery.getByRole('button', { name: 'Enviar pacote final' }).click();
+        const finalDeliveryTask = page.locator('.upload-tasks-dialog li')
+            .filter({ hasText: 'Entrega final · Entrega E2E Browser' });
+        await finalDeliveryTask.waitFor();
+        await page.waitForFunction(() => [...document.querySelectorAll('.upload-tasks-dialog li')]
+            .some(item => item.textContent.includes('Entrega final · Entrega E2E Browser')
+                && ['completed', 'failed'].includes(item.dataset.state)));
+        assert.equal(await finalDeliveryTask.getAttribute('data-state'), 'completed', await finalDeliveryTask.textContent());
         await page.waitForFunction(() => [...document.querySelectorAll('.final-delivery-card')]
             .some(item => item.textContent.includes('Entrega E2E Browser')));
         await page.getByRole('button', { name: 'Enviar para revisão' }).click();
@@ -277,17 +304,11 @@ function expectStatus(result, status, label) {
         const delivery = producerFiles.find(item => item.nome_exibicao === 'entrega-browser.wav');
         assert.ok(preview && delivery);
         assert.equal(preview.visivel_cliente, true);
-        assert.equal(delivery.visivel_cliente, false);
+        assert.equal(delivery.visivel_cliente, true);
         assert.ok(producerFiles.some(item => item.nome_exibicao === 'material-cliente.wav'));
 
         await resetSession(page);
         await login(page, '/admin', 'e2e-admin');
-        for (const file of [preview, delivery]) {
-            expectStatus(await api(page, 'PATCH', `/producoes/${productionId}/arquivos/${file.id}/visibilidade`, {
-                visivel_produtor: true,
-                visivel_cliente: true,
-            }), 200, `admin releases ${file.tipo}`);
-        }
         expectStatus(await api(page, 'PUT', `/producoes/${productionId}/repasse`, {
             valor_combinado: '275.90',
         }), 200, 'admin defines payout');
@@ -308,8 +329,8 @@ function expectStatus(result, status, label) {
         const previewItem = page.locator('.producer-file').filter({ hasText: 'preview-browser.mp3' });
         await previewItem.getByRole('button', { name: 'Reproduzir' }).click();
         await previewItem.locator('audio.client-player').waitFor({ state: 'attached' });
-        const deliveryItem = page.locator('.producer-file').filter({ hasText: 'entrega-browser.wav' });
-        assert.equal(await deliveryItem.getByRole('button', { name: 'Baixar' }).count(), 0);
+        const deliveryItem = page.locator('.final-delivery-card').filter({ hasText: 'Entrega E2E Browser' });
+        assert.equal(await deliveryItem.getByRole('button', { name: 'Baixar arquivo' }).count(), 0);
         expectStatus(await api(page, 'GET', `/portal/cliente/arquivos/${delivery.id}/conteudo`),
             402, 'unpaid final delivery denied by real backend');
         const balanceLink = deliveryItem.getByRole('link', { name: 'Pagar saldo e liberar' });
@@ -325,9 +346,9 @@ function expectStatus(result, status, label) {
         await page.locator('#checkout-terminal').getByText('Pagamento confirmado!', { exact: true }).waitFor();
         await page.goto(`${FRONTEND}/cliente/projetos/${productionId}`);
         await page.locator('#client-loading').waitFor({ state: 'hidden' });
-        await deliveryItem.getByRole('button', { name: 'Baixar' }).waitFor();
+        await deliveryItem.getByRole('button', { name: 'Baixar arquivo' }).waitFor();
         const downloadPromise = page.waitForEvent('download');
-        await deliveryItem.getByRole('button', { name: 'Baixar' }).click();
+        await deliveryItem.getByRole('button', { name: 'Baixar arquivo' }).click();
         const download = await downloadPromise;
         // The API exposes Content-Disposition cross-origin (AUD-S12-002).
         assert.equal(download.suggestedFilename(), 'entrega-browser.wav');
