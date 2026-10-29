@@ -9,9 +9,9 @@ implementado sem autorizacao do responsavel.
 | Campo | Estado atual |
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
-| Lote atual | Lotes 1 a 8 publicados |
-| Item em andamento | APL-S09-06: reorganizacao do Admin por processo, com formularios avancados recolhidos |
-| Proxima acao | Aguardar CI e revisao da PR #154; depois da #153, redirecionar a base para `main` antes da integracao |
+| Lote atual | Lotes 1 a 8 e itens APL-S08-05, APL-S08-06 e APL-S09-06 publicados |
+| Item em andamento | Nenhum item desta publicacao; controles de tag e reorganizacao do Admin estao em producao |
+| Proxima acao | Retomar o proximo item pendente da Etapa 07 |
 | Ultima atualizacao | 28/10/2026 |
 
 ## 2. Regras
@@ -88,8 +88,8 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S08-02 | S08-002 | P2 | Falha de tag gera pendencia/aviso ao Admin com "Reprocessar" | Codigo; com APL-S11-01 | Publicado | #114 (lista no dashboard com Reprocessar; notificacao ao Admin segue com APL-S11-01) |
 | APL-S08-03 | S08-003, S08-005 | P3 | Seletor de arquivo estilizado em portugues; "Enviar para revisao" dentro da etapa | Codigo | Publicado | #110 (seletor) e #118 (acao geral dentro do resumo) |
 | APL-S08-04 | S08-007 | P3 | Nao permitir versionar arquivo oculto para o produtor | Codigo | Publicado | #110 |
-| APL-S08-05 | Pedido do responsavel | P3 | Configuracoes > Audio e tags: controlar nivelamento automatico, alvo relativo, faixa de ganho, silencio, limiter, intervalo e fallback; gerar MP3 temporario escolhendo beat ou audio de producao finalizada e qualquer versao de tag | Codigo + migration `b4d6f8a0c2e5` | Em validacao | #153 |
-| APL-S08-06 | Pedido do responsavel | P3 | Produtor pode excluir somente a propria previa mais recente; versoes substituidas e anexos de mensagens permanecem protegidos; original e derivada com tag usam limpeza exata | Codigo | Em validacao | #153 |
+| APL-S08-05 | Pedido do responsavel | P3 | Configuracoes > Audio e tags: controlar nivelamento automatico, alvo relativo, faixa de ganho, silencio, limiter, intervalo e fallback; gerar MP3 temporario escolhendo beat ou audio de producao finalizada e qualquer versao de tag | Codigo + migration `b4d6f8a0c2e5` | Publicado | #153; release `40793684027` |
+| APL-S08-06 | Pedido do responsavel | P3 | Produtor pode excluir somente a propria previa mais recente; versoes substituidas e anexos de mensagens permanecem protegidos; original e derivada com tag usam limpeza exata | Codigo | Publicado | #153; release `40793684027` |
 
 ### S09 - Administracao operacional ([diagnostico](auditoria/S09_ADMIN_OPERACIONAL.md))
 
@@ -100,7 +100,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S09-03 | S09-003, 004, 005 | P3 | Dashboard sem blocos repetidos; carregar secoes sob demanda; textos com acento e erros humanos | Codigo/texto | Publicado | #115 (acentos) e #135 (sem blocos repetidos; secoes sob demanda) |
 | APL-S09-04 | S09-006 | P3 | Busca global | Codigo | Publicado | #136 |
 | APL-S09-05 | S09-007 | P3 | `PUT /config` sem a linha `id=1` | Codigo | Publicado | #115 |
-| APL-S09-06 | Pedido do responsavel | P3 | Reorganizar navegacao e telas do Admin por processo; mover segmentos para Portfolio e precos para Servicos; recolher editores, filtros e operacoes avancadas; dividir o detalhe da producao por etapa | Codigo + testes de navegador | Em PR | #154 (empilhada sobre #153) |
+| APL-S09-06 | Pedido do responsavel | P3 | Reorganizar navegacao e telas do Admin por processo; mover segmentos para Portfolio e precos para Servicos; recolher editores, filtros e operacoes avancadas; dividir o detalhe da producao por etapa | Codigo + testes de navegador | Publicado | #154; release `40793684027` |
 
 ### S05 - Propostas ([diagnostico](auditoria/S05_PROPOSTAS.md))
 
@@ -179,6 +179,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 28/10/2026 | APL-S08-05, APL-S08-06 e APL-S09-06 | #153 e #154 publicadas no SHA `fdb3841ee29886e8f218f31fdfdf9506c748a9aa`. Backup `40789807717`; migration aditiva `b4d6f8a0c2e5` aplicada e verificada (12 colunas, 12 constraints, zero linhas invalidas); gate final `40791554966`; smokes reais e evidencia HMAC `40793289970`; dry-run `40793586147`; release Render + Cloudflare `40793684027`. Ref. `CTRL-20261028-S08-S09-PUBLISH`; Commercial V2 permaneceu `true` | Retomar o proximo item pendente da Etapa 07 |
 | 28/10/2026 | APL-S09-06 | PR #154 aberta sobre a #153: navegacao agrupada por processo; precos adicionais em Servicos; segmentos em Portfolio; Configuracoes restrita a Audio/tags e Portais; detalhe da producao dividido em cinco etapas; editores de Beats, Audio/tags, Portais, filtros avancados e Pix direto recolhidos por padrao. Testes focados e revisao visual concluidos; sem merge, migration ou deploy | Aguardar CI e revisao; depois da #153, redirecionar a base da #154 para `main` |
 | 28/10/2026 | APL-S08-05 e APL-S08-06 | PR #153: controles completos em Configuracoes > Audio e tags, gerador temporario com fontes privadas elegiveis e todas as tags, snapshot dos parametros na fila e exclusao segura da ultima previa pelo produtor. Migration nova ainda nao aplicada; sem merge ou deploy | Validar CI e solicitar autorizacao separada para merge/migration/publicacao |
 | 27/10/2026 | Pedido do responsavel (R14) | #151 publicado no SHA `ed7becf58beffeee2c03f1d3d7da71beaa54ce35`: nivelamento automatico da tag de audio pelo loudness (EBU R128) de cada beat ou previa; o percentual vira nivel relativo (40% = 3 dB abaixo do audio). Gate `40609260317`, evidencia Storage `40610529778`, dry-run `40610674127` e publicacao `40610749805`. Ref. `CTRL-20261027-R14-NIVEL-TAG`; sem migration; Commercial V2 `true` | - |
