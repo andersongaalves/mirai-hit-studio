@@ -240,6 +240,7 @@ function expectStatus(result, status, label) {
         await page.getByRole('link', { name: 'Minhas produções' }).click();
         card = page.locator('#producer-list .producer-card').filter({ hasText: 'E2E Browser Integrado' });
         await card.getByRole('button', { name: 'Abrir detalhes' }).click();
+        await page.getByText('Enviar prévia', { exact: true }).click();
         await page.getByLabel('Tipo de arquivo').selectOption('previa');
         await page.getByLabel('Arquivo para enviar').setInputFiles({
             name: 'preview-browser.mp3',
@@ -251,15 +252,17 @@ function expectStatus(result, status, label) {
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Envio iniciado'));
         await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')]
             .some(item => item.textContent.includes('preview-browser.mp3')));
-        await page.getByLabel('Tipo de arquivo').selectOption('entrega');
-        await page.getByLabel('Arquivo para enviar').setInputFiles({
+        await page.getByText('Enviar entrega final', { exact: true }).click();
+        await page.getByLabel('Tipo de entrega').selectOption('outro');
+        await page.getByLabel('Título').fill('Entrega E2E Browser');
+        await page.getByLabel('Arquivo principal').setInputFiles({
             name: 'entrega-browser.wav',
             mimeType: 'audio/wav',
             buffer: Buffer.from('RIFF-browser-delivery'),
         });
-        await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-        await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')]
-            .some(item => item.textContent.includes('entrega-browser.wav')));
+        await page.getByRole('button', { name: 'Enviar pacote final' }).click();
+        await page.waitForFunction(() => [...document.querySelectorAll('.final-delivery-card')]
+            .some(item => item.textContent.includes('Entrega E2E Browser')));
         await page.getByRole('button', { name: 'Enviar para revisão' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         expectStatus(await api(page, 'GET', `/portal/produtor/producoes/${otherProductionId}`), 404, 'producer ownership');
