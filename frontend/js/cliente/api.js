@@ -128,6 +128,20 @@ export async function listarArquivos(producaoId) {
     );
 }
 
+export async function listarEntregasFinais(producaoId) {
+    return responseData(
+        await authFetch(`/portal/cliente/producoes/${producaoId}/entregas-finais`),
+        "Não foi possível carregar as entregas finais.",
+    );
+}
+
+export async function obterLinkMultitrackEntrega(entregaId) {
+    return responseData(
+        await authFetch(`/portal/cliente/entregas-finais/${entregaId}/multitrack`),
+        "Não foi possível abrir o multitrack.",
+    );
+}
+
 export async function enviarArquivo(producaoId, arquivo, tipo, substituiId = null, observacao = "") {
     const form = new FormData();
     form.append("arquivo", arquivo);

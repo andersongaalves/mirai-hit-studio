@@ -1,11 +1,14 @@
 from typing import Annotated, Literal
 from urllib.parse import quote
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
+from sqlalchemy.orm import Session
 
 from core.dependencies import require_producer
 from crud import crud_producao
 from database import get_db
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
 from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
 from models.usuario import UsuarioModel
@@ -15,15 +18,16 @@ from schemas.producao_arquivo import (
     ProducaoArquivoObservacaoRequest,
     ProducaoArquivoResponse,
 )
+from schemas.producao_entrega import ProducaoEntregaFinalResponse
 from schemas.repasse_produtor import RepasseProdutorResponse
 from services import (
     audit_service,
     politica_service,
     producao_arquivo_service,
+    producao_entrega_service,
     repasse_produtor_service,
 )
 from services.producao_arquivo_storage import MAX_FILE_SIZE
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/portal/produtor", tags=["Portal do Produtor"])
 Db = Annotated[Session, Depends(get_db)]
@@ -135,6 +139,31 @@ def _file_error(exc):
     return HTTPException(status_code=422, detail=str(exc))
 
 
+def _delivery_error(exc):
+    if isinstance(exc, producao_entrega_service.ProducaoEntregaConflict):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, producao_entrega_service.ProducaoEntregaUnavailable):
+        return HTTPException(status_code=503, detail=str(exc))
+    return HTTPException(status_code=422, detail=str(exc))
+
+
+def _upload_mime(upload):
+    extension = (upload.filename or "").lower().rsplit(".", 1)[-1]
+    aliases = {
+        "mp3": "audio/mpeg", "wav": "audio/wav", "flac": "audio/flac", "m4a": "audio/mp4",
+        "zip": "application/zip", "rar": "application/vnd.rar", "pdf": "application/pdf",
+    }
+    return aliases.get(extension, upload.content_type or "application/octet-stream")
+
+
+async def _delivery_file(upload):
+    if upload is None or not upload.filename:
+        return None
+    data = await upload.read(MAX_FILE_SIZE + 1)
+    await upload.close()
+    return (upload.filename, _upload_mime(upload), data)
+
+
 @router.get(
     "/producoes/{producao_id}/arquivos",
     response_model=list[ProducaoArquivoResponse],
@@ -193,6 +222,62 @@ async def enviar_arquivo(
         )
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
+
+
+@router.get("/producoes/{producao_id}/entregas-finais", response_model=list[ProducaoEntregaFinalResponse])
+def listar_entregas_finais(producao_id: int, db: Db, user: CurrentProducer):
+    if not crud_producao.buscar_por_produtor(db, producao_id, user.id):
+        raise HTTPException(status_code=404, detail="Producao nao encontrada.")
+    return producao_entrega_service.list_for_production(db, producao_id)
+
+
+@router.post(
+    "/producoes/{producao_id}/entregas-finais",
+    response_model=ProducaoEntregaFinalResponse,
+    status_code=201,
+)
+async def criar_entrega_final(
+    producao_id: int,
+    request: Request,
+    db: Db,
+    user: CurrentProducer,
+    request_id: Annotated[UUID, Form()],
+    categoria: Annotated[Literal["instrumental", "outro"], Form()],
+    titulo: Annotated[str, Form(max_length=150)],
+    arquivo_principal: Annotated[UploadFile, File()],
+    wav: Annotated[UploadFile | None, File()] = None,
+    multitrack: Annotated[UploadFile | None, File()] = None,
+    licenca: Annotated[UploadFile | None, File()] = None,
+    multitrack_url: Annotated[str | None, Form(max_length=2000)] = None,
+    observacao: Annotated[str | None, Form(max_length=1000)] = None,
+):
+    production = crud_producao.buscar_por_produtor(db, producao_id, user.id)
+    if not production:
+        raise HTTPException(status_code=404, detail="Producao nao encontrada.")
+    if production.produtor_id != user.id:
+        raise HTTPException(status_code=403, detail="Somente o produtor coordenador pode enviar a entrega final.")
+    try:
+        model = producao_entrega_service.create(
+            db, production=production, actor=user, request_id=request_id, category=categoria,
+            title=titulo, main=await _delivery_file(arquivo_principal), wav=await _delivery_file(wav),
+            archive=await _delivery_file(multitrack), license_file=await _delivery_file(licenca),
+            multitrack_url=multitrack_url, note=observacao,
+            request_log_id=getattr(request.state, "request_id", None),
+        )
+        return producao_entrega_service.response(model)
+    except producao_entrega_service.ProducaoEntregaError as exc:
+        raise _delivery_error(exc) from None
+
+
+@router.get("/entregas-finais/{entrega_id}/multitrack")
+def abrir_multitrack_entrega(entrega_id: int, db: Db, user: CurrentProducer):
+    try:
+        model = producao_entrega_service.get(db, entrega_id)
+        if not crud_producao.buscar_por_produtor(db, model.producao_id, user.id):
+            raise HTTPException(status_code=404, detail="Entrega final nao encontrada.")
+        return {"url": producao_entrega_service.external_multitrack(model)}
+    except producao_entrega_service.ProducaoEntregaError as exc:
+        raise _delivery_error(exc) from None
 
 
 @router.patch("/arquivos/{arquivo_id}/observacao", response_model=ProducaoArquivoResponse)

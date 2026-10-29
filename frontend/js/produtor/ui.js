@@ -223,19 +223,168 @@ function fileItem(file, handlers) {
     return item;
 }
 
-function filesPanel(production, files, handlers) {
+function deliveryFilePicker(name, label, accept, required = false) {
+    const wrapper = element("label", "final-delivery-form__field");
+    wrapper.append(element("span", "", label));
+    const input = element("input");
+    input.type = "file";
+    input.name = name;
+    input.accept = accept;
+    input.required = required;
+    const picker = element("span", "producer-upload__picker");
+    const button = element("span", "producer-upload__pick-button", "Escolher arquivo");
+    const filename = element("span", "producer-upload__filename", "Nenhum arquivo selecionado");
+    input.addEventListener("change", () => {
+        filename.textContent = input.files[0]?.name || "Nenhum arquivo selecionado";
+        filename.title = filename.textContent;
+    });
+    picker.append(input, button, filename);
+    wrapper.append(picker);
+    return { wrapper, input };
+}
+
+function deliveryCard(delivery, handlers) {
+    const card = element("article", "final-delivery-card");
+    card.append(
+        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Instrumental" : "Outra entrega"),
+        element("h3", "", delivery.titulo),
+    );
+    if (delivery.observacao) card.append(element("p", "file-note", delivery.observacao));
+    const actions = element("div", "final-delivery-card__actions");
+    const addFile = (file, label) => {
+        if (!file) return;
+        const button = element("button", "btn-outline", label);
+        button.type = "button";
+        button.addEventListener("click", () => handlers.onDownload(file.id, button));
+        actions.append(button);
+    };
+    addFile(delivery.arquivo_principal, delivery.categoria === "instrumental" ? "Baixar MP3" : "Baixar arquivo");
+    addFile(delivery.wav_arquivo, "Baixar WAV");
+    addFile(delivery.multitrack_arquivo, "Baixar multitrack");
+    if (delivery.multitrack_disponivel && !delivery.multitrack_arquivo) {
+        const link = element("button", "btn-outline", "Abrir multitrack");
+        link.type = "button";
+        link.addEventListener("click", () => handlers.onDeliveryLink(delivery, link));
+        actions.append(link);
+    }
+    addFile(delivery.licenca_arquivo, "Baixar licença");
+    card.append(actions, element("small", "", `Enviada em ${formatDate(delivery.created_at, true)}`));
+    return card;
+}
+
+function finalDeliveryForm(production, handlers) {
+    const disclosure = element("details", "final-delivery-disclosure");
+    disclosure.append(element("summary", "", "Enviar entrega final"));
+    const form = element("form", "producer-upload final-delivery-form");
+    const categoryLabel = element("label", "final-delivery-form__field");
+    categoryLabel.append(element("span", "", "Tipo de entrega"));
+    const category = element("select");
+    category.name = "categoria";
+    [["instrumental", "Instrumental"], ["outro", "Outro tipo de entrega"]].forEach(([value, label]) => {
+        const option = element("option", "", label);
+        option.value = value;
+        category.append(option);
+    });
+    categoryLabel.append(category);
+    const titleLabel = element("label", "final-delivery-form__field");
+    titleLabel.append(element("span", "", "Título"));
+    const title = element("input");
+    title.name = "titulo";
+    title.maxLength = 150;
+    title.required = true;
+    titleLabel.append(title);
+    const main = deliveryFilePicker("arquivo_principal", "MP3 final", ".mp3,audio/mpeg", true);
+    const instrumental = element("div", "final-delivery-form__instrumental");
+    const wav = deliveryFilePicker("wav", "WAV final", ".wav,audio/wav,audio/x-wav", true);
+    const sourceLabel = element("label", "final-delivery-form__field");
+    sourceLabel.append(element("span", "", "Origem do multitrack"));
+    const source = element("select");
+    source.name = "multitrack_origem";
+    [["link", "Link HTTPS"], ["arquivo", "Arquivo ZIP ou RAR"]].forEach(([value, label]) => {
+        const option = element("option", "", label);
+        option.value = value;
+        source.append(option);
+    });
+    sourceLabel.append(source);
+    const linkLabel = element("label", "final-delivery-form__field");
+    linkLabel.append(element("span", "", "Link HTTPS do multitrack"));
+    const multitrackUrl = element("input");
+    multitrackUrl.type = "url";
+    multitrackUrl.name = "multitrack_url";
+    multitrackUrl.maxLength = 2000;
+    multitrackUrl.placeholder = "https://drive.google.com/...";
+    linkLabel.append(multitrackUrl);
+    const archive = deliveryFilePicker("multitrack", "Multitrack", ".zip,.rar,application/zip,application/vnd.rar");
+    const license = deliveryFilePicker("licenca", "Licença (PDF)", ".pdf,application/pdf", true);
+    instrumental.append(wav.wrapper, sourceLabel, linkLabel, archive.wrapper, license.wrapper);
+    const noteLabel = element("label", "final-delivery-form__field final-delivery-form__full");
+    noteLabel.append(element("span", "", "Observação (opcional)"));
+    const note = element("textarea");
+    note.name = "observacao";
+    note.maxLength = 1000;
+    note.rows = 3;
+    noteLabel.append(note);
+    const hint = element("p", "final-delivery-form__hint", "Os arquivos e o link ficam privados e são liberados ao cliente conforme a situação financeira da produção.");
+    const submit = element("button", "btn-cta", "Enviar pacote final");
+    submit.type = "submit";
+
+    const sync = () => {
+        const isInstrumental = category.value === "instrumental";
+        instrumental.hidden = !isInstrumental;
+        [...instrumental.querySelectorAll("input, select")].forEach(field => { field.disabled = !isInstrumental; });
+        main.wrapper.querySelector("span").textContent = isInstrumental ? "MP3 final" : "Arquivo principal";
+        main.input.accept = isInstrumental ? ".mp3,audio/mpeg" : ".pdf,.zip,.rar,.mp3,.wav,.flac,.m4a,.mp4";
+        const byLink = source.value === "link";
+        linkLabel.hidden = !byLink;
+        multitrackUrl.disabled = !isInstrumental || !byLink;
+        multitrackUrl.required = isInstrumental && byLink;
+        archive.wrapper.hidden = byLink;
+        archive.input.disabled = !isInstrumental || byLink;
+        archive.input.required = isInstrumental && !byLink;
+        wav.input.required = isInstrumental;
+        license.input.required = isInstrumental;
+    };
+    category.addEventListener("change", sync);
+    source.addEventListener("change", sync);
+    sync();
+    form.append(categoryLabel, titleLabel, main.wrapper, instrumental, noteLabel, hint, submit);
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const data = new FormData(form);
+        data.delete("multitrack_origem");
+        data.set("request_id", crypto.randomUUID());
+        handlers.onDelivery(production, data, submit, form, disclosure);
+    });
+    disclosure.append(form);
+    return disclosure;
+}
+
+function filesPanel(production, files, deliveries, handlers) {
     const panel = element("section", "producer-files");
-    panel.append(element("h2", "", "Arquivos"));
+    panel.append(element("h2", "", "Arquivos e entregas"));
+    if (deliveries.length) {
+        const deliveryList = element("div", "final-delivery-list");
+        deliveries.forEach(delivery => deliveryList.append(deliveryCard(delivery, handlers)));
+        panel.append(deliveryList);
+    }
+    const linkedIds = new Set(deliveries.flatMap(delivery => [
+        delivery.arquivo_principal?.id,
+        delivery.wav_arquivo?.id,
+        delivery.multitrack_arquivo?.id,
+        delivery.licenca_arquivo?.id,
+    ]).filter(Boolean));
+    const looseFiles = files.filter(file => !linkedIds.has(file.id));
     const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
     const fileHandlers = { ...handlers, replacedIds: replaced };
     const list = element("ul", "producer-file-list");
-    if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo disponível."));
-    else files.forEach(file => list.append(fileItem(file, fileHandlers)));
+    if (!looseFiles.length && !deliveries.length) list.append(element("li", "producer-empty", "Nenhum arquivo disponível."));
+    else looseFiles.forEach(file => list.append(fileItem(file, fileHandlers)));
     panel.append(list);
 
     const form = element("form", "producer-upload");
     const type = element("select");
-    [["previa", "Prévia"], ["entrega", "Entrega"]].forEach(([value, label]) => {
+    [["previa", "Prévia"]].forEach(([value, label]) => {
         const option = element("option", "", label);
         option.value = value;
         type.append(option);
@@ -288,11 +437,15 @@ function filesPanel(production, files, handlers) {
         event.preventDefault();
         if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value);
     });
-    panel.append(form);
+    const uploadDisclosure = element("details", "final-delivery-disclosure");
+    uploadDisclosure.append(element("summary", "", "Enviar prévia"), form);
+    panel.append(finalDeliveryForm(production, handlers), uploadDisclosure);
     return panel;
 }
 
-export function renderDetail(production, files, handlers) {
+export function renderDetail(production, files, deliveriesOrHandlers, maybeHandlers) {
+    const deliveries = Array.isArray(deliveriesOrHandlers) ? deliveriesOrHandlers : [];
+    const handlers = maybeHandlers || deliveriesOrHandlers;
     const root = document.getElementById("producer-detail-content");
     root.replaceChildren();
     const detail = element("article", "producer-detail");
@@ -372,7 +525,7 @@ export function renderDetail(production, files, handlers) {
     }
     const messagesSlot = element("div");
     messagesSlot.id = "production-messages-slot";
-    detail.append(filesPanel(production, files, handlers), messagesSlot);
+    detail.append(filesPanel(production, files, deliveries, handlers), messagesSlot);
     root.append(detail);
 }
 

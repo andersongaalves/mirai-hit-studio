@@ -99,14 +99,17 @@ async function loadMessages(production, files) {
 async function openDetail(id) {
     setAlert();
     try {
-        const [production, files] = await Promise.all([
+        const [production, files, deliveries] = await Promise.all([
             api.obterProducao(id),
             api.listarArquivos(id),
+            api.listarEntregasFinais(id),
         ]);
         productions = productions.map(item => item.id === production.id ? { ...item, ...production } : item);
-        renderDetail(production, files, {
+        renderDetail(production, files, deliveries, {
             onStatus: updateStatus,
             onUpload: uploadFile,
+            onDelivery: uploadFinalDelivery,
+            onDeliveryLink: openDeliveryLink,
             onDownload: downloadFile,
             onListen: listenFile,
             onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
@@ -262,11 +265,16 @@ async function updateStatus(id, status, button) {
         const updated = await api.atualizarStatus(id, status);
         productions = productions.map(item => item.id === updated.id ? updated : item);
         // The status is already saved; a file-list failure must not report it as an error.
-        const files = await api.listarArquivos(id).catch(() => null);
-        if (files) {
-            renderDetail(updated, files, {
+        const [files, deliveries] = await Promise.all([
+            api.listarArquivos(id).catch(() => null),
+            api.listarEntregasFinais(id).catch(() => null),
+        ]);
+        if (files && deliveries) {
+            renderDetail(updated, files, deliveries, {
                 onStatus: updateStatus,
                 onUpload: uploadFile,
+                onDelivery: uploadFinalDelivery,
+                onDeliveryLink: openDeliveryLink,
                 onDownload: downloadFile,
                 onListen: listenFile,
                 onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
@@ -352,6 +360,38 @@ async function uploadFile(production, file, type, replacesId, button, note = "")
             meta: { kind: "producer-production", productionId: production.id },
         });
         setAlert("Envio iniciado. Você pode continuar usando o portal e acompanhar em Envios.");
+    } catch (error) {
+        setAlert(error.message, true);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function uploadFinalDelivery(production, formData, button, form, disclosure) {
+    if (button.disabled) return;
+    button.disabled = true;
+    setAlert();
+    try {
+        await enqueueUpload(`/portal/produtor/producoes/${production.id}/entregas-finais`, formData, {
+            label: `Entrega final · ${production.titulo}`,
+            meta: { kind: "producer-production", productionId: production.id },
+        });
+        form.reset();
+        form.querySelector('[name="categoria"]').dispatchEvent(new Event("change"));
+        disclosure.open = false;
+        setAlert("Entrega final adicionada aos envios. Você pode continuar usando o portal.");
+    } catch (error) {
+        setAlert(error.message, true);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function openDeliveryLink(delivery, button) {
+    button.disabled = true;
+    try {
+        const result = await api.obterLinkMultitrack(delivery.id);
+        window.open(result.url, "_blank", "noopener,noreferrer");
     } catch (error) {
         setAlert(error.message, true);
     } finally {

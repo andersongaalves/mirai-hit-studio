@@ -90,6 +90,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S08-04 | S08-007 | P3 | Nao permitir versionar arquivo oculto para o produtor | Codigo | Publicado | #110 |
 | APL-S08-05 | Pedido do responsavel | P3 | Configuracoes > Audio e tags: controlar nivelamento automatico, alvo relativo, faixa de ganho, silencio, limiter, intervalo e fallback; gerar MP3 temporario escolhendo beat ou audio de producao finalizada e qualquer versao de tag | Codigo + migration `b4d6f8a0c2e5` | Em validacao | #153 |
 | APL-S08-06 | Pedido do responsavel | P3 | Produtor pode excluir somente a propria previa mais recente; versoes substituidas e anexos de mensagens permanecem protegidos; original e derivada com tag usam limpeza exata | Codigo | Em validacao | #153 |
+| APL-S08-07 | Pedido do responsavel | P2 | Entrega final estruturada no Portal do Produtor: seletor Instrumental/Outro, pacote privado com MP3, WAV, multitrack por arquivo ou link e licenca PDF; liberacao ao cliente segue a quitacao existente | Codigo + migration `c5e7a9b1d304` | Em implementacao | PR pendente |
 
 ### S09 - Administracao operacional ([diagnostico](auditoria/S09_ADMIN_OPERACIONAL.md))
 

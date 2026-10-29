@@ -225,20 +225,65 @@ function fileGroup(title, files, handlers, help = "") {
     return group;
 }
 
-function filesPanel(production, files, handlers) {
+function finalDeliveryCard(delivery, handlers) {
+    const card = element("article", "final-delivery-card");
+    card.append(
+        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Instrumental" : "Entrega final"),
+        element("h3", "", delivery.titulo),
+    );
+    if (delivery.observacao) card.append(element("p", "file-note", delivery.observacao));
+    if (delivery.bloqueado_pagamento) {
+        card.append(element("p", "producer-help", "Este pacote será liberado após a quitação do saldo."));
+        return card;
+    }
+    const actions = element("div", "final-delivery-card__actions");
+    const addFile = (file, label) => {
+        if (!file) return;
+        const button = element("button", "btn-outline", label);
+        button.type = "button";
+        button.addEventListener("click", () => handlers.onDownload(file.id, button));
+        actions.append(button);
+    };
+    addFile(delivery.arquivo_principal, delivery.categoria === "instrumental" ? "Baixar MP3" : "Baixar arquivo");
+    addFile(delivery.wav_arquivo, "Baixar WAV");
+    addFile(delivery.multitrack_arquivo, "Baixar multitrack");
+    if (delivery.multitrack_disponivel && !delivery.multitrack_arquivo) {
+        const link = element("button", "btn-outline", "Abrir multitrack");
+        link.type = "button";
+        link.addEventListener("click", () => handlers.onDeliveryLink(delivery, link));
+        actions.append(link);
+    }
+    addFile(delivery.licenca_arquivo, "Baixar licença");
+    card.append(actions);
+    return card;
+}
+
+function filesPanel(production, files, deliveries, handlers) {
     const panel = element("section", "producer-files");
     panel.id = "project-section-files";
     panel.append(element("h2", "", "Arquivos e entregas"));
     if (portalSettings?.textos?.ajuda_arquivos) {
         panel.append(element("p", "producer-help", portalSettings.textos.ajuda_arquivos));
     }
+    const linkedIds = new Set(deliveries.flatMap(delivery => [
+        delivery.arquivo_principal?.id,
+        delivery.wav_arquivo?.id,
+        delivery.multitrack_arquivo?.id,
+        delivery.licenca_arquivo?.id,
+    ]).filter(Boolean));
+    const looseFiles = files.filter(file => !linkedIds.has(file.id));
+    if (deliveries.length) {
+        const deliveryList = element("div", "final-delivery-list");
+        deliveries.forEach(delivery => deliveryList.append(finalDeliveryCard(delivery, handlers)));
+        panel.append(deliveryList);
+    }
     panel.append(
-        fileGroup("Prévias", files.filter(file => file.tipo === "previa"), handlers),
-        fileGroup("Entregas finais", files.filter(file => file.tipo === "entrega"), handlers,
+        fileGroup("Prévias", looseFiles.filter(file => file.tipo === "previa"), handlers),
+        fileGroup("Outras entregas finais", looseFiles.filter(file => file.tipo === "entrega"), handlers,
             files.some(file => file.bloqueado_pagamento)
                 ? "Os arquivos finais serão liberados após a quitação do saldo."
                 : ""),
-        fileGroup("Materiais e referências", files.filter(file => ["material", "referencia"].includes(file.tipo)), handlers),
+        fileGroup("Materiais e referências", looseFiles.filter(file => ["material", "referencia"].includes(file.tipo)), handlers),
     );
 
     if (!FINAL_STATUSES.has(production.status)) {
@@ -361,7 +406,12 @@ function financePanel(finance) {
     return panel;
 }
 
-export function renderDetail(production, files, finance, handlers) {
+export function renderDetail(production, files, deliveries, finance, handlers) {
+    if (!Array.isArray(deliveries)) {
+        handlers = finance;
+        finance = deliveries;
+        deliveries = [];
+    }
     const root = document.getElementById("client-detail-content");
     root.replaceChildren();
     const detail = element("article", "producer-detail");
@@ -396,7 +446,7 @@ export function renderDetail(production, files, finance, handlers) {
     messagesSlot.id = "production-messages-slot";
     const pending = paymentPending(finance);
     if (pending) overview.append(sectionButton("project-section-payment", "Ver pagamento", "btn-cta client-detail-cta"));
-    detail.append(title, meta, sectionNavigation(pending), grid, filesPanel(production, files, { ...handlers, finance }), messagesSlot, financePanel(finance));
+    detail.append(title, meta, sectionNavigation(pending), grid, filesPanel(production, files, deliveries, { ...handlers, finance }), messagesSlot, financePanel(finance));
     root.append(detail);
 }
 

@@ -1,6 +1,5 @@
 from uuid import uuid4
 
-from database import Base
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -10,11 +9,14 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
     false,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
+from database import Base
 
 
 class ProducaoArquivoModel(Base):
@@ -118,6 +120,50 @@ class ProducaoArquivoModel(Base):
     producao = relationship("ProducaoModel")
     remetente = relationship("UsuarioModel", foreign_keys=[remetente_usuario_id])
     substitui = relationship("ProducaoArquivoModel", remote_side=[id], uselist=False)
+
+
+class ProducaoEntregaFinalModel(Base):
+    __tablename__ = "producao_entregas_finais"
+    __table_args__ = (
+        CheckConstraint("categoria IN ('instrumental', 'outro')", name="ck_entregas_finais_categoria"),
+        CheckConstraint("length(request_hash) = 64", name="ck_entregas_finais_request_hash"),
+        CheckConstraint(
+            "multitrack_arquivo_id IS NULL OR multitrack_url IS NULL",
+            name="ck_entregas_finais_multitrack_origem_unica",
+        ),
+        CheckConstraint(
+            "categoria <> 'instrumental' OR (wav_arquivo_id IS NOT NULL AND licenca_arquivo_id IS NOT NULL "
+            "AND ((multitrack_arquivo_id IS NOT NULL) <> (multitrack_url IS NOT NULL)))",
+            name="ck_entregas_finais_instrumental_completo",
+        ),
+        UniqueConstraint("request_id", name="uq_entregas_finais_request_id"),
+        UniqueConstraint("arquivo_principal_id", name="uq_entregas_finais_principal"),
+        UniqueConstraint("wav_arquivo_id", name="uq_entregas_finais_wav"),
+        UniqueConstraint("multitrack_arquivo_id", name="uq_entregas_finais_multitrack"),
+        UniqueConstraint("licenca_arquivo_id", name="uq_entregas_finais_licenca"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    request_id = Column(String(36), nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    producao_id = Column(Integer, ForeignKey("producoes.id", ondelete="RESTRICT"), nullable=False, index=True)
+    produtor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False, index=True)
+    categoria = Column(String(20), nullable=False)
+    titulo = Column(String(150), nullable=False)
+    arquivo_principal_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="RESTRICT"), nullable=False)
+    wav_arquivo_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="RESTRICT"), nullable=True)
+    multitrack_arquivo_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="RESTRICT"), nullable=True)
+    multitrack_url = Column(String(2000), nullable=True)
+    licenca_arquivo_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="RESTRICT"), nullable=True)
+    observacao = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    producao = relationship("ProducaoModel")
+    produtor = relationship("UsuarioModel", foreign_keys=[produtor_id])
+    arquivo_principal = relationship("ProducaoArquivoModel", foreign_keys=[arquivo_principal_id])
+    wav_arquivo = relationship("ProducaoArquivoModel", foreign_keys=[wav_arquivo_id])
+    multitrack_arquivo = relationship("ProducaoArquivoModel", foreign_keys=[multitrack_arquivo_id])
+    licenca_arquivo = relationship("ProducaoArquivoModel", foreign_keys=[licenca_arquivo_id])
 
 
 class RepasseProdutorModel(Base):

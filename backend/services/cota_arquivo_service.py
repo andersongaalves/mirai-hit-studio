@@ -172,7 +172,7 @@ def instanciar(db: Session, producao: ProducaoModel, proposta) -> list:
 
 
 def _uso(db: Session, producao_id: int) -> dict[str, tuple[int, int]]:
-    from models import PreviaTagJobModel
+    from models import PreviaTagJobModel, ProducaoEntregaFinalModel
 
     rows = db.execute(
         select(
@@ -185,7 +185,67 @@ def _uso(db: Session, producao_id: int) -> dict[str, tuple[int, int]]:
         .where(ProducaoArquivoModel.producao_id == producao_id)
         .group_by(ProducaoArquivoModel.tipo)
     ).all()
-    return {tipo: (int(arquivos), int(total)) for tipo, arquivos, total in rows}
+    usage = {tipo: (int(arquivos), int(total)) for tipo, arquivos, total in rows}
+    delivery = usage.get("entrega")
+    if delivery is not None:
+        packages = list(db.scalars(select(ProducaoEntregaFinalModel).where(
+            ProducaoEntregaFinalModel.producao_id == producao_id,
+        )))
+        linked_ids = {
+            file_id
+            for package in packages
+            for file_id in (
+                package.arquivo_principal_id,
+                package.wav_arquivo_id,
+                package.multitrack_arquivo_id,
+                package.licenca_arquivo_id,
+            )
+            if file_id is not None
+        }
+        # A structured package consumes one contractual delivery slot, while its
+        # MP3/WAV/archive/license bytes still count in full.
+        usage["entrega"] = (max(0, delivery[0] - len(linked_ids) + len(packages)), delivery[1])
+    return usage
+
+
+def verificar_pacote_entrega(
+    db: Session,
+    producao_id: int,
+    arquivos: list[tuple[str, int, bytes]],
+    *,
+    extra_storage_bytes: int = 0,
+) -> None:
+    """Validate a final-delivery bundle as one logical delivery and all of its bytes."""
+    from services import credito_alocacao_service, credito_producao_service
+
+    try:
+        credito_producao_service.validar_upload(db, producao_id, "entrega")
+    except credito_alocacao_service.AlocacaoConflito as error:
+        raise CotaExcedida(str(error)) from None
+    cota = db.scalar(select(ProducaoCotaArquivoModel).where(
+        ProducaoCotaArquivoModel.producao_id == producao_id,
+        ProducaoCotaArquivoModel.tipo == "entrega",
+    ))
+    if cota is None:
+        return
+    usados, total = _uso(db, producao_id).get("entrega", (0, 0))
+    if cota.max_arquivos is not None and usados >= cota.max_arquivos:
+        raise CotaExcedida(f"Limite de {cota.max_arquivos} arquivo(s) de entregas do contrato atingido.")
+    total_novo = extra_storage_bytes
+    for mime_type, tamanho, data in arquivos:
+        if cota.formatos is not None and mime_type not in cota.formatos:
+            raise CotaFormato("Formato nao permitido pelo contrato para entregas.")
+        if cota.max_tamanho_mb is not None and tamanho > cota.max_tamanho_mb * MB:
+            raise CotaFormato(f"O contrato permite entregas de ate {cota.max_tamanho_mb} MB por arquivo.")
+        if cota.max_duracao_min is not None and mime_type.startswith("audio/"):
+            duration = audio_duracao.segundos(data)
+            if duration is None:
+                raise CotaFormato("Nao foi possivel conferir a duracao deste audio; envie um formato valido.")
+            if duration > cota.max_duracao_min * 60 + 1:
+                raise CotaFormato(f"O contrato permite entregas de ate {cota.max_duracao_min} min por faixa.")
+        total_novo += tamanho
+    if cota.max_total_mb is not None and total + total_novo > cota.max_total_mb * MB:
+        raise CotaExcedida(f"Espaco contratado para entregas ({cota.max_total_mb} MB) esgotado.")
 
 
 def listar_producao(db: Session, producao: ProducaoModel, *, tipos=TIPOS) -> dict:

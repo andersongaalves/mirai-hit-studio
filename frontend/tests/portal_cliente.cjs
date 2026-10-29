@@ -71,6 +71,29 @@ let files = [{
     tamanho_bytes: 4096, sha256: 'd'.repeat(64), grupo_versao: 'held-group', versao: 1,
     substitui_arquivo_id: null, enviado_por_mim: false, bloqueado_pagamento: true,
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+}, {
+    id: 21, producao_id: 1, tipo: 'entrega', nome_exibicao: 'instrumental.mp3', mime_type: 'audio/mpeg',
+    tamanho_bytes: 4096, sha256: 'e'.repeat(64), grupo_versao: 'package-main', versao: 1,
+    substitui_arquivo_id: null, enviado_por_mim: false, bloqueado_pagamento: true,
+    created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+}, {
+    id: 22, producao_id: 1, tipo: 'entrega', nome_exibicao: 'instrumental.wav', mime_type: 'audio/wav',
+    tamanho_bytes: 4096, sha256: 'f'.repeat(64), grupo_versao: 'package-wav', versao: 1,
+    substitui_arquivo_id: null, enviado_por_mim: false, bloqueado_pagamento: true,
+    created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+}, {
+    id: 23, producao_id: 1, tipo: 'entrega', nome_exibicao: 'licenca.pdf', mime_type: 'application/pdf',
+    tamanho_bytes: 1024, sha256: '1'.repeat(64), grupo_versao: 'package-license', versao: 1,
+    substitui_arquivo_id: null, enviado_por_mim: false, bloqueado_pagamento: true,
+    created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+}];
+
+const deliveries = [{
+    id: 31, producao_id: 1, categoria: 'instrumental', titulo: 'Instrumental aprovado',
+    observacao: 'Arquivos finais e licença.', arquivo_principal: files.find(file => file.id === 21),
+    wav_arquivo: files.find(file => file.id === 22), multitrack_arquivo: null,
+    multitrack_disponivel: true, licenca_arquivo: files.find(file => file.id === 23),
+    bloqueado_pagamento: true, created_at: new Date(now).toISOString(),
 }];
 
 const finances = new Map([
@@ -255,6 +278,10 @@ async function staticResponse(route) {
             const uploaded = { ...files[1], id: 9 + uploads, nome_exibicao: request.postData()?.includes('nome-longo') ? 'nome-longo.wav' : 'nova-voz.wav', versao: 1 + uploads, substitui_arquivo_id: 8 };
             files.push(uploaded);
             return route.fulfill({ status: 201, json: uploaded });
+        }
+        if (/^\/portal\/cliente\/producoes\/\d+\/entregas-finais$/.test(url.pathname) && request.method() === 'GET') {
+            const productionId = Number(url.pathname.split('/').at(-2));
+            return route.fulfill({ json: deliveries.filter(item => item.producao_id === productionId) });
         }
         if (/^\/portal\/cliente\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
             return route.fulfill({ body: 'synthetic-audio', contentType: 'audio/mpeg', headers: { 'content-disposition': "attachment; filename*=UTF-8''preview.mp3" } });
@@ -494,6 +521,10 @@ async function staticResponse(route) {
             'https://miraihitstudio.com.br/checkout/11111111-1111-1111-1111-111111111111');
         assert.match(await page.locator('.client-file-group').filter({ hasText: 'Entregas finais' }).textContent(),
             /liberados após a quitação do saldo/);
+        const packageCard = page.locator('.final-delivery-card').filter({ hasText: 'Instrumental aprovado' });
+        assert.match(await packageCard.textContent(), /liberado após a quitação do saldo/);
+        assert.equal(await packageCard.locator('button').count(), 0);
+        assert.equal(await page.locator('.producer-file').filter({ hasText: 'licenca.pdf' }).count(), 0);
 
         // Roadmap 5.06: contract stages replace the legacy list, read-only and without values.
         await page.waitForSelector('#production-stages-panel .production-stages');
