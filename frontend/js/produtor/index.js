@@ -373,7 +373,7 @@ async function uploadFinalDelivery(production, formData, button, form, disclosur
     setAlert();
     try {
         await enqueueUpload(`/portal/produtor/producoes/${production.id}/entregas-finais`, formData, {
-            label: `Entrega final · ${production.titulo}`,
+            label: `Entrega final · ${formData.get("titulo")}`,
             meta: { kind: "producer-production", productionId: production.id },
         });
         form.reset();
