@@ -49,6 +49,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_entregas_finais_produtor", table_name="producao_entregas_finais")
-    op.drop_index("ix_entregas_finais_producao", table_name="producao_entregas_finais")
     op.drop_table("producao_entregas_finais")
