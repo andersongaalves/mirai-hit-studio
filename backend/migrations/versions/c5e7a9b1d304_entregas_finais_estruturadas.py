@@ -44,8 +44,8 @@ def upgrade():
         sa.UniqueConstraint("multitrack_arquivo_id", name="uq_entregas_finais_multitrack"),
         sa.UniqueConstraint("licenca_arquivo_id", name="uq_entregas_finais_licenca"),
     )
-    op.create_index("ix_entregas_finais_producao", "producao_entregas_finais", ["producao_id"])
-    op.create_index("ix_entregas_finais_produtor", "producao_entregas_finais", ["produtor_id"])
+    op.create_index("ix_producao_entregas_finais_producao_id", "producao_entregas_finais", ["producao_id"])
+    op.create_index("ix_producao_entregas_finais_produtor_id", "producao_entregas_finais", ["produtor_id"])
 
 
 def downgrade():
