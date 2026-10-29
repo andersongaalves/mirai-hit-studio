@@ -51,43 +51,34 @@
                             <button type="button" class="admin-nav__item" data-admin-target="dashboard-menu">
                                 Dashboard
                             </button>
-                            <button type="button" class="admin-nav__item" data-admin-target="section-inbox">
-                                Inbox IA
-                            </button>
-                            <button type="button" class="admin-nav__item" data-admin-target="section-producoes">
-                                Produções
-                            </button>
-                            <button type="button" class="admin-nav__item" data-admin-target="section-clientes">
-                                Clientes
-                            </button>
-                            <button type="button" class="admin-nav__item" data-admin-target="section-orcamentos">
-                                Propostas e Orçamentos
-                            </button>
-                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-financeiro">
-                                Financeiro
-                            </button>
-                            <button type="button" class="admin-nav__item" data-admin-target="section-servicos">
-                                Serviços
-                            </button>
-                            <button type="button" class="admin-nav__item" data-admin-target="section-portfolio">
-                                Portfólio
-                            </button>
-                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-beats">Beats</button>
-                            <button type="button" class="admin-nav__item" data-admin-target="section-custos">
-                                Configurações
-                            </button>
-                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-usuarios">
-                                Usuários
-                            </button>
-                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-newsletter">
-                                Newsletter
-                            </button>
-                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-auditoria">
-                                Auditoria
-                            </button>
-                            <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-uso">
-                                Uso da infraestrutura
-                            </button>
+                            <details class="admin-nav-group">
+                                <summary>Comercial</summary>
+                                <button type="button" class="admin-nav__item" data-admin-target="section-clientes">Clientes</button>
+                                <button type="button" class="admin-nav__item" data-admin-target="section-orcamentos">Propostas e Orçamentos</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-financeiro">Financeiro</button>
+                            </details>
+                            <details class="admin-nav-group">
+                                <summary>Operação</summary>
+                                <button type="button" class="admin-nav__item" data-admin-target="section-producoes">Produções</button>
+                            </details>
+                            <details class="admin-nav-group">
+                                <summary>Catálogo</summary>
+                                <button type="button" class="admin-nav__item" data-admin-target="section-servicos">Serviços</button>
+                                <button type="button" class="admin-nav__item" data-admin-target="section-portfolio">Portfólio</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-beats">Beats</button>
+                            </details>
+                            <details class="admin-nav-group">
+                                <summary>Atendimento</summary>
+                                <button type="button" class="admin-nav__item" data-admin-target="section-inbox">Inbox IA</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-newsletter">Newsletter</button>
+                            </details>
+                            <details class="admin-nav-group">
+                                <summary>Sistema</summary>
+                                <button type="button" class="admin-nav__item" data-admin-target="section-custos">Configurações</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-usuarios">Usuários</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-auditoria">Auditoria</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-uso">Infraestrutura</button>
+                            </details>
                         </nav>
                     </aside>
 
@@ -143,6 +134,13 @@
                                 </button>
                             </div>
                         </header>
+
+                        <div class="integrado-admin__config-tabs" data-admin-tabs role="tablist" aria-label="Catálogo de serviços">
+                            <button type="button" role="tab" id="services-catalog-tab" aria-controls="services-catalog-panel" aria-selected="true">Serviços e combos</button>
+                            <button type="button" role="tab" id="services-pricing-tab" aria-controls="services-pricing-panel" aria-selected="false">Preços adicionais</button>
+                        </div>
+
+                        <div id="services-catalog-panel" role="tabpanel" aria-labelledby="services-catalog-tab">
 
                         <div
                             id="lista-servicos"
@@ -384,6 +382,31 @@
                                 </div>
                             </div>
                         </div>
+                        </div>
+
+                        <div id="services-pricing-panel" role="tabpanel" aria-labelledby="services-pricing-tab" hidden>
+                            <section class="admin-collapsible-summary">
+                                <h2>Preços e descontos globais</h2>
+                                <p class="admin-help">Valores adicionais usados no cálculo dos serviços. Eles não alteram propostas já enviadas.</p>
+                                <div class="form-group">
+                                    <label>Desconto global para combos (%)<input type="number" id="cfg_desconto" /></label>
+                                </div>
+                                <div class="config-financial-grid">
+                                    <div class="form-group"><label>Por segundo extra<input type="number" step="0.01" id="val_extra_duracao" /></label></div>
+                                    <div class="form-group"><label>Por artista extra<input type="number" id="val_extra_pessoa" /></label></div>
+                                    <div class="form-group"><label>Canal de voz extra<input type="number" id="val_extra_canal_voz" /></label></div>
+                                    <div class="form-group"><label>Canal instrumental extra<input type="number" id="val_extra_canal_inst" /></label></div>
+                                    <div class="form-group"><label>Melodia extra<input type="number" id="val_extra_melodia" /></label></div>
+                                    <div class="form-group"><label>Revisão extra<input type="number" id="val_extra_revisao" /></label></div>
+                                    <div class="form-group"><label>Instrumental híbrido (+)<input type="number" id="val_inst_hibrido" /></label></div>
+                                    <div class="form-group"><label>Instrumental gravado (+)<input type="number" id="val_inst_gravado" /></label></div>
+                                    <div class="form-group"><label>Prazo urgente (+)<input type="number" id="val_prazo_urgente" /></label></div>
+                                    <div class="form-group"><label>Prazo express (+)<input type="number" id="val_prazo_express" /></label></div>
+                                    <div class="form-group"><label>Desconto não exclusivo (-)<input type="number" id="val_lease_desconto" /></label></div>
+                                </div>
+                                <button class="btn-cta btn-submit" data-admin-action="salvarConfiguracoesExtras">Salvar preços adicionais</button>
+                            </section>
+                        </div>
                     </div>
 
                     <div id="section-portfolio" class="admin-section hidden">
@@ -400,14 +423,37 @@
                             </div>
                         </header>
 
-                        <h2>Envios de produtores</h2>
-                        <div id="portfolio-submissions-admin"></div>
-                        <h2>Projetos do portfólio</h2>
-                        <div
-                            id="portfolio-list"
-                            class="admin-list-container"
-                            style="margin-top: 20px"
-                        ></div>
+                        <div class="integrado-admin__config-tabs" data-admin-tabs role="tablist" aria-label="Gestão do portfólio">
+                            <button type="button" role="tab" id="portfolio-projects-tab" aria-controls="portfolio-projects-panel" aria-selected="true">Projetos</button>
+                            <button type="button" role="tab" id="portfolio-submissions-tab" aria-controls="portfolio-submissions-panel" aria-selected="false">Envios de produtores</button>
+                            <button type="button" role="tab" id="portfolio-segments-tab" aria-controls="portfolio-segments-panel" aria-selected="false">Segmentos</button>
+                        </div>
+
+                        <div id="portfolio-projects-panel" role="tabpanel" aria-labelledby="portfolio-projects-tab">
+                            <div id="portfolio-list" class="admin-list-container"></div>
+                        </div>
+                        <div id="portfolio-submissions-panel" role="tabpanel" aria-labelledby="portfolio-submissions-tab" hidden>
+                            <div id="portfolio-submissions-admin"></div>
+                        </div>
+                        <div id="portfolio-segments-panel" role="tabpanel" aria-labelledby="portfolio-segments-tab" hidden>
+                            <section class="portfolio-segment-settings" aria-labelledby="portfolio-segments-title">
+                                <div class="portfolio-segment-settings__header">
+                                    <div>
+                                        <h2 id="portfolio-segments-title">Segmentos do portfólio</h2>
+                                        <p>Organize os gêneros disponíveis no cadastro de projetos.</p>
+                                    </div>
+                                    <form id="portfolio-segment-add" class="portfolio-segment-add">
+                                        <label for="portfolio-segment-label">Novo segmento</label>
+                                        <div>
+                                            <input id="portfolio-segment-label" type="text" minlength="2" maxlength="80" autocomplete="off" placeholder="Ex: Brazilian Phonk" />
+                                            <button type="submit" class="btn-cta">Adicionar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <p id="portfolio-segments-status" class="admin-field-help" aria-live="polite"></p>
+                                <div id="portfolio-segments-list" class="portfolio-segment-list"></div>
+                            </section>
+                        </div>
                     </div>
 
                     <div id="section-custos" class="admin-section hidden">
@@ -415,21 +461,21 @@
                             <div class="admin-page-header__content">
                                 <span class="admin-page-header__eyebrow">Configurações</span>
                                 <h1>Configurações</h1>
-                                <p>Gerencie segmentos e parâmetros de preço.</p>
+                                <p>Centralize as regras globais de áudio, identidade e portais.</p>
                             </div>
                         </header>
 
-                        <div class="integrado-admin__config-tabs" role="tablist" aria-label="Configurações">
-                            <button type="button" role="tab" id="admin-config-segments-tab" aria-controls="admin-config-segments" aria-selected="true">Segmentos</button>
-                            <button type="button" role="tab" id="admin-config-pricing-tab" aria-controls="admin-config-pricing" aria-selected="false">Preços e descontos</button>
-                            <button type="button" role="tab" id="admin-config-audio-tab" aria-controls="admin-config-audio" aria-selected="false">Áudio e tags</button>
+                        <div class="integrado-admin__config-tabs" data-admin-tabs role="tablist" aria-label="Configurações">
+                            <button type="button" role="tab" id="admin-config-audio-tab" aria-controls="admin-config-audio" aria-selected="true">Áudio e tags</button>
                             <button type="button" role="tab" id="admin-config-portals-tab" aria-controls="admin-config-portals" aria-selected="false">Portais</button>
                         </div>
-                        <div id="admin-config-audio" role="tabpanel" aria-labelledby="admin-config-audio-tab" hidden>
+                        <div id="admin-config-audio" role="tabpanel" aria-labelledby="admin-config-audio-tab">
                             <section id="audio-tag-settings" aria-label="Tag e nivelamento das previas"></section>
                         </div>
                         <div id="admin-config-portals" role="tabpanel" aria-labelledby="admin-config-portals-tab" hidden>
-                            <section class="portal-settings" aria-labelledby="portal-settings-title">
+                            <details class="portal-settings admin-disclosure">
+                                <summary>Textos e experiência dos portais</summary>
+                                <div class="admin-disclosure__content">
                                 <div class="portal-settings__header">
                                     <div>
                                         <h2 id="portal-settings-title">Configurações dos portais</h2>
@@ -450,8 +496,11 @@
                                 </div>
                                 <h3>Histórico de versões</h3>
                                 <ul id="portal-settings-versions" class="portal-settings__versions"></ul>
-                            </section>
-                            <section class="portal-settings" aria-labelledby="policy-settings-title">
+                                </div>
+                            </details>
+                            <details class="portal-settings admin-disclosure">
+                                <summary>Políticas contratuais</summary>
+                                <div class="admin-disclosure__content">
                                 <div class="portal-settings__header">
                                     <div>
                                         <h2 id="policy-settings-title">Políticas contratuais (padrão global)</h2>
@@ -466,120 +515,8 @@
                                 </div>
                                 <h3>Histórico de versões</h3>
                                 <ul id="policy-settings-versions" class="portal-settings__versions"></ul>
-                            </section>
-                        </div>
-                        <div id="admin-config-segments" role="tabpanel" aria-labelledby="admin-config-segments-tab">
-                        <section class="portfolio-segment-settings" aria-labelledby="portfolio-segments-title">
-                            <div class="portfolio-segment-settings__header">
-                                <div>
-                                    <h2 id="portfolio-segments-title">Segmentos do Portfólio</h2>
-                                    <p>Organize os gêneros disponíveis no cadastro de projetos.</p>
                                 </div>
-                                <form id="portfolio-segment-add" class="portfolio-segment-add">
-                                    <label for="portfolio-segment-label">Novo segmento</label>
-                                    <div>
-                                        <input
-                                            id="portfolio-segment-label"
-                                            type="text"
-                                            minlength="2"
-                                            maxlength="80"
-                                            autocomplete="off"
-                                            placeholder="Ex: Brazilian Phonk"
-                                        />
-                                        <button type="submit" class="btn-cta">Adicionar</button>
-                                    </div>
-                                </form>
-                            </div>
-                            <p id="portfolio-segments-status" class="admin-field-help" aria-live="polite"></p>
-                            <div id="portfolio-segments-list" class="portfolio-segment-list"></div>
-                        </section>
-                        </div>
-
-                        <div id="admin-config-pricing" role="tabpanel" aria-labelledby="admin-config-pricing-tab" hidden>
-                        <div class="admin-section-divider">
-                            <h2>Parâmetros financeiros</h2>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Desconto Global para Combos (%)</label
-                            ><input type="number" id="cfg_desconto" />
-                        </div>
-                        <div
-                            class="config-financial-grid"
-                            style="
-                                display: grid;
-                                grid-template-columns: 1fr 1fr;
-                                gap: 10px;
-                            "
-                        >
-                            <div class="form-group">
-                                <label>Por Segundo Extra</label
-                                ><input
-                                    type="number"
-                                    step="0.01"
-                                    id="val_extra_duracao"
-                                />
-                            </div>
-                            <div class="form-group">
-                                <label>Por Artista Extra</label
-                                ><input type="number" id="val_extra_pessoa" />
-                            </div>
-                            <div class="form-group">
-                                <label>Canal Voz Extra</label
-                                ><input
-                                    type="number"
-                                    id="val_extra_canal_voz"
-                                />
-                            </div>
-                            <div class="form-group">
-                                <label>Canal Inst Extra</label
-                                ><input
-                                    type="number"
-                                    id="val_extra_canal_inst"
-                                />
-                            </div>
-                            <div class="form-group">
-                                <label>Melodia Extra</label
-                                ><input type="number" id="val_extra_melodia" />
-                            </div>
-                            <div class="form-group">
-                                <label>Revisão Extra</label
-                                ><input type="number" id="val_extra_revisao" />
-                            </div>
-                            <div class="form-group">
-                                <label>Inst. Híbrido (+)</label
-                                ><input type="number" id="val_inst_hibrido" />
-                            </div>
-                            <div class="form-group">
-                                <label>Inst. Gravado (+)</label
-                                ><input type="number" id="val_inst_gravado" />
-                            </div>
-                            <div class="form-group">
-                                <label>Prazo Urgente (+)</label
-                                ><input type="number" id="val_prazo_urgente" />
-                            </div>
-                            <div class="form-group">
-                                <label>Prazo Express (+)</label
-                                ><input type="number" id="val_prazo_express" />
-                            </div>
-                            <div class="form-group">
-                                <label>Desconto Não Exclusivo (-)</label
-                                ><input type="number" id="val_lease_desconto" />
-                            </div>
-                        </div>
-                        <button
-                            class="btn-cta btn-submit"
-                            style="
-                                background: linear-gradient(
-                                    45deg,
-                                    #10b981,
-                                    #059669
-                                );
-                            "
-                            data-admin-action="salvarConfiguracoesExtras"
-                        >
-                            SALVAR TABELA
-                        </button>
+                            </details>
                         </div>
                     </div>
 
@@ -734,7 +671,9 @@
                             </div>
                             <div id="inbox-metrics-content" aria-live="polite"></div>
                         </details>
-                        <div class="admin-filter-bar inbox-toolbar" aria-label="Filtros da Inbox IA">
+                        <details class="admin-disclosure admin-filter-disclosure">
+                            <summary>Filtros das conversas</summary>
+                        <div class="admin-filter-bar inbox-toolbar admin-disclosure__content" aria-label="Filtros da Inbox IA">
                             <label class="admin-filter-field admin-filter-field--search">
                                 <span>Buscar</span>
                                 <input id="inbox-search" type="search" maxlength="80" placeholder="Cliente, assunto ou conversa" />
@@ -789,6 +728,7 @@
                                 <button id="inbox-clear-filters" type="button" class="btn-small hidden">Limpar filtros</button>
                             </div>
                         </div>
+                        </details>
 
                         <div class="inbox-layout">
                             <section id="inbox-list-panel" class="inbox-list-panel" aria-labelledby="inbox-list-title">
@@ -903,7 +843,9 @@
                             </div>
                         </header>
                         <div id="financeiro-metrics" class="dashboard-kpi-grid financeiro-kpi-grid" aria-live="polite"></div>
-                        <div class="admin-filter-bar" aria-label="Filtros financeiros">
+                        <details class="admin-disclosure admin-filter-disclosure">
+                            <summary>Filtros financeiros</summary>
+                        <div class="admin-filter-bar admin-disclosure__content" aria-label="Filtros financeiros">
                             <label class="admin-filter-field admin-filter-field--search">
                                 <span>Buscar</span>
                                 <input id="financeiro-search" type="search" maxlength="120" placeholder="Cliente, proposta ou cobrança" />
@@ -941,6 +883,7 @@
                                 <button id="financeiro-clear-filters" type="button" class="btn-small">Limpar</button>
                             </div>
                         </div>
+                        </details>
                         <p id="financeiro-summary" class="newsletter-summary" aria-live="polite"></p>
                         <div id="financeiro-list" class="admin-list-container" aria-live="polite"></div>
                         <nav id="financeiro-pagination" class="audit-pagination hidden" aria-label="Paginação financeira">
@@ -971,7 +914,9 @@
                                 <p>Histórico administrativo estruturado e somente leitura.</p>
                             </div>
                         </header>
-                        <div class="admin-filter-bar audit-filter-bar" aria-label="Filtros de auditoria">
+                        <details class="admin-disclosure admin-filter-disclosure">
+                            <summary>Filtros de auditoria</summary>
+                        <div class="admin-filter-bar audit-filter-bar admin-disclosure__content" aria-label="Filtros de auditoria">
                             <label class="admin-filter-field">
                                 <span>Ação</span>
                                 <select id="audit-action-filter">
@@ -1024,6 +969,7 @@
                                 <button id="audit-clear-filters" type="button" class="btn-small">Limpar</button>
                             </div>
                         </div>
+                        </details>
                         <p id="audit-summary" class="newsletter-summary" aria-live="polite"></p>
                         <div id="audit-list" class="admin-list-container" aria-live="polite"></div>
                         <nav id="audit-pagination" class="audit-pagination hidden" aria-label="Paginação da auditoria">
@@ -1603,7 +1549,9 @@
                         <div class="admin-form-actions financeiro-modal-actions">
                             <button id="financeiro-copy-link" type="button" class="btn-small">Copiar link do checkout</button>
                         </div>
-                        <form id="financeiro-manual-form" class="financeiro-manual-form">
+                        <details class="admin-disclosure financeiro-manual-disclosure">
+                            <summary>Registrar Pix recebido diretamente</summary>
+                        <form id="financeiro-manual-form" class="financeiro-manual-form admin-disclosure__content">
                             <h3>Pix recebido diretamente</h3>
                             <div class="financeiro-manual-options" role="radiogroup" aria-label="Tipo do registro">
                                 <label><input type="radio" name="modo" value="parcial" checked> Pagamento parcial</label>
@@ -1614,6 +1562,7 @@
                             <p class="admin-help">Registre somente depois de confirmar o crédito na conta. O histórico não substitui conciliação bancária.</p>
                             <button id="financeiro-manual-submit" type="submit" class="btn-primary">Registrar Pix direto</button>
                         </form>
+                        </details>
                         <section class="financeiro-payments-section" aria-labelledby="financeiro-payments-title">
                             <h3 id="financeiro-payments-title">Pagamentos</h3>
                             <div id="financeiro-payments" class="financeiro-payments"></div>
@@ -1661,6 +1610,15 @@
                             </button>
                         </div>
 
+                        <div class="integrado-admin__config-tabs producao-modal-tabs" data-admin-tabs role="tablist" aria-label="Detalhes da produção">
+                            <button type="button" role="tab" id="prod-overview-tab" aria-controls="prod-overview-panel" aria-selected="true">Visão geral</button>
+                            <button type="button" role="tab" id="prod-flow-tab" aria-controls="prod-flow-panel" aria-selected="false">Fluxo</button>
+                            <button type="button" role="tab" id="prod-files-tab" aria-controls="prod-files-panel" aria-selected="false">Arquivos e mensagens</button>
+                            <button type="button" role="tab" id="prod-contract-tab" aria-controls="prod-contract-panel" aria-selected="false">Contrato</button>
+                            <button type="button" role="tab" id="prod-finance-tab" aria-controls="prod-finance-panel" aria-selected="false">Financeiro</button>
+                        </div>
+
+                        <div id="prod-overview-panel" role="tabpanel" aria-labelledby="prod-overview-tab">
                         <section class="producao-detail-block">
                             <h3>Resumo</h3>
                             <div class="producao-detail-grid">
@@ -1668,77 +1626,6 @@
                                 <p><strong>E-mail</strong><span id="prod_email"></span></p>
                                 <p><strong>Serviço</strong><span id="prod_servico"></span></p>
                                 <p><strong>Criada em</strong><span id="prod_data"></span></p>
-                            </div>
-                        </section>
-
-                        <section class="producao-detail-block">
-                            <h3>Arquivos privados</h3>
-                            <div id="prod_arquivos" class="producao-arquivos" aria-live="polite"></div>
-                            <form id="prod_arquivo_form" class="producao-operacao-form">
-                                <label>Tipo
-                                    <select id="prod_arquivo_tipo">
-                                        <option value="material">Material</option>
-                                        <option value="referencia">Referência</option>
-                                        <option value="previa">Prévia</option>
-                                        <option value="entrega">Entrega</option>
-                                        <option value="comprovante">Comprovante</option>
-                                    </select>
-                                </label>
-                                <label>Arquivo<input id="prod_arquivo_input" type="file" required /></label>
-                                <label>Histórico<select id="prod_arquivo_substitui"><option value="">Nova versão independente</option></select></label>
-                                <label>Observação da versão<textarea id="prod_arquivo_observacao" rows="2" maxlength="1000" placeholder="Opcional"></textarea></label>
-                                <label class="producao-check"><input id="prod_arquivo_produtor" type="checkbox" /> Visível ao produtor</label>
-                                <label class="producao-check"><input id="prod_arquivo_cliente" type="checkbox" /> Visível ao cliente</label>
-                                <button id="prod_arquivo_enviar" class="btn-small" type="submit">Enviar arquivo</button>
-                            </form>
-                        </section>
-
-                        <section class="producao-detail-block">
-                            <h3>Etapas do contrato</h3>
-                            <p class="admin-help">Criadas a partir dos valores congelados da proposta. O produtor inicia e envia para revisão; a conclusão é aprovada aqui.</p>
-                            <div id="prod_etapas_contratuais" aria-live="polite"></div>
-                        </section>
-
-                        <section class="producao-detail-block">
-                            <h3>Cotas de arquivos</h3>
-                            <p class="admin-help">Limites do contrato para envios do cliente e do produtor. Uma exceção substitui as cotas desta produção e fica registrada.</p>
-                            <div id="prod_cotas" aria-live="polite"></div>
-                        </section>
-
-                        <section class="producao-detail-block">
-                            <h3>Políticas dos portais</h3>
-                            <p class="admin-help">Políticas em vigor e de onde vêm. Uma exceção vale só para esta produção, exige motivo e fica registrada na auditoria.</p>
-                            <div id="prod_politicas" aria-live="polite"></div>
-                        </section>
-
-                        <section class="producao-detail-block">
-                            <h3>Mensagens da produção</h3>
-                            <div id="prod_mensagens" aria-live="polite"></div>
-                        </section>
-
-                        <section class="producao-detail-block">
-                            <h3>Créditos vinculados</h3>
-                            <div id="prod_creditos" aria-live="polite"></div>
-                        </section>
-
-                        <section class="producao-detail-block">
-                            <h3>Repasses por etapa</h3>
-                            <div id="prod_repasses_etapas" aria-live="polite"></div>
-                        </section>
-
-                        <section class="producao-detail-block" id="prod_repasse_legado">
-                            <h3>Repasse do produtor</h3>
-                            <p class="admin-help">Obrigação manual via Pix. O produtor vinculado é preservado como snapshot ao definir o valor.</p>
-                            <div id="prod_repasse_resumo" class="producao-repasse-resumo" aria-live="polite"></div>
-                            <div class="producao-operacao-form">
-                                <label>Valor combinado (R$)<input id="prod_repasse_valor" type="number" min="0.01" step="0.01" /></label>
-                                <label>Referência do pagamento<input id="prod_repasse_referencia" maxlength="160" /></label>
-                                <label>Comprovante<select id="prod_repasse_comprovante"><option value="">Sem comprovante</option></select></label>
-                            </div>
-                            <div class="admin-form-actions">
-                                <button id="prod_repasse_salvar" class="btn-small" type="button">Definir repasse</button>
-                                <button id="prod_repasse_liberar" class="btn-small hidden" type="button">Liberar repasse</button>
-                                <button id="prod_repasse_pagar" class="btn-small hidden" type="button">Registrar pagamento</button>
                             </div>
                         </section>
 
@@ -1764,27 +1651,101 @@
                         </section>
 
                         <section class="producao-detail-block">
-                            <h3>Etapas</h3>
+                            <label class="admin-form-field" for="prod_observacoes">
+                                <strong>Observações</strong>
+                                <textarea id="prod_observacoes" maxlength="20000" placeholder="Notas internas da produção"></textarea>
+                            </label>
+                            <div class="admin-form-actions">
+                                <button id="btn-save-observacoes" class="btn-small">Salvar observações</button>
+                            </div>
+                        </section>
+                        </div>
+
+                        <div id="prod-flow-panel" role="tabpanel" aria-labelledby="prod-flow-tab" hidden>
+                        <section class="producao-detail-block">
+                            <h3>Etapas do contrato</h3>
+                            <p class="admin-help">Criadas a partir dos valores congelados da proposta. O produtor inicia e envia para revisão; a conclusão é aprovada aqui.</p>
+                            <div id="prod_etapas_contratuais" aria-live="polite"></div>
+                        </section>
+                        <section class="producao-detail-block">
+                            <h3>Etapas operacionais</h3>
                             <div id="prod_etapas" class="producao-etapas"></div>
                             <div class="producao-add-etapa">
                                 <input id="prod_nova_etapa" maxlength="120" placeholder="Nome da nova etapa" />
                                 <button id="btn-add-etapa" class="btn-small">Adicionar etapa</button>
                             </div>
                         </section>
+                        </div>
 
+                        <div id="prod-files-panel" role="tabpanel" aria-labelledby="prod-files-tab" hidden>
                         <section class="producao-detail-block">
-                            <label class="admin-form-field" for="prod_observacoes">
-                                <strong>Observações</strong>
-                                <textarea
-                                    id="prod_observacoes"
-                                    maxlength="20000"
-                                    placeholder="Notas internas da produção"
-                                ></textarea>
-                            </label>
+                            <h3>Arquivos privados</h3>
+                            <div id="prod_arquivos" class="producao-arquivos" aria-live="polite"></div>
+                            <details class="admin-disclosure producao-file-disclosure">
+                                <summary>Adicionar arquivo</summary>
+                                <form id="prod_arquivo_form" class="producao-operacao-form admin-disclosure__content">
+                                    <label>Tipo
+                                        <select id="prod_arquivo_tipo">
+                                            <option value="material">Material</option>
+                                            <option value="referencia">Referência</option>
+                                            <option value="previa">Prévia</option>
+                                            <option value="entrega">Entrega</option>
+                                            <option value="comprovante">Comprovante</option>
+                                        </select>
+                                    </label>
+                                    <label>Arquivo<input id="prod_arquivo_input" type="file" required /></label>
+                                    <label>Histórico<select id="prod_arquivo_substitui"><option value="">Nova versão independente</option></select></label>
+                                    <label>Observação da versão<textarea id="prod_arquivo_observacao" rows="2" maxlength="1000" placeholder="Opcional"></textarea></label>
+                                    <label class="producao-check"><input id="prod_arquivo_produtor" type="checkbox" /> Visível ao produtor</label>
+                                    <label class="producao-check"><input id="prod_arquivo_cliente" type="checkbox" /> Visível ao cliente</label>
+                                    <button id="prod_arquivo_enviar" class="btn-small" type="submit">Enviar arquivo</button>
+                                </form>
+                            </details>
+                        </section>
+                        <section class="producao-detail-block">
+                            <h3>Mensagens da produção</h3>
+                            <div id="prod_mensagens" aria-live="polite"></div>
+                        </section>
+                        </div>
+
+                        <div id="prod-contract-panel" role="tabpanel" aria-labelledby="prod-contract-tab" hidden>
+                        <section class="producao-detail-block">
+                            <h3>Cotas de arquivos</h3>
+                            <p class="admin-help">Limites do contrato para envios do cliente e do produtor. Uma exceção substitui as cotas desta produção e fica registrada.</p>
+                            <div id="prod_cotas" aria-live="polite"></div>
+                        </section>
+                        <section class="producao-detail-block">
+                            <h3>Políticas dos portais</h3>
+                            <p class="admin-help">Políticas em vigor e de onde vêm. Uma exceção vale só para esta produção, exige motivo e fica registrada na auditoria.</p>
+                            <div id="prod_politicas" aria-live="polite"></div>
+                        </section>
+                        <section class="producao-detail-block">
+                            <h3>Créditos vinculados</h3>
+                            <div id="prod_creditos" aria-live="polite"></div>
+                        </section>
+                        </div>
+
+                        <div id="prod-finance-panel" role="tabpanel" aria-labelledby="prod-finance-tab" hidden>
+                        <section class="producao-detail-block">
+                            <h3>Repasses por etapa</h3>
+                            <div id="prod_repasses_etapas" aria-live="polite"></div>
+                        </section>
+                        <section class="producao-detail-block" id="prod_repasse_legado">
+                            <h3>Repasse do produtor</h3>
+                            <p class="admin-help">Obrigação manual via Pix. O produtor vinculado é preservado como snapshot ao definir o valor.</p>
+                            <div id="prod_repasse_resumo" class="producao-repasse-resumo" aria-live="polite"></div>
+                            <div class="producao-operacao-form">
+                                <label>Valor combinado (R$)<input id="prod_repasse_valor" type="number" min="0.01" step="0.01" /></label>
+                                <label>Referência do pagamento<input id="prod_repasse_referencia" maxlength="160" /></label>
+                                <label>Comprovante<select id="prod_repasse_comprovante"><option value="">Sem comprovante</option></select></label>
+                            </div>
                             <div class="admin-form-actions">
-                                <button id="btn-save-observacoes" class="btn-small">Salvar observações</button>
+                                <button id="prod_repasse_salvar" class="btn-small" type="button">Definir repasse</button>
+                                <button id="prod_repasse_liberar" class="btn-small hidden" type="button">Liberar repasse</button>
+                                <button id="prod_repasse_pagar" class="btn-small hidden" type="button">Registrar pagamento</button>
                             </div>
                         </section>
+                        </div>
                     </div>
                 </div>
             </div>

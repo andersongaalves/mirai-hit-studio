@@ -94,6 +94,7 @@ const root = path.resolve(__dirname, "..");
         await page.waitForFunction(() => document.getElementById("admin-config-audio-tab")?.getAttribute("aria-selected") === "true");
         const panel = page.locator("#audio-tag-settings");
         await panel.getByText("Nenhuma tag cadastrada.", { exact: true }).waitFor();
+        await panel.getByText("Editar nivelamento", { exact: true }).click();
         await panel.locator('[name="intervalo_segundos"]').fill("15");
         await panel.locator('[name="volume_percentual"]').fill("25");
         await panel.locator('[name="alvo_relativo_db"]').fill("-4");
@@ -104,12 +105,14 @@ const root = path.resolve(__dirname, "..");
         const previousParameters = await panel.locator('form').nth(1).elementHandle();
         await panel.getByRole("button", { name: "Salvar parâmetros" }).click();
         await page.waitForFunction(form => !form.isConnected, previousParameters);
+        await panel.getByText("Editar nivelamento", { exact: true }).click();
         await panel.getByRole("button", { name: "Salvar parâmetros" }).waitFor();
         assert.equal(await panel.locator('[name="intervalo_segundos"]').inputValue(), "15");
         assert.equal(await panel.locator('[name="volume_percentual"]').inputValue(), "25");
         assert.deepEqual(writes[0], { versao: 0, nivelamento_automatico: true, intervalo_segundos: 15,
             volume_percentual: 25, alvo_relativo_db: -4, ganho_min_db: -30, ganho_max_db: 20,
             silencio_lufs: -55, limiter_dbfs: -1.2 });
+        await panel.getByText("Gerar prévia de teste", { exact: true }).click();
         await panel.getByLabel("Áudio de origem").selectOption("beat:7");
         await panel.getByLabel("Tag aplicada").selectOption("2");
         await panel.getByRole("button", { name: "Gerar prévia com estes controles" }).click();
@@ -119,12 +122,15 @@ const root = path.resolve(__dirname, "..");
         assert.deepEqual(previews[0], { nivelamento_automatico: true, intervalo_segundos: 15,
             volume_percentual: 25, alvo_relativo_db: -4, ganho_min_db: -30, ganho_max_db: 20,
             silencio_lufs: -55, limiter_dbfs: -1.2, source_type: "beat", source_id: 7, tag_id: 2 });
+        await panel.getByText("Cadastrar tag padrão", { exact: true }).click();
         await panel.locator('input[type="file"]').setInputFiles({ name: "tag.wav", mimeType: "audio/wav", buffer: Buffer.from("synthetic-audio-boundary") });
         await panel.getByRole("button", { name: "Cadastrar tag" }).click();
         await panel.getByText("Tag sintética.wav", { exact: true }).waitFor();
         assert.match(writes[1].upload, /name="versao"\r\n\r\n1/);
+        await panel.getByText("Trocar tag padrão", { exact: true }).click();
         assert.equal(await panel.getByRole("button", { name: "Trocar tag" }).count(), 1);
         conflict = true;
+        await panel.getByText("Editar nivelamento", { exact: true }).click();
         await panel.getByRole("button", { name: "Salvar parâmetros" }).click();
         await panel.getByText("A configuração foi alterada. Recarregue antes de salvar.", { exact: true }).waitFor();
         const shots = path.join(os.tmpdir(), "mirai-audio-tags");

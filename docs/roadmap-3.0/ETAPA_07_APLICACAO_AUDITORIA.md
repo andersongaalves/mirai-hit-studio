@@ -10,8 +10,8 @@ implementado sem autorizacao do responsavel.
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
 | Lote atual | Lotes 1 a 8 publicados |
-| Item em andamento | APL-S08-05 e APL-S08-06: controles da tag, gerador temporario e exclusao segura de previa |
-| Proxima acao | Validar a PR do setor S08; migration antes de eventual publicacao |
+| Item em andamento | APL-S09-06: reorganizacao do Admin por processo, com formularios avancados recolhidos |
+| Proxima acao | Aguardar CI e revisao da PR #154; depois da #153, redirecionar a base para `main` antes da integracao |
 | Ultima atualizacao | 28/10/2026 |
 
 ## 2. Regras
@@ -100,6 +100,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S09-03 | S09-003, 004, 005 | P3 | Dashboard sem blocos repetidos; carregar secoes sob demanda; textos com acento e erros humanos | Codigo/texto | Publicado | #115 (acentos) e #135 (sem blocos repetidos; secoes sob demanda) |
 | APL-S09-04 | S09-006 | P3 | Busca global | Codigo | Publicado | #136 |
 | APL-S09-05 | S09-007 | P3 | `PUT /config` sem a linha `id=1` | Codigo | Publicado | #115 |
+| APL-S09-06 | Pedido do responsavel | P3 | Reorganizar navegacao e telas do Admin por processo; mover segmentos para Portfolio e precos para Servicos; recolher editores, filtros e operacoes avancadas; dividir o detalhe da producao por etapa | Codigo + testes de navegador | Em PR | #154 (empilhada sobre #153) |
 
 ### S05 - Propostas ([diagnostico](auditoria/S05_PROPOSTAS.md))
 
@@ -178,6 +179,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 28/10/2026 | APL-S09-06 | PR #154 aberta sobre a #153: navegacao agrupada por processo; precos adicionais em Servicos; segmentos em Portfolio; Configuracoes restrita a Audio/tags e Portais; detalhe da producao dividido em cinco etapas; editores de Beats, Audio/tags, Portais, filtros avancados e Pix direto recolhidos por padrao. Testes focados e revisao visual concluidos; sem merge, migration ou deploy | Aguardar CI e revisao; depois da #153, redirecionar a base da #154 para `main` |
 | 28/10/2026 | APL-S08-05 e APL-S08-06 | PR #153: controles completos em Configuracoes > Audio e tags, gerador temporario com fontes privadas elegiveis e todas as tags, snapshot dos parametros na fila e exclusao segura da ultima previa pelo produtor. Migration nova ainda nao aplicada; sem merge ou deploy | Validar CI e solicitar autorizacao separada para merge/migration/publicacao |
 | 27/10/2026 | Pedido do responsavel (R14) | #151 publicado no SHA `ed7becf58beffeee2c03f1d3d7da71beaa54ce35`: nivelamento automatico da tag de audio pelo loudness (EBU R128) de cada beat ou previa; o percentual vira nivel relativo (40% = 3 dB abaixo do audio). Gate `40609260317`, evidencia Storage `40610529778`, dry-run `40610674127` e publicacao `40610749805`. Ref. `CTRL-20261027-R14-NIVEL-TAG`; sem migration; Commercial V2 `true` | - |
 | 26/10/2026 | Pedido do responsavel (R13) | #149 publicado no SHA `a4d5aab1d8d30c2e9e59bc6f95a57de60420241b`: especialidades dos produtores (Beatmaker, Engenheiro de mixagem, Engenheiro de masterizacao); CPF pedido so para beatmakers, visivel apenas no detalhe do Admin e no contrato do beat, onde o produtor passa a ser o licenciante. Migration `a3c5e7f9b1d4` aplicada antes do release (3 produtores com painel de beats viraram beatmakers, CPF pendente). Gate `40439595543`, evidencia Storage `40441130464`, dry-run `40441225092` e publicacao `40441294771`. Ref. `CTRL-20261026-R13-ESPECIALIDADES-CPF`; Commercial V2 `true` | Admin preencher o CPF dos beatmakers |

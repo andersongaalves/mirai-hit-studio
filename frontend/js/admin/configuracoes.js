@@ -48,13 +48,13 @@ let segmentControlsBound = false;
 
 export async function carregarConfiguracoes() {
     loadAudioTag($("audio-tag-settings"), { admin: true });
+}
+
+export async function carregarPrecos() {
     try {
         const response = await authFetch("/config");
         // AUD6-S09-007: no saved prices yet; the first save creates them.
-        if (response.status === 404) {
-            await carregarSegmentosPortfolio();
-            return;
-        }
+        if (response.status === 404) return;
         if (!response.ok) throw new Error("Erro ao carregar configurações.");
         const config = await response.json();
 
@@ -64,7 +64,6 @@ export async function carregarConfiguracoes() {
 
         Notify.error("Erro ao carregar configurações.");
     }
-    await carregarSegmentosPortfolio();
 }
 
 async function responseMessage(response, fallback) {

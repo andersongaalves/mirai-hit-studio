@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 const items = [];
@@ -131,7 +131,8 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         await context.close();
         const admin = await setup("admin", 1280);
         await admin.page.locator('[data-admin-target="dashboard-menu"][aria-current="page"]').waitFor();
-        await admin.page.locator('[data-admin-target="section-portfolio"]').click();
+        await openAdminSection(admin.page, 'section-portfolio');
+        await admin.page.getByRole('tab', { name: 'Envios de produtores' }).click();
         const review = admin.page.locator(".portfolio-submission-review");
         await review.getByRole("button", { name: "Recusar", exact: true }).click();
         assert.equal(posts.length, 1, "Refusal needs a reason");

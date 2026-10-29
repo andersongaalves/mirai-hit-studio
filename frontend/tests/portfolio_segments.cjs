@@ -147,7 +147,8 @@ async function staticResponse(route) {
         await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
         await page.locator("#admin-area:not(.hidden)").waitFor();
         await page.locator("#dashboard-metrics .dashboard-kpi").first().waitFor();
-        await page.evaluate(() => window.mostrarSecao("section-custos"));
+        await page.evaluate(() => window.mostrarSecao("section-portfolio"));
+        await page.getByRole("tab", { name: "Segmentos", exact: true }).click();
         await page.locator('[data-segment-id="rock"]').waitFor();
 
         await page.locator("#portfolio-segment-label").fill("Brazilian Phonk");
@@ -186,10 +187,10 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.getElementById("modal-projeto").classList.contains("hidden"));
         assert.deepEqual(projectWrites.at(-1).segmentos_json, ["rock", "legacy_mix", "brazilian_phonk"]);
 
-        await page.evaluate(() => window.mostrarSecao("section-custos"));
-        await page.getByRole("tab", { name: "Preços e descontos" }).click();
-        assert.equal(await page.getByRole("tab", { name: "Preços e descontos" }).getAttribute("aria-selected"), "true");
-        await page.getByRole("button", { name: "SALVAR TABELA" }).click();
+        await page.evaluate(() => window.mostrarSecao("section-servicos"));
+        await page.getByRole("tab", { name: "Preços adicionais" }).click();
+        assert.equal(await page.getByRole("tab", { name: "Preços adicionais" }).getAttribute("aria-selected"), "true");
+        await page.getByRole("button", { name: "Salvar preços adicionais" }).click();
         assert.deepEqual(financialWrites, [configValues]);
 
         for (const width of [320, 390, 768, 1440]) {
@@ -206,6 +207,8 @@ async function staticResponse(route) {
 
         await page.reload();
         await page.waitForFunction(() => window.fazerLogout instanceof Function);
+        await page.evaluate(() => window.mostrarSecao("section-portfolio"));
+        await page.getByRole("tab", { name: "Segmentos", exact: true }).click();
         await page.locator('[data-segment-id="brazilian_phonk"]').waitFor({ state: "attached" });
         assert.deepEqual(errors, []);
         console.log("PASS: segment catalog CRUD, stable IDs, ordering, multi-select, keyboard, legacy values, finance isolation and mobile layout.");

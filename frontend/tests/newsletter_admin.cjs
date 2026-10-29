@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 const now = "2026-09-14T12:00:00Z";
@@ -66,7 +66,7 @@ async function staticResponse(route) {
             return route.fulfill({ status: 404, json: { detail: "not found" } });
         });
         await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
-        await page.locator('[data-admin-target="section-newsletter"]').click();
+        await openAdminSection(page, 'section-newsletter');
         await page.waitForSelector(".newsletter-campaigns-table tbody tr");
         assert.equal(await page.locator("#newsletter-campaigns-panel").isVisible(), true);
         await page.locator("#newsletter-tab-subscribers").click();

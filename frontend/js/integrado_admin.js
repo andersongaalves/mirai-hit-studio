@@ -1,6 +1,4 @@
-const tabs = [...document.querySelectorAll(".integrado-admin__config-tabs [role='tab']")];
-
-function selectTab(selected, focus = false) {
+function selectTab(tabs, selected, focus = false) {
     tabs.forEach(tab => {
         const active = tab === selected;
         tab.setAttribute("aria-selected", String(active));
@@ -10,17 +8,19 @@ function selectTab(selected, focus = false) {
     if (focus) selected.focus();
 }
 
-tabs.forEach((tab, index) => {
-    tab.addEventListener("click", () => selectTab(tab));
-    tab.addEventListener("keydown", event => {
-        const next = event.key === "ArrowRight" ? (index + 1) % tabs.length
-            : event.key === "ArrowLeft" ? (index - 1 + tabs.length) % tabs.length
-                : event.key === "Home" ? 0
-                    : event.key === "End" ? tabs.length - 1 : -1;
-        if (next < 0) return;
-        event.preventDefault();
-        selectTab(tabs[next], true);
+document.querySelectorAll("[data-admin-tabs], .integrado-admin__config-tabs").forEach(tablist => {
+    const tabs = [...tablist.querySelectorAll(":scope > [role='tab']")];
+    tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => selectTab(tabs, tab));
+        tab.addEventListener("keydown", event => {
+            const next = event.key === "ArrowRight" ? (index + 1) % tabs.length
+                : event.key === "ArrowLeft" ? (index - 1 + tabs.length) % tabs.length
+                    : event.key === "Home" ? 0
+                        : event.key === "End" ? tabs.length - 1 : -1;
+            if (next < 0) return;
+            event.preventDefault();
+            selectTab(tabs, tabs[next], true);
+        });
     });
+    if (tabs.length) selectTab(tabs, tabs.find(tab => tab.getAttribute("aria-selected") === "true") || tabs[0]);
 });
-
-if (tabs.length) selectTab(tabs[0]);

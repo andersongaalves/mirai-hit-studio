@@ -30,13 +30,19 @@ export function closeMobileNavigation({ restoreFocus = false } = {}) {
 }
 
 export function setActiveSection(sectionId) {
+    let activeControl = null;
     document.querySelectorAll("[data-admin-target]").forEach((control) => {
         const active = control.dataset.adminTarget === sectionId;
         control.classList.toggle("is-active", active);
+        if (active) activeControl = control;
         if (control.matches(".admin-nav__item")) {
             if (active) control.setAttribute("aria-current", "page");
             else control.removeAttribute("aria-current");
         }
+    });
+
+    document.querySelectorAll(".admin-nav-group").forEach((group) => {
+        group.open = Boolean(activeControl && group.contains(activeControl));
     });
 
     closeMobileNavigation();

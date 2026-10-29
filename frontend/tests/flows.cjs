@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 const root = path.resolve(__dirname, '..');
 
 (async () => {
@@ -161,21 +161,21 @@ const root = path.resolve(__dirname, '..');
         await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));
         await page.waitForTimeout(100);
         assert.equal(entryCalls().length, expected.length);
-        await page.locator('[data-admin-target="section-servicos"]').first().click();
+        await openAdminSection(page, 'section-servicos');
         await page.waitForFunction(() => document.getElementById('lista-servicos')?.textContent.includes('Servico teste'));
         assert.match(await page.locator('#lista-servicos').textContent(), /Servico teste/);
-        assert.deepEqual(entryCalls(), ['GET /combos', 'GET /dashboard', 'GET /servicos']);
+        assert.deepEqual(entryCalls(), ['GET /combos', 'GET /config', 'GET /dashboard', 'GET /servicos']);
         await page.evaluate(() => window.mostrarDashboard());
-        await page.locator('[data-admin-target="section-servicos"]').first().click();
+        await openAdminSection(page, 'section-servicos');
         await page.waitForTimeout(100);
         assert.equal(entryCalls().filter(call => call === 'GET /servicos').length, 1, 'a section loads only on its first visit');
-        await page.locator('[data-admin-target="section-custos"]').first().click();
+        await openAdminSection(page, 'section-servicos');
         await page.waitForFunction(() => document.getElementById('cfg_desconto')?.value === '10');
         assert.equal(await page.locator('#cfg_desconto').inputValue(), '10');
         for (const value of ['0', '15', '-1', '101']) {
             await page.locator('#cfg_desconto').evaluate((el, value) => { el.value = value; }, value);
             await page.evaluate(() => window.salvarConfiguracoesExtras());
-            await page.evaluate(async () => (await import('/js/admin/configuracoes.js')).carregarConfiguracoes());
+            await page.evaluate(async () => (await import('/js/admin/configuracoes.js')).carregarPrecos());
             assert.equal(await page.locator('#cfg_desconto').inputValue(), value);
         }
         const puts = calls.filter(call => call === 'PUT /config').length;

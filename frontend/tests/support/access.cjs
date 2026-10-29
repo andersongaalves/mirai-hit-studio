@@ -38,4 +38,16 @@ async function stayWithoutSession(page) {
     await page.route(url => url.pathname === '/acesso', route => route.fulfill({ status: 204, body: '' }));
 }
 
-module.exports = { expectAccessPage, signIn, stayWithoutSession };
+async function revealAdminNavigation(page, target) {
+    await page.locator(`[data-admin-target="${target}"]`).evaluate(control => {
+        const group = control.closest('details');
+        if (group) group.open = true;
+    });
+}
+
+async function openAdminSection(page, target) {
+    await revealAdminNavigation(page, target);
+    await page.locator(`[data-admin-target="${target}"]`).click();
+}
+
+module.exports = { expectAccessPage, openAdminSection, revealAdminNavigation, signIn, stayWithoutSession };

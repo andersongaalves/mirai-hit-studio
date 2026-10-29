@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const DEFAULTS = {
@@ -121,8 +121,10 @@ function current(portal) {
         await signIn(page, { next: '/admin.html', username: 'admin' });
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
 
-        await page.locator('[data-admin-target="section-custos"]').click();
+        await openAdminSection(page, 'section-custos');
         await page.getByRole('tab', { name: 'Portais' }).click();
+        await page.getByText('Textos e experiência dos portais', { exact: true }).click();
+        await page.getByText('Políticas contratuais', { exact: true }).click();
         await page.waitForFunction(() => document.getElementById('portal-settings-version').textContent.includes('Nenhuma versão'));
         const form = page.locator('#portal-settings-form');
         assert.equal(await form.locator('input[name="indicadores"]:checked').count(), 4);

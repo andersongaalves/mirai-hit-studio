@@ -7,7 +7,11 @@ import { carregarPortfolio } from "./projetos.js";
 
 import { initOrcamentos } from "./orcamentos/orcamentos.js";
 
-import { carregarConfiguracoes } from "./configuracoes.js";
+import {
+    carregarConfiguracoes,
+    carregarPrecos,
+    carregarSegmentosPortfolio,
+} from "./configuracoes.js";
 
 import { initProducoes } from "./producoes/producoes.js";
 import { initClientes } from "./clientes/clientes.js";
@@ -27,8 +31,8 @@ import { setActiveSection } from "./admin_shell.js";
 // signing in only asks the API for the dashboard. Inbox and Beats refresh on
 // every visit, as before.
 const firstVisitLoaders = {
-    "section-servicos": carregarServicos,
-    "section-portfolio": carregarPortfolio,
+    "section-servicos": () => Promise.all([carregarServicos(), carregarPrecos()]),
+    "section-portfolio": () => Promise.all([carregarPortfolio(), carregarSegmentosPortfolio()]),
     "section-orcamentos": initOrcamentos,
     "section-custos": carregarConfiguracoes,
     "section-producoes": initProducoes,

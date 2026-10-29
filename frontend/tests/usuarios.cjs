@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const now = '2026-09-13T12:00:00Z';
@@ -104,10 +104,9 @@ async function staticResponse(route) {
     try {
         await signIn(page, { next: '/admin.html', username: 'admin', password: 'admin-pass' });
         // AUD6-S09-004: Users is loaded when the section opens, not at sign-in.
-        await page.locator('[data-admin-target="section-usuarios"]').waitFor();
+        assert.equal(await page.locator('[data-admin-target="section-usuarios"]').count(), 1);
         assert.equal(await page.locator('.usuarios-table tbody tr').count(), 0);
-        assert.equal(await page.locator('[data-admin-target="section-usuarios"]').isVisible(), true);
-        await page.locator('[data-admin-target="section-usuarios"]').click();
+        await openAdminSection(page, 'section-usuarios');
         await page.waitForSelector('.usuarios-table tbody tr', { state: 'visible' });
         assert.equal(await page.locator('.usuarios-table tbody tr').count(), 3);
         assert.equal(await page.locator('#usuarios-list img, #usuarios-list script').count(), 0);
@@ -207,7 +206,7 @@ async function staticResponse(route) {
         await page.waitForFunction(() => !document.getElementById('section-clientes').classList.contains('hidden'));
         await page.locator('#modal-cliente').waitFor({ state: 'visible' });
         await page.evaluate(() => window.fecharModalCliente());
-        await page.locator('[data-admin-target="section-usuarios"]').click();
+        await openAdminSection(page, 'section-usuarios');
         await page.locator('#usuarios-clear-filters').click();
         // The role selector never offers "Cliente" for internal accounts.
         await page.getByRole('button', { name: 'Abrir usuario inativo', exact: true }).click();

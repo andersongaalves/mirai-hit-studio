@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, "..");
 let reconciliations = 0;
@@ -66,7 +66,8 @@ async function staticResponse(route) {
         });
 
         await signIn(page, { next: "/admin.html", username: "admin", password: "password" });
-        await page.locator('[data-admin-target="section-financeiro"]').click();
+        await openAdminSection(page, 'section-financeiro');
+        await page.getByText("Filtros financeiros", { exact: true }).click();
         await page.waitForSelector(".financeiro-table-view tbody tr");
         assert.match(await page.locator("#financeiro-metrics").textContent(), /R\$\s*60,00/);
         assert.equal(await page.locator("#financeiro-list img, #financeiro-list script").count(), 0);
@@ -90,6 +91,7 @@ async function staticResponse(route) {
 
         await page.locator(".financeiro-table-view tbody tr button").click();
         await page.waitForSelector("#modal-financeiro:not(.hidden)");
+        await page.getByText("Registrar Pix recebido diretamente", { exact: true }).click();
         assert.equal(await page.locator("#modal-financeiro img, #modal-financeiro script").count(), 0);
         assert.match(await page.locator("#financeiro-payments").textContent(), /Valor divergente/);
         await page.getByRole("button", { name: "Copiar link do checkout" }).click();
@@ -103,6 +105,7 @@ async function staticResponse(route) {
         assert.equal(manualPayments[0].valor, 20);
         assert.equal(manualPayments[0].referencia, "PIX-TESTE-001");
         assert.match(manualPayments[0].idempotency_key, /^[0-9a-f-]{36}$/);
+        await page.getByText("Registrar Pix recebido diretamente", { exact: true }).click();
         await page.locator("#financeiro-manual-form input[value=quitar]").check();
         assert.equal(await page.locator("#financeiro-manual-value").isDisabled(), true);
         await page.getByRole("button", { name: "Conciliar com provider" }).click();

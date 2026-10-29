@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, revealAdminNavigation, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 
@@ -75,6 +75,9 @@ async function staticResponse(route) {
     try {
         await signIn(page, { next: '/admin.html', username: 'admin', password: 'synthetic-password' });
         await page.waitForFunction(() => !document.getElementById('admin-area').classList.contains('hidden'));
+        assert.equal(await page.locator('.admin-nav-group').count(), 5);
+        assert.equal(await page.locator('.admin-nav-group[open]').count(), 0, 'admin groups start collapsed');
+        assert.equal(await page.locator('#admin-config-portals details[open]').count(), 0, 'advanced configuration starts collapsed');
         const dangerStyle = await page.evaluate(() => {
             const button = document.createElement('button');
             button.className = 'btn-small btn-danger';
@@ -98,6 +101,7 @@ async function staticResponse(route) {
         assert.equal(keyboardFocus.navigationControl, true);
 
         const productionNav = page.locator('.admin-nav__item[data-admin-target="section-producoes"]');
+        await revealAdminNavigation(page, 'section-producoes');
         await productionNav.focus();
         await page.keyboard.press('Enter');
         assert.equal(await page.locator('#section-producoes').isVisible(), true);
@@ -106,9 +110,12 @@ async function staticResponse(route) {
             'section-producoes',
         );
         assert.equal(await page.locator('#section-producoes h1').evaluate(el => el === document.activeElement), true);
+        assert.equal(await page.locator('.admin-nav-group[open]').count(), 1);
+        assert.match(await page.locator('.admin-nav-group[open] > summary').textContent(), /Operação/);
 
         await page.evaluate(() => window.mostrarDashboard());
         const serviceNav = page.locator('.admin-nav__item[data-admin-target="section-servicos"]');
+        await revealAdminNavigation(page, 'section-servicos');
         await serviceNav.focus();
         await page.keyboard.press('Space');
         assert.equal(await page.locator('#section-servicos').isVisible(), true);
@@ -116,6 +123,17 @@ async function staticResponse(route) {
             await page.locator('.admin-nav__item[aria-current="page"]').getAttribute('data-admin-target'),
             'section-servicos',
         );
+        assert.match(await page.locator('.admin-nav-group[open] > summary').textContent(), /Catálogo/);
+
+        const productionPanels = await page.evaluate(() => {
+            document.getElementById('prod-files-tab').click();
+            return {
+                filesVisible: !document.getElementById('prod-files-panel').hidden,
+                overviewHidden: document.getElementById('prod-overview-panel').hidden,
+                uploadClosed: !document.querySelector('.producao-file-disclosure').open,
+            };
+        });
+        assert.deepEqual(productionPanels, { filesVisible: true, overviewHidden: true, uploadClosed: true });
 
         const duplicateListeners = await page.evaluate(async () => {
             const shell = await import('/js/admin/admin_shell.js');

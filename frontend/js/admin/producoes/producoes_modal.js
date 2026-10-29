@@ -234,6 +234,10 @@ export function abrirModalProducao(producao, handlers = {}) {
     handlersAtuais = handlers;
     renderizarResumo();
     registrarAcoes();
+    document.getElementById("prod-overview-tab")?.click();
+    document.querySelectorAll("#modal-producao .admin-disclosure[open]").forEach(details => {
+        details.open = false;
+    });
     openAdminModal("modal-producao", {
         onRequestClose: fecharModalProducao,
         initialFocus: ".producao-modal-header button",

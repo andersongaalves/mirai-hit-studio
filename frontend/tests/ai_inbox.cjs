@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { expectAccessPage, signIn } = require('./support/access.cjs');
+const { expectAccessPage, openAdminSection, signIn } = require('./support/access.cjs');
 
 const root = path.resolve(__dirname, '..');
 const id = '2af0260f-8486-4a0a-9a43-9e1dd1b4f19e';
@@ -121,7 +121,7 @@ function listPage(url) {
     });
     try {
         await signIn(page, { next: '/admin.html', username: 'admin', password: 'test-password' });
-        await page.locator('[data-admin-target="section-inbox"]').click();
+        await openAdminSection(page, 'section-inbox');
         assert.equal(calls.filter(call => call.includes('/metrics')).length, 0);
         await page.locator('#inbox-metrics > summary').click();
         await page.locator('#inbox-metrics-content dd').first().waitFor();
@@ -185,7 +185,8 @@ function listPage(url) {
         }));
         assert.deepEqual(logout.result, ['', '', '', 'false']);
         await signIn(page, { next: '/admin.html', username: 'admin', password: 'test-password' });
-        await page.locator('[data-admin-target="section-inbox"]').click();
+        await openAdminSection(page, 'section-inbox');
+        await page.getByText('Filtros das conversas', { exact: true }).click();
         await page.locator('.inbox-conversation-item').waitFor();
         const beforeSearch = calls.filter(call => call === 'GET /admin/ai/conversations').length;
         await page.locator('#inbox-search').fill('sem resultado');

@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
+const { openAdminSection } = require('./support/access.cjs');
 
 const prefix = process.env.I3_PREFIX;
 const username = process.env.I3_USERNAME;
@@ -64,7 +65,7 @@ async function sendChat(page, text) {
     await admin.locator('#password').fill(password);
     await admin.locator('#access-login-form button[type=submit]').click();
     await admin.waitForURL(url => url.pathname === '/admin.html');
-    await admin.locator('[data-admin-target="section-inbox"]').click();
+    await openAdminSection(admin, 'section-inbox');
     console.log('I3_STEP admin');
     const conversation = admin.locator('.inbox-conversation-item').first();
     await conversation.waitFor();
@@ -79,7 +80,7 @@ async function sendChat(page, text) {
     await page.waitForFunction(() => !document.querySelector('#site-chat-message').disabled);
     await sendChat(page, `${prefix} preciso de uma resposta criativa para esta ideia`);
     await admin.reload();
-    await admin.locator('[data-admin-target="section-inbox"]').click();
+    await openAdminSection(admin, 'section-inbox');
     const reopened = admin.locator('.inbox-conversation-item').first();
     await reopened.waitFor();
     await reopened.getByRole('button').click();
