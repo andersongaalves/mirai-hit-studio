@@ -252,15 +252,17 @@ function expectStatus(result, status, label) {
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Envio iniciado'));
         await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')]
             .some(item => item.textContent.includes('preview-browser.mp3')));
-        await page.getByText('Enviar entrega final', { exact: true }).click();
-        await page.getByLabel('Tipo de entrega').selectOption('outro');
-        await page.getByLabel('Título').fill('Entrega E2E Browser');
-        await page.getByLabel('Arquivo principal').setInputFiles({
+        const finalDelivery = page.locator('details.final-delivery-disclosure')
+            .filter({ hasText: 'Enviar entrega final' });
+        await finalDelivery.getByText('Enviar entrega final', { exact: true }).click();
+        await finalDelivery.getByLabel('Tipo de entrega').selectOption('outro');
+        await finalDelivery.getByLabel('Título').fill('Entrega E2E Browser');
+        await finalDelivery.getByLabel('Arquivo principal').setInputFiles({
             name: 'entrega-browser.wav',
             mimeType: 'audio/wav',
             buffer: Buffer.from('RIFF-browser-delivery'),
         });
-        await page.getByRole('button', { name: 'Enviar pacote final' }).click();
+        await finalDelivery.getByRole('button', { name: 'Enviar pacote final' }).click();
         await page.waitForFunction(() => [...document.querySelectorAll('.final-delivery-card')]
             .some(item => item.textContent.includes('Entrega E2E Browser')));
         await page.getByRole('button', { name: 'Enviar para revisão' }).click();
