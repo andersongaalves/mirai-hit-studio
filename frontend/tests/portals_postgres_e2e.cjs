@@ -285,7 +285,7 @@ function syntheticWav() {
         await finalDelivery.getByRole('button', { name: 'Enviar pacote final' }).click();
         const finalDeliveryTask = page.locator('.upload-tasks-dialog li')
             .filter({ hasText: 'Entrega final · Entrega E2E Browser' });
-        await finalDeliveryTask.waitFor();
+        await finalDeliveryTask.waitFor({ state: 'attached' });
         await page.waitForFunction(() => [...document.querySelectorAll('.upload-tasks-dialog li')]
             .some(item => item.textContent.includes('Entrega final · Entrega E2E Browser')
                 && ['completed', 'failed'].includes(item.dataset.state)));
