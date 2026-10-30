@@ -2,13 +2,11 @@ from typing import Annotated, Literal
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_producer
 from crud import crud_producao
 from database import get_db
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from models.orcamento import OrcamentoModel
 from models.portal_produtor import ProducaoArquivoModel
 from models.usuario import UsuarioModel
@@ -28,6 +26,7 @@ from services import (
     repasse_produtor_service,
 )
 from services.producao_arquivo_storage import MAX_FILE_SIZE
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/portal/produtor", tags=["Portal do Produtor"])
 Db = Annotated[Session, Depends(get_db)]
@@ -245,6 +244,9 @@ async def criar_entrega_final(
     categoria: Annotated[Literal["instrumental", "outro"], Form()],
     titulo: Annotated[str, Form(max_length=150)],
     arquivo_principal: Annotated[UploadFile, File()],
+    bpm: Annotated[int | None, Form(ge=20, le=300)] = None,
+    tonalidade: Annotated[str | None, Form(max_length=20)] = None,
+    creditos_adicionais: Annotated[str | None, Form(max_length=1200)] = None,
     wav: Annotated[UploadFile | None, File()] = None,
     multitrack: Annotated[UploadFile | None, File()] = None,
     licenca: Annotated[UploadFile | None, File()] = None,
@@ -262,6 +264,7 @@ async def criar_entrega_final(
             title=titulo, main=await _delivery_file(arquivo_principal), wav=await _delivery_file(wav),
             archive=await _delivery_file(multitrack), license_file=await _delivery_file(licenca),
             multitrack_url=multitrack_url, note=observacao,
+            bpm=bpm, tonalidade=tonalidade, creditos_adicionais=creditos_adicionais,
             request_log_id=getattr(request.state, "request_id", None),
         )
         return producao_entrega_service.response(model)

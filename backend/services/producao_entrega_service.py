@@ -5,15 +5,19 @@ import logging
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
-from sqlalchemy.exc import IntegrityError
-
 from models import ProducaoArquivoModel, ProducaoEntregaFinalModel
 from schemas.producao_arquivo import ProducaoArquivoResponse
-from services import audit_service, cota_arquivo_service, producao_arquivo_service
+from services import (
+    audit_service,
+    cota_arquivo_service,
+    producao_arquivo_service,
+    producao_licenca_service,
+)
 from services.producao_arquivo_storage import (
     ProducaoArquivoStorageError,
     new_production_file_storage,
 )
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +61,31 @@ def _multitrack_url(value):
     return value
 
 
+def _technical_sheet(category, bpm, tonalidade, additional_credits):
+    if category != "instrumental":
+        if bpm is not None or (tonalidade or "").strip() or (additional_credits or "").strip():
+            raise ProducaoEntregaError("A ficha tecnica se aplica somente a entregas de beat.")
+        return None, None, []
+    if not isinstance(bpm, int) or isinstance(bpm, bool) or not 20 <= bpm <= 300:
+        raise ProducaoEntregaError("Informe um BPM entre 20 e 300.")
+    key = _text(tonalidade, field="Tom / Key", limit=20)
+    credits = []
+    seen = set()
+    for raw in (additional_credits or "").splitlines():
+        name = " ".join(raw.split())
+        if not name:
+            continue
+        if len(name) < 2 or len(name) > 120:
+            raise ProducaoEntregaError("Cada credito adicional deve ter entre 2 e 120 caracteres.")
+        marker = name.casefold()
+        if marker not in seen:
+            seen.add(marker)
+            credits.append(name)
+    if len(credits) > 10:
+        raise ProducaoEntregaError("Informe no maximo 10 creditos adicionais.")
+    return bpm, key, credits
+
+
 def _file_response(model):
     return ProducaoArquivoResponse.model_validate(model).model_dump()
 
@@ -67,6 +96,9 @@ def response(model, *, blocked=False):
         "producao_id": model.producao_id,
         "categoria": model.categoria,
         "titulo": model.titulo,
+        "bpm": model.bpm,
+        "tonalidade": model.tonalidade,
+        "creditos_adicionais": model.creditos_adicionais or [],
         "observacao": model.observacao,
         "arquivo_principal": _file_response(model.arquivo_principal),
         "wav_arquivo": _file_response(model.wav_arquivo) if model.wav_arquivo else None,
@@ -91,8 +123,8 @@ def _validate_files(category, main, wav, archive, license_file, external):
             raise ProducaoEntregaError("Escolha um arquivo ou um link para o multitrack.")
         if archive is not None and archive[1] not in {"application/zip", "application/vnd.rar"}:
             raise ProducaoEntregaError("O multitrack deve ser ZIP ou RAR.")
-        if license_file is None or license_file[1] != "application/pdf":
-            raise ProducaoEntregaError("Inclua a licenca em PDF.")
+        if license_file is not None:
+            raise ProducaoEntregaError("A licenca exclusiva desta entrega e gerada automaticamente.")
     elif category == "outro":
         if wav is not None or archive is not None or external is not None:
             raise ProducaoEntregaError("Campos de instrumental nao podem ser enviados nesta categoria.")
@@ -125,7 +157,8 @@ def _new_file(production, actor, item, role, storage):
 
 
 def create(db, *, production, actor, request_id, category, title, main, wav=None, archive=None,
-           multitrack_url=None, license_file=None, note=None, request_log_id=None, storage=None):
+           multitrack_url=None, license_file=None, note=None, bpm=None, tonalidade=None,
+           creditos_adicionais=None, request_log_id=None, storage=None):
     try:
         request_key = str(UUID(str(request_id)))
     except (TypeError, ValueError, AttributeError):
@@ -133,6 +166,7 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
     title = _text(title, field="Titulo", limit=150)
     note = producao_arquivo_service._normalize_note(note)
     external = _multitrack_url(multitrack_url)
+    bpm, tonalidade, credits = _technical_sheet(category, bpm, tonalidade, creditos_adicionais)
     _validate_files(category, main, wav, archive, license_file, external)
     media_components = [item for item in (main, wav, archive) if item is not None]
     components = [*media_components, *([license_file] if license_file is not None else [])]
@@ -141,6 +175,9 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
         "producer_id": actor.id,
         "category": category,
         "title": title,
+        "bpm": bpm,
+        "tonalidade": tonalidade,
+        "creditos_adicionais": credits,
         "note": note,
         "multitrack_url": external,
         "files": [
@@ -157,6 +194,17 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
         ):
             raise ProducaoEntregaConflict("Este identificador ja foi usado em outro envio.")
         return existing
+    if category == "instrumental":
+        license_file = producao_licenca_service.gerar(
+            db,
+            production=production,
+            producer=actor,
+            title=title,
+            request_id=request_key,
+            bpm=bpm,
+            tonalidade=tonalidade,
+            creditos_adicionais=credits,
+        )
     cota_arquivo_service.travar_producao(db, production.id)
     try:
         cota_arquivo_service.verificar_pacote_entrega(
@@ -200,6 +248,9 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
             produtor_id=actor.id,
             categoria=category,
             titulo=title,
+            bpm=bpm,
+            tonalidade=tonalidade,
+            creditos_adicionais=credits,
             arquivo_principal_id=principal.id,
             wav_arquivo_id=getattr(wav_model, "id", None),
             multitrack_arquivo_id=getattr(archive_model, "id", None),

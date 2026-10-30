@@ -11,6 +11,9 @@ class ProducaoEntregaFinalResponse(BaseModel):
     producao_id: int
     categoria: Literal["instrumental", "outro"]
     titulo: str
+    bpm: int | None
+    tonalidade: str | None
+    creditos_adicionais: list[str]
     observacao: str | None
     arquivo_principal: ProducaoArquivoResponse
     wav_arquivo: ProducaoArquivoResponse | None

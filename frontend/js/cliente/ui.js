@@ -228,9 +228,12 @@ function fileGroup(title, files, handlers, help = "") {
 function finalDeliveryCard(delivery, handlers) {
     const card = element("article", "final-delivery-card");
     card.append(
-        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Instrumental" : "Entrega final"),
+        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Entrega final"),
         element("h3", "", delivery.titulo),
     );
+    if (delivery.categoria === "instrumental" && delivery.bpm && delivery.tonalidade) {
+        card.append(element("p", "file-note", `${delivery.bpm} BPM · ${delivery.tonalidade}`));
+    }
     if (delivery.observacao) card.append(element("p", "file-note", delivery.observacao));
     if (delivery.bloqueado_pagamento) {
         card.append(element("p", "producer-help", "Este pacote será liberado após a quitação do saldo."));

@@ -54,6 +54,7 @@ def reject_ddl(connection, cursor, statement, parameters, context, many):
                 'newsletter_deliveries', 'audit_logs', 'cobrancas', 'pagamentos',
                 'provider_webhook_events', 'ai_conversations', 'ai_messages', 'ai_email_threads',
                 'ai_briefings', 'ai_usage_events', 'producao_arquivos',
+                'producao_entregas_finais',
                 'repasses_produtor', 'cliente_acessos', 'auth_rate_limits', 'beats',
                 'beat_licencas', 'alembic_version', 'portal_notificacoes',
                 'producao_politicas', 'credito_lotes', 'politicas_globais', 'repasse_etapas',

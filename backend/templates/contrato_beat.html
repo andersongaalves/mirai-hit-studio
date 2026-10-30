@@ -38,17 +38,31 @@ li { margin: 0 0 3pt; }
 
 <h2>1. Objeto</h2>
 <p>Este contrato concede ao Licenciado o direito de usar o beat <strong>"{{ beat_titulo }}"</strong>, produzido por {{ produtor }}, para criar uma nova obra musical com voz, letra ou outros elementos próprios (a "Música"), nos termos abaixo.</p>
-<p>Licença: <strong>{{ licenca_rotulo }}</strong> · Arquivos entregues: <strong>{{ formatos }}</strong> · Valor pago: <strong>{{ valor|moeda }}</strong>.</p>
+<p>Licença: <strong>{{ licenca_rotulo }}</strong> · Arquivos entregues: <strong>{{ formatos }}</strong> · {{ valor_rotulo }}: <strong>{{ valor_texto }}</strong>.</p>
+
+<h2>2. Ficha técnica do beat</h2>
+<table><tr>
+<td width="50%"><p><strong>Compositor e programador das melodias</strong></p>
+<p>{{ produtor }} (produtor responsável)</p>
+{% for credito in creditos_adicionais %}<p>{{ credito }}</p>{% endfor %}</td>
+<td width="25%"><p><strong>Tom / Key</strong></p><p>{{ tonalidade }}</p></td>
+<td width="25%"><p><strong>BPM</strong></p><p>{{ bpm if bpm else "Não informado" }}</p></td>
+</tr></table>
 
 {% if exclusivo %}
-<h2>2. Exclusividade</h2>
+<h2>3. Exclusividade</h2>
 <ol>
+{% if sob_encomenda %}
+<li>O beat foi criado especificamente para o Licenciado e não será oferecido, vendido ou licenciado a terceiros.</li>
+<li>Não existem licenças não exclusivas anteriores concedidas sobre este beat.</li>
+{% else %}
 <li>A partir da data de emissão, o beat deixa de ser oferecido (aparece como "Vendido" no catálogo) e não será licenciado a nenhum novo interessado.</li>
 <li>Licenças não exclusivas concedidas antes desta data continuam válidas nos seus próprios termos e limites.</li>
+{% endif %}
 <li>Esta licença inclui todos os formatos (MP3, WAV e multitrack/stems) e todos os direitos das licenças não exclusivas.</li>
 </ol>
 
-<h2>3. Usos permitidos</h2>
+<h2>4. Usos permitidos</h2>
 <ol>
 <li>Gravar, mixar, editar e lançar a Música, sem limite de reproduções, vendas, downloads ou visualizações.</li>
 <li>Distribuir a Música em plataformas digitais, rádio, televisão, apresentações ao vivo e vídeos, com ou sem fins lucrativos.</li>
@@ -56,13 +70,13 @@ li { margin: 0 0 3pt; }
 <li>Monetizar a Música e registrá-la em sistemas de identificação de conteúdo, desde que como Música completa (com os elementos do Licenciado).</li>
 </ol>
 {% else %}
-<h2>2. Natureza da licença</h2>
+<h2>3. Natureza da licença</h2>
 <ol>
 <li>A licença é <strong>não exclusiva</strong>: o beat pode continuar sendo licenciado a outras pessoas, inclusive de forma exclusiva. Uma venda exclusiva futura não cancela esta licença.</li>
 <li>A licença vale para <strong>uma</strong> Música. Cada nova música exige uma nova licença.</li>
 </ol>
 
-<h2>3. Usos permitidos e limites</h2>
+<h2>4. Usos permitidos e limites</h2>
 <ol>
 <li>Distribuição em plataformas digitais (streaming e lojas) até <strong>{{ limites.streams }}</strong> reproduções somadas em todas as plataformas.</li>
 <li>Venda ou download pago até <strong>{{ limites.vendas }}</strong> unidades.</li>
@@ -74,28 +88,28 @@ li { margin: 0 0 3pt; }
 <p>Atingido qualquer limite, o Licenciado deve adquirir uma nova licença ou a licença exclusiva para continuar usando a Música.</p>
 {% endif %}
 
-<h2>4. Crédito e autoria</h2>
+<h2>5. Crédito e autoria</h2>
 <ol>
 <li>O Licenciado deve creditar o produtor como "prod. {{ produtor }}" na descrição e nos créditos de todas as publicações da Música, quando a plataforma permitir.</li>
 <li>O produtor continua sendo o autor do beat. Esta licença não transfere direitos autorais sobre o beat (Lei nº 9.610/1998).</li>
 <li>No registro da Música em associações de gestão coletiva, o produtor deve constar como coautor da parte instrumental.</li>
 </ol>
 
-<h2>5. Proibições</h2>
+<h2>6. Proibições</h2>
 <ol>
 <li>Revender, sublicenciar, ceder ou distribuir o beat sozinho, sem a Música.</li>
 <li>Registrar o beat sozinho como obra própria ou em sistemas de identificação de conteúdo (como o Content ID).</li>
 <li>Usar o beat em conteúdo ilícito, difamatório ou que viole direitos de terceiros.</li>
 </ol>
 
-<h2>6. Vigência e encerramento</h2>
+<h2>7. Vigência e encerramento</h2>
 <ol>
 <li>A licença vale por prazo indeterminado a partir da confirmação do pagamento, enquanto este contrato for cumprido.</li>
 <li>O descumprimento dos limites ou das proibições encerra a licença e autoriza o licenciante a pedir a retirada da Música das plataformas.</li>
 <li>Estorno, contestação ou cancelamento do pagamento encerra a licença.</li>
 </ol>
 
-<h2>7. Disposições gerais</h2>
+<h2>8. Disposições gerais</h2>
 <ol>
 <li>O beat é entregue no estado em que se encontra, nos formatos indicados acima.</li>
 <li>Este contrato é aceito eletronicamente com a aceitação da proposta e a confirmação do pagamento no site, e fica disponível na conta do Licenciado.</li>
@@ -104,7 +118,7 @@ li { margin: 0 0 3pt; }
 
 <div class="footer">
 <p>Licença nº {{ numero }} · {{ licenca_rotulo }} · Beat "{{ beat_titulo }}" · Licenciado: {{ cliente_nome }}</p>
-<p class="muted">Documento gerado pelo site do Mirai Hit Studio. Confirmação do pagamento em {{ data }}.</p>
+<p class="muted">Documento gerado pelo site do Mirai Hit Studio. {{ confirmacao_texto }}</p>
 </div>
 </body>
 </html>

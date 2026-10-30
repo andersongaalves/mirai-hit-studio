@@ -422,9 +422,15 @@ async function staticResponse(route) {
         assert.equal(await finalDelivery.getAttribute('open'), null);
         await finalDelivery.getByText('Enviar entrega final', { exact: true }).click();
         const category = finalDelivery.getByLabel('Tipo de entrega');
-        assert.deepEqual(await category.locator('option').allTextContents(), ['Instrumental', 'Outro tipo de entrega']);
-        assert.equal(await finalDelivery.getByText('Licença (PDF)').isVisible(), true);
+        assert.deepEqual(await category.locator('option').allTextContents(), ['Beat exclusivo', 'Outro tipo de entrega']);
+        assert.equal(await finalDelivery.getByLabel('Título do beat').isVisible(), true);
+        assert.equal(await finalDelivery.getByLabel('BPM').isVisible(), true);
+        assert.equal(await finalDelivery.getByLabel('Key / Tom').isVisible(), true);
+        assert.equal(await finalDelivery.getByLabel(/Compositores\/programadores adicionais/).isVisible(), true);
+        assert.equal(await finalDelivery.getByText(/licença exclusiva.*gerada automaticamente/i).isVisible(), true);
         await category.selectOption('outro');
+        assert.equal(await finalDelivery.getByLabel('Título da entrega').isVisible(), true);
+        assert.equal(await finalDelivery.getByLabel('BPM').isVisible(), false);
         assert.equal(await finalDelivery.getByText('WAV final').isVisible(), false);
         assert.equal(await finalDelivery.getByText('Arquivo principal').isVisible(), true);
         await finalDelivery.getByText('Enviar entrega final', { exact: true }).click();

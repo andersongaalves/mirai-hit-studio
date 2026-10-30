@@ -91,13 +91,15 @@ payload = {
     'request_id': '550e8400-e29b-41d4-a716-446655440000',
     'categoria': 'instrumental',
     'titulo': 'Instrumental final',
+    'bpm': '142',
+    'tonalidade': 'F# menor',
+    'creditos_adicionais': 'Melodista Um\\nProgramador Dois',
     'multitrack_url': 'https://drive.example.test/private-delivery',
     'observacao': 'Versao aprovada.',
 }
 files = {
     'arquivo_principal': ('final.mp3', b'mp3-final', 'audio/mpeg'),
     'wav': ('final.wav', b'wav-final', 'audio/wav'),
-    'licenca': ('licenca.pdf', b'%PDF-1.4 synthetic', 'application/pdf'),
 }
 with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
     created = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
@@ -105,11 +107,26 @@ with patch.object(producao_entrega_service, 'new_production_file_storage', retur
 assert created.status_code == 201, created.text
 delivery = created.json()
 assert delivery['categoria'] == 'instrumental'
+assert delivery['bpm'] == 142 and delivery['tonalidade'] == 'F# menor'
+assert delivery['creditos_adicionais'] == ['Melodista Um', 'Programador Dois']
 assert delivery['multitrack_disponivel'] is True and 'multitrack_url' not in delivery
 assert delivery['arquivo_principal']['nome_exibicao'] == 'final.mp3'
 assert delivery['wav_arquivo']['nome_exibicao'] == 'final.wav'
-assert delivery['licenca_arquivo']['nome_exibicao'] == 'licenca.pdf'
+assert delivery['licenca_arquivo']['nome_exibicao'] == 'instrumental-final-licenca-exclusiva.pdf'
 with Session(engine) as db:
+    license_file = db.get(ProducaoArquivoModel, delivery['licenca_arquivo']['id'])
+    license_pdf = storage.read(license_file.object_key)
+    assert license_pdf.startswith(b'%PDF-')
+    from io import BytesIO
+    from pypdf import PdfReader
+    license_text = ''.join(page.extract_text() for page in PdfReader(BytesIO(license_pdf)).pages)
+    assert 'Licença Exclusiva de Beat' in license_text
+    assert 'criado especificamente para o Licenciado' in license_text
+    assert 'Exclusiva sob encomenda' in license_text
+    assert 'Cliente A' in license_text and 'producer-a' in license_text
+    assert 'F# menor' in license_text and '142' in license_text
+    assert 'Melodista Um' in license_text and 'Programador Dois' in license_text
+    assert 'Vigência condicionada à quitação integral' in license_text
     assert db.query(ProducaoEntregaFinalModel).count() == 1
     assert db.query(ProducaoArquivoModel).filter_by(producao_id=PRODUCTION_ID, tipo='entrega').count() == 3
 
@@ -152,7 +169,7 @@ assert api.get(f'/portal/cliente/producoes/{PRODUCTION_ID}/entregas-finais', hea
 assert api.get(f"/portal/cliente/entregas-finais/{delivery['id']}/multitrack", headers=bearer('client-b')).status_code == 404
 ''')
 
-    def test_instrumental_requires_wav_multitrack_and_pdf_license(self):
+    def test_instrumental_requires_wav_and_multitrack_and_generates_exclusive_license(self):
         self.run_case('''
 with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
     invalid = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
@@ -163,6 +180,29 @@ assert invalid.status_code == 422, invalid.text
 with Session(engine) as db:
     assert db.query(ProducaoEntregaFinalModel).count() == 0
     assert db.query(ProducaoArquivoModel).filter_by(tipo='entrega').count() == 0
+
+files = {
+    'arquivo_principal': ('final.mp3', b'mp3', 'audio/mpeg'),
+    'wav': ('final.wav', b'wav', 'audio/wav'),
+    'licenca': ('manual.pdf', b'%PDF-manual', 'application/pdf'),
+}
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    manual = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
+        headers=bearer('producer-a'),
+        data={'request_id':'550e8400-e29b-41d4-a716-446655440002','categoria':'instrumental',
+              'titulo':'Beat exclusivo','bpm':'90','tonalidade':'D menor',
+              'multitrack_url':'https://drive.example.test/stems'},
+        files=files)
+assert manual.status_code == 422 and 'gerada automaticamente' in manual.json()['detail']
+
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    missing_sheet = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais',
+        headers=bearer('producer-a'),
+        data={'request_id':'550e8400-e29b-41d4-a716-446655440003','categoria':'instrumental',
+              'titulo':'Sem ficha','multitrack_url':'https://drive.example.test/stems'},
+        files={'arquivo_principal':('final.mp3',b'mp3','audio/mpeg'),
+               'wav':('final.wav',b'wav','audio/wav')})
+assert missing_sheet.status_code == 422 and 'BPM' in missing_sheet.json()['detail']
 ''')
 
     def test_delivery_held_until_paid(self):
