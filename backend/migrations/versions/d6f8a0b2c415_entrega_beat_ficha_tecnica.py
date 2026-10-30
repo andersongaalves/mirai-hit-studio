@@ -26,15 +26,29 @@ def upgrade():
             server_default=sa.text("'[]'"),
         ),
     )
-    op.create_check_constraint(
-        "ck_entregas_finais_bpm_valido",
-        "producao_entregas_finais",
-        "bpm IS NULL OR bpm BETWEEN 20 AND 300",
-    )
+    if op.get_bind().dialect.name == "sqlite":
+        with op.batch_alter_table("producao_entregas_finais") as batch:
+            batch.create_check_constraint(
+                "ck_entregas_finais_bpm_valido",
+                "bpm IS NULL OR bpm BETWEEN 20 AND 300",
+            )
+    else:
+        op.create_check_constraint(
+            "ck_entregas_finais_bpm_valido",
+            "producao_entregas_finais",
+            "bpm IS NULL OR bpm BETWEEN 20 AND 300",
+        )
 
 
 def downgrade():
-    op.drop_constraint("ck_entregas_finais_bpm_valido", "producao_entregas_finais", type_="check")
-    op.drop_column("producao_entregas_finais", "creditos_adicionais")
-    op.drop_column("producao_entregas_finais", "tonalidade")
-    op.drop_column("producao_entregas_finais", "bpm")
+    if op.get_bind().dialect.name == "sqlite":
+        with op.batch_alter_table("producao_entregas_finais") as batch:
+            batch.drop_constraint("ck_entregas_finais_bpm_valido", type_="check")
+            batch.drop_column("creditos_adicionais")
+            batch.drop_column("tonalidade")
+            batch.drop_column("bpm")
+    else:
+        op.drop_constraint("ck_entregas_finais_bpm_valido", "producao_entregas_finais", type_="check")
+        op.drop_column("producao_entregas_finais", "creditos_adicionais")
+        op.drop_column("producao_entregas_finais", "tonalidade")
+        op.drop_column("producao_entregas_finais", "bpm")
