@@ -1,12 +1,10 @@
 from typing import Annotated, Literal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_client
 from database import get_db
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from integrations.mercado_pago import (
     MercadoPagoClient,
     MercadoPagoError,
@@ -41,6 +39,7 @@ from services import (
     producao_solicitacao_service,
 )
 from services.producao_arquivo_storage import MAX_FILE_SIZE
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/portal/cliente", tags=["Portal do Cliente"])
 Db = Annotated[Session, Depends(get_db)]
