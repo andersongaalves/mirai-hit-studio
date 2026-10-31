@@ -9,10 +9,10 @@ implementado sem autorizacao do responsavel.
 | Campo | Estado atual |
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
-| Lote atual | Lotes 1 a 8 publicados |
-| Item em andamento | APL-S09-06: reorganizacao do Admin por processo, com formularios avancados recolhidos |
-| Proxima acao | Aguardar CI e revisao da PR #154; depois da #153, redirecionar a base para `main` antes da integracao |
-| Ultima atualizacao | 28/10/2026 |
+| Lote atual | Lotes 1 a 8 e itens APL-S08-05 a APL-S08-08 e APL-S09-06 publicados |
+| Item em andamento | Nenhum; R15 publicada (licenca exclusiva automatica na entrega de beat) |
+| Proxima acao | Retomar o proximo item pendente da Etapa 07; Admin preencher CPF dos beatmakers pendentes |
+| Ultima atualizacao | 31/10/2026 |
 
 ## 2. Regras
 
@@ -88,10 +88,10 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S08-02 | S08-002 | P2 | Falha de tag gera pendencia/aviso ao Admin com "Reprocessar" | Codigo; com APL-S11-01 | Publicado | #114 (lista no dashboard com Reprocessar; notificacao ao Admin segue com APL-S11-01) |
 | APL-S08-03 | S08-003, S08-005 | P3 | Seletor de arquivo estilizado em portugues; "Enviar para revisao" dentro da etapa | Codigo | Publicado | #110 (seletor) e #118 (acao geral dentro do resumo) |
 | APL-S08-04 | S08-007 | P3 | Nao permitir versionar arquivo oculto para o produtor | Codigo | Publicado | #110 |
-| APL-S08-05 | Pedido do responsavel | P3 | Configuracoes > Audio e tags: controlar nivelamento automatico, alvo relativo, faixa de ganho, silencio, limiter, intervalo e fallback; gerar MP3 temporario escolhendo beat ou audio de producao finalizada e qualquer versao de tag | Codigo + migration `b4d6f8a0c2e5` | Em validacao | #153 |
-| APL-S08-06 | Pedido do responsavel | P3 | Produtor pode excluir somente a propria previa mais recente; versoes substituidas e anexos de mensagens permanecem protegidos; original e derivada com tag usam limpeza exata | Codigo | Em validacao | #153 |
-| APL-S08-07 | Pedido do responsavel | P2 | Entrega final estruturada no Portal do Produtor: seletor Instrumental/Outro, pacote privado com MP3, WAV, multitrack por arquivo ou link e licenca PDF; liberacao ao cliente segue a quitacao existente | Codigo + migration `c5e7a9b1d304` | Publicado | #156 |
-| APL-S08-08 | Pedido do responsavel | P2 | Entrega de beat sob encomenda e sempre exclusiva; gerar automaticamente a licenca PDF com cliente, produtor, proposta, pacote e ficha tecnica congelada (BPM, tom, produtor e colaboradores), sem upload manual | Codigo + migration `d6f8a0b2c415` | Em PR | #157 |
+| APL-S08-05 | Pedido do responsavel | P3 | Configuracoes > Audio e tags: controlar nivelamento automatico, alvo relativo, faixa de ganho, silencio, limiter, intervalo e fallback; gerar MP3 temporario escolhendo beat ou audio de producao finalizada e qualquer versao de tag | Codigo + migration `b4d6f8a0c2e5` | Publicado | #153; release `40793684027` |
+| APL-S08-06 | Pedido do responsavel | P3 | Produtor pode excluir somente a propria previa mais recente; versoes substituidas e anexos de mensagens permanecem protegidos; original e derivada com tag usam limpeza exata | Codigo | Publicado | #153; release `40793684027` |
+| APL-S08-07 | Pedido do responsavel | P2 | Entrega final estruturada no Portal do Produtor: seletor Instrumental/Outro, pacote privado com MP3, WAV, multitrack por arquivo ou link e licenca PDF; liberacao ao cliente segue a quitacao existente | Codigo + migration `c5e7a9b1d304` | Publicado | #156; release `40980429960` |
+| APL-S08-08 | Pedido do responsavel | P2 | Entrega de beat sob encomenda e sempre exclusiva; gerar automaticamente a licenca PDF com cliente, produtor, proposta, pacote e ficha tecnica congelada (BPM, tom, produtor e colaboradores), sem upload manual | Codigo + migration `d6f8a0b2c415` | Publicado | #157; release `41210124477` (R15) |
 
 ### S09 - Administracao operacional ([diagnostico](auditoria/S09_ADMIN_OPERACIONAL.md))
 
@@ -102,7 +102,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S09-03 | S09-003, 004, 005 | P3 | Dashboard sem blocos repetidos; carregar secoes sob demanda; textos com acento e erros humanos | Codigo/texto | Publicado | #115 (acentos) e #135 (sem blocos repetidos; secoes sob demanda) |
 | APL-S09-04 | S09-006 | P3 | Busca global | Codigo | Publicado | #136 |
 | APL-S09-05 | S09-007 | P3 | `PUT /config` sem a linha `id=1` | Codigo | Publicado | #115 |
-| APL-S09-06 | Pedido do responsavel | P3 | Reorganizar navegacao e telas do Admin por processo; mover segmentos para Portfolio e precos para Servicos; recolher editores, filtros e operacoes avancadas; dividir o detalhe da producao por etapa | Codigo + testes de navegador | Em PR | #154 (empilhada sobre #153) |
+| APL-S09-06 | Pedido do responsavel | P3 | Reorganizar navegacao e telas do Admin por processo; mover segmentos para Portfolio e precos para Servicos; recolher editores, filtros e operacoes avancadas; dividir o detalhe da producao por etapa | Codigo + testes de navegador | Publicado | #154; release `40793684027` |
 
 ### S05 - Propostas ([diagnostico](auditoria/S05_PROPOSTAS.md))
 
@@ -181,6 +181,9 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 31/10/2026 | APL-S08-08 (R15) | #157 publicado no SHA `1dacab2e2954405cdddb78e17522bf84af172358`: entrega de beat sob encomenda sempre exclusiva, com licenca PDF gerada pelo sistema e ficha tecnica (BPM, tom, produtor e colaboradores). Antes: #158 corrigiu a ordem dos imports de `routers/portal_cliente.py` que quebrava o Portals E2E na main desde o #156. Backup `41208386009`; migration aditiva `d6f8a0b2c415` aplicada e verificada (3 colunas, 1 constraint; tabela vazia). Gate `41208611377`, evidencia Storage `41209969703`, dry-run `41210071706` e publicacao `41210124477`. Ref. `CTRL-20261031-R15-LICENCA-EXCLUSIVA-ENTREGA`; Commercial V2 `true` | Retomar o proximo item pendente |
+| 29/10/2026 | APL-S08-07 | #156 publicado no SHA `3a17ee7e6256497ec4d02fbf926447ff9f695c31`: entrega final estruturada. Backup `40950922519`; migration `c5e7a9b1d304` aplicada (tabela `producao_entregas_finais` vazia). Gate `40950763038`, evidencia Storage `40980182962`, dry-run `40980326282` e publicacao `40980429960` (primeira tentativa `40980076460` falhou na verificacao de evidencia e foi repetida) | - |
+| 28/10/2026 | APL-S08-05, APL-S08-06 e APL-S09-06 | #153 e #154 publicadas no SHA `fdb3841ee29886e8f218f31fdfdf9506c748a9aa`. Backup `40789807717`; migration aditiva `b4d6f8a0c2e5` aplicada e verificada (12 colunas, 12 constraints, zero linhas invalidas); gate final `40791554966`; smokes reais e evidencia HMAC `40793289970`; dry-run `40793586147`; release Render + Cloudflare `40793684027`. Ref. `CTRL-20261028-S08-S09-PUBLISH`; Commercial V2 permaneceu `true` | - |
 | 30/10/2026 | APL-S08-08 | PR #157 aberta: PDF manual substituido por licenca exclusiva gerada pelo sistema, com ficha tecnica persistida (BPM, tom, produtor responsavel e ate 10 colaboradores); backend, migrations, contrato e portais validados localmente | Aguardar CI e revisao; migration e publicacao exigem autorizacao separada |
 | 28/10/2026 | APL-S09-06 | PR #154 aberta sobre a #153: navegacao agrupada por processo; precos adicionais em Servicos; segmentos em Portfolio; Configuracoes restrita a Audio/tags e Portais; detalhe da producao dividido em cinco etapas; editores de Beats, Audio/tags, Portais, filtros avancados e Pix direto recolhidos por padrao. Testes focados e revisao visual concluidos; sem merge, migration ou deploy | Aguardar CI e revisao; depois da #153, redirecionar a base da #154 para `main` |
 | 28/10/2026 | APL-S08-05 e APL-S08-06 | PR #153: controles completos em Configuracoes > Audio e tags, gerador temporario com fontes privadas elegiveis e todas as tags, snapshot dos parametros na fila e exclusao segura da ultima previa pelo produtor. Migration nova ainda nao aplicada; sem merge ou deploy | Validar CI e solicitar autorizacao separada para merge/migration/publicacao |
