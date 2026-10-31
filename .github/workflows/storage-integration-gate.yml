@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["c5e7a9b1d304"], heads
+                  assert heads == ["d6f8a0b2c415"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -375,6 +375,7 @@ jobs:
                     backend/services/producao_arquivo_storage.py \
                     backend/services/producao_arquivo_service.py \
                     backend/services/producao_entrega_service.py \
+                    backend/services/producao_licenca_service.py \
                     backend/services/cota_arquivo_service.py \
                     backend/models/portal_produtor.py \
                     backend/routers/portal_produtor.py \
@@ -422,6 +423,7 @@ jobs:
                     backend/migrations/versions/a3c5e7f9b1d4_especialidades_cpf_produtor.py \
                     backend/migrations/versions/b4d6f8a0c2e5_audio_tag_level_controls.py \
                     backend/migrations/versions/c5e7a9b1d304_entregas_finais_estruturadas.py \
+                    backend/migrations/versions/d6f8a0b2c415_entrega_beat_ficha_tecnica.py \
                     backend/core/proposta_mudancas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
@@ -492,7 +494,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic c5e7a9b1d304: passed"
+                    echo "- PostgreSQL 17 and Alembic d6f8a0b2c415: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

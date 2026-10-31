@@ -5,9 +5,16 @@ it again at any time from the purchased beat.
 """
 import base64
 
-from models import BeatLicencaModel, BeatModel, ClienteModel, PropostaModel, UsuarioModel
+from jinja2 import TemplateError
+from models import (
+    BeatLicencaModel,
+    BeatModel,
+    ClienteModel,
+    PropostaModel,
+    UsuarioModel,
+)
 from services.documento_storage import DocumentoIndisponivel
-from services.pdf_service import BRASILIA, ROOT, TEMPLATES, gerar_pdf
+from services.pdf_service import BRASILIA, ROOT, TEMPLATES, gerar_pdf, moeda
 
 # Business terms of the non-exclusive (lease) license; reviewed by the studio.
 LIMITES_LEASE = {
@@ -39,6 +46,42 @@ class ContratoNaoEncontrado(Exception):
     pass
 
 
+def gerar_documento(*, numero, data, proposta_numero, exclusivo, licenca_rotulo,
+                    formatos, valor_texto, beat_titulo, produtor, produtor_cpf,
+                    cliente_nome, cliente_email, sob_encomenda=False,
+                    valor_rotulo="Valor pago", confirmacao_texto=None,
+                    bpm=None, tonalidade=None, creditos_adicionais=None):
+    """Render a private beat license from already-authorized business data."""
+    try:
+        logo = "data:image/png;base64," + base64.b64encode(
+            (ROOT / "frontend" / "assets" / "logo_proposta.png").read_bytes()).decode("ascii")
+        html = TEMPLATES.get_template("contrato_beat.html").render(
+            numero=numero,
+            data=data,
+            proposta_numero=proposta_numero,
+            exclusivo=exclusivo,
+            licenca_rotulo=licenca_rotulo,
+            formatos=formatos,
+            valor_texto=valor_texto,
+            valor_rotulo=valor_rotulo,
+            beat_titulo=beat_titulo,
+            produtor=produtor,
+            produtor_cpf=produtor_cpf,
+            cliente_nome=cliente_nome,
+            cliente_email=cliente_email,
+            limites=LIMITES_LEASE,
+            logo=logo,
+            sob_encomenda=sob_encomenda,
+            confirmacao_texto=(confirmacao_texto or f"Confirmação do pagamento em {data}."),
+            bpm=bpm,
+            tonalidade=tonalidade or "Não informado",
+            creditos_adicionais=creditos_adicionais or [],
+        )
+    except (OSError, TemplateError):
+        raise DocumentoIndisponivel("Não foi possível montar o contrato.") from None
+    return gerar_pdf(html)
+
+
 def _license(db, licenca_id, cliente_id=None):
     license = db.get(BeatLicencaModel, licenca_id)
     if (
@@ -66,26 +109,22 @@ def gerar(db, licenca_id, *, cliente_id=None):
     # The beatmaker CPF identifies the licensor; it appears only in this private contract.
     cpf = getattr(producer, "cpf", None) or ""
     producer_cpf = f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}" if len(cpf) == 11 and cpf.isdigit() else None
-    try:
-        logo = "data:image/png;base64," + base64.b64encode(
-            (ROOT / "frontend" / "assets" / "logo_proposta.png").read_bytes()).decode("ascii")
-        html = TEMPLATES.get_template("contrato_beat.html").render(
-            numero=f"MHS-BEAT-{license.id:06d}",
-            data=license.adquirida_em.astimezone(BRASILIA).strftime("%d/%m/%Y"),
-            proposta_numero=getattr(proposal, "numero", "-") or "-",
-            exclusivo=license.tipo == "exclusivo",
-            licenca_rotulo=ROTULOS.get(license.tipo, license.tipo),
-            formatos=FORMATOS.get(license.tipo, "-"),
-            valor=license.valor,
-            beat_titulo=beat.titulo,
-            produtor=producer_name,
-            produtor_cpf=producer_cpf,
-            cliente_nome=client.nome,
-            cliente_email=client.email or "-",
-            limites=LIMITES_LEASE,
-            logo=logo,
-        )
-    except Exception:
-        raise DocumentoIndisponivel("Não foi possível montar o contrato.") from None
+    data = license.adquirida_em.astimezone(BRASILIA).strftime("%d/%m/%Y")
+    content = gerar_documento(
+        numero=f"MHS-BEAT-{license.id:06d}",
+        data=data,
+        proposta_numero=getattr(proposal, "numero", "-") or "-",
+        exclusivo=license.tipo == "exclusivo",
+        licenca_rotulo=ROTULOS.get(license.tipo, license.tipo),
+        formatos=FORMATOS.get(license.tipo, "-"),
+        valor_texto=moeda(license.valor),
+        beat_titulo=beat.titulo,
+        produtor=producer_name,
+        produtor_cpf=producer_cpf,
+        cliente_nome=client.nome,
+        cliente_email=client.email or "-",
+        bpm=beat.bpm,
+        tonalidade=beat.tonalidade,
+    )
     filename = _download_name(beat, f"-contrato-{license.tipo.replace('_', '-')}", "pdf")
-    return gerar_pdf(html), filename
+    return content, filename

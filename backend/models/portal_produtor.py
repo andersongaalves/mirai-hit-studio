@@ -1,6 +1,8 @@
 from uuid import uuid4
 
+from database import Base
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Column,
@@ -13,10 +15,9 @@ from sqlalchemy import (
     UniqueConstraint,
     false,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-
-from database import Base
 
 
 class ProducaoArquivoModel(Base):
@@ -136,6 +137,10 @@ class ProducaoEntregaFinalModel(Base):
             "AND ((multitrack_arquivo_id IS NOT NULL) <> (multitrack_url IS NOT NULL)))",
             name="ck_entregas_finais_instrumental_completo",
         ),
+        CheckConstraint(
+            "bpm IS NULL OR bpm BETWEEN 20 AND 300",
+            name="ck_entregas_finais_bpm_valido",
+        ),
         UniqueConstraint("request_id", name="uq_entregas_finais_request_id"),
         UniqueConstraint("arquivo_principal_id", name="uq_entregas_finais_principal"),
         UniqueConstraint("wav_arquivo_id", name="uq_entregas_finais_wav"),
@@ -150,6 +155,14 @@ class ProducaoEntregaFinalModel(Base):
     produtor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False, index=True)
     categoria = Column(String(20), nullable=False)
     titulo = Column(String(150), nullable=False)
+    bpm = Column(Integer, nullable=True)
+    tonalidade = Column(String(20), nullable=True)
+    creditos_adicionais = Column(
+        JSON().with_variant(JSONB(), "postgresql"),
+        nullable=False,
+        default=list,
+        server_default="[]",
+    )
     arquivo_principal_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="RESTRICT"), nullable=False)
     wav_arquivo_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="RESTRICT"), nullable=True)
     multitrack_arquivo_id = Column(Integer, ForeignKey("producao_arquivos.id", ondelete="RESTRICT"), nullable=True)

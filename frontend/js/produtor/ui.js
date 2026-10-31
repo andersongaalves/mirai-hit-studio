@@ -246,9 +246,12 @@ function deliveryFilePicker(name, label, accept, required = false) {
 function deliveryCard(delivery, handlers) {
     const card = element("article", "final-delivery-card");
     card.append(
-        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Instrumental" : "Outra entrega"),
+        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Outra entrega"),
         element("h3", "", delivery.titulo),
     );
+    if (delivery.categoria === "instrumental" && delivery.bpm && delivery.tonalidade) {
+        card.append(element("p", "file-note", `${delivery.bpm} BPM · ${delivery.tonalidade}`));
+    }
     if (delivery.observacao) card.append(element("p", "file-note", delivery.observacao));
     const actions = element("div", "final-delivery-card__actions");
     const addFile = (file, label) => {
@@ -280,14 +283,15 @@ function finalDeliveryForm(production, handlers) {
     categoryLabel.append(element("span", "", "Tipo de entrega"));
     const category = element("select");
     category.name = "categoria";
-    [["instrumental", "Instrumental"], ["outro", "Outro tipo de entrega"]].forEach(([value, label]) => {
+    [["instrumental", "Beat exclusivo"], ["outro", "Outro tipo de entrega"]].forEach(([value, label]) => {
         const option = element("option", "", label);
         option.value = value;
         category.append(option);
     });
     categoryLabel.append(category);
     const titleLabel = element("label", "final-delivery-form__field");
-    titleLabel.append(element("span", "", "Título"));
+    const titleText = element("span", "", "Título do beat");
+    titleLabel.append(titleText);
     const title = element("input");
     title.name = "titulo";
     title.maxLength = 150;
@@ -295,6 +299,30 @@ function finalDeliveryForm(production, handlers) {
     titleLabel.append(title);
     const main = deliveryFilePicker("arquivo_principal", "MP3 final", ".mp3,audio/mpeg", true);
     const instrumental = element("div", "final-delivery-form__instrumental");
+    const bpmLabel = element("label", "final-delivery-form__field");
+    bpmLabel.append(element("span", "", "BPM"));
+    const bpm = element("input");
+    bpm.name = "bpm";
+    bpm.type = "number";
+    bpm.min = "20";
+    bpm.max = "300";
+    bpm.step = "1";
+    bpmLabel.append(bpm);
+    const keyLabel = element("label", "final-delivery-form__field");
+    keyLabel.append(element("span", "", "Key / Tom"));
+    const key = element("input");
+    key.name = "tonalidade";
+    key.maxLength = 20;
+    key.placeholder = "Ex.: C# menor";
+    keyLabel.append(key);
+    const creditsLabel = element("label", "final-delivery-form__field final-delivery-form__full");
+    creditsLabel.append(element("span", "", "Compositores/programadores adicionais (opcional)"));
+    const credits = element("textarea");
+    credits.name = "creditos_adicionais";
+    credits.maxLength = 1200;
+    credits.rows = 3;
+    credits.placeholder = "Um nome por linha";
+    creditsLabel.append(credits);
     const wav = deliveryFilePicker("wav", "WAV final", ".wav,audio/wav,audio/x-wav", true);
     const sourceLabel = element("label", "final-delivery-form__field");
     sourceLabel.append(element("span", "", "Origem do multitrack"));
@@ -315,8 +343,12 @@ function finalDeliveryForm(production, handlers) {
     multitrackUrl.placeholder = "https://drive.google.com/...";
     linkLabel.append(multitrackUrl);
     const archive = deliveryFilePicker("multitrack", "Multitrack", ".zip,.rar,application/zip,application/vnd.rar");
-    const license = deliveryFilePicker("licenca", "Licença (PDF)", ".pdf,application/pdf", true);
-    instrumental.append(wav.wrapper, sourceLabel, linkLabel, archive.wrapper, license.wrapper);
+    const licenseHint = element(
+        "p",
+        "final-delivery-form__hint",
+        "A licença exclusiva, em nome do cliente, será gerada automaticamente.",
+    );
+    instrumental.append(bpmLabel, keyLabel, creditsLabel, wav.wrapper, sourceLabel, linkLabel, archive.wrapper, licenseHint);
     const noteLabel = element("label", "final-delivery-form__field final-delivery-form__full");
     noteLabel.append(element("span", "", "Observação (opcional)"));
     const note = element("textarea");
@@ -331,8 +363,9 @@ function finalDeliveryForm(production, handlers) {
     const sync = () => {
         const isInstrumental = category.value === "instrumental";
         instrumental.hidden = !isInstrumental;
-        [...instrumental.querySelectorAll("input, select")].forEach(field => { field.disabled = !isInstrumental; });
+        [...instrumental.querySelectorAll("input, select, textarea")].forEach(field => { field.disabled = !isInstrumental; });
         main.wrapper.querySelector("span").textContent = isInstrumental ? "MP3 final" : "Arquivo principal";
+        titleText.textContent = isInstrumental ? "Título do beat" : "Título da entrega";
         main.input.accept = isInstrumental ? ".mp3,audio/mpeg" : ".pdf,.zip,.rar,.mp3,.wav,.flac,.m4a,.mp4";
         const byLink = source.value === "link";
         linkLabel.hidden = !byLink;
@@ -342,7 +375,8 @@ function finalDeliveryForm(production, handlers) {
         archive.input.disabled = !isInstrumental || byLink;
         archive.input.required = isInstrumental && !byLink;
         wav.input.required = isInstrumental;
-        license.input.required = isInstrumental;
+        bpm.required = isInstrumental;
+        key.required = isInstrumental;
     };
     category.addEventListener("change", sync);
     source.addEventListener("change", sync);
