@@ -10,9 +10,9 @@ implementado sem autorizacao do responsavel.
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
 | Lote atual | Lotes 1 a 8 e itens APL-S08-05 a APL-S08-08 e APL-S09-06 publicados |
-| Item em andamento | Nenhum; R15 publicada (licenca exclusiva automatica na entrega de beat) |
+| Item em andamento | Nenhum; R16 publicada (formularios do Admin) |
 | Proxima acao | Retomar o proximo item pendente da Etapa 07; Admin preencher CPF dos beatmakers pendentes |
-| Ultima atualizacao | 31/10/2026 |
+| Ultima atualizacao | 01/11/2026 |
 
 ## 2. Regras
 
@@ -181,6 +181,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 01/11/2026 | Pedido do responsavel (R16) | #160 publicado no SHA `48567487738c25d519407c1374927314ce432e7b`: auditoria dos formularios do Admin (capturas de todas as secoes e modais e verificacao do DOM) e sistema unico de formularios (`css/components/admin-forms.css`); corrigidos 5 botoes sem estilo, 14 campos sem rotulo ligado, especialidades do usuario e Pix direto; Orcamento, Projeto, Editor de servico, Nova producao, Proposta e Cobranca reorganizados; modais focam o primeiro campo. Gate `41311882273`, evidencia Storage `41313231108`, dry-run `41313306260` e publicacao `41313362081`. Ref. `CTRL-20261101-R16-FORMULARIOS-ADMIN`; sem migration; Commercial V2 `true` | Trocar o ID do produtor da proposta por lista de produtores |
 | 31/10/2026 | APL-S08-08 (R15) | #157 publicado no SHA `1dacab2e2954405cdddb78e17522bf84af172358`: entrega de beat sob encomenda sempre exclusiva, com licenca PDF gerada pelo sistema e ficha tecnica (BPM, tom, produtor e colaboradores). Antes: #158 corrigiu a ordem dos imports de `routers/portal_cliente.py` que quebrava o Portals E2E na main desde o #156. Backup `41208386009`; migration aditiva `d6f8a0b2c415` aplicada e verificada (3 colunas, 1 constraint; tabela vazia). Gate `41208611377`, evidencia Storage `41209969703`, dry-run `41210071706` e publicacao `41210124477`. Ref. `CTRL-20261031-R15-LICENCA-EXCLUSIVA-ENTREGA`; Commercial V2 `true` | Retomar o proximo item pendente |
 | 29/10/2026 | APL-S08-07 | #156 publicado no SHA `3a17ee7e6256497ec4d02fbf926447ff9f695c31`: entrega final estruturada. Backup `40950922519`; migration `c5e7a9b1d304` aplicada (tabela `producao_entregas_finais` vazia). Gate `40950763038`, evidencia Storage `40980182962`, dry-run `40980326282` e publicacao `40980429960` (primeira tentativa `40980076460` falhou na verificacao de evidencia e foi repetida) | - |
 | 28/10/2026 | APL-S08-05, APL-S08-06 e APL-S09-06 | #153 e #154 publicadas no SHA `fdb3841ee29886e8f218f31fdfdf9506c748a9aa`. Backup `40789807717`; migration aditiva `b4d6f8a0c2e5` aplicada e verificada (12 colunas, 12 constraints, zero linhas invalidas); gate final `40791554966`; smokes reais e evidencia HMAC `40793289970`; dry-run `40793586147`; release Render + Cloudflare `40793684027`. Ref. `CTRL-20261028-S08-S09-PUBLISH`; Commercial V2 permaneceu `true` | - |
