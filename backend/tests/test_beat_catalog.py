@@ -68,15 +68,16 @@ async def check():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
             denied = await api.post('/portal/produtor/beats', headers=bearer('producer-b'), data={'titulo':'Nope','preco_lease':'50'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg'),'capa':('cover.png',png(),'image/png')})
             assert denied.status_code == 403
-            created = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Horizonte','bpm':'140','generos':'Trap','preco_lease':'100','preco_wav':'200','preco_multitrack':'300','preco_exclusivo':'500'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg'),'wav':('beat.wav',wav(),'audio/wav'),'multitrack':('beat.zip',b'PK\x03\x04more','application/zip'),'capa':('cover.png',png(),'image/png')})
+            created = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Horizonte','bpm':'140','generos':'Trap','moods':'Dark, Melancólico','preco_lease':'100','preco_wav':'200','preco_multitrack':'300','preco_exclusivo':'500'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg'),'wav':('beat.wav',wav(),'audio/wav'),'multitrack':('beat.zip',b'PK\x03\x04more','application/zip'),'capa':('cover.png',png(),'image/png')})
             assert created.status_code == 201, created.text
             beat_id = created.json()['id']
             assert created.json()['status'] == 'revisao' and len(storage.objects) == 4
             assert created.json()['capa_url'].startswith('https://images.example.test/') and len(images.objects) == 1
             assert created.json()['preco_wav_base'] == 200 and created.json()['preco_multitrack_base'] == 300
+            assert created.json()['moods'] == 'Dark, Melancólico'
             assert (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json() == []
             assert (await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))).status_code == 404
-            changed = await api.put(f'/admin/beats/{beat_id}', headers=bearer('admin'), data={'titulo':'Horizonte revisado','descricao':'Nova descricao','bpm':'142','tonalidade':'Am','generos':'Trap','preco_lease':'110','preco_wav':'220','preco_multitrack':'330','preco_exclusivo':'550'})
+            changed = await api.put(f'/admin/beats/{beat_id}', headers=bearer('admin'), data={'titulo':'Horizonte revisado','descricao':'Nova descricao','bpm':'142','tonalidade':'Am','generos':'Trap','moods':'Dark, Energético','preco_lease':'110','preco_wav':'220','preco_multitrack':'330','preco_exclusivo':'550'})
             assert changed.status_code == 200, changed.text
             assert changed.json()['titulo'] == 'Horizonte revisado' and changed.json()['preco_lease_base'] == 110
             approved = await api.patch(f'/admin/beats/{beat_id}', headers=bearer('admin'), json={'decisao':'aprovar','motivo':''})
@@ -97,6 +98,8 @@ async def check():
             catalog = (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json()
             assert [item['id'] for item in catalog] == [beat_id]
             assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330 and catalog[0]['capa_url']
+            # Catalog filters: genre, mood, producer, key and BPM come with each beat.
+            assert catalog[0]['moods'] == 'Dark, Energético' and catalog[0]['tonalidade'] == 'Am' and catalog[0]['bpm'] == 142
             assert not {'produtor_id', 'status', 'ativo', 'motivo_rejeicao'} & set(catalog[0])
             preview = await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))
             assert preview.content == mp3()+b'tag' and preview.headers['cache-control'] == 'private, no-store'

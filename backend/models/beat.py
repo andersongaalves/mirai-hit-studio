@@ -65,6 +65,7 @@ class BeatModel(Base):
     bpm = Column(Integer, nullable=True)
     tonalidade = Column(String(24), nullable=True)
     generos = Column(String(240), nullable=False, default="", server_default="")
+    moods = Column(String(240), nullable=False, default="", server_default="")
     preco_lease = Column(Numeric(12, 2), nullable=True)
     preco_wav = Column(Numeric(12, 2), nullable=True)
     preco_multitrack = Column(Numeric(12, 2), nullable=True)

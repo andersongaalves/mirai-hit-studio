@@ -236,7 +236,8 @@ async function staticResponse(route) {
         }
         if (url.pathname === '/portal/cliente/beats') {
             return route.fulfill({ json: [
-                { id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString(), vendido: false },
+                { id: 71, produtor_id: 2, produtor: '<Producer>', titulo: '<Horizonte>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', moods: 'Dark', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString(), vendido: false },
+                { id: 74, produtor: 'Lia', titulo: 'Céu de agosto', descricao: '', bpm: 95, tonalidade: 'C#m', generos: 'R&B, Pop', moods: 'Romântico', preco_lease: null, preco_wav: null, preco_multitrack: null, preco_exclusivo: '900.00', created_at: new Date().toISOString(), vendido: false },
                 { id: 73, produtor: '<Producer>', titulo: '<Vendido>', descricao: '', bpm: 90, tonalidade: null, generos: 'Boom bap', preco_lease: null, preco_wav: null, preco_multitrack: null, preco_exclusivo: null, created_at: new Date().toISOString(), vendido: true },
             ] });
         }
@@ -350,6 +351,43 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#client-beats-list .client-beat-card__content').first().evaluate(element => (
             element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
         )), true, 'client beat content must fit inside the square');
+        // Catalog filters: genre, mood, producer, key, BPM and search, combined; state in the URL.
+        const filters = page.getByRole('search', { name: 'Filtrar beats' });
+        const visibleTitles = () => page.locator('#client-beats-list .beat-card:not([hidden]) h3').allTextContents();
+        assert.equal(await filters.locator('.beat-filters__summary').textContent(), '3 beats');
+        assert.deepEqual(await page.locator('#client-beats-list .beat-card').first().locator('.beat-card__tags li').allTextContents(), ['Trap', 'Dark']);
+        await filters.getByLabel('Gênero').selectOption('Pop');
+        assert.deepEqual(await visibleTitles(), ['Céu de agosto']);
+        assert.equal(await filters.locator('.beat-filters__summary').textContent(), '1 de 3 beats');
+        assert.match(new URL(page.url()).search, /genero=Pop/);
+        // Options that cannot combine with the active filters are unavailable.
+        assert.equal(await filters.getByLabel('Produtor').locator('option[value="<Producer>"]').evaluate(option => option.disabled), true);
+        await filters.getByLabel('Gênero').selectOption('');
+        await filters.getByLabel('Mood').selectOption('Dark');
+        await filters.getByLabel('Key').selectOption('Am');
+        await filters.getByLabel('Produtor').selectOption('<Producer>');
+        assert.deepEqual(await visibleTitles(), ['<Horizonte>']);
+        await filters.getByLabel('Mood').selectOption('');
+        await filters.getByLabel('Key').selectOption('');
+        await filters.getByLabel('Produtor').selectOption('');
+        await filters.getByLabel('BPM mín.').fill('91');
+        await filters.getByLabel('BPM máx.').fill('120');
+        assert.deepEqual(await visibleTitles(), ['Céu de agosto']);
+        await filters.getByLabel('BPM mín.').fill('150');
+        assert.deepEqual(await visibleTitles(), []);
+        assert.equal(await page.locator('.beat-filters__empty').isVisible(), true);
+        await filters.getByRole('button', { name: 'Limpar filtros' }).click();
+        assert.equal((await visibleTitles()).length, 3);
+        assert.equal(new URL(page.url()).search, '');
+        await filters.getByLabel('Buscar').fill('romantico');
+        assert.deepEqual(await visibleTitles(), ['Céu de agosto']);
+        await page.reload();
+        await page.waitForSelector('#client-beats-list .producer-card:not([hidden])');
+        assert.equal(await page.getByRole('search', { name: 'Filtrar beats' }).getByLabel('Buscar').inputValue(), 'romantico');
+        assert.deepEqual(await visibleTitles(), ['Céu de agosto']);
+        await page.getByRole('search', { name: 'Filtrar beats' }).getByRole('button', { name: 'Limpar filtros' }).click();
+        await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);
+
         await page.getByRole('button', { name: /MP3 lease/ }).click();
         await page.waitForURL('**/checkout?proposta=91');
         await page.goBack();

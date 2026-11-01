@@ -33,6 +33,7 @@ class BeatCreate(BaseModel):
     bpm: int | None = Field(default=None, ge=30, le=300)
     tonalidade: str | None = Field(default=None, max_length=24)
     generos: str = Field(default="", max_length=240)
+    moods: str = Field(default="", max_length=240)
     preco_lease: Decimal | None = Field(
         default=None, gt=0, max_digits=12, decimal_places=2
     )
@@ -75,6 +76,7 @@ class BeatResponse(BaseModel):
     bpm: int | None
     tonalidade: str | None
     generos: str
+    moods: str = ""
     preco_lease: Decimal | None
     preco_exclusivo: Decimal | None
     status: str

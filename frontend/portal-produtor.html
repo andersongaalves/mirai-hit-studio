@@ -14,6 +14,7 @@
         <link rel="stylesheet" href="/css/components/production-messages.css" />
         <link rel="stylesheet" href="/css/components/production-stages.css" />
         <link rel="stylesheet" href="/css/components/file-player.css" />
+        <link rel="stylesheet" href="/css/components/beat-filters.css" />
         <link rel="stylesheet" href="/css/components/file-quotas.css" />
         <link rel="stylesheet" href="/css/components/portal-notifications.css" />
         <link rel="stylesheet" href="/css/components/portfolio-submissions.css" />
@@ -153,7 +154,8 @@
                                     <label class="portal-field portal-field--full">Título<input name="titulo" maxlength="160" required /></label>
                                     <label class="portal-field">BPM<input name="bpm" type="number" min="30" max="300" /></label>
                                     <label class="portal-field">Key<input name="tonalidade" maxlength="24" placeholder="Ex.: C# menor" /></label>
-                                    <label class="portal-field portal-field--full">Gêneros<input name="generos" maxlength="240" placeholder="Ex.: Trap, R&amp;B" /></label>
+                                    <label class="portal-field">Gêneros<input name="generos" maxlength="240" placeholder="Ex.: Trap, R&amp;B" /><small>Separe por vírgula.</small></label>
+                                    <label class="portal-field">Moods<input name="moods" maxlength="240" placeholder="Ex.: Dark, Melancólico" /><small>Separe por vírgula. Ajuda o cliente a filtrar o catálogo.</small></label>
                                     <label class="portal-field portal-field--full">Descrição<textarea name="descricao" maxlength="5000"></textarea></label>
                                     <label class="portal-field portal-field--full">Capa<input name="capa" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required /></label>
                                 </div>

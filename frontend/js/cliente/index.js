@@ -8,6 +8,7 @@ import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { startAccountPassword } from "../modules/account_password.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
+import { mountBeatFilters, splitList } from "../modules/beat_filters.js";
 import { selectStage, setStages } from "../modules/stage_files.js";
 import {
     applySettings,
@@ -286,18 +287,23 @@ async function loadBeats() {
             license.textContent = `Licença: ${{ lease: "Lease MP3", lease_mp3: "Lease MP3", lease_wav: "Lease WAV", multitrack: "Lease Multitrack", exclusivo: "Exclusiva" }[item.licenca] || item.licenca}`;
             card.append(title, license, actions); return card;
         }));
-        list.replaceChildren(...beats.map(beat => {
+        const cards = beats.map(beat => {
             const card = document.createElement("article"); card.className = "producer-card beat-card client-beat-card";
             const content = document.createElement("div"); content.className = "client-beat-card__content";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
             let cover = null;
             if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; }
             const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
+            // Genres and moods as tags; the catalog filters use the same values.
+            const tags = [...splitList(beat.generos), ...splitList(beat.moods)];
+            const tagList = document.createElement("ul"); tagList.className = "beat-card__tags"; tagList.setAttribute("aria-label", "Gêneros e moods");
+            tags.forEach(tag => { const item = document.createElement("li"); item.textContent = tag; tagList.append(item); });
+            const info = tags.length ? [author, tagList] : [author];
             if (beat.vendido) {
                 // Sold with exclusivity: shown as sold, without preview or purchase.
                 card.classList.add("beat-card--sold");
                 const sold = document.createElement("span"); sold.className = "beat-card__sold"; sold.textContent = "Vendido";
-                content.append(title, author, sold);
+                content.append(title, ...info, sold);
                 if (cover) card.append(cover);
                 else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
                 card.append(content);
@@ -322,14 +328,16 @@ async function loadBeats() {
                 };
                 actions.append(button);
             }
-            content.append(title, author, audio, actions);
+            content.append(title, ...info, audio, actions);
             if (cover) card.append(cover);
             else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
             card.append(content);
             return card;
-        }));
+        });
+        list.replaceChildren(...cards);
+        mountBeatFilters(list, beats.map((beat, index) => ({ beat, card: cards[index] })), { idPrefix: "client-beat-filter" });
         if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";
-    } catch (error) { setAlert(error.message, true); list.textContent = ""; }
+    } catch (error) { setAlert(error.message, true); list.textContent = ""; mountBeatFilters(list, []); }
 }
 
 let walletRequest = 0;

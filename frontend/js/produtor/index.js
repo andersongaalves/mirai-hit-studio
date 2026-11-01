@@ -11,6 +11,7 @@ import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { loadAudioTag } from "../modules/audio_tags.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
+import { mountBeatFilters } from "../modules/beat_filters.js";
 import { watchFilePickers } from "../modules/file_picker.js";
 import { selectStage, setStages } from "../modules/stage_files.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
@@ -240,14 +241,14 @@ async function loadBeatCatalog() {
     list.textContent = "Carregando catálogo...";
     try {
         const beats = await api.listarCatalogoBeats();
-        list.replaceChildren(...beats.map(beat => {
+        const cards = beats.map(beat => {
             const card = document.createElement("article");
             card.className = "producer-card beat-card producer-beat-card";
             const content = document.createElement("div");
             content.className = "producer-beat-card__content";
             const title = document.createElement("h3"); title.textContent = beat.titulo;
             const producer = document.createElement("p"); producer.textContent = beat.produtor;
-            const meta = document.createElement("p"); meta.textContent = `${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.tonalidade ? `${beat.tonalidade} · ` : ""}${beat.generos || "Sem gênero"}`;
+            const meta = document.createElement("p"); meta.textContent = `${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.tonalidade ? `${beat.tonalidade} · ` : ""}${beat.generos || "Sem gênero"}${beat.moods ? ` · ${beat.moods}` : ""}`;
             const prices = document.createElement("p"); prices.className = "beat-card__prices"; prices.textContent = [["MP3", beat.preco_lease], ["WAV", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
             if (beat.vendido) {
                 card.classList.add("beat-card--sold");
@@ -261,7 +262,9 @@ async function loadBeatCatalog() {
             }
             card.append(content);
             return card;
-        }));
+        });
+        list.replaceChildren(...cards);
+        mountBeatFilters(list, beats.map((beat, index) => ({ beat, card: cards[index] })), { idPrefix: "producer-beat-filter" });
         if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";
     } catch (error) { setAlert(error.message, true); list.textContent = ""; }
 }
