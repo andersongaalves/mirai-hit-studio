@@ -128,6 +128,7 @@ def _response(db, model, *, exclusive_available=True, include_base=False):
         "bpm": model.bpm,
         "tonalidade": model.tonalidade,
         "generos": model.generos,
+        "moods": model.moods or "",
         "preco_lease": price(db, model, "lease_mp3" if model.mp3_ref else "lease"),
         "preco_wav": price(db, model, "lease_wav"),
         "preco_multitrack": price(db, model, "multitrack"),

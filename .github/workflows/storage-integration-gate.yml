@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["f8b0d2e4a6c7"], heads
+                  assert heads == ["b2d4f6a8c0e1"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -425,6 +425,7 @@ jobs:
                     backend/migrations/versions/c5e7a9b1d304_entregas_finais_estruturadas.py \
                     backend/migrations/versions/d6f8a0b2c415_entrega_beat_ficha_tecnica.py \
                     backend/migrations/versions/f8b0d2e4a6c7_arquivos_por_etapa.py \
+                    backend/migrations/versions/b2d4f6a8c0e1_beat_moods.py \
                     backend/core/proposta_mudancas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
@@ -495,7 +496,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic f8b0d2e4a6c7: passed"
+                    echo "- PostgreSQL 17 and Alembic b2d4f6a8c0e1: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

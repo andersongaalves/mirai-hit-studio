@@ -54,10 +54,10 @@ async def _file(upload, kind, limits):
     return data, allowed[extension]
 
 
-def _payload(titulo, descricao, bpm, tonalidade, generos, preco_lease, preco_wav, preco_multitrack, preco_exclusivo):
+def _payload(titulo, descricao, bpm, tonalidade, generos, preco_lease, preco_wav, preco_multitrack, preco_exclusivo, moods=""):
     try:
         return BeatCreate(titulo=titulo, descricao=descricao, bpm=bpm, tonalidade=tonalidade,
-                          generos=generos, preco_lease=preco_lease or None,
+                          generos=generos, moods=moods, preco_lease=preco_lease or None,
                           preco_wav=preco_wav or None, preco_multitrack=preco_multitrack or None,
                           preco_exclusivo=preco_exclusivo or None)
     except ValidationError:
@@ -100,6 +100,7 @@ async def submit_beat(
     bpm: Annotated[int | None, Form()] = None,
     tonalidade: Annotated[str | None, Form()] = None,
     generos: Annotated[str, Form()] = "",
+    moods: Annotated[str, Form()] = "",
     preco_lease: Annotated[str | None, Form()] = None,
     preco_wav: Annotated[str | None, Form()] = None,
     preco_multitrack: Annotated[str | None, Form()] = None,
@@ -107,7 +108,7 @@ async def submit_beat(
 ):
     limits = beat_upload_config_service.limits_bytes(db)
     payload = _payload(titulo, descricao, bpm, tonalidade, generos,
-                       preco_lease, preco_wav, preco_multitrack, preco_exclusivo)
+                       preco_lease, preco_wav, preco_multitrack, preco_exclusivo, moods)
     return beat_service.create(db, actor=user, payload=payload,
                                mp3=await _file(mp3, "mp3", limits), wav=await _file(wav, "wav", limits),
                                archive=await _file(multitrack, "multitrack", limits), cover=await _file(capa, "capa", limits),
@@ -253,6 +254,7 @@ async def edit_beat(
     beat_id: int, db: Db, user: Admin, titulo: Annotated[str, Form()],
     descricao: Annotated[str, Form()] = "", bpm: Annotated[int | None, Form()] = None,
     tonalidade: Annotated[str | None, Form()] = None, generos: Annotated[str, Form()] = "",
+    moods: Annotated[str, Form()] = "",
     preco_lease: Annotated[str | None, Form()] = None, preco_wav: Annotated[str | None, Form()] = None,
     preco_multitrack: Annotated[str | None, Form()] = None,
     preco_exclusivo: Annotated[str | None, Form()] = None,
@@ -264,7 +266,7 @@ async def edit_beat(
 ):
     limits = beat_upload_config_service.limits_bytes(db)
     payload = _payload(titulo, descricao, bpm, tonalidade, generos,
-                       preco_lease, preco_wav, preco_multitrack, preco_exclusivo)
+                       preco_lease, preco_wav, preco_multitrack, preco_exclusivo, moods)
     return beat_service.edit(db, beat_id, payload, user,
                              mp3=await _file(mp3, "mp3", limits), wav=await _file(wav, "wav", limits),
                              archive=await _file(multitrack, "multitrack", limits), cover=await _file(capa, "capa", limits),

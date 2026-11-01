@@ -196,6 +196,7 @@ function beatCard(beat, config) {
     field(pair, "Key", "tonalidade", beat.tonalidade, { maxlength: 24 });
     form.append(pair);
     field(form, "Gêneros", "generos", beat.generos, { maxlength: 240 });
+    field(form, "Moods", "moods", beat.moods, { maxlength: 240 });
     field(form, "Descrição", "descricao", beat.descricao, { multiline: true, maxlength: 5000 });
     field(form, "Preço (exclusivo)", "preco_exclusivo", beat.preco_exclusivo_base, { type: "number" });
     const actions = document.createElement("div"); actions.className = "admin-form-actions";
