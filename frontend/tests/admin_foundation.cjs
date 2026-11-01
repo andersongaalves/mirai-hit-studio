@@ -178,7 +178,9 @@ async function staticResponse(route) {
         const modalButtons = projectModal.getByRole('button');
         await modalButtons.last().focus();
         await page.keyboard.press('Tab');
-        assert.equal(await page.locator('#proj_titulo').evaluate(el => el === document.activeElement), true);
+        // The focus trap wraps to the first control: the header's "Fechar".
+        assert.equal(await modalButtons.first().evaluate(el => el === document.activeElement), true);
+        assert.equal(await modalButtons.first().textContent(), 'Fechar');
         await page.keyboard.press('Shift+Tab');
         assert.equal(await modalButtons.last().evaluate(el => el === document.activeElement), true);
         await page.keyboard.press('Escape');
