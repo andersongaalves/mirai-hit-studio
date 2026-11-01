@@ -1,5 +1,6 @@
 import { exigirSessao, getCurrentUser, logout } from "../admin/auth.js";
 import * as api from "./api.js";
+import { loadProfileCpf } from "./perfil.js";
 import { bindImageCrop } from "../modules/image_crop.js";
 import { applyBeatUploadLimits, validateBeatUpload } from "../modules/beat_upload_validation.js";
 import { messagesPanel } from "../modules/production_messages.js";
@@ -200,6 +201,7 @@ function renderRoute() {
     }
     if (current.view === "perfil") {
         showView("perfil");
+        loadProfileCpf(document.getElementById("producer-cpf"));
         loadAudioTag(document.getElementById("producer-audio-tag"));
         return;
     }
