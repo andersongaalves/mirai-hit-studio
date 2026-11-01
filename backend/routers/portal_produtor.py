@@ -13,10 +13,14 @@ from models.usuario import UsuarioModel
 from schemas.portal_produtor import ProducaoProdutorResponse
 from schemas.producao import ProducaoStatusUpdate
 from schemas.producao_arquivo import (
+    ProducaoArquivoEdicaoRequest,
     ProducaoArquivoObservacaoRequest,
     ProducaoArquivoResponse,
 )
-from schemas.producao_entrega import ProducaoEntregaFinalResponse
+from schemas.producao_entrega import (
+    ProducaoEntregaFinalResponse,
+    ProducaoEntregaFinalUpdate,
+)
 from schemas.repasse_produtor import RepasseProdutorResponse
 from services import (
     audit_service,
@@ -276,6 +280,30 @@ async def criar_entrega_final(
         raise _delivery_error(exc) from None
 
 
+@router.patch("/entregas-finais/{entrega_id}", response_model=ProducaoEntregaFinalResponse)
+def editar_entrega_final(
+    entrega_id: int,
+    payload: ProducaoEntregaFinalUpdate,
+    request: Request,
+    db: Db,
+    user: CurrentProducer,
+):
+    try:
+        model = producao_entrega_service.get(db, entrega_id)
+        production = crud_producao.buscar_por_produtor(db, model.producao_id, user.id)
+        if not production:
+            raise HTTPException(status_code=404, detail="Entrega final nao encontrada.")
+        model = producao_entrega_service.update(
+            db, model=model, production=production, actor=user,
+            changes=payload.model_dump(exclude_unset=True),
+            request_log_id=getattr(request.state, "request_id", None),
+        )
+        return producao_entrega_service.response(model)
+    except producao_entrega_service.ProducaoEntregaError as exc:
+        db.rollback()
+        raise _delivery_error(exc) from None
+
+
 @router.get("/entregas-finais/{entrega_id}/multitrack")
 def abrir_multitrack_entrega(entrega_id: int, db: Db, user: CurrentProducer):
     try:
@@ -302,6 +330,28 @@ def editar_observacao(
             model=model,
             actor=user,
             note=payload.observacao,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except producao_arquivo_service.ProducaoArquivoError as exc:
+        db.rollback()
+        raise _file_error(exc) from None
+
+
+@router.patch("/arquivos/{arquivo_id}", response_model=ProducaoArquivoResponse)
+def editar_arquivo(
+    arquivo_id: int,
+    payload: ProducaoArquivoEdicaoRequest,
+    request: Request,
+    db: Db,
+    user: CurrentProducer,
+):
+    try:
+        model = producao_arquivo_service.get_for_producer(db, arquivo_id, user.id)
+        return producao_arquivo_service.update_details(
+            db,
+            model=model,
+            actor=user,
+            changes=payload.model_dump(exclude_unset=True),
             request_id=getattr(request.state, "request_id", None),
         )
     except producao_arquivo_service.ProducaoArquivoError as exc:

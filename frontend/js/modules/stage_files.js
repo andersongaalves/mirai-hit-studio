@@ -40,6 +40,14 @@ export function selectedStage() {
 }
 
 // Value for an upload: the select's choice; "" means a general file.
+/** The stages of the production in view, for edit forms: [{ id, label }]. */
+export function stageChoices() {
+    return orderedStages(state.stages).map(({ stage, parent }) => ({
+        id: stage.id,
+        label: parent ? `${parent.nome} › ${stage.nome}` : stage.nome,
+    }));
+}
+
 export function stageFieldValue(form) {
     const value = form?.querySelector("select[data-stage-field]")?.value || "";
     return /^\d+$/.test(value) ? value : "";

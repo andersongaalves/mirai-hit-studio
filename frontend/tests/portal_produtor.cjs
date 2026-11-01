@@ -14,6 +14,10 @@ let portalSettings = null;
 const threadPosts = [];
 let threadFails = true;
 let beatUploads = 0;
+const beatEdits = [];
+const fileEdits = [];
+const deliveryEdits = [];
+let deliveries = [];
 // Roadmap 5.06: contract stages of production 1 (server-decided actions, no values).
 const PRODUCER_ACTIONS = { pendente: ['em_andamento'], em_andamento: ['em_revisao'], em_revisao: ['em_andamento'], concluida: [] };
 const stagePatches = [];
@@ -181,7 +185,7 @@ async function staticResponse(route) {
             return route.fulfill(portalSettings ? { json: { portal: 'produtor', versao: 2, config: portalSettings } } : { status: 503, json: { detail: 'indisponível' } });
         }
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'GET') {
-            return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
+            return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', preco_lease_base: '100.00', preco_exclusivo_base: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
         if (url.pathname === '/portal/produtor/audio-tag' && request.method() === 'GET') {
             return route.fulfill({ json: { tag_id: null, nome: null, padrao_disponivel: true, versao: 0 } });
@@ -192,6 +196,10 @@ async function staticResponse(route) {
         }
         if (url.pathname === '/portal/produtor/beats/configuracao' && request.method() === 'GET') {
             return route.fulfill({ json: { limits: { capa_mb: 10, mp3_mb: 1, wav_mb: 50, multitrack_mb: 50, multitrack_mode: 'arquivo' }, ready: true, message: '' } });
+        }
+        if (url.pathname === '/portal/produtor/beats/71' && request.method() === 'PUT') {
+            beatEdits.push(request.postDataBuffer().toString('utf8'));
+            return route.fulfill({ json: { id: 71, status: 'revisao' } });
         }
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'POST') {
             const body = request.postDataBuffer().toString('latin1');
@@ -223,6 +231,12 @@ async function staticResponse(route) {
             return route.fulfill({ json: file });
         }
         const fileDelete = url.pathname.match(/^\/portal\/produtor\/arquivos\/(\d+)$/);
+        if (fileDelete && request.method() === 'PATCH') {
+            const file = files.find(item => item.id === Number(fileDelete[1]));
+            fileEdits.push(request.postDataJSON());
+            Object.assign(file, request.postDataJSON());
+            return route.fulfill({ json: file });
+        }
         if (fileDelete && request.method() === 'DELETE') {
             const id = Number(fileDelete[1]);
             deletedFiles.push(id);
@@ -243,8 +257,14 @@ async function staticResponse(route) {
             files.push({ ...files[0], id: 10, tipo: 'previa', nome_exibicao: 'preview.mp3', versao: 1, visivel_cliente: true });
             return route.fulfill({ status: 201, json: files.at(-1) });
         }
+        const deliveryEdit = url.pathname.match(/^\/portal\/produtor\/entregas-finais\/(\d+)$/);
+        if (deliveryEdit && request.method() === 'PATCH') {
+            deliveryEdits.push(request.postDataJSON());
+            Object.assign(deliveries[0], request.postDataJSON());
+            return route.fulfill({ json: deliveries[0] });
+        }
         if (/^\/portal\/produtor\/producoes\/\d+\/entregas-finais$/.test(url.pathname) && request.method() === 'GET') {
-            return route.fulfill({ json: [] });
+            return route.fulfill({ json: deliveries });
         }
         const detail = url.pathname.match(/^\/portal\/produtor\/producoes\/(\d+)$/);
         if (detail && request.method() === 'GET') {
@@ -287,7 +307,7 @@ async function staticResponse(route) {
         assert.equal(await page.locator('#producer-beats-list .producer-beat-card__content').evaluate(element => (
             element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
         )), true, 'producer beat content must fit inside the square');
-        assert.match(await page.locator('#producer-beats-list').textContent(), /Producer A/);
+        assert.match(await page.locator('#producer-beats-list').textContent(), /Em revisão · 140 BPM · Am · Trap/);
         await page.locator('#producer-beats').getByRole('link', { name: 'Catálogo' }).click();
         await page.waitForURL('**/produtor/catalogo');
         assert.equal(await nav.getByRole('link', { name: 'Beats', exact: true }).getAttribute('aria-current'), 'page');
@@ -323,6 +343,22 @@ async function staticResponse(route) {
         await page.waitForFunction(() => [...document.querySelectorAll('.upload-tasks-dialog li span')]
             .some(item => item.textContent === 'Concluído'));
         assert.equal(beatUploads, 1);
+        // Edit a beat already sent: the same form, prefilled, files optional, sent with PUT.
+        await page.getByRole('button', { name: 'Editar <Beat seguro>' }).click();
+        const beatForm = page.locator('#producer-beat-form');
+        assert.match(await beatForm.locator('.beat-form__editing').textContent(), /Editando "<Beat seguro>"/);
+        assert.equal(await beatForm.locator('[name="titulo"]').inputValue(), '<Beat seguro>');
+        assert.equal(await beatForm.locator('[name="bpm"]').inputValue(), '140');
+        assert.equal(await beatForm.locator('[name="preco_lease"]').inputValue(), '100.00');
+        await beatForm.locator('[name="moods"]').fill('Dark');
+        await page.getByRole('button', { name: 'Salvar alterações' }).click();
+        await page.waitForFunction(() => [...document.querySelectorAll('.upload-tasks-dialog li span')]
+            .filter(item => item.textContent === 'Concluído').length >= 2);
+        assert.equal(beatEdits.length, 1);
+        assert.match(beatEdits[0], /name="moods"\r\n\r\nDark/);
+        assert.doesNotMatch(beatEdits[0], /name="(?:mp3|capa|wav|multitrack)"/);
+        assert.equal(await beatForm.locator('.beat-form__editing').count(), 0);
+        assert.equal(await page.getByRole('button', { name: 'Enviar para revisão' }).count(), 1);
         await page.getByRole('link', { name: 'Dashboard' }).click();
         await page.setViewportSize({ width: 390, height: 900 });
         const producerMenu = page.locator('.integrado-portal__menu-toggle');
@@ -366,18 +402,45 @@ async function staticResponse(route) {
         assert.match(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).textContent(), /Sua observação: Primeira ideia <i>sem master<\/i>/);
         // The producer edits the note of their own preview; studio files have no edit button.
         const own = page.locator('.producer-file').filter({ hasText: 'historical.mp3' });
-        assert.equal(await page.locator('.producer-file').first().getByRole('button', { name: /observação/ }).count(), 0);
-        await own.getByRole('button', { name: 'Editar observação' }).click();
-        await own.getByLabel('Observação').fill('Segunda ideia, voz mais alta');
-        await own.getByRole('button', { name: 'Salvar' }).click();
+        assert.equal(await page.locator('.producer-file').first().getByRole('button', { name: /^Editar/ }).count(), 0);
+        await own.getByRole('button', { name: 'Editar historical.mp3' }).click();
+        const fileForm = own.getByRole('form', { name: 'Editar historical.mp3' });
+        assert.equal(await fileForm.getByLabel('Nome do arquivo').inputValue(), 'historical.mp3');
+        await fileForm.getByLabel('Observação').fill('Segunda ideia, voz mais alta');
+        await fileForm.getByRole('button', { name: 'Salvar alterações' }).click();
         await page.waitForFunction(() => /Sua observação: Segunda ideia, voz mais alta/.test(
             [...document.querySelectorAll('.producer-file')].find(item => item.textContent.includes('historical.mp3'))?.textContent || ''));
-        assert.deepEqual(noteEdits, [{ observacao: 'Segunda ideia, voz mais alta' }]);
+        // Only what changed is sent.
+        assert.deepEqual(fileEdits, [{ observacao: 'Segunda ideia, voz mais alta' }]);
+        assert.deepEqual(noteEdits, []);
         // Listen in the page without saving a file.
         await own.getByRole('button', { name: 'Reproduzir historical.mp3' }).click();
         await page.waitForFunction(() => [...document.querySelectorAll('.producer-file audio.ouvir-arquivo__media')].some(audio => audio.src.startsWith('blob:')));
         assert.equal(await own.locator('.file-player__timeline input[type=range]').count(), 1);
         assert.ok(listens.includes('?ouvir=true'), JSON.stringify(listens));
+        // The coordinator corrects a final delivery: only changed fields go out.
+        const packageFile = (id, nome, mime) => ({ ...files[0], id, nome_exibicao: nome, mime_type: mime, tipo: 'entrega', etapa_id: null });
+        deliveries = [{ id: 501, producao_id: 1, categoria: 'instrumental', titulo: 'Beat final', etapa_id: null, bpm: 90, tonalidade: 'Am',
+            creditos_adicionais: ['Melodista Um'], observacao: null, arquivo_principal: packageFile(901, 'final.mp3', 'audio/mpeg'),
+            wav_arquivo: packageFile(902, 'final.wav', 'audio/wav'), multitrack_arquivo: null, multitrack_disponivel: true,
+            licenca_arquivo: packageFile(903, 'licenca.pdf', 'application/pdf'), bloqueado_pagamento: false, created_at: new Date().toISOString() }];
+        await page.reload();
+        const deliveryCard = page.locator('.final-delivery-card').filter({ hasText: 'Beat final' });
+        await deliveryCard.waitFor();
+        await deliveryCard.getByRole('button', { name: 'Editar entrega Beat final' }).click();
+        const deliveryForm = deliveryCard.getByRole('form', { name: 'Editar entrega Beat final' });
+        assert.equal(await deliveryForm.getByLabel('BPM').inputValue(), '90');
+        assert.equal(await deliveryForm.getByLabel('Créditos adicionais').inputValue(), 'Melodista Um');
+        assert.match(await deliveryForm.textContent(), /nova versão da licença/);
+        await deliveryForm.getByLabel('BPM').fill('92');
+        await deliveryForm.getByLabel('Créditos adicionais').fill('Melodista Um\nProgramador Dois');
+        await deliveryForm.getByRole('button', { name: 'Salvar alterações' }).click();
+        await page.waitForFunction(() => document.querySelector('.producer-alert, #producer-alert')?.textContent.includes('Entrega atualizada.'));
+        assert.deepEqual(deliveryEdits, [{ bpm: 92, creditos_adicionais: ['Melodista Um', 'Programador Dois'] }]);
+        assert.match(await page.locator('.final-delivery-card').first().textContent(), /92 BPM · Am/);
+        deliveries = [];
+        await page.reload();
+        await page.locator('.producer-file').first().waitFor();
         const studio = await page.evaluate(async () => {
             const module = await import('/js/modules/ouvir_arquivo.js');
             return [module.opcoesEstudio({ processamento_tag: 'pronto' }), module.opcoesEstudio({ processamento_tag: null }),

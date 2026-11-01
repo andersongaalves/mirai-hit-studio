@@ -1,4 +1,4 @@
-import { applyStageFiles, resetStageFiles, stageField, stageFieldValue } from "../modules/stage_files.js";
+import { applyStageFiles, resetStageFiles, stageChoices, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { controlesOuvir, opcoesEstudio, podeOuvir } from "../modules/ouvir_arquivo.js";
 import { deadlineState, filterAndSort, formatDate, nextAction, parseEtapas, statusInfo, summarize } from "./utils.js";
 
@@ -130,6 +130,94 @@ export function renderList(productions, filters, onOpen) {
     items.forEach(item => list.append(productionCard(item, onOpen)));
 }
 
+// Inline edit form used by files and final deliveries. Sends only the fields that changed.
+function editPanel({ title, fields, note = "", onSave, onCancel }) {
+    const form = element("form", "edit-panel");
+    form.hidden = true;
+    form.setAttribute("aria-label", title);
+    const grid = element("div", "edit-panel__grid");
+    const controls = new Map();
+    fields.forEach(field => {
+        const label = element("label", `portal-field${field.full ? " edit-panel__full" : ""}`);
+        label.append(element("span", "portal-field__label", field.label));
+        let control;
+        if (field.type === "textarea") {
+            control = element("textarea");
+            control.rows = field.rows || 3;
+        } else if (field.type === "stage") {
+            control = element("select");
+        } else {
+            control = element("input");
+            control.type = field.type || "text";
+            if (field.min != null) control.min = String(field.min);
+            if (field.max != null) control.max = String(field.max);
+        }
+        control.name = field.name;
+        if (field.maxLength) control.maxLength = field.maxLength;
+        if (field.required) control.required = true;
+        label.append(control);
+        if (field.help) label.append(element("small", "", field.help));
+        grid.append(label);
+        controls.set(field.name, { field, control, label });
+    });
+    const error = element("p", "edit-panel__error");
+    error.setAttribute("role", "alert");
+    const actions = element("div", "edit-panel__actions");
+    const cancel = element("button", "btn-outline btn-small", "Cancelar");
+    cancel.type = "button";
+    const save = element("button", "btn-cta btn-small", "Salvar alterações");
+    save.type = "submit";
+    actions.append(cancel, save);
+    form.append(grid);
+    if (note) form.append(element("p", "edit-panel__note", note));
+    form.append(error, actions);
+
+    const initial = field => (field.value == null ? "" : String(field.value));
+    const fill = () => {
+        controls.forEach(({ field, control, label }) => {
+            if (field.type === "stage") {
+                const choices = stageChoices();
+                label.hidden = choices.length === 0;
+                control.replaceChildren(new Option("Geral (sem etapa)", ""), ...choices.map(choice => new Option(choice.label, String(choice.id))));
+            }
+            control.value = initial(field);
+        });
+        error.textContent = "";
+    };
+    const close = () => { form.hidden = true; onCancel?.(); };
+    cancel.addEventListener("click", close);
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const changes = {};
+        controls.forEach(({ field, control }) => {
+            if (control.value === initial(field)) return;
+            const raw = control.value.trim();
+            if (field.type === "stage" || field.type === "number") changes[field.name] = raw ? Number(raw) : null;
+            else if (field.list) changes[field.name] = raw.split("\n").map(line => line.trim()).filter(Boolean);
+            else changes[field.name] = raw;
+        });
+        if (!Object.keys(changes).length) { close(); return; }
+        save.disabled = true;
+        error.textContent = "";
+        try {
+            await onSave(changes);
+        } catch (saveError) {
+            error.textContent = saveError.message || "Não foi possível salvar.";
+        } finally {
+            save.disabled = false;
+        }
+    });
+    return {
+        element: form,
+        open() {
+            fill();
+            form.hidden = false;
+            form.querySelector("input, select, textarea")?.focus();
+        },
+    };
+}
+
 function fileItem(file, handlers) {
     const onDownload = handlers.onDownload;
     const item = element("li", "producer-file");
@@ -147,47 +235,23 @@ function fileItem(file, handlers) {
     };
     showNote();
     info.append(note);
-    if (own && handlers.onEditNote) {
-        // The producer can fix or complete the note of a file they sent.
-        const edit = element("button", "btn-outline btn-small", file.observacao ? "Editar observação" : "Adicionar observação");
+    if (own && handlers.onEditFile) {
+        // The producer corrects a file they sent: name, stage and note.
+        const edit = element("button", "btn-outline btn-small", "Editar");
         edit.type = "button";
-        const form = element("form", "file-note-form");
-        form.hidden = true;
-        const label = element("label", "", "Observação");
-        const text = element("textarea");
-        text.maxLength = 1000;
-        text.rows = 3;
-        label.append(text);
-        const save = element("button", "btn-cta btn-small", "Salvar");
-        save.type = "submit";
-        const cancel = element("button", "btn-outline btn-small", "Cancelar");
-        cancel.type = "button";
-        form.append(label, save, cancel);
-        const close = () => { form.hidden = true; edit.hidden = false; };
-        edit.addEventListener("click", () => {
-            text.value = file.observacao || "";
-            form.hidden = false;
-            edit.hidden = true;
-            text.focus();
+        edit.setAttribute("aria-label", `Editar ${file.nome_exibicao}`);
+        const panel = editPanel({
+            title: `Editar ${file.nome_exibicao}`,
+            fields: [
+                { name: "nome_exibicao", label: "Nome do arquivo", value: file.nome_exibicao, maxLength: 180, required: true },
+                { name: "etapa_id", label: "Etapa", type: "stage", value: file.etapa_id },
+                { name: "observacao", label: "Observação", type: "textarea", value: file.observacao || "", maxLength: 1000, full: true },
+            ],
+            onCancel: () => { edit.hidden = false; },
+            onSave: values => handlers.onEditFile(file, values),
         });
-        cancel.addEventListener("click", close);
-        form.addEventListener("submit", async event => {
-            event.preventDefault();
-            save.disabled = true;
-            try {
-                const updated = await handlers.onEditNote(file, text.value.trim());
-                file.observacao = updated?.observacao ?? null;
-                showNote();
-                edit.textContent = file.observacao ? "Editar observação" : "Adicionar observação";
-                close();
-                setAlert("Observação salva.");
-            } catch (error) {
-                setAlert(error.message, true);
-            } finally {
-                save.disabled = false;
-            }
-        });
-        info.append(edit, form);
+        edit.addEventListener("click", () => { panel.open(); edit.hidden = true; });
+        info.append(edit, panel.element);
     }
     if (file.tipo === "previa") {
         info.append(element(
@@ -286,6 +350,33 @@ function deliveryCard(delivery, handlers) {
     }
     addFile(delivery.licenca_arquivo, "Baixar licença");
     card.append(actions, element("small", "", `Enviada em ${formatDate(delivery.created_at, true)}`));
+    if (handlers.onEditDelivery && !handlers.deliveryLocked) {
+        const instrumental = delivery.categoria === "instrumental";
+        const edit = element("button", "btn-outline btn-small final-delivery-card__edit", "Editar entrega");
+        edit.type = "button";
+        edit.setAttribute("aria-label", `Editar entrega ${delivery.titulo}`);
+        const panel = editPanel({
+            title: `Editar entrega ${delivery.titulo}`,
+            fields: [
+                { name: "titulo", label: instrumental ? "Título do beat" : "Título da entrega", value: delivery.titulo, maxLength: 150, required: true, full: true },
+                ...(instrumental ? [
+                    { name: "bpm", label: "BPM", type: "number", value: delivery.bpm, min: 20, max: 300, required: true },
+                    { name: "tonalidade", label: "Tom / Key", value: delivery.tonalidade, maxLength: 20, required: true },
+                    { name: "creditos_adicionais", label: "Créditos adicionais", type: "textarea", list: true, full: true,
+                      value: (delivery.creditos_adicionais || []).join("\n"), help: "Um nome por linha, até 10." },
+                ] : []),
+                { name: "etapa_id", label: "Etapa", type: "stage", value: delivery.etapa_id },
+                { name: "observacao", label: "Observação", type: "textarea", value: delivery.observacao || "", maxLength: 1000, full: true },
+            ],
+            note: instrumental
+                ? "Mudar título, BPM, tom ou créditos emite uma nova versão da licença. Para trocar arquivos, envie uma nova entrega."
+                : "Para trocar arquivos, envie uma nova entrega.",
+            onCancel: () => { edit.hidden = false; },
+            onSave: changes => handlers.onEditDelivery(delivery, changes),
+        });
+        edit.addEventListener("click", () => { panel.open(); edit.hidden = true; });
+        card.append(edit, panel.element);
+    }
     return card;
 }
 
@@ -419,7 +510,9 @@ function filesPanel(production, files, deliveries, handlers) {
     if (deliveries.length) {
         const deliveryList = element("div", "final-delivery-list");
         deliveryList.dataset.stageGroup = "";
-        deliveries.forEach(delivery => deliveryList.append(deliveryCard(delivery, handlers)));
+        // Delivered to the client: the delivery is final and can no longer be edited.
+        const deliveryHandlers = { ...handlers, deliveryLocked: production.status === "entregue" || production.coordenador === false };
+        deliveries.forEach(delivery => deliveryList.append(deliveryCard(delivery, deliveryHandlers)));
         panel.append(deliveryList);
     }
     const linkedIds = new Set(deliveries.flatMap(delivery => [
@@ -428,6 +521,17 @@ function filesPanel(production, files, deliveries, handlers) {
         delivery.multitrack_arquivo?.id,
         delivery.licenca_arquivo?.id,
     ]).filter(Boolean));
+    // Older versions of a delivery file (a reissued license) stay with the delivery.
+    let grew = true;
+    while (grew) {
+        grew = false;
+        files.forEach(file => {
+            if (linkedIds.has(file.id) && file.substitui_arquivo_id != null && !linkedIds.has(file.substitui_arquivo_id)) {
+                linkedIds.add(file.substitui_arquivo_id);
+                grew = true;
+            }
+        });
+    }
     const looseFiles = files.filter(file => !linkedIds.has(file.id));
     const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
     const fileHandlers = { ...handlers, replacedIds: replaced };

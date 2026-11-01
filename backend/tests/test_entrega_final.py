@@ -205,6 +205,67 @@ with patch.object(producao_entrega_service, 'new_production_file_storage', retur
 assert missing_sheet.status_code == 422 and 'BPM' in missing_sheet.json()['detail']
 ''')
 
+    def test_producer_edits_delivery_and_files(self):
+        self.run_case('''
+from models import ProducaoEtapaModel
+with Session(engine) as db:
+    db.add(UsuarioModel(id=30, username='producer-z', password_hash='unused', role='produtor', is_admin=False, ativo=True))
+    stage = db.query(ProducaoEtapaModel).filter_by(producao_id=PRODUCTION_ID).first()
+    if stage is None:
+        stage = ProducaoEtapaModel(producao_id=PRODUCTION_ID, proposta_id=PROPOSAL_ID, item_indice=1, ordem=99,
+                                   ordem_no_item=1, nome='Masterizacao', peso_percentual=Decimal('100'), valor=Decimal('100'))
+        db.add(stage)
+    db.commit()
+    STAGE_ID = stage.id
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    created = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('producer-a'),
+        data={'request_id': '550e8400-e29b-41d4-a716-446655440099', 'categoria': 'instrumental', 'titulo': 'Beat',
+              'bpm': '90', 'tonalidade': 'Am', 'multitrack_url': 'https://drive.example.test/stems'},
+        files={'arquivo_principal': ('final.mp3', b'mp3', 'audio/mpeg'), 'wav': ('final.wav', b'wav', 'audio/wav')})
+assert created.status_code == 201, created.text
+delivery = created.json()
+old_license = delivery['licenca_arquivo']['id']
+path = f"/portal/produtor/entregas-finais/{delivery['id']}"
+assert api.patch(path, headers=bearer('producer-z'), json={'titulo': 'X'}).status_code == 404
+assert api.patch(path, headers=bearer('producer-a'), json={'bpm': 5}).status_code == 422
+assert api.patch(path, headers=bearer('producer-a'), json={'arquivo_principal': 1}).status_code == 422
+# Only the note: the license stays.
+noted = api.patch(path, headers=bearer('producer-a'), json={'observacao': 'Corrigida', 'etapa_id': STAGE_ID})
+assert noted.status_code == 200, noted.text
+assert noted.json()['observacao'] == 'Corrigida' and noted.json()['etapa_id'] == STAGE_ID
+assert noted.json()['licenca_arquivo']['id'] == old_license
+# The technical sheet changes: a new version of the license is issued.
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    edited = api.patch(path, headers=bearer('producer-a'), json={'titulo': 'Beat final', 'bpm': 92, 'tonalidade': 'Bm',
+                                                                  'creditos_adicionais': ['Melodista Um']})
+assert edited.status_code == 200, edited.text
+body = edited.json()
+assert body['titulo'] == 'Beat final' and body['bpm'] == 92 and body['tonalidade'] == 'Bm'
+assert body['creditos_adicionais'] == ['Melodista Um']
+license = body['licenca_arquivo']
+assert license['id'] != old_license and license['versao'] == 2 and license['etapa_id'] == STAGE_ID
+with Session(engine) as db:
+    assert db.get(ProducaoArquivoModel, license['id']).substitui_arquivo_id == old_license
+
+# Files: name, stage and note by the sender; delivery files only through the delivery.
+preview = upload('previa', 'rough.mp3')
+file_path = f'/portal/produtor/arquivos/{preview}'
+changed = api.patch(file_path, headers=bearer('producer-a'), json={'nome_exibicao': 'Rough Mix v1.mp3', 'etapa_id': STAGE_ID, 'observacao': 'Primeira'})
+assert changed.status_code == 200, changed.text
+assert changed.json()['nome_exibicao'] == 'Rough Mix v1.mp3' and changed.json()['etapa_id'] == STAGE_ID
+assert api.patch(file_path, headers=bearer('producer-a'), json={'nome_exibicao': '  '}).status_code == 422
+assert api.patch(file_path, headers=bearer('producer-a'), json={'etapa_id': 99999}).status_code == 422
+principal = f"/portal/produtor/arquivos/{delivery['arquivo_principal']['id']}"
+assert api.patch(principal, headers=bearer('producer-a'), json={'nome_exibicao': 'x.mp3'}).status_code == 409
+
+# Delivered to the client: locked.
+with Session(engine) as db:
+    db.get(ProducaoModel, PRODUCTION_ID).status = 'entregue'
+    db.commit()
+locked = api.patch(path, headers=bearer('producer-a'), json={'titulo': 'Depois'})
+assert locked.status_code == 409 and 'entregue' in locked.json()['detail']
+''')
+
     def test_delivery_held_until_paid(self):
         self.run_case('''
 preview_id = upload('previa', 'mix.mp3')

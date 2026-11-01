@@ -164,3 +164,45 @@ def revisar(db, actor, envio_id, payload):
     db.commit()
     db.refresh(item)
     return item
+
+
+def editar(db, actor, envio_id, payload):
+    """A pending or refused submission can be corrected; it goes back to the review queue."""
+    item = db.scalar(select(PortfolioEnvioModel).where(PortfolioEnvioModel.id == envio_id).with_for_update())
+    if item is None or item.produtor_id != actor.id:
+        raise HTTPException(404, "Envio nao encontrado.")
+    if item.status not in ("pendente", "recusado"):
+        raise HTTPException(409, "Este envio ja foi publicado e nao pode mais ser editado.")
+    if item.versao != payload.versao:
+        raise HTTPException(409, "Este envio mudou desde que voce abriu. Atualize a lista.")
+    data = payload.model_dump(mode="json")
+    data.pop("request_id", None)
+    data.pop("versao", None)
+    producao_id = data.pop("producao_id")
+    data.pop("autorizacao_artista")
+    CreditoProjeto(funcao=data["funcao"], funcao_outra=data.get("funcao_outra"), nome=actor.username)
+    if producao_id is not None and not crud_producao.buscar_por_produtor(db, producao_id, actor.id):
+        raise HTTPException(404, "Producao nao encontrada.")
+    for kept in ("link_capa", "_capa_sha256"):
+        if kept in item.dados:
+            data[kept] = item.dados[kept]
+    if data == item.dados and producao_id == item.producao_id and item.status == "pendente":
+        return item
+    reopened = item.status == "recusado"
+    item.dados = data
+    item.producao_id = producao_id
+    item.status = "pendente"
+    item.versao += 1
+    item.motivo = None
+    item.revisado_em = None
+    item.revisado_por = None
+    item.autorizado_em = datetime.now(timezone.utc)
+    audit_service.record(db, actor=actor, action="portfolio.submission_edited", entity_type="portfolio_submission",
+                         entity_id=item.id, metadata={"producao_id": producao_id, "reopened": reopened})
+    if reopened:
+        from services import portal_notificacao_service
+
+        portal_notificacao_service.portfolio_proposto(db, item, reenvio=True)
+    db.commit()
+    db.refresh(item)
+    return item

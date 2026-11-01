@@ -402,6 +402,56 @@ def update_note(db, *, model, actor, note, request_id=None):
     return model
 
 
+def update_details(db, *, model, actor, changes, request_id=None):
+    """The sender corrects a file: display name, stage and note (only the fields sent).
+
+    Files that belong to a final delivery are edited through the delivery.
+    """
+    from models import ProducaoEntregaFinalModel
+    from sqlalchemy import or_
+
+    if model.remetente_usuario_id != getattr(actor, "id", None):
+        raise ProducaoArquivoConflict("So quem enviou o arquivo pode edita-lo.")
+    in_delivery = db.query(ProducaoEntregaFinalModel.id).filter(or_(
+        ProducaoEntregaFinalModel.arquivo_principal_id == model.id,
+        ProducaoEntregaFinalModel.wav_arquivo_id == model.id,
+        ProducaoEntregaFinalModel.multitrack_arquivo_id == model.id,
+        ProducaoEntregaFinalModel.licenca_arquivo_id == model.id,
+    )).first()
+    if in_delivery is not None and set(changes) - {"observacao"}:
+        raise ProducaoArquivoConflict("Edite este arquivo pela entrega final a que ele pertence.")
+    updates = {}
+    if "nome_exibicao" in changes:
+        raw = (changes["nome_exibicao"] or "").strip()
+        if not raw:
+            raise ProducaoArquivoError("Informe o nome do arquivo.")
+        name = _display_name(raw)
+        updates["nome_exibicao"] = name
+    if "etapa_id" in changes:
+        updates["etapa_id"] = (
+            resolve_stage(db, model.producao_id, changes["etapa_id"]) if changes["etapa_id"] is not None else None
+        )
+    if "observacao" in changes:
+        updates["observacao"] = _normalize_note(changes["observacao"])
+    changed = sorted(key for key, value in updates.items() if getattr(model, key) != value)
+    if not changed:
+        return model
+    for key in changed:
+        setattr(model, key, updates[key])
+    audit_service.record(
+        db,
+        actor=actor,
+        action="production.file_edited",
+        entity_type="production_file",
+        entity_id=model.id,
+        metadata={"production_id": model.producao_id, "tipo": model.tipo, "fields": changed},
+        request_id=request_id,
+    )
+    db.commit()
+    db.refresh(model)
+    return model
+
+
 def delete_preview_for_producer(db, *, file_id, actor, request_id=None, storage=None):
     """Delete only the producer's latest preview and its exact private objects."""
     from models import PreviaTagJobModel, ProducaoMensagemModel

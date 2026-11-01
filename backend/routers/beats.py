@@ -273,6 +273,30 @@ async def edit_beat(
                              multitrack_url=multitrack_url)
 
 
+@router.put("/portal/produtor/beats/{beat_id}")
+async def producer_edit_beat(
+    beat_id: int, db: Db, user: Producer, titulo: Annotated[str, Form()],
+    descricao: Annotated[str, Form()] = "", bpm: Annotated[int | None, Form()] = None,
+    tonalidade: Annotated[str | None, Form()] = None, generos: Annotated[str, Form()] = "",
+    moods: Annotated[str, Form()] = "",
+    preco_lease: Annotated[str | None, Form()] = None, preco_wav: Annotated[str | None, Form()] = None,
+    preco_multitrack: Annotated[str | None, Form()] = None,
+    preco_exclusivo: Annotated[str | None, Form()] = None,
+    mp3: Annotated[UploadFile | None, File()] = None,
+    wav: Annotated[UploadFile | None, File()] = None,
+    multitrack: Annotated[UploadFile | None, File()] = None,
+    multitrack_url: Annotated[str | None, Form()] = None,
+    capa: Annotated[UploadFile | None, File()] = None,
+):
+    limits = beat_upload_config_service.limits_bytes(db)
+    payload = _payload(titulo, descricao, bpm, tonalidade, generos,
+                       preco_lease, preco_wav, preco_multitrack, preco_exclusivo, moods)
+    return beat_service.producer_edit(db, beat_id, payload, user,
+                                      mp3=await _file(mp3, "mp3", limits), wav=await _file(wav, "wav", limits),
+                                      archive=await _file(multitrack, "multitrack", limits),
+                                      cover=await _file(capa, "capa", limits), multitrack_url=multitrack_url)
+
+
 @router.get("/beats/{beat_id}/preview")
 def preview(beat_id: int, db: Db, user: User):
     return Response(
