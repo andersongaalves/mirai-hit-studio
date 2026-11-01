@@ -14,6 +14,8 @@ let portalSettings = null;
 const threadPosts = [];
 let threadFails = true;
 let beatUploads = 0;
+const cpfSaves = [];
+let profile = { especialidades: ['beatmaker'], beatmaker: true, cpf_cadastrado: false, cpf_mascarado: null };
 const beatEdits = [];
 const fileEdits = [];
 const deliveryEdits = [];
@@ -187,6 +189,12 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'GET') {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', preco_lease_base: '100.00', preco_exclusivo_base: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
+        if (url.pathname === '/portal/produtor/perfil' && request.method() === 'GET') return route.fulfill({ json: profile });
+        if (url.pathname === '/portal/produtor/perfil/cpf' && request.method() === 'PUT') {
+            cpfSaves.push(request.postDataJSON());
+            profile = { ...profile, cpf_cadastrado: true, cpf_mascarado: '***.***.***-25' };
+            return route.fulfill({ json: profile });
+        }
         if (url.pathname === '/portal/produtor/audio-tag' && request.method() === 'GET') {
             return route.fulfill({ json: { tag_id: null, nome: null, padrao_disponivel: true, versao: 0 } });
         }
@@ -294,6 +302,22 @@ async function staticResponse(route) {
         assert.equal(await page.getByRole('link', { name: 'Minha tag', exact: true }).count(), 0);
         assert.equal(await tagNotice.getByRole('link', { name: 'Cadastrar minha tag' }).getAttribute('href'), '/produtor/perfil');
         assert.equal(await page.getByRole('link', { name: 'Catálogo', exact: true }).count(), 0, 'the catalog lives inside Beats');
+        // "Meu perfil": the producer registers the CPF the beat contracts need; it comes back masked.
+        await page.locator('#producer-navigation').getByRole('link', { name: 'Meu perfil' }).click();
+        await page.waitForURL('**/produtor/perfil');
+        const cpfForm = page.locator('#producer-cpf form');
+        await cpfForm.waitFor();
+        assert.match(await cpfForm.textContent(), /CPF pendente/);
+        await cpfForm.getByLabel('CPF').fill('52998224724');
+        await cpfForm.getByRole('button', { name: 'Salvar CPF' }).click();
+        assert.equal(cpfSaves.length, 0, 'invalid check digits are caught before sending');
+        await cpfForm.getByLabel('CPF').fill('52998224725');
+        assert.equal(await cpfForm.getByLabel('CPF').inputValue(), '529.982.247-25');
+        await cpfForm.getByRole('button', { name: 'Salvar CPF' }).click();
+        await page.getByText('CPF cadastrado: ***.***.***-25').waitFor();
+        assert.deepEqual(cpfSaves, [{ cpf: '52998224725' }]);
+        assert.match(await page.locator('#producer-cpf').textContent(), /CPF salvo\./);
+        assert.doesNotMatch(await page.locator('#producer-cpf').textContent(), /52998224725|529\.982\.247-25/);
         const nav = page.locator('#producer-navigation');
         await nav.getByRole('link', { name: 'Beats', exact: true }).click();
         await page.waitForURL('**/produtor/beats');

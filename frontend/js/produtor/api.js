@@ -223,3 +223,16 @@ export async function editarEnvioPortfolio(id, dados) {
         body: JSON.stringify(dados),
     }), "Não foi possível salvar o envio.");
 }
+
+export async function obterPerfil() {
+    return responseData(await authFetch("/portal/produtor/perfil"), "Não foi possível carregar seu perfil.");
+}
+
+export async function salvarCpf(cpf) {
+    const response = await authFetch("/portal/produtor/perfil/cpf", {
+        method: "PUT",
+        body: JSON.stringify({ cpf }),
+    });
+    if (response.status === 422) throw new Error("CPF inválido. Confira os 11 números.");
+    return responseData(response, "Não foi possível salvar o CPF.");
+}
