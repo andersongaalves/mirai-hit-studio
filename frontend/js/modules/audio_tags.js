@@ -209,7 +209,10 @@ export async function loadAudioTag(root, { admin = false } = {}) {
                 upload.reset();
             } catch (error) { feedback.textContent = error.message; }
         };
-        root.append(disclosure(current.tag_id ? "Trocar tag padrão" : "Cadastrar tag padrão", upload, "audio-tag-upload-disclosure"));
+        const uploadTitle = admin
+            ? (current.tag_id ? "Trocar tag padrão" : "Cadastrar tag padrão")
+            : (current.tag_id ? "Trocar minha tag" : "Cadastrar minha tag");
+        root.append(disclosure(uploadTitle, upload, "audio-tag-upload-disclosure"));
         if (admin) {
             const form = settingsForm(current);
             form.append(node("p", "O modo automático mede áudio e tag. Se a medição não for possível, o sistema usa o volume fixo de fallback.", "admin-field-help"));

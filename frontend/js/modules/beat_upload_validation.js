@@ -39,7 +39,7 @@ export function applyBeatUploadLimits(form, limits) {
         if (!hint) {
             hint = document.createElement("small");
             hint.className = "beat-file-limit";
-            input.insertAdjacentElement("afterend", hint);
+            (input.closest(".producer-upload__picker") || input).insertAdjacentElement("afterend", hint);
         }
         hint.textContent = `${spec.extensions.map(item => item.toUpperCase()).join(" ou ")} · até ${limits[`${name}_mb`]} MB`;
     }

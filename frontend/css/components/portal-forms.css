@@ -1,0 +1,177 @@
+/* Producer portal forms: one look for fields, sections, pickers and actions.
+   Loaded last on the producer portal; scoped to it. */
+
+/* Section titles inside views: left-aligned, not the site's centered h2. */
+.producer-body .producer-view h2 {
+    margin: 0 0 16px;
+    padding: 0;
+    font: 700 22px/28px var(--font-titulos);
+    text-align: left;
+}
+.producer-body .producer-view h2::after { display: none; }
+
+/* ---- Fields ---- */
+.producer-body .portal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    color: var(--integrado-secondary, var(--color-text-secondary));
+    font: 700 14px/20px var(--font-texto);
+}
+.producer-body .portal-field__label { color: inherit; font: inherit; }
+.producer-body .portal-field--full { grid-column: 1 / -1; }
+.producer-body .portal-field :is(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 12px 14px;
+    border: 1px solid var(--integrado-control, rgba(255, 255, 255, 0.2));
+    border-radius: var(--radius-sm);
+    background: var(--integrado-surface, var(--color-background));
+    color: var(--integrado-primary, var(--color-text-primary));
+    font: 400 15px/22px var(--font-texto);
+}
+.producer-body .portal-field textarea { min-height: 96px; resize: vertical; }
+.producer-body .portal-field small { color: var(--integrado-secondary, var(--color-text-secondary)); font: 400 13px/18px var(--font-texto); }
+.producer-body .producer-upload__picker { min-height: 48px; }
+
+/* ---- Sections ---- */
+.producer-body .portal-form-section {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding: 0 0 20px;
+    border: 0;
+    border-bottom: 1px solid var(--integrado-border, rgba(255, 255, 255, 0.12));
+}
+.producer-body .portal-form-section + .portal-form-section { padding-top: 20px; }
+.producer-body .portal-form-section > legend {
+    margin: 0 0 4px;
+    padding: 0;
+    color: var(--integrado-primary, var(--color-text-primary));
+    font: 700 18px/24px var(--font-subtitulos);
+}
+.producer-body .portal-form-help { margin: 0; color: var(--integrado-secondary, var(--color-text-secondary)); font: 400 14px/20px var(--font-texto); }
+.producer-body .portal-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    min-width: 0;
+}
+.producer-body .portal-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+}
+.producer-body .portal-form-footer > p { flex: 1 1 240px; margin: 0; }
+
+/* ---- Beat upload ---- */
+.producer-body .beat-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; max-width: 960px; }
+.producer-body .beat-form__format {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
+    align-items: start;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid var(--integrado-border, rgba(255, 255, 255, 0.12));
+    border-radius: var(--radius-sm);
+    background: rgba(6, 16, 31, 0.35);
+}
+.producer-body .beat-form__format.hidden { display: none; }
+.producer-body .beat-form__license {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-self: center;
+    color: var(--integrado-primary, var(--color-text-primary));
+    font: 700 15px/20px var(--font-texto);
+}
+.producer-body .beat-form__license small { color: var(--integrado-secondary, var(--color-text-secondary)); font: 400 13px/18px var(--font-texto); }
+.producer-body .beat-file-limit { color: var(--integrado-secondary, var(--color-text-secondary)); font: 400 13px/18px var(--font-texto); }
+
+/* ---- Filters ---- */
+.producer-body .producer-filters {
+    grid-template-columns: repeat(2, minmax(0, 260px));
+    align-items: end;
+    justify-content: start;
+    gap: 16px;
+}
+
+/* ---- File cards: actions sized to their text ---- */
+.producer-body .producer-file { align-items: flex-start; }
+.producer-body .producer-file > div > :is(button, .file-note-form) { justify-self: start; }
+.producer-body .producer-file .ouvir-arquivo__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.producer-body .producer-file .ouvir-arquivo__actions .btn-outline { width: auto; }
+.producer-body .producer-file__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.producer-body .file-note-form { display: grid; gap: 8px; width: min(100%, 520px); }
+
+/* ---- Preview upload ---- */
+.producer-body .producer-preview-form {
+    grid-template-columns: minmax(140px, 0.7fr) minmax(220px, 1.5fr) minmax(200px, 1fr);
+    align-items: end;
+    gap: 16px;
+}
+.producer-body .producer-preview-form > .file-quota-hint,
+.producer-body .producer-preview-form > button { grid-column: 1 / -1; }
+.producer-body .producer-preview-form > button { justify-self: end; }
+.producer-body .producer-preview-form textarea { min-height: 72px; }
+
+/* ---- Profile: own tag ---- */
+.producer-body #producer-audio-tag { display: grid; gap: 12px; max-width: 720px; }
+.producer-body #producer-audio-tag > p { margin: 0; }
+.producer-body #producer-audio-tag .admin-disclosure {
+    border: 1px solid var(--integrado-border, rgba(255, 255, 255, 0.12));
+    border-radius: var(--radius-sm);
+    background: rgba(6, 16, 31, 0.35);
+}
+.producer-body #producer-audio-tag .admin-disclosure > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 12px 16px;
+    color: var(--integrado-primary, var(--color-text-primary));
+    font: 700 14px/20px var(--font-acoes);
+    cursor: pointer;
+    list-style: none;
+}
+.producer-body #producer-audio-tag .admin-disclosure > summary::-webkit-details-marker { display: none; }
+.producer-body #producer-audio-tag .admin-disclosure > summary::after { content: "+"; color: var(--integrado-cyan, var(--color-accent)); font-size: 20px; }
+.producer-body #producer-audio-tag .admin-disclosure[open] > summary::after { content: "−"; }
+.producer-body #producer-audio-tag .admin-disclosure > form { display: grid; gap: 12px; padding: 16px; border-top: 1px solid var(--integrado-border, rgba(255, 255, 255, 0.12)); }
+.producer-body #producer-audio-tag .admin-disclosure > form > label { display: flex; flex-direction: column; gap: 8px; font: 700 14px/20px var(--font-texto); color: var(--integrado-secondary, var(--color-text-secondary)); }
+.producer-body #producer-audio-tag .admin-disclosure > form > button { justify-self: start; }
+
+/* ---- Small screens ---- */
+@media (max-width: 640px) {
+    .producer-body .portal-form-grid,
+    .producer-body .beat-form__format,
+    .producer-body .producer-preview-form,
+    .producer-body .producer-filters { grid-template-columns: minmax(0, 1fr); }
+    .producer-body .producer-file { flex-direction: column; }
+    .producer-body .producer-file__actions { justify-content: flex-start; }
+    .producer-body .portal-form-footer > button,
+    .producer-body .producer-preview-form > button { width: 100%; }
+}
+
+/* Portfolio submission: full-width description. */
+.producer-body .portfolio-submission-form__full { grid-column: 1 / -1; }
+.producer-body .portfolio-submission-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 96px;
+    padding: 12px 14px;
+    resize: vertical;
+    border: 1px solid var(--integrado-control, rgba(255, 255, 255, 0.2));
+    border-radius: var(--radius-sm);
+    background: var(--integrado-surface, var(--color-background));
+    color: var(--integrado-primary, var(--color-text-primary));
+    font: 400 15px/22px var(--font-texto);
+}

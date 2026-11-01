@@ -17,6 +17,7 @@
         <link rel="stylesheet" href="/css/components/portal-notifications.css" />
         <link rel="stylesheet" href="/css/components/portfolio-submissions.css" />
         <link rel="stylesheet" href="/css/components/upload-tasks.css" />
+        <link rel="stylesheet" href="/css/components/portal-forms.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -97,7 +98,7 @@
                             </div>
                         </div>
                         <div class="producer-filters">
-                            <label for="producer-status-filter">Status</label>
+                            <label class="portal-field" for="producer-status-filter">Status
                             <select id="producer-status-filter">
                                 <option value="todos">Todos</option>
                                 <option value="aguardando_inicio">Aguardando início</option>
@@ -106,11 +107,13 @@
                                 <option value="finalizado">Finalizadas</option>
                                 <option value="entregue">Entregues</option>
                             </select>
-                            <label for="producer-order">Ordenar</label>
+                            </label>
+                            <label class="portal-field" for="producer-order">Ordenar
                             <select id="producer-order">
                                 <option value="prazo">Prazo mais próximo</option>
                                 <option value="recente">Atualização recente</option>
                             </select>
+                            </label>
                         </div>
                         <div id="producer-list" class="producer-list"></div>
                     </section>
@@ -143,18 +146,30 @@
                         <nav class="producer-tabs" aria-label="Beats"><a class="hidden" href="/produtor/beats" data-route-tab="beats" data-beats-panel>Meus beats</a><a href="/produtor/catalogo" data-route-tab="catalog">Catálogo</a></nav>
                         <div class="producer-page-heading"><div><p class="producer-eyebrow">Catálogo interno</p><h1 id="producer-beats-title">Meus beats</h1><p class="producer-lead">Envie beats com sua tag para revisão da Mirai.</p></div></div>
                         <form id="producer-beat-form" class="producer-upload beat-form beat-upload-panel">
-                            <label class="beat-form__full">Título<input name="titulo" maxlength="160" required /></label>
-                            <label class="beat-form__full">Capa<input name="capa" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required /></label>
-                            <div class="beat-form__format"><label>MP3 lease (com tag)<input name="mp3" type="file" accept=".mp3,audio/mpeg" required /></label><label>Preço<input name="preco_lease" type="number" min="0.01" step="0.01" /></label></div>
-                            <div class="beat-form__format"><label>WAV lease (sem tag)<input name="wav" type="file" accept=".wav,audio/wav" /></label><label>Preço<input name="preco_wav" type="number" min="0.01" step="0.01" /></label></div>
-                            <div class="beat-form__format" data-multitrack-file><label>Multitrack (ZIP ou RAR)<input name="multitrack" type="file" accept=".zip,.rar,application/zip,application/vnd.rar" /></label><label>Preço<input name="preco_multitrack" type="number" min="0.01" step="0.01" /></label></div>
-                            <div class="beat-form__format hidden" data-multitrack-link><label>Link HTTPS do multitrack<input name="multitrack_url" type="url" maxlength="2000" placeholder="https://drive.google.com/..." /></label><label>Preço<input name="preco_multitrack_link" type="number" min="0.01" step="0.01" /></label></div>
-                            <div class="beat-form__pair"><label>BPM<input name="bpm" type="number" min="30" max="300" /></label><label>Key<input name="tonalidade" maxlength="24" /></label></div>
-                            <label class="beat-form__full">Gêneros<input name="generos" maxlength="240" /></label>
-                            <label class="beat-form__full">Descrição<textarea name="descricao" maxlength="5000"></textarea></label>
-                            <label class="beat-form__full">Preço (exclusivo)<input name="preco_exclusivo" type="number" min="0.01" step="0.01" /></label>
-                            <button class="btn-cta" type="submit">Enviar para revisão</button>
-                            <p id="producer-beat-upload-status" class="beat-upload-status" role="status" aria-live="polite"></p>
+                            <fieldset class="portal-form-section">
+                                <legend>Sobre o beat</legend>
+                                <div class="portal-form-grid">
+                                    <label class="portal-field portal-field--full">Título<input name="titulo" maxlength="160" required /></label>
+                                    <label class="portal-field">BPM<input name="bpm" type="number" min="30" max="300" /></label>
+                                    <label class="portal-field">Key<input name="tonalidade" maxlength="24" placeholder="Ex.: C# menor" /></label>
+                                    <label class="portal-field portal-field--full">Gêneros<input name="generos" maxlength="240" placeholder="Ex.: Trap, R&amp;B" /></label>
+                                    <label class="portal-field portal-field--full">Descrição<textarea name="descricao" maxlength="5000"></textarea></label>
+                                    <label class="portal-field portal-field--full">Capa<input name="capa" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required /></label>
+                                </div>
+                            </fieldset>
+                            <fieldset class="portal-form-section">
+                                <legend>Licenças e arquivos</legend>
+                                <p class="portal-form-help">O MP3 com tag é obrigatório. Informe ao menos um preço; WAV e multitrack só são vendidos se tiverem arquivo e preço.</p>
+                                <div class="beat-form__format"><label class="portal-field">MP3 lease (com tag)<input name="mp3" type="file" accept=".mp3,audio/mpeg" required /></label><label class="portal-field">Preço (R$)<input name="preco_lease" type="number" min="0.01" step="0.01" /></label></div>
+                                <div class="beat-form__format"><label class="portal-field">WAV lease (sem tag)<input name="wav" type="file" accept=".wav,audio/wav" /></label><label class="portal-field">Preço (R$)<input name="preco_wav" type="number" min="0.01" step="0.01" /></label></div>
+                                <div class="beat-form__format" data-multitrack-file><label class="portal-field">Multitrack (ZIP ou RAR)<input name="multitrack" type="file" accept=".zip,.rar,application/zip,application/vnd.rar" /></label><label class="portal-field">Preço (R$)<input name="preco_multitrack" type="number" min="0.01" step="0.01" /></label></div>
+                                <div class="beat-form__format hidden" data-multitrack-link><label class="portal-field">Link HTTPS do multitrack<input name="multitrack_url" type="url" maxlength="2000" placeholder="https://drive.google.com/..." /></label><label class="portal-field">Preço (R$)<input name="preco_multitrack_link" type="number" min="0.01" step="0.01" /></label></div>
+                                <div class="beat-form__format beat-form__format--price-only"><span class="beat-form__license">Exclusivo<small>Todos os arquivos e o direito de uso exclusivo</small></span><label class="portal-field">Preço (R$)<input name="preco_exclusivo" type="number" min="0.01" step="0.01" aria-label="Preço (exclusivo)" /></label></div>
+                            </fieldset>
+                            <div class="portal-form-footer">
+                                <p id="producer-beat-upload-status" class="beat-upload-status" role="status" aria-live="polite"></p>
+                                <button class="btn-cta" type="submit">Enviar para revisão</button>
+                            </div>
                         </form>
                         <section class="beat-submissions" aria-labelledby="producer-beats-list-title">
                             <h2 id="producer-beats-list-title">Enviados para revisão</h2>
