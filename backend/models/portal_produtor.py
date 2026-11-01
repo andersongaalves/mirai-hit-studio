@@ -110,6 +110,13 @@ class ProducaoArquivoModel(Base):
     visivel_cliente = Column(Boolean, default=False, server_default=false(), nullable=False)
     # Roadmap 5.02: note written by the uploader for this exact version; never edited.
     observacao = Column(String(1000), nullable=True)
+    # Contract stage the file belongs to (Rough Mix, Mixagem...); null = general.
+    etapa_id = Column(
+        Integer,
+        ForeignKey("producao_etapas.id", ondelete="SET NULL", name="fk_producao_arquivos_etapa_id"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),

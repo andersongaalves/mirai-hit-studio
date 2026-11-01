@@ -83,6 +83,7 @@ class ProducaoArquivoClienteResponse(BaseModel):
     original_disponivel: bool = False
     # 5.14: final delivery ready but held until the balance is paid.
     bloqueado_pagamento: bool = False
+    etapa_id: int | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -1,3 +1,5 @@
+import { controlesOuvir, podeOuvir } from "../modules/ouvir_arquivo.js";
+import { applyStageFiles, resetStageFiles, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { renderMudancas } from "../modules/proposta_mudancas.js";
 import {
     FINAL_STATUSES,
@@ -137,6 +139,7 @@ function currentVersions(files) {
 
 function fileItem(file, handlers) {
     const item = element("li", "producer-file");
+    item.dataset.etapaId = file.etapa_id == null ? "" : String(file.etapa_id);
     if (file.tipo === "previa") item.dataset.previewFileId = String(file.id);
     if (file.processamento_tag === "pendente") item.dataset.tagPending = "true";
     const info = element("div");
@@ -157,23 +160,18 @@ function fileItem(file, handlers) {
         item.append(info);
         return item;
     }
-    if (file.tipo === "previa" && /^(audio|video)\//.test(file.mime_type)) {
-        const play = element("button", "btn-outline", "Reproduzir");
-        play.type = "button";
-        play.addEventListener("click", () => handlers.onPreview(file, player, play));
-        actions.append(play);
+    const listenable = podeOuvir(file) && handlers.onListen && !file.bloqueado_pagamento;
+    if (listenable) {
         // The untagged original is released together with the final delivery.
-        if (file.original_disponivel) {
-            const original = element("button", "btn-outline", "Ouvir sem tag");
-            original.type = "button";
-            original.addEventListener("click", () => handlers.onPreview(file, player, original, "original"));
-            actions.append(original);
-        }
-    } else if (!file.bloqueado_pagamento && /^(audio|video)\//.test(file.mime_type)) {
-        const listen = element("button", "btn-outline", "Ouvir");
-        listen.type = "button";
-        listen.addEventListener("click", () => handlers.onPreview(file, player, listen));
-        actions.append(listen);
+        const opcoes = file.tipo === "previa" && file.original_disponivel
+            ? [{ versao: null, rotulo: "Com tag" }, { versao: "original", rotulo: "Sem tag" }]
+            : [{ versao: null, rotulo: "Áudio" }];
+        player.append(controlesOuvir(file, {
+            opcoes,
+            load: versao => handlers.onListen(file, versao),
+            onError: error => setAlert(error.message, true),
+        }));
+        info.append(player);
     }
     if (file.bloqueado_pagamento) {
         // 5.14: the final delivery is ready but only released after the balance is paid.
@@ -185,14 +183,14 @@ function fileItem(file, handlers) {
             pay.href = checkout;
             actions.append(pay);
         }
-        item.append(info, actions, player);
+        item.append(info, actions);
         return item;
     }
     const download = element("button", "btn-outline", "Baixar");
     download.type = "button";
     download.addEventListener("click", () => handlers.onDownload(file.id, download));
     actions.append(download);
-    item.append(info, actions, player);
+    item.append(info, actions);
     return item;
 }
 
@@ -219,14 +217,86 @@ function fileGroup(title, files, handlers, help = "") {
     group.append(element("h3", "", title));
     if (help) group.append(element("p", "producer-help", help));
     const list = element("ul", "producer-file-list");
+    list.dataset.stageGroup = "";
     if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo liberado."));
     else files.forEach(file => list.append(fileItem(file, handlers)));
     group.append(list);
     return group;
 }
 
+// Final delivery: before (Rough Mix) and after (master) in one player that keeps the
+// position when switching, like the portfolio comparison. Shown only when both exist
+// and the final audio is released to the client.
+let beforeAfterContext = null;
+
+function latest(list) {
+    return [...list].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)) || b.id - a.id)[0] || null;
+}
+
+function pickBeforeAfter(stages, files, deliveries) {
+    const audio = files.filter(file => podeOuvir(file) && !file.bloqueado_pagamento && !["pendente", "erro"].includes(file.processamento_tag));
+    const stageIds = pattern => new Set(stages.filter(stage => pattern.test(stage.nome || "")).map(stage => stage.id));
+    const roughStages = stageIds(/rough/i);
+    const masterStages = stageIds(/master/i);
+    const before = latest(audio.filter(file => roughStages.has(file.etapa_id)))
+        || latest(audio.filter(file => file.tipo === "previa" && /rough/i.test(file.nome_exibicao || "")));
+    if (!before) return null;
+    const released = deliveries.filter(delivery => !delivery.bloqueado_pagamento);
+    const deliveryAudio = released.map(delivery => delivery.arquivo_principal).filter(file => file && podeOuvir(file));
+    const after = latest(audio.filter(file => masterStages.has(file.etapa_id) && file.id !== before.id))
+        || latest(deliveryAudio)
+        || latest(audio.filter(file => file.tipo === "entrega"));
+    return after && after.id !== before.id ? { before, after } : null;
+}
+
+export function renderBeforeAfter(stages = []) {
+    const slot = document.getElementById("project-before-after");
+    if (!slot || !beforeAfterContext) return;
+    const { files, deliveries, handlers } = beforeAfterContext;
+    const pair = handlers.onListen ? pickBeforeAfter(stages, files, deliveries) : null;
+    slot.hidden = !pair;
+    if (!pair) { slot.replaceChildren(); return; }
+    const section = element("section", "before-after");
+    section.setAttribute("aria-labelledby", "before-after-title");
+    const title = element("h2", "", "Antes e depois");
+    title.id = "before-after-title";
+    section.append(
+        element("p", "before-after__eyebrow", "Entrega final"),
+        title,
+        element("p", "before-after__lead", "Compare a primeira mix (Rough Mix) com a versão final. Troque entre as duas durante a reprodução: a música continua do mesmo ponto."),
+    );
+    // The untagged original of the rough is released together with the final delivery.
+    const sources = {
+        antes: { file: pair.before, versao: pair.before.original_disponivel ? "original" : null },
+        depois: { file: pair.after, versao: null },
+    };
+    section.append(controlesOuvir(pair.after, {
+        titulo: pair.after.nome_exibicao,
+        opcoes: [{ versao: "antes", rotulo: "Antes · Rough Mix" }, { versao: "depois", rotulo: "Depois · Final" }],
+        inicial: "depois",
+        load: key => handlers.onListen(sources[key].file, sources[key].versao),
+        onError: error => setAlert(error.message, true),
+    }));
+    slot.replaceChildren(section);
+}
+
+// Delivery packages: listen to the MP3 and, when present, the WAV, without downloading.
+function deliveryPlayer(card, delivery, handlers) {
+    if (!handlers.onListen) return;
+    const sources = [[delivery.arquivo_principal, "MP3"], [delivery.wav_arquivo, "WAV"]]
+        .filter(([file]) => file && podeOuvir(file));
+    if (!sources.length) return;
+    const byKey = new Map(sources.map(([file, label]) => [label, file]));
+    card.append(controlesOuvir(sources[0][0], {
+        opcoes: sources.map(([, label]) => ({ versao: label, rotulo: label })),
+        load: key => handlers.onListen(byKey.get(key), null),
+        onError: error => setAlert(error.message, true),
+    }));
+}
+
 function finalDeliveryCard(delivery, handlers) {
     const card = element("article", "final-delivery-card");
+    card.dataset.etapaId = delivery.etapa_id == null ? "" : String(delivery.etapa_id);
     card.append(
         element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Entrega final"),
         element("h3", "", delivery.titulo),
@@ -245,6 +315,7 @@ function finalDeliveryCard(delivery, handlers) {
         }
         return card;
     }
+    deliveryPlayer(card, delivery, handlers);
     const actions = element("div", "final-delivery-card__actions");
     const addFile = (file, label) => {
         if (!file) return;
@@ -274,6 +345,9 @@ function filesPanel(production, files, deliveries, handlers) {
     if (portalSettings?.textos?.ajuda_arquivos) {
         panel.append(element("p", "producer-help", portalSettings.textos.ajuda_arquivos));
     }
+    const stageFilter = element("div", "stage-filter hidden");
+    stageFilter.dataset.stageFilter = "";
+    panel.append(stageFilter);
     const linkedIds = new Set(deliveries.flatMap(delivery => [
         delivery.arquivo_principal?.id,
         delivery.wav_arquivo?.id,
@@ -283,6 +357,7 @@ function filesPanel(production, files, deliveries, handlers) {
     const looseFiles = files.filter(file => !linkedIds.has(file.id));
     if (deliveries.length) {
         const deliveryList = element("div", "final-delivery-list");
+        deliveryList.dataset.stageGroup = "";
         deliveries.forEach(delivery => deliveryList.append(finalDeliveryCard(delivery, handlers)));
         panel.append(deliveryList);
     }
@@ -372,6 +447,7 @@ function filesPanel(production, files, deliveries, handlers) {
         form.append(
             element("h3", "client-upload-form__title", "Enviar material ou referência"),
             field("Tipo", type),
+            stageField(),
             field("Arquivo", filePicker),
             field("Substitui", replaces),
             quotaHint,
@@ -382,7 +458,7 @@ function filesPanel(production, files, deliveries, handlers) {
         form.addEventListener("submit", event => {
             event.preventDefault();
             if (form.dataset.busy === "true" || !input.files[0]) return;
-            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback, note.value);
+            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback, note.value, stageFieldValue(form));
         });
         panel.append(form);
     }
@@ -471,8 +547,15 @@ export function renderDetail(production, files, deliveries, finance, handlers) {
     messagesSlot.id = "production-messages-slot";
     const pending = paymentPending(finance);
     if (pending) overview.append(sectionButton("project-section-payment", "Ver pagamento", "btn-cta client-detail-cta"));
-    detail.append(title, meta, sectionNavigation(pending), grid, filesPanel(production, files, deliveries, { ...handlers, finance }), messagesSlot, financePanel(finance));
+    resetStageFiles(production.id);
+    const beforeAfter = element("div", "before-after-slot");
+    beforeAfter.id = "project-before-after";
+    beforeAfter.hidden = true;
+    detail.append(title, meta, sectionNavigation(pending), grid, beforeAfter, filesPanel(production, files, deliveries, { ...handlers, finance }), messagesSlot, financePanel(finance));
     root.append(detail);
+    applyStageFiles(root);
+    beforeAfterContext = { files, deliveries, handlers };
+    renderBeforeAfter([]);
 }
 
 // AUD6-S07-001: the detail is long on phones; sections are one tap away and the

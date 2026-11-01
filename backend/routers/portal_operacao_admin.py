@@ -81,6 +81,7 @@ async def upload_file(
     visivel_cliente: Annotated[bool, Form()] = False,
     substitui_arquivo_id: Annotated[int | None, Form()] = None,
     observacao: Annotated[str | None, Form(max_length=1000)] = None,
+    etapa_id: Annotated[int | None, Form()] = None,
 ):
     production = _production(db, producao_id)
     try:
@@ -97,6 +98,7 @@ async def upload_file(
             replaces_id=substitui_arquivo_id,
             note=observacao,
             request_id=getattr(request.state, "request_id", None),
+            stage_id=etapa_id,
         )
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None

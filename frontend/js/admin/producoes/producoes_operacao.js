@@ -3,6 +3,7 @@ import * as Notify from "../../utils/notifications.js";
 import * as API from "./producoes_api.js";
 import { messagesPanel } from "../../modules/production_messages.js";
 import { stagesPanel } from "../../modules/production_stages.js";
+import { applyStageFiles, resetStageFiles, selectStage, setStages, stageFieldValue } from "../../modules/stage_files.js";
 import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
 import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
 import { creditAllocationsPanel } from "../../modules/credit_allocations.js";
@@ -51,9 +52,11 @@ function saveBlob({ blob, filename }) {
 function renderFiles() {
     const root = byId("prod_arquivos");
     root.replaceChildren();
+    root.dataset.stageGroup = "";
     if (!files.length) root.append(node("p", "admin-empty", "Nenhum arquivo registrado."));
     files.forEach(file => {
         const row = node("article", "producao-arquivo-row");
+        row.dataset.etapaId = file.etapa_id == null ? "" : String(file.etapa_id);
         const info = node("div", "producao-arquivo-row__info");
         info.append(
             node("strong", "", file.nome_exibicao),
@@ -110,6 +113,7 @@ function renderFiles() {
     const receipt = byId("prod_repasse_comprovante");
     receipt.replaceChildren(new Option("Sem comprovante", ""));
     files.filter(file => file.tipo === "comprovante").forEach(file => receipt.append(new Option(file.nome_exibicao, String(file.id))));
+    applyStageFiles(byId("modal-producao") || document);
 }
 
 function renderPayout() {
@@ -157,6 +161,8 @@ function bindActions() {
         if (replacement) form.append("substitui_arquivo_id", replacement);
         const note = byId("prod_arquivo_observacao")?.value.trim();
         if (note) form.append("observacao", note);
+        const stage = stageFieldValue(uploadForm);
+        if (stage) form.append("etapa_id", stage);
         enqueueUpload(`/producoes/${productionId}/arquivos`, form, {
             label: `${input.files[0].name} · Produção #${productionId}`,
             meta: { kind: "admin-production", productionId },
@@ -257,6 +263,10 @@ async function carregarEtapas(id, revision) {
             await reload();
         },
         onHistory: stage => API.historicoEtapaContratual(id, stage.id),
+        onSelect: stage => {
+            selectStage(stage.id);
+            byId("prod-files-tab")?.click();
+        },
         onGenerate: async () => {
             try {
                 await API.gerarEtapasContratuais(id);
@@ -267,6 +277,7 @@ async function carregarEtapas(id, revision) {
             await reload();
         },
     }));
+    setStages(id, data?.etapas || []);
 }
 
 // Roadmap 5.09: quotas load independently; the editor saves an admin exception.
@@ -476,6 +487,7 @@ async function carregarRepassesEtapas(id, revision) {
 export async function carregarOperacao(id) {
     const revision = ++loadRevision;
     productionId = id;
+    resetStageFiles(id);
     const stagePayouts = byId("prod_repasses_etapas");
     if (stagePayouts) stagePayouts.textContent = "Carregando repasses...";
     carregarCreditos(id, revision);

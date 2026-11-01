@@ -8,8 +8,10 @@ import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { startAccountPassword } from "../modules/account_password.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
+import { selectStage, setStages } from "../modules/stage_files.js";
 import {
     applySettings,
+    renderBeforeAfter,
     renderDashboard,
     renderDetail,
     renderList,
@@ -40,7 +42,7 @@ function watchTaggedPreviews(production, files, failures = 0) {
         try {
             const updated = await api.listarArquivos(production.id);
             if (route().view !== "detail" || route().id !== production.id || !getCurrentUser()) return;
-            updateProcessedPreviews(updated, { onDownload: downloadFile, onPreview: playPreview });
+            updateProcessedPreviews(updated, { onDownload: downloadFile, onListen: listenFile });
             watchTaggedPreviews(production, updated);
         } catch {
             watchTaggedPreviews(production, files, failures + 1);
@@ -107,7 +109,13 @@ async function loadStages(production) {
     panel.replaceChildren(stagesPanel({
         role: "cliente",
         data,
+        onSelect: stage => {
+            selectStage(stage.id);
+            document.getElementById("project-section-files")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        },
     }));
+    setStages(production.id, data.etapas);
+    renderBeforeAfter(data.etapas);
 }
 
 // Roadmap 5.09: quota hints load after the detail; the server enforces them anyway.
@@ -182,7 +190,7 @@ async function openDetail(id) {
             onRefreshFiles: refreshFiles,
             onDownload: downloadFile,
             onDeliveryLink: openDeliveryLink,
-            onPreview: playPreview,
+            onListen: listenFile,
             uploadFeedback,
         });
         showView("detail");
@@ -437,24 +445,9 @@ async function refuseProposal(proposal, button) {
     }
 }
 
-async function playPreview(file, player, button, versao = null) {
-    button.disabled = true;
-    try {
-        const { blob } = await api.baixarArquivo(file.id, { versao, ouvir: true });
-        const url = URL.createObjectURL(blob);
-        objectUrls.add(url);
-        const media = document.createElement(file.mime_type.startsWith("video/") ? "video" : "audio");
-        media.className = "client-player";
-        media.controls = true;
-        media.preload = "metadata";
-        media.playsInline = true;
-        media.src = url;
-        player.replaceChildren(media);
-    } catch (error) {
-        setAlert(error.message, true);
-    } finally {
-        button.disabled = false;
-    }
+async function listenFile(file, versao = null) {
+    const { blob } = await api.baixarArquivo(file.id, { versao, ouvir: true });
+    return blob;
 }
 
 function uploadError(error) {
@@ -482,7 +475,7 @@ async function refreshFiles(production, setFeedback) {
             onRefreshFiles: refreshFiles,
             onDownload: downloadFile,
             onDeliveryLink: openDeliveryLink,
-            onPreview: playPreview,
+            onListen: listenFile,
             uploadFeedback,
         });
         watchTaggedPreviews(production, files);
@@ -500,7 +493,7 @@ async function refreshFiles(production, setFeedback) {
     }
 }
 
-async function uploadFile(production, file, type, replacesId, form, setFeedback, note = "") {
+async function uploadFile(production, file, type, replacesId, form, setFeedback, note = "", stageId = "") {
     if (form.dataset.busy === "true") return;
     form.dataset.busy = "true";
     setFeedback("loading", "Adicionando à fila de envios...");
@@ -510,6 +503,7 @@ async function uploadFile(production, file, type, replacesId, form, setFeedback,
         body.append("tipo", type);
         if (replacesId) body.append("substitui_arquivo_id", String(replacesId));
         if (note.trim()) body.append("observacao", note.trim());
+        if (stageId) body.append("etapa_id", String(stageId));
         await enqueueUpload(`/portal/cliente/producoes/${production.id}/arquivos`, body, {
             label: `${file.name} · ${production.titulo}`,
             meta: { kind: "client-production", productionId: production.id },

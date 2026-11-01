@@ -12,6 +12,7 @@ import { loadAudioTag } from "../modules/audio_tags.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
 import { watchFilePickers } from "../modules/file_picker.js";
+import { selectStage, setStages } from "../modules/stage_files.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
@@ -59,7 +60,12 @@ async function loadStages(production) {
             await api.atualizarEtapa(production.id, stage.id, { status: destino, status_atual: stage.status });
             await loadStages(production);
         },
+        onSelect: stage => {
+            selectStage(stage.id);
+            document.querySelector(".producer-files")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        },
     }));
+    setStages(production.id, data.etapas);
 }
 
 // Roadmap 5.09: quota hints load after the detail; the server enforces them anyway.
@@ -347,7 +353,7 @@ async function downloadReceipt(id, button, byStage = false) {
     }
 }
 
-async function uploadFile(production, file, type, replacesId, button, note = "") {
+async function uploadFile(production, file, type, replacesId, button, note = "", stageId = "") {
     if (button.disabled) return;
     button.disabled = true;
     setAlert();
@@ -357,6 +363,7 @@ async function uploadFile(production, file, type, replacesId, button, note = "")
         form.append("tipo", type);
         if (replacesId) form.append("substitui_arquivo_id", String(replacesId));
         if (note.trim()) form.append("observacao", note.trim());
+        if (stageId) form.append("etapa_id", String(stageId));
         await enqueueUpload(`/portal/produtor/producoes/${production.id}/arquivos`, form, {
             label: `${file.name} · ${production.titulo}`,
             meta: { kind: "producer-production", productionId: production.id },

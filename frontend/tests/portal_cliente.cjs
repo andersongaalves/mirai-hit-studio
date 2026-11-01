@@ -50,6 +50,7 @@ let productions = [
         updated_at: new Date(now - 3600000).toISOString(),
     },
 ];
+const contentRequests = [];
 let files = [{
     id: 7, producao_id: 1, tipo: 'previa', nome_exibicao: '<script>preview</script>.mp3',
     mime_type: 'audio/mpeg', tamanho_bytes: 2048, sha256: 'a'.repeat(64),
@@ -284,6 +285,7 @@ async function staticResponse(route) {
             return route.fulfill({ json: deliveries.filter(item => item.producao_id === productionId) });
         }
         if (/^\/portal\/cliente\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
+            contentRequests.push(url.pathname + url.search);
             return route.fulfill({ body: 'synthetic-audio', contentType: 'audio/mpeg', headers: { 'content-disposition': "attachment; filename*=UTF-8''preview.mp3" } });
         }
         const detail = url.pathname.match(/^\/portal\/cliente\/producoes\/(\d+)$/);
@@ -534,7 +536,9 @@ async function staticResponse(route) {
         assert.match(await clientStagePanel.textContent(), /50% concluído/);
         assert.match(await clientStagePanel.textContent(), /Mix <i>final<\/i>.*Em andamento.*Prazo:/s);
         assert.match(await clientStagePanel.locator('.production-stage').first().textContent(), /Concluída/);
-        assert.equal(await clientStagePanel.locator('button, i').count(), 0);
+        // Only the "Arquivos" shortcut of each stage; no stage actions for the client.
+        assert.equal(await clientStagePanel.locator('button:not(.production-stage__files), i').count(), 0);
+        assert.equal(await clientStagePanel.locator('.production-stage__files').count(), 2);
         assert.doesNotMatch(await clientStagePanel.textContent(), /R\$|revisões/);
         assert.equal(await clientStagePanel.getByRole('progressbar').getAttribute('aria-valuenow'), '50');
 
@@ -550,9 +554,11 @@ async function staticResponse(route) {
         assert.deepEqual(messagePosts[0], { texto: 'Ficou ótimo, pode seguir.', audiencia: 'todos', responde_a_id: 1, arquivo_id: null });
         assert.match(await page.locator('.production-message').nth(1).textContent(), /Você.*Em resposta a: Prévia nova/s);
 
-        await page.getByRole('button', { name: 'Reproduzir' }).click();
-        await page.waitForSelector('audio.client-player', { state: 'attached' });
-        assert.equal(await page.locator('audio.client-player').count(), 1);
+        // Previews play in the page, in the portfolio player style; nothing is downloaded.
+        const previewPlayer = page.locator('.producer-file').filter({ hasText: 'preview' }).first().locator('.file-player');
+        await previewPlayer.getByRole('button', { name: /^Reproduzir / }).click();
+        await page.waitForFunction(() => [...document.querySelectorAll('audio.ouvir-arquivo__media')].some(audio => audio.src.startsWith('blob:')));
+        assert.equal(await previewPlayer.locator('input[type=range]').count(), 1);
 
         const longName = `${'nome-longo-'.repeat(18)}.wav`;
         await page.getByLabel('Arquivo para enviar').setInputFiles({ name: longName, mimeType: 'audio/wav', buffer: Buffer.from('RIFF-client') });
@@ -672,6 +678,30 @@ async function staticResponse(route) {
         await page.locator('#client-list .producer-card').getByRole('button', { name: 'Abrir projeto' }).click();
         await page.waitForURL('**/cliente/projetos/1');
         assert.match(await page.locator('.producer-files').first().textContent(), /Envie stems em WAV\./);
+        // Final delivery: no comparison while the final audio is held for payment.
+        assert.equal(await page.locator('#project-before-after').isVisible(), false);
+
+        // Before and after: the Rough Mix stage preview against the released final.
+        files.push({
+            id: 31, producao_id: 1, tipo: 'previa', nome_exibicao: 'rough.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 1024,
+            sha256: 'e'.repeat(64), grupo_versao: 'rough-group', versao: 1, substitui_arquivo_id: null, enviado_por_mim: false,
+            etapa_id: 41, original_disponivel: true, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+        }, {
+            id: 32, producao_id: 1, tipo: 'entrega', nome_exibicao: 'master-liberado.wav', mime_type: 'audio/wav', tamanho_bytes: 4096,
+            sha256: 'f'.repeat(64), grupo_versao: 'master-group', versao: 1, substitui_arquivo_id: null, enviado_por_mim: false,
+            etapa_id: 42, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
+        });
+        await page.reload();
+        const comparison = page.locator('#project-before-after .before-after');
+        await comparison.waitFor();
+        assert.match(await comparison.textContent(), /Antes e depois/);
+        await comparison.getByRole('button', { name: /^Reproduzir / }).click();
+        await page.waitForFunction(() => document.querySelector('#project-before-after audio')?.src.startsWith('blob:'));
+        assert.ok(contentRequests.includes('/portal/cliente/arquivos/32/conteudo?ouvir=true'), JSON.stringify(contentRequests));
+        await comparison.getByRole('button', { name: 'Antes · Rough Mix' }).click();
+        await page.waitForFunction(() => document.querySelector('#project-before-after [aria-pressed="true"]')?.textContent.includes('Antes'));
+        await page.waitForTimeout(300);
+        assert.ok(contentRequests.includes('/portal/cliente/arquivos/31/conteudo?versao=original&ouvir=true'), JSON.stringify(contentRequests));
 
         assert.deepEqual(errors, []);
         console.log('PASS: client login, dashboard, projects, files, preview, finance, safe text, errors and responsive structure.');

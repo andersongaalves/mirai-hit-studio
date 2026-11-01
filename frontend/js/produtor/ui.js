@@ -1,3 +1,4 @@
+import { applyStageFiles, resetStageFiles, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { controlesOuvir, opcoesEstudio, podeOuvir } from "../modules/ouvir_arquivo.js";
 import { deadlineState, filterAndSort, formatDate, nextAction, parseEtapas, statusInfo, summarize } from "./utils.js";
 
@@ -132,6 +133,7 @@ export function renderList(productions, filters, onOpen) {
 function fileItem(file, handlers) {
     const onDownload = handlers.onDownload;
     const item = element("li", "producer-file");
+    item.dataset.etapaId = file.etapa_id == null ? "" : String(file.etapa_id);
     const info = element("div");
     info.append(
         element("strong", "", file.nome_exibicao),
@@ -245,6 +247,7 @@ function deliveryFilePicker(name, label, accept, required = false) {
 
 function deliveryCard(delivery, handlers) {
     const card = element("article", "final-delivery-card");
+    card.dataset.etapaId = delivery.etapa_id == null ? "" : String(delivery.etapa_id);
     card.append(
         element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Outra entrega"),
         element("h3", "", delivery.titulo),
@@ -253,6 +256,17 @@ function deliveryCard(delivery, handlers) {
         card.append(element("p", "file-note", `${delivery.bpm} BPM · ${delivery.tonalidade}`));
     }
     if (delivery.observacao) card.append(element("p", "file-note", delivery.observacao));
+    // Listen to the MP3 and, when present, the WAV of the package without downloading.
+    const sources = [[delivery.arquivo_principal, "MP3"], [delivery.wav_arquivo, "WAV"]]
+        .filter(([file]) => file && podeOuvir(file));
+    if (handlers.onListen && sources.length) {
+        const byKey = new Map(sources.map(([file, label]) => [label, file]));
+        card.append(controlesOuvir(sources[0][0], {
+            opcoes: sources.map(([, label]) => ({ versao: label, rotulo: label })),
+            load: key => handlers.onListen(byKey.get(key), null),
+            onError: error => setAlert(error.message, true),
+        }));
+    }
     const actions = element("div", "final-delivery-card__actions");
     const addFile = (file, label) => {
         if (!file) return;
@@ -381,12 +395,14 @@ function finalDeliveryForm(production, handlers) {
     category.addEventListener("change", sync);
     source.addEventListener("change", sync);
     sync();
-    form.append(categoryLabel, titleLabel, main.wrapper, instrumental, noteLabel, hint, submit);
+    const stage = stageField("final-delivery-form__field");
+    form.append(categoryLabel, titleLabel, stage, main.wrapper, instrumental, noteLabel, hint, submit);
     form.addEventListener("submit", event => {
         event.preventDefault();
         if (!form.reportValidity()) return;
         const data = new FormData(form);
         data.delete("multitrack_origem");
+        if (!stageFieldValue(form)) data.delete("etapa_id");
         data.set("request_id", crypto.randomUUID());
         handlers.onDelivery(production, data, submit, form, disclosure);
     });
@@ -397,8 +413,12 @@ function finalDeliveryForm(production, handlers) {
 function filesPanel(production, files, deliveries, handlers) {
     const panel = element("section", "producer-files");
     panel.append(element("h2", "", "Arquivos e entregas"));
+    const stageFilter = element("div", "stage-filter hidden");
+    stageFilter.dataset.stageFilter = "";
+    panel.append(stageFilter);
     if (deliveries.length) {
         const deliveryList = element("div", "final-delivery-list");
+        deliveryList.dataset.stageGroup = "";
         deliveries.forEach(delivery => deliveryList.append(deliveryCard(delivery, handlers)));
         panel.append(deliveryList);
     }
@@ -412,6 +432,7 @@ function filesPanel(production, files, deliveries, handlers) {
     const replaced = new Set(files.map(file => file.substitui_arquivo_id).filter(id => id != null));
     const fileHandlers = { ...handlers, replacedIds: replaced };
     const list = element("ul", "producer-file-list");
+    list.dataset.stageGroup = "";
     if (!looseFiles.length && !deliveries.length) list.append(element("li", "producer-empty", "Nenhum arquivo disponível."));
     else looseFiles.forEach(file => list.append(fileItem(file, fileHandlers)));
     panel.append(list);
@@ -473,8 +494,10 @@ function filesPanel(production, files, deliveries, handlers) {
         return wrapper;
     };
     form.classList.add("producer-preview-form");
+    const stage = stageField();
     form.append(
         field("Tipo", type),
+        stage,
         field("Arquivo", filePicker),
         field("Substitui", replaces),
         quotaHint,
@@ -483,7 +506,7 @@ function filesPanel(production, files, deliveries, handlers) {
     );
     form.addEventListener("submit", event => {
         event.preventDefault();
-        if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value);
+        if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value, stageFieldValue(form));
     });
     const uploadDisclosure = element("details", "final-delivery-disclosure");
     uploadDisclosure.append(element("summary", "", "Enviar prévia"), form);
@@ -573,8 +596,10 @@ export function renderDetail(production, files, deliveriesOrHandlers, maybeHandl
     }
     const messagesSlot = element("div");
     messagesSlot.id = "production-messages-slot";
+    resetStageFiles(production.id);
     detail.append(filesPanel(production, files, deliveries, handlers), messagesSlot);
     root.append(detail);
+    applyStageFiles(root);
 }
 
 export function renderPayouts(payouts, onReceipt) {

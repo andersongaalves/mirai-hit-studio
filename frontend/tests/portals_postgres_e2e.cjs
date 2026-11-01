@@ -327,8 +327,10 @@ function syntheticWav() {
         card = page.locator('#client-list .producer-card').filter({ hasText: 'E2E Browser Integrado' });
         await card.getByRole('button', { name: 'Abrir projeto' }).click();
         const previewItem = page.locator('.producer-file').filter({ hasText: 'preview-browser.mp3' });
-        await previewItem.getByRole('button', { name: 'Reproduzir' }).click();
-        await previewItem.locator('audio.client-player').waitFor({ state: 'attached' });
+        // In-page player: the audio loads from the real backend on the first play.
+        await previewItem.locator('.file-player').getByRole('button', { name: /^Reproduzir / }).click();
+        await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')]
+            .find(item => item.textContent.includes('preview-browser.mp3'))?.querySelector('audio')?.src.startsWith('blob:'));
         const deliveryItem = page.locator('.final-delivery-card').filter({ hasText: 'Entrega E2E Browser' });
         assert.equal(await deliveryItem.getByRole('button', { name: 'Baixar arquivo' }).count(), 0);
         expectStatus(await api(page, 'GET', `/portal/cliente/arquivos/${delivery.id}/conteudo`),

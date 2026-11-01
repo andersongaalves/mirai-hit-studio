@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="css/pages/integrado-admin.css" />
         <link rel="stylesheet" href="css/components/production-messages.css" />
         <link rel="stylesheet" href="css/components/production-stages.css" />
+        <link rel="stylesheet" href="css/components/file-player.css" />
         <link rel="stylesheet" href="css/components/file-quotas.css" />
         <link rel="stylesheet" href="css/components/policies.css" />
         <link rel="stylesheet" href="css/components/portfolio-submissions.css" />
@@ -1463,6 +1464,7 @@
                         <div id="prod-files-panel" role="tabpanel" aria-labelledby="prod-files-tab" hidden>
                         <section class="producao-detail-block">
                             <h3>Arquivos privados</h3>
+                            <div class="stage-filter hidden" data-stage-filter></div>
                             <div id="prod_arquivos" class="producao-arquivos" aria-live="polite"></div>
                             <details class="admin-disclosure producao-file-disclosure">
                                 <summary>Adicionar arquivo</summary>
@@ -1476,6 +1478,7 @@
                                             <option value="comprovante">Comprovante</option>
                                         </select>
                                     </label>
+                                    <label class="stage-field hidden">Etapa<select id="prod_arquivo_etapa" name="etapa_id" data-stage-field></select></label>
                                     <label>Arquivo<input id="prod_arquivo_input" type="file" required /></label>
                                     <label>Histórico<select id="prod_arquivo_substitui"><option value="">Nova versão independente</option></select></label>
                                     <label>Observação da versão<textarea id="prod_arquivo_observacao" rows="2" maxlength="1000" placeholder="Opcional"></textarea></label>

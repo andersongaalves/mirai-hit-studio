@@ -101,6 +101,18 @@ def _version(db, production_id, file_type, replaces_id, replacement_actor_id=Non
     return previous.grupo_versao, previous.versao + 1, previous
 
 
+def resolve_stage(db, production_id, stage_id, previous=None):
+    """The stage of a new file: the chosen one (of this production) or the replaced version's."""
+    from models import ProducaoEtapaModel
+
+    if stage_id is None:
+        return getattr(previous, "etapa_id", None)
+    stage = db.get(ProducaoEtapaModel, stage_id)
+    if stage is None or stage.producao_id != production_id:
+        raise ProducaoArquivoError("Etapa nao encontrada nesta producao.")
+    return stage.id
+
+
 def upload(
     db: Session,
     *,
@@ -119,6 +131,7 @@ def upload(
     request_id=None,
     note: str | None = None,
     enforce_quota: bool = False,
+    stage_id: int | None = None,
 ):
     _validate_upload(data, mime_type, file_type)
     note = _normalize_note(note)
@@ -138,6 +151,7 @@ def upload(
         replacement_actor_id,
         replacement_audience,
     )
+    etapa_id = resolve_stage(db, production.id, stage_id, previous)
     if enforce_quota:
         try:
             cota_arquivo_service.verificar(
@@ -173,6 +187,7 @@ def upload(
         visivel_cliente=visible_to_client if tag_job is None else False,
         original_restrito=tag_job is not None,
         observacao=note,
+        etapa_id=etapa_id,
     )
     production_id = production.id
     sender_id = getattr(actor, "id", None)
