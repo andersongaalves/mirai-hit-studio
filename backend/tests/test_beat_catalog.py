@@ -346,6 +346,20 @@ with Session(engine) as db:
     # The beatmaker CPF identifies the licensor.
     assert 'CPF 529.982.247-25' in text and 'Representado comercialmente' in text, text[:600]
     assert filename == 'contrato-contrato-exclusivo.pdf'
+    # Lease limits by format: MP3 200 mil streams/views; WAV and multitrack 500 mil.
+    def lease_text(kind):
+        content = beat_contrato_service.gerar_documento(
+            numero='MHS-BEAT-T', data='01/11/2026', proposta_numero='-', exclusivo=False,
+            licenca_rotulo=beat_contrato_service.ROTULOS[kind], formatos=beat_contrato_service.FORMATOS[kind],
+            valor_texto='R$ 1,00', beat_titulo='Teste', produtor='Produtor', produtor_cpf=None,
+            cliente_nome='Cliente', cliente_email='c@example.test',
+            limites=beat_contrato_service.LIMITES_POR_LICENCA[kind])
+        return ''.join(page.extract_text() for page in PdfReader(BytesIO(content)).pages)
+    for kind, expected, other in (('lease_mp3', '200.000', '500.000'), ('lease', '200.000', '500.000'),
+                                  ('lease_wav', '500.000', '200.000'), ('multitrack', '500.000', '200.000')):
+        rendered = lease_text(kind)
+        assert rendered.count(expected) >= 2 and other not in rendered, (kind, rendered[:1500])
+        assert '5.000' in rendered
     try:
         beat_contrato_service.gerar(db, license.id, cliente_id=92)
     except beat_contrato_service.ContratoNaoEncontrado:
