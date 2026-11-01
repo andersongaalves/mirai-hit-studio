@@ -105,7 +105,9 @@ export function openAdminModal(modalOrId, options = {}) {
         const initial = typeof options.initialFocus === "string"
             ? modal.querySelector(options.initialFocus)
             : options.initialFocus;
-        const target = initial || focusableElements(modal)[0] || modal;
+        // Without an explicit target, start on the first field rather than the header's "Fechar".
+        const focusable = focusableElements(modal);
+        const target = initial || focusable.find(element => element.matches("input, select, textarea")) || focusable[0] || modal;
         target?.focus();
     });
     return true;

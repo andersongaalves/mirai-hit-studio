@@ -1310,16 +1310,12 @@
 
 .usuario-especialidades {
     grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-4);
-    margin: 0;
+    margin: 0 0 var(--space-3);
     padding: 0;
     border: 0;
 }
 
-.usuario-especialidades legend { padding: 0; margin-bottom: var(--space-2); }
-.usuario-especialidades label { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }
+.usuario-especialidades legend { width: 100%; padding: 0; margin-bottom: var(--space-1); font-weight: 700; }
 .usuario-especialidades.hidden { display: none; }
 
 .usuario-modal-actions {
