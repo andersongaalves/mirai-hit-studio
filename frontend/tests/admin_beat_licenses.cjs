@@ -106,6 +106,13 @@ const beats = () => [
         await cards.filter({ hasText: 'Vendido' }).getByRole('button', { name: 'Baixar contrato' }).click();
         assert.equal((await contractDownload).suggestedFilename(), 'vendido-contrato-lease-mp3.pdf');
 
+        // The tagged preview can be generated again from the original, with the producer's tag.
+        const reservedCard = cards.filter({ hasText: 'Reservado' });
+        await reservedCard.locator('summary').first().click().catch(() => {});
+        await reservedCard.getByRole('button', { name: /^Gerar prévia com tag de novo/ }).first().click();
+        await page.waitForTimeout(150);
+        assert.match(posts.shift().path, /^\/admin\/beats\/\d+\/regenerar-previa$/);
+
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
         assert.equal(overflow, false);
         if (process.env.SHOT_DIR) await reserved.screenshot({ path: path.join(process.env.SHOT_DIR, 'admin_beat_licenses_390.png') });

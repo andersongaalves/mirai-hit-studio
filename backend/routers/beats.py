@@ -249,6 +249,11 @@ def review(beat_id: int, payload: BeatReview, db: Db, user: Admin):
     return beat_service.review(db, beat_id, payload, user)
 
 
+@router.post("/admin/beats/{beat_id}/regenerar-previa")
+def admin_regenerate_preview(beat_id: int, db: Db, user: Admin):
+    return beat_service.regenerar_previa(db, beat_id, user)
+
+
 @router.put("/admin/beats/{beat_id}")
 async def edit_beat(
     beat_id: int, db: Db, user: Admin, titulo: Annotated[str, Form()],

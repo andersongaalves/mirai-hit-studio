@@ -716,6 +716,54 @@ def producer_delete(db, beat_id, actor):
             logger.warning("beat_cover_delete_failed beat_id=%s", beat_id)
 
 
+def regenerar_previa(db, beat_id, actor):
+    """Admin: mix the beat's original again with its producer's tag (own, else the studio's)
+    and the current settings; the new tagged MP3 replaces the previous one."""
+    model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
+    if model is None:
+        raise HTTPException(404, "Beat nao encontrado.")
+    tag, profile = _tag(db, model.produtor_id)
+    storage = new_production_file_storage("previa")
+    try:
+        original = storage.read(model.original_ref)
+    except ProducaoArquivoStorageError:
+        raise HTTPException(503, "Nao foi possivel ler o audio original do beat.") from None
+    if hashlib.sha256(original).hexdigest() != model.original_sha256:
+        raise HTTPException(409, "Integridade do audio original nao confirmada.")
+    try:
+        tagged = audio_tag_service.mixar(
+            original, tag.conteudo, profile.intervalo_segundos, profile.volume_percentual,
+            **audio_tag_service.level_values(profile),
+        )
+    except Exception:
+        logger.warning("beat_preview_regenerate_failed beat_id=%s", beat_id)
+        raise HTTPException(503, "Nao foi possivel gerar a previa agora.") from None
+    new_ref = storage.save(tagged, "audio/mpeg")
+    old_refs = {ref for ref in (model.mp3_ref, model.preview_ref) if ref and ref != model.original_ref}
+    try:
+        if model.mp3_ref:
+            model.mp3_ref = new_ref
+        model.preview_ref = new_ref
+        model.preview_sha256 = hashlib.sha256(tagged).hexdigest()
+        audit_service.record(db, actor=actor, action="beat.preview_regenerated", entity_type="beat", entity_id=beat_id,
+                             metadata={"tag_id": tag.id})
+        db.commit()
+        db.refresh(model)
+    except Exception:
+        db.rollback()
+        try:
+            storage.delete(new_ref)
+        except ProducaoArquivoStorageError:
+            pass
+        raise
+    for reference in old_refs - {new_ref}:
+        try:
+            storage.delete(reference)
+        except ProducaoArquivoStorageError:
+            logger.warning("beat_preview_old_cleanup_failed beat_id=%s", beat_id)
+    return _response(db, model, include_base=True)
+
+
 def preview(db, beat_id, actor):
     model = db.get(BeatModel, beat_id)
     if model is None:

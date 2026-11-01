@@ -248,7 +248,7 @@ asyncio.run(check())
     def test_admin_replaces_tagged_preview_and_missing_format_is_rejected(self):
         self.run_case(r"""
 async def check():
-    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service, 'storage_for', return_value=images), patch.object(beat_service.audio_tag_service, 'duracao', return_value=.2), patch.object(beat_service.audio_tag_service, 'mixar', side_effect=[mp3()+b'tag-a', mp3()+b'tag-b']):
+    with patch.object(beat_service, 'new_production_file_storage', return_value=storage), patch.object(beat_service, 'storage_for', return_value=images), patch.object(beat_service.audio_tag_service, 'duracao', return_value=.2), patch.object(beat_service.audio_tag_service, 'mixar', side_effect=[mp3()+b'tag-a', mp3()+b'tag-b', mp3()+b'tag-c']):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
             invalid = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Sem WAV','preco_wav':'200'}, files={'mp3':('beat.mp3',mp3(),'audio/mpeg'),'capa':('cover.png',png(),'image/png')})
             assert invalid.status_code == 422 and not storage.objects
@@ -266,6 +266,16 @@ async def check():
             assert (await api.patch(f'/admin/beats/{beat_id}', headers=bearer('admin'), json={'decisao':'aprovar'})).status_code == 200
             preview = await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))
             assert preview.content == mp3()+b'tag-b'
+            # The Admin generates the tagged preview again (e.g. after fixing the tag level): it replaces the old one.
+            with Session(engine) as db:
+                old_preview = db.get(BeatModel, beat_id).preview_ref
+            assert (await api.post(f'/admin/beats/{beat_id}/regenerar-previa', headers=bearer('producer-a'))).status_code == 403
+            regenerated = await api.post(f'/admin/beats/{beat_id}/regenerar-previa', headers=bearer('admin'))
+            assert regenerated.status_code == 200, regenerated.text
+            assert regenerated.json()['status'] == 'aprovado'
+            assert (await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))).content == mp3()+b'tag-c'
+            assert old_preview in storage.deleted and old_preview not in storage.objects
+            assert (await api.post('/admin/beats/999999/regenerar-previa', headers=bearer('admin'))).status_code == 404
 asyncio.run(check())
 """)
 

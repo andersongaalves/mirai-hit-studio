@@ -255,6 +255,45 @@ class AudioTagTests(unittest.TestCase):
                     raise AssertionError('integrity mismatch accepted')
         ''')
 
+    def test_admin_regenerates_preview_with_the_responsible_producer_tag(self):
+        self.run_case('''
+            with Session(engine) as db:
+                admin = db.get(UsuarioModel, 1)
+                producer_b = db.get(UsuarioModel, 3)
+                tags.salvar(db, actor=admin, chave='studio', data=wav(), filename='studio.wav', mime_type='audio/wav', versao=0)
+                own_b = tags.salvar(db, actor=producer_b, chave='producer:3', data=wav(frequency=500), filename='b.wav', mime_type='audio/wav', versao=0)
+                # The production's producer is responsible: an Admin upload carries producer-b's tag.
+                db.get(ProducaoModel, 1).produtor_id = 3
+                db.commit()
+                sent = files.upload(db, production=db.get(ProducaoModel, 1), actor=admin, file_type='previa', filename='mix.wav',
+                    mime_type='audio/wav', data=wav(), visible_to_client=True, visible_to_producer=True, storage=storage)
+                file_id = sent.id
+                assert sent.tag_processamento.tag_id == own_b['tag_id']
+            assert tags.processar_um(session_factory, storage=storage, renderer=lambda *args, **kwargs: b'tagged-1')
+            with Session(engine) as db:
+                first_key = db.get(PreviaTagJobModel, file_id).object_key
+                # producer-b replaces the tag (e.g. louder); the Admin generates the preview again.
+                newer = tags.salvar(db, actor=producer_b, chave='producer:3', data=wav(frequency=700), filename='b2.wav', mime_type='audio/wav', versao=1)
+            async def regenerate():
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
+                    endpoint = f'/admin/audio-tag/previas/{file_id}/regenerar'
+                    assert (await api.post(endpoint, headers=bearer('producer-b'))).status_code == 403
+                    assert (await api.post('/admin/audio-tag/previas/999999/regenerar', headers=bearer('admin'))).status_code == 404
+                    queued = await api.post(endpoint, headers=bearer('admin'))
+                    assert queued.status_code == 200 and queued.json()['estado'] == 'pendente', queued.text
+                    # Asking again while queued changes nothing.
+                    assert (await api.post(endpoint, headers=bearer('admin'))).json()['estado'] == 'pendente'
+            asyncio.run(regenerate())
+            with Session(engine) as db:
+                assert db.get(PreviaTagJobModel, file_id).tag_id == newer['tag_id']
+            assert tags.processar_um(session_factory, storage=storage, renderer=lambda *args, **kwargs: b'tagged-2')
+            with Session(engine) as db:
+                job = db.get(PreviaTagJobModel, file_id)
+                assert job.estado == 'pronto' and job.object_key != first_key
+                assert storage.objects[job.object_key] == b'tagged-2'
+            assert first_key in storage.deleted and first_key not in storage.objects
+        ''')
+
     def test_admin_preview_generator_uses_selected_tag_and_controls(self):
         self.run_case('''
             with Session(engine) as db:

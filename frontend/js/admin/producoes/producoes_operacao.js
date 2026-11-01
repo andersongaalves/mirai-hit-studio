@@ -68,11 +68,14 @@ function renderFiles() {
         const actions = node("div", "producao-arquivo-row__actions");
         if (file.processamento_tag) {
             info.append(node("span", "", { pendente: "Processando tag", pronto: "Versão com tag pronta", erro: "Falha no processamento da tag" }[file.processamento_tag]));
-            if (file.processamento_tag === "erro") {
-                const retry = node("button", "btn-small", "Reprocessar tag");
-                retry.type = "button";
-                retry.onclick = () => run(retry, () => API.reprocessarTag(file.id));
-                actions.append(retry);
+            if (file.processamento_tag !== "pendente") {
+                // New tagged version with the responsible producer's tag; replaces the previous one.
+                const regenerate = node("button", "btn-small", "Gerar prévia com tag de novo");
+                regenerate.type = "button";
+                regenerate.setAttribute("aria-label", `Gerar prévia com tag de novo: ${file.nome_exibicao}`);
+                regenerate.onclick = () => run(regenerate, () => API.regenerarTag(file.id),
+                    "Nova prévia com tag na fila. Ela substitui a anterior quando ficar pronta.");
+                actions.append(regenerate);
             }
         }
         const download = node("button", "btn-small", "Baixar");
