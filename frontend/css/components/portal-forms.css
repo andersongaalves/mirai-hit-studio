@@ -175,3 +175,55 @@
     color: var(--integrado-primary, var(--color-text-primary));
     font: 400 15px/22px var(--font-texto);
 }
+
+/* ===== Client portal ===== */
+/* Request dialog: centered (a reset removed the dialog's auto margin), title on the left. */
+.client-body .client-request-dialog { margin: auto; padding: 28px; }
+.client-body .client-request-dialog form { gap: 16px; }
+.client-body .client-dialog-header { display: grid; gap: 4px; }
+.client-body .client-dialog-header .producer-eyebrow { margin: 0; }
+.client-body .client-request-dialog h2 {
+    margin: 0;
+    font: 700 24px/30px var(--font-titulos);
+    text-align: left;
+}
+.client-body .client-request-dialog h2::after { display: none; }
+.client-body .client-request-dialog #client-request-error:empty { display: none; }
+
+/* Page heading actions stay on one line. */
+.client-body .producer-page-heading__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.client-body .producer-page-heading__actions > * { white-space: nowrap; }
+
+/* Explore: purchases separated from the catalog. */
+.client-body #client-acquired-beats-section { margin-bottom: 24px; }
+
+/* Project detail: send form and payment summary. */
+.client-body .client-upload-form {
+    grid-template-columns: minmax(140px, 0.7fr) minmax(220px, 1.5fr) minmax(180px, 1fr);
+    align-items: end;
+    gap: 16px;
+}
+.client-body .client-upload-form__title {
+    grid-column: 1 / -1;
+    margin: 0;
+    font: 700 16px/22px var(--font-subtitulos);
+}
+.client-body .client-upload-form > :is(.file-quota-hint, .producer-upload__feedback) { grid-column: 1 / -1; }
+.client-body .client-upload-form > button { grid-column: 1 / -1; justify-self: end; }
+.client-body .client-upload-form textarea { min-height: 72px; }
+.client-body .producer-detail > .producer-files:last-child .client-finance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Proposal detail: cards as tall as their content. */
+.client-body .client-proposal-detail { align-items: start; }
+.client-body .client-proposal-detail > * { height: auto; min-height: 0; }
+
+@media (max-width: 640px) {
+    .client-body .client-upload-form { grid-template-columns: minmax(0, 1fr); }
+    .client-body .client-upload-form > button { width: 100%; }
+    .client-body .producer-detail > .producer-files:last-child .client-finance-grid { grid-template-columns: minmax(0, 1fr); }
+    .client-body .producer-page-heading__actions { width: 100%; }
+    .client-body .producer-page-heading__actions > * { flex: 1 1 auto; text-align: center; }
+}
+/* Client file cards: action buttons side by side. */
+.client-body .producer-file > div:last-child:not(:first-child) { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+@media (max-width: 640px) { .client-body .producer-file > div:last-child:not(:first-child) { justify-content: flex-start; } }
