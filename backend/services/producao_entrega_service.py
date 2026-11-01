@@ -274,7 +274,6 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
         )
         db.commit()
         db.refresh(delivery)
-        return delivery
     except Exception as exc:
         db.rollback()
         persisted = db.query(ProducaoEntregaFinalModel).filter_by(request_id=request_key).first()
@@ -290,6 +289,10 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
         if isinstance(exc, IntegrityError):
             raise ProducaoEntregaConflict("Conflito ao registrar a entrega final.") from None
         raise
+    _replace_previous(db, delivery=delivery, production=production, actor=actor,
+                      request_log_id=request_log_id, storage=storage)
+    db.refresh(delivery)
+    return delivery
 
 
 LOCKED_STATUSES = {"entregue"}
@@ -383,18 +386,52 @@ def update(db, *, model, production, actor, changes, request_log_id=None, storag
             raise ProducaoEntregaUnavailable(str(exc)) from None
         raise
     db.refresh(model)
+    if "etapa_id" in changed:
+        # Moved to a stage that already had a final delivery: this one becomes that stage's final.
+        _replace_previous(db, delivery=model, production=production, actor=actor, request_log_id=request_log_id)
+        db.refresh(model)
     return model
 
 
 def delete(db, *, model, production, actor, request_log_id=None, storage=None):
     """The producer removes a final delivery they sent, with all its files (and earlier
     versions of its license). Locked once the production is delivered to the client."""
-    from models import ProducaoMensagemModel
-
     if model.produtor_id != actor.id:
         raise ProducaoEntregaConflict("So quem enviou a entrega pode exclui-la.")
     if production.status in LOCKED_STATUSES:
         raise ProducaoEntregaConflict("A producao ja foi entregue ao cliente; a entrega nao pode mais ser excluida.")
+    _remove(db, model=model, production=production, actor=actor, action="production.final_delivery_deleted",
+            request_log_id=request_log_id, storage=storage)
+
+
+def _stage_of(model):
+    return getattr(model.arquivo_principal, "etapa_id", None)
+
+
+def _replace_previous(db, *, delivery, production, actor, request_log_id=None, storage=None):
+    """One final delivery per stage: the new one replaces earlier deliveries of the same stage."""
+    stage_id = _stage_of(delivery)
+    if stage_id is None:
+        return
+    previous = [
+        item for item in db.query(ProducaoEntregaFinalModel).filter(
+            ProducaoEntregaFinalModel.producao_id == production.id,
+            ProducaoEntregaFinalModel.id != delivery.id,
+        ).all()
+        if _stage_of(item) == stage_id
+    ]
+    for item in previous:
+        try:
+            _remove(db, model=item, production=production, actor=actor, action="production.final_delivery_replaced",
+                    request_log_id=request_log_id, storage=storage, replaced_by=delivery.id)
+        except ProducaoEntregaError:
+            db.rollback()
+            logger.warning("final_delivery_replace_kept delivery_id=%s replaced_by=%s", item.id, delivery.id)
+
+
+def _remove(db, *, model, production, actor, action, request_log_id=None, storage=None, replaced_by=None):
+    from models import ProducaoMensagemModel
+
     files = [item for item in (model.arquivo_principal, model.wav_arquivo, model.multitrack_arquivo, model.licenca_arquivo) if item]
     previous = model.licenca_arquivo
     while previous is not None and previous.substitui_arquivo_id is not None:
@@ -408,10 +445,13 @@ def delete(db, *, model, production, actor, request_log_id=None, storage=None):
         raise ProducaoEntregaConflict("Um arquivo desta entrega esta em uso em outro lugar (mensagem ou nova versao).")
     keys = [item.object_key for item in files]
     delivery_id = model.id
+    metadata = {"production_id": production.id, "files": len(files)}
+    if replaced_by is not None:
+        metadata["replaced_by"] = replaced_by
     audit_service.record(
-        db, actor=actor, action="production.final_delivery_deleted",
+        db, actor=actor, action=action,
         entity_type="production_final_delivery", entity_id=delivery_id,
-        metadata={"production_id": production.id, "files": len(files)}, request_id=request_log_id,
+        metadata=metadata, request_id=request_log_id,
     )
     db.delete(model)
     db.flush()

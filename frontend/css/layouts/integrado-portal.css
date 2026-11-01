@@ -13,6 +13,9 @@
     padding: 24px 16px;
     border-right: 1px solid var(--integrado-border);
     background: var(--integrado-page);
+    /* The sidebar is sticky (its own stacking context) and holds the fixed header bar:
+       above the content, so positioned headings never paint over the header. */
+    z-index: 30;
 }
 .producer-body .producer-header,
 .client-body .producer-header { min-height: 0; border: 0; }
