@@ -422,9 +422,10 @@ def update_details(db, *, model, actor, changes, request_id=None):
         raise ProducaoArquivoConflict("Edite este arquivo pela entrega final a que ele pertence.")
     updates = {}
     if "nome_exibicao" in changes:
-        name = _display_name(changes["nome_exibicao"] or "")
-        if not name.strip():
+        raw = (changes["nome_exibicao"] or "").strip()
+        if not raw:
             raise ProducaoArquivoError("Informe o nome do arquivo.")
+        name = _display_name(raw)
         updates["nome_exibicao"] = name
     if "etapa_id" in changes:
         updates["etapa_id"] = (
