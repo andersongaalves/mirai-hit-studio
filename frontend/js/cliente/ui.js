@@ -1,6 +1,7 @@
 import { controlesOuvir, podeOuvir } from "../modules/ouvir_arquivo.js";
 import { applyStageFiles, resetStageFiles, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { renderMudancas } from "../modules/proposta_mudancas.js";
+import { beforeAfterSection, pickBeforeAfter } from "../modules/before_after.js";
 import {
     FINAL_STATUSES,
     deadlineState,
@@ -229,26 +230,6 @@ function fileGroup(title, files, handlers, help = "") {
 // and the final audio is released to the client.
 let beforeAfterContext = null;
 
-function latest(list) {
-    return [...list].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)) || b.id - a.id)[0] || null;
-}
-
-function pickBeforeAfter(stages, files, deliveries) {
-    const audio = files.filter(file => podeOuvir(file) && !file.bloqueado_pagamento && !["pendente", "erro"].includes(file.processamento_tag));
-    const stageIds = pattern => new Set(stages.filter(stage => pattern.test(stage.nome || "")).map(stage => stage.id));
-    const roughStages = stageIds(/rough/i);
-    const masterStages = stageIds(/master/i);
-    const before = latest(audio.filter(file => roughStages.has(file.etapa_id)))
-        || latest(audio.filter(file => file.tipo === "previa" && /rough/i.test(file.nome_exibicao || "")));
-    if (!before) return null;
-    const released = deliveries.filter(delivery => !delivery.bloqueado_pagamento);
-    const deliveryAudio = released.map(delivery => delivery.arquivo_principal).filter(file => file && podeOuvir(file));
-    const after = latest(audio.filter(file => masterStages.has(file.etapa_id) && file.id !== before.id))
-        || latest(deliveryAudio)
-        || latest(audio.filter(file => file.tipo === "entrega"));
-    return after && after.id !== before.id ? { before, after } : null;
-}
-
 export function renderBeforeAfter(stages = []) {
     const slot = document.getElementById("project-before-after");
     if (!slot || !beforeAfterContext) return;
@@ -256,28 +237,14 @@ export function renderBeforeAfter(stages = []) {
     const pair = handlers.onListen ? pickBeforeAfter(stages, files, deliveries) : null;
     slot.hidden = !pair;
     if (!pair) { slot.replaceChildren(); return; }
-    const section = element("section", "before-after");
-    section.setAttribute("aria-labelledby", "before-after-title");
-    const title = element("h2", "", "Antes e depois");
-    title.id = "before-after-title";
-    section.append(
-        element("p", "before-after__eyebrow", "Entrega final"),
-        title,
-        element("p", "before-after__lead", "Compare a primeira mix (Rough Mix) com a versão final. Troque entre as duas durante a reprodução: a música continua do mesmo ponto."),
-    );
     // The untagged original of the rough is released together with the final delivery.
-    const sources = {
-        antes: { file: pair.before, versao: pair.before.original_disponivel ? "original" : null },
-        depois: { file: pair.after, versao: null },
-    };
-    section.append(controlesOuvir(pair.after, {
-        titulo: pair.after.nome_exibicao,
-        opcoes: [{ versao: "antes", rotulo: "Antes · Rough Mix" }, { versao: "depois", rotulo: "Depois · Final" }],
-        inicial: "depois",
-        load: key => handlers.onListen(sources[key].file, sources[key].versao),
+    slot.replaceChildren(beforeAfterSection(pair, {
+        eyebrow: "Entrega final",
+        lead: "Compare a primeira mix (Rough Mix) com a versão final. Troque entre as duas durante a reprodução: a música continua do mesmo ponto.",
+        beforeVersion: pair.before.original_disponivel ? "original" : null,
+        load: (file, versao) => handlers.onListen(file, versao),
         onError: error => setAlert(error.message, true),
     }));
-    slot.replaceChildren(section);
 }
 
 // Delivery packages: listen to the MP3 and, when present, the WAV, without downloading.

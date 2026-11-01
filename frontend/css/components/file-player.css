@@ -102,7 +102,7 @@
 .file-player .file-player__status:empty { display: none; }
 .file-player audio { display: none; }
 
-/* Final delivery: before (Rough Mix) and after (final), client portal. */
+/* Final delivery: before (Rough Mix) and after (final), client portal and Admin. */
 .before-after-slot[hidden] { display: none; }
 .before-after {
     display: grid;
@@ -121,8 +121,9 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
-.before-after h2 { margin: 0; text-align: left; }
-.before-after h2::after { display: none; }
+.before-after :is(h2, h3) { margin: 0; text-align: left; }
+.before-after :is(h2, h3)::after { display: none; }
+.producao-detail-block .before-after { margin: 0 0 20px; padding: 20px; }
 .before-after__lead { margin: 0 0 8px; color: var(--integrado-secondary, var(--color-text-secondary, #a8b3c7)); }
 .before-after .file-player { width: 100%; padding: 18px; }
 .before-after .file-player .file-player__versions button { min-height: 52px; font-size: 13px; }
