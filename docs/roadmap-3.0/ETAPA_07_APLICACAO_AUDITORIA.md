@@ -10,7 +10,7 @@ implementado sem autorizacao do responsavel.
 | --- | --- |
 | Status global | Backlog completo (12 setores diagnosticados); execucao por lotes |
 | Lote atual | Lotes 1 a 8 e itens APL-S08-05 a APL-S08-08 e APL-S09-06 publicados |
-| Item em andamento | Nenhum; R19 publicada (arquivos por etapa, players e antes/depois) |
+| Item em andamento | Nenhum; R20 publicada (antes/depois no Admin e filtros do catalogo de beats) |
 | Proxima acao | Retomar o proximo item pendente da Etapa 07; Admin preencher CPF dos beatmakers pendentes |
 | Ultima atualizacao | 01/11/2026 |
 
@@ -181,6 +181,7 @@ Ordem por risco e dependencia. Cada lote pode ter varios PRs (um por setor).
 
 | Data | Item/lote | Resultado | Proxima acao |
 | --- | --- | --- | --- |
+| 01/11/2026 | Pedido do responsavel (R20) | #166 e #167 publicados juntos no SHA `3e37e10db018552fe7b84a6d386f13d14c6ada4b` (o gate do #166 sozinho foi cancelado pelo push do #167). S09: "Antes e depois" (Rough Mix x final) no painel de arquivos da producao no Admin, sem tag e sem trava de pagamento; selecao do par em modulo compartilhado com o cliente. S04: filtros combinaveis no catalogo de beats do cliente e do produtor (busca, genero, mood, produtor, key e faixa de BPM), com contagem por opcao, opcoes sem resultado desativadas e estado na URL; campo Moods no envio do produtor e na revisao do Admin; tags de genero e mood nos cards. Backup `41347493456`; migration aditiva `b2d4f6a8c0e1` (`beats.moods varchar(240) default ''`) aplicada e verificada (9 beats). Gate `41347686697`, evidencia Storage `41349056821`, dry-run `41349165802` e publicacao `41349223345`. Ref. `CTRL-20261101-R20-ANTES-DEPOIS-FILTROS`; Commercial V2 `true` | Produtores preencherem Moods nos beats ja publicados |
 | 01/11/2026 | Pedido do responsavel (R19) | #164 publicado no SHA `bd03e466869721b38c1066539a42746586dd1853`: arquivos e entregas por etapa (envios escolhem a etapa, nova versao herda, filtros e botao "Arquivos" por etapa no produtor, cliente e Admin); players na pagina no estilo do portfolio para previas, materiais e pacotes de entrega; "Antes e depois" (Rough Mix x final) para o cliente, so com a final liberada. Backup `41327893765`; migration aditiva `f8b0d2e4a6c7` (`producao_arquivos.etapa_id`, FK `ON DELETE SET NULL`, indice) aplicada e verificada; 20 arquivos existentes ficaram como Gerais. Gate `41328086313`, evidencia Storage `41329509377`, dry-run `41329625025` e publicacao `41329692833`. Ref. `CTRL-20261101-R19-ETAPAS-PLAYERS`; Commercial V2 `true` | - |
 | 01/11/2026 | Pedido do responsavel (R18) | #163 publicado no SHA `48f99c03d7a6feeb8d47248bc7c8f6eed6d82a8f`: formularios do Portal do Cliente no padrao (pedido de nova producao centralizado, envio com rotulos, pagamento em grade); grades de envio encolhem em telas medias. Gate `41323570395`, evidencia Storage `41325038570`, dry-run `41325154753` e publicacao `41325217098`. Ref. `CTRL-20261101-R18-FORMULARIOS-CLIENTE`; sem migration | - |
 | 01/11/2026 | Pedido do responsavel (R17) | #162 publicado no SHA `5c74332d1460d63d0782996e82118929306f655b`: formularios do Portal do Produtor no padrao (envio de beat em secoes, seletor de arquivo em portugues, titulos e filtros). Gate `41321462121`, evidencia Storage `41322898032`, dry-run `41323009882` e publicacao `41323071401`. Ref. `CTRL-20261101-R17-FORMULARIOS-PRODUTOR`; sem migration | - |
