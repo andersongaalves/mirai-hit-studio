@@ -1,3 +1,4 @@
+import { deliveriesSection, stageLabel } from "../modules/final_deliveries.js";
 import { applyStageFiles, resetStageFiles, stageChoices, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { controlesOuvir, opcoesEstudio, podeOuvir } from "../modules/ouvir_arquivo.js";
 import { deadlineState, filterAndSort, formatDate, nextAction, parseEtapas, statusInfo, summarize } from "./utils.js";
@@ -313,7 +314,8 @@ function deliveryCard(delivery, handlers) {
     const card = element("article", "final-delivery-card");
     card.dataset.etapaId = delivery.etapa_id == null ? "" : String(delivery.etapa_id);
     card.append(
-        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Outra entrega"),
+        stageLabel(delivery),
+        element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Entrega final"),
         element("h3", "", delivery.titulo),
     );
     if (delivery.categoria === "instrumental" && delivery.bpm && delivery.tonalidade) {
@@ -521,12 +523,11 @@ function filesPanel(production, files, deliveries, handlers) {
     stageFilter.dataset.stageFilter = "";
     panel.append(stageFilter);
     if (deliveries.length) {
-        const deliveryList = element("div", "final-delivery-list");
-        deliveryList.dataset.stageGroup = "";
         // Delivered to the client: the delivery is final and can no longer be edited.
         const deliveryHandlers = { ...handlers, deliveryLocked: production.status === "entregue" || production.coordenador === false };
-        deliveries.forEach(delivery => deliveryList.append(deliveryCard(delivery, deliveryHandlers)));
-        panel.append(deliveryList);
+        panel.append(deliveriesSection(deliveries, delivery => deliveryCard(delivery, deliveryHandlers), {
+            help: "A versão final de cada etapa. Enviar outra entrega final para a mesma etapa substitui a anterior.",
+        }));
     }
     const linkedIds = new Set(deliveries.flatMap(delivery => [
         delivery.arquivo_principal?.id,
@@ -552,6 +553,7 @@ function filesPanel(production, files, deliveries, handlers) {
     list.dataset.stageGroup = "";
     if (!looseFiles.length && !deliveries.length) list.append(element("li", "producer-empty", "Nenhum arquivo disponível."));
     else looseFiles.forEach(file => list.append(fileItem(file, fileHandlers)));
+    if (looseFiles.length) panel.append(element("h3", "producer-files__subtitle", "Prévias e arquivos"));
     panel.append(list);
 
     const form = element("form", "producer-upload");
