@@ -2,6 +2,8 @@
 // The server decides which transitions each viewer may perform (`acoes`); values are
 // only present in the admin response. Everything is rendered as text.
 
+import { groupKey, stageTree } from "./stage_tree.js";
+
 export const STAGE_LABELS = Object.freeze({
     pendente: "Pendente",
     em_andamento: "Em andamento",
@@ -100,16 +102,35 @@ export function stagesPanel({
     const feedback = element("p", "production-stages__feedback");
     feedback.setAttribute("role", "status");
     // Group by contract item and, inside combos (5.08), by component service label.
-    const groupKey = stage => `${stage.item_indice}|${stage.item_descricao}`;
-    const multipleItems = new Set(stages.map(groupKey)).size > 1;
+    // A component that repeats a stage of another one is shown as its sub-stages.
+    const { children, childIds } = stageTree(stages);
+    const topLevel = stages.filter(stage => !childIds.has(stage.id));
+    const multipleItems = new Set(topLevel.map(groupKey)).size > 1;
     const list = element("ol", "production-stages__list");
     let currentItem = null;
-    stages.forEach(stage => {
+    topLevel.forEach(stage => {
         if (multipleItems && groupKey(stage) !== currentItem) {
             currentItem = groupKey(stage);
             list.append(element("li", "production-stages__group", stage.item_descricao || `Item ${stage.item_indice}`));
         }
-        const item = element("li", `production-stage production-stage--${stage.status}`);
+        const item = renderStage(stage);
+        const internal = children.get(stage.id);
+        if (internal?.length) {
+            const nested = element("div", "production-stage__substages");
+            const title = element("p", "production-stage__substages-title", `Etapas internas · ${internal[0].item_descricao?.split(/\s[—–-]\s/).pop() || stage.nome}`);
+            const sublist = element("ol", "production-stages__sublist");
+            sublist.setAttribute("aria-label", `Etapas internas de ${stage.nome}`);
+            internal.forEach(child => sublist.append(renderStage(child, true)));
+            nested.append(title, sublist);
+            item.append(nested);
+        }
+        list.append(item);
+    });
+    panel.append(list, feedback);
+    return panel;
+
+    function renderStage(stage, substage = false) {
+        const item = element("li", `production-stage production-stage--${stage.status}${substage ? " production-stage--sub" : ""}`);
         item.dataset.stageId = String(stage.id);
         const head = element("p", "production-stage__head");
         head.append(
@@ -270,8 +291,6 @@ export function stagesPanel({
             }
             item.append(controls);
         }
-        list.append(item);
-    });
-    panel.append(list, feedback);
-    return panel;
+        return item;
+    }
 }

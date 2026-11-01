@@ -6,6 +6,8 @@
 //   select[data-stage-field]  the "Etapa" field of an upload form
 //   [data-stage-select]   a control in the stages panel that opens that stage's files
 
+import { orderedStages } from "./stage_tree.js";
+
 const GENERAL = "geral";
 let state = { productionId: null, stages: [], selected: null };
 
@@ -70,11 +72,12 @@ function counts(root) {
     return total;
 }
 
-function chip(label, value, count) {
+function chip(label, value, count, parent = null) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "stage-chip";
+    button.className = parent ? "stage-chip stage-chip--sub" : "stage-chip";
     button.textContent = count == null ? label : `${label} (${count})`;
+    if (parent) button.title = `Etapa interna de ${parent.nome}`;
     const pressed = state.selected === value;
     button.setAttribute("aria-pressed", String(pressed));
     button.addEventListener("click", () => selectStage(value));
@@ -89,7 +92,7 @@ export function applyStageFiles(root = document) {
         bar.classList.toggle("hidden", !hasStages);
         if (!hasStages) { bar.replaceChildren(); return; }
         const chips = [chip("Todas", null, null)];
-        state.stages.forEach(stage => chips.push(chip(stage.nome, stage.id, total.get(String(stage.id)) || 0)));
+        orderedStages(state.stages).forEach(({ stage, label, parent }) => chips.push(chip(label, stage.id, total.get(String(stage.id)) || 0, parent)));
         if (total.get(GENERAL)) chips.push(chip("Gerais", GENERAL, total.get(GENERAL)));
         bar.setAttribute("role", "group");
         bar.setAttribute("aria-label", "Filtrar arquivos por etapa");
@@ -117,7 +120,7 @@ export function applyStageFiles(root = document) {
         if (!hasStages) return;
         const keep = select.dataset.userChoice === "true" ? select.value : null;
         const options = [new Option("Geral (sem etapa)", "")];
-        state.stages.forEach(stage => options.push(new Option(stage.nome, String(stage.id))));
+        orderedStages(state.stages).forEach(({ stage, parent }) => options.push(new Option(parent ? `${parent.nome} › ${stage.nome}` : stage.nome, String(stage.id))));
         select.replaceChildren(...options);
         select.value = keep ?? (preferred != null ? String(preferred) : "");
         if (!select.dataset.bound) {
