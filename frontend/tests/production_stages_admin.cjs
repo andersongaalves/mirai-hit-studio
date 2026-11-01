@@ -208,6 +208,29 @@ const STAGES = {
         assert.equal(await page.locator('#producer-detail-content .producer-detail__actions button').count(), 1);
         assert.doesNotMatch(await page.locator('#producer-detail-content').textContent(), /pelas etapas atribuídas/);
 
+        // A combo component that repeats a stage (Start: Mixagem ends with Masterização and the
+        // Masterização service follows) is shown as the internal steps of that stage.
+        const base = { prazo: null, iniciada_em: null, concluida_em: null, depende_da_anterior: false, administrativa: false,
+            unidade: '', revisoes_incluidas: null, prazo_dias: null, acoes: [], peso_percentual: '0.00', valor: '0.00' };
+        const mix = '🎮 Start — 🎛️ Mixagem';
+        const master = '🎮 Start — 🎧 Masterização';
+        const combo = { producao_id: 50, progresso_percentual: 0, pode_gerar: false, etapas: [
+            { ...base, id: 41, ordem: 1, item_indice: 1, item_descricao: mix, ordem_no_item: 1, nome: 'Rough Mix', status: 'concluida' },
+            { ...base, id: 42, ordem: 2, item_indice: 1, item_descricao: mix, ordem_no_item: 2, nome: 'Mixagem', status: 'concluida' },
+            { ...base, id: 43, ordem: 3, item_indice: 1, item_descricao: mix, ordem_no_item: 3, nome: 'Masterização', status: 'em_andamento' },
+            { ...base, id: 44, ordem: 4, item_indice: 1, item_descricao: master, ordem_no_item: 1, nome: 'Planejamento', status: 'concluida', administrativa: true },
+            { ...base, id: 45, ordem: 5, item_indice: 1, item_descricao: master, ordem_no_item: 2, nome: 'Masterização', status: 'pendente' },
+        ] };
+        await page.evaluate(data => window.render(data), combo);
+        assert.equal(await page.locator('.production-stages__group').count(), 0, 'one component left: no group headings');
+        assert.deepEqual(await page.locator('.production-stages__list > .production-stage > .production-stage__head strong').allTextContents(),
+            ['Rough Mix', 'Mixagem', 'Masterização']);
+        const parent = page.locator('.production-stages__list > .production-stage[data-stage-id="43"]');
+        assert.deepEqual(await parent.locator('.production-stages__sublist > .production-stage strong').allTextContents(), ['Planejamento', 'Masterização']);
+        assert.match(await parent.locator('.production-stage__substages-title').textContent(), /Etapas internas · 🎧 Masterização/);
+        const { orderedStages } = await import('../js/modules/stage_tree.js').catch(() => ({}));
+        if (orderedStages) assert.deepEqual(orderedStages(combo.etapas).map(item => item.label), ['Rough Mix', 'Mixagem', 'Masterização', '↳ Planejamento', '↳ Masterização']);
+
         assert.deepEqual(errors, []);
         console.log('PASS: admin stages show values and grouping, approve/reopen/resume, refusal feedback, deadlines, generation, responsible/history (5.07), producer ownership view and narrow layout.');
     } finally { await browser.close(); }
