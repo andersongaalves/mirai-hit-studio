@@ -90,6 +90,7 @@ def _client_file(model, user_id, entrega_bloqueada=False):
         "bloqueado_pagamento": bool(entrega_bloqueada and model.tipo == portal_cliente_service.TIPO_ENTREGA_FINAL),
         # The untagged original of a preview is released together with the final delivery.
         "original_disponivel": bool(job is not None and not entrega_bloqueada),
+        "etapa_id": model.etapa_id,
         "created_at": model.created_at,
         "updated_at": model.updated_at,
     }
@@ -416,6 +417,7 @@ async def enviar_material(
     tipo: Annotated[str, Form()],
     substitui_arquivo_id: Annotated[int | None, Form()] = None,
     observacao: Annotated[str | None, Form(max_length=1000)] = None,
+    etapa_id: Annotated[int | None, Form()] = None,
 ):
     try:
         production = portal_cliente_service.buscar_producao(db, producao_id, user.cliente_id)
@@ -443,6 +445,7 @@ async def enviar_material(
             enforce_quota=True,  # 5.09: contractual file quotas.
             replacement_actor_id=user.id,
             request_id=getattr(request.state, "request_id", None),
+            stage_id=etapa_id,
         )
         return _client_file(model, user.id)
     except producao_arquivo_service.ProducaoArquivoError as exc:

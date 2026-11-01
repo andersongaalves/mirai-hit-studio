@@ -276,5 +276,45 @@ with Session(engine) as db:
 ''')
 
 
+    def test_files_belong_to_a_stage(self):
+        self.run_case('''
+os.environ.setdefault('RATE_LIMIT_DB', os.path.join(tempfile.mkdtemp(), 'limits.sqlite3'))
+client = make_api()
+from services import producao_arquivo_service
+
+class MemoryStorage:
+    def __init__(self): self.objects = {}
+    def save(self, data, mime_type):
+        key = f'arquivos/{len(self.objects) + 1:032x}/{len(self.objects) + 101:032x}'
+        self.objects[key] = data
+        return key
+    def delete(self, key): self.objects.pop(key, None)
+
+with Session(engine) as db:
+    seed_service(db)
+    db.get(OrcamentoModel, 1).produtor_id = 2
+    db.commit()
+    production, _ = approved_production(db)
+    production_id = production.id
+ids = [stage['id'] for stage in client.get(f'/producoes/{production_id}/etapas-contratuais', headers=bearer('admin')).json()['etapas']]
+url = f'/portal/produtor/producoes/{production_id}/arquivos'
+def send(**data):
+    return client.post(url, headers=bearer('producer-a'), data={'tipo': 'previa', **data},
+                       files={'arquivo': ('rough.mp3', b'ID3rough', 'audio/mpeg')})
+with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=MemoryStorage()):
+    rough = send(etapa_id=str(ids[1]))
+    assert rough.status_code == 201 and rough.json()['etapa_id'] == ids[1], rough.text
+    # A new version stays in the stage of the version it replaces.
+    second = send(substitui_arquivo_id=str(rough.json()['id']))
+    assert second.status_code == 201 and second.json()['etapa_id'] == ids[1], second.text
+    general = send()
+    assert general.status_code == 201 and general.json()['etapa_id'] is None
+    unknown = send(etapa_id='999999')
+    assert unknown.status_code == 422 and 'Etapa' in unknown.json()['detail']
+listed = client.get(url, headers=bearer('producer-a')).json()
+assert sorted((item['id'], item['etapa_id']) for item in listed) == sorted([
+    (rough.json()['id'], ids[1]), (second.json()['id'], ids[1]), (general.json()['id'], None)])
+''')
+
 if __name__ == "__main__":
     unittest.main()

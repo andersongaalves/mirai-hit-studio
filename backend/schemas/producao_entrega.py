@@ -11,6 +11,7 @@ class ProducaoEntregaFinalResponse(BaseModel):
     producao_id: int
     categoria: Literal["instrumental", "outro"]
     titulo: str
+    etapa_id: int | None = None
     bpm: int | None
     tonalidade: str | None
     creditos_adicionais: list[str]

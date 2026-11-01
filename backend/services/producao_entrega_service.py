@@ -96,6 +96,7 @@ def response(model, *, blocked=False):
         "producao_id": model.producao_id,
         "categoria": model.categoria,
         "titulo": model.titulo,
+        "etapa_id": getattr(model.arquivo_principal, "etapa_id", None),
         "bpm": model.bpm,
         "tonalidade": model.tonalidade,
         "creditos_adicionais": model.creditos_adicionais or [],
@@ -134,7 +135,7 @@ def _validate_files(category, main, wav, archive, license_file, external):
         raise ProducaoEntregaError("Tipo de entrega invalido.")
 
 
-def _new_file(production, actor, item, role, storage):
+def _new_file(production, actor, item, role, storage, stage_id=None):
     filename, mime_type, data = item
     key = storage.save(data, mime_type)
     model = ProducaoArquivoModel(
@@ -152,13 +153,14 @@ def _new_file(production, actor, item, role, storage):
         visivel_cliente=True,
         original_restrito=False,
         observacao=f"Pacote de entrega final: {role}",
+        etapa_id=stage_id,
     )
     return model, key
 
 
 def create(db, *, production, actor, request_id, category, title, main, wav=None, archive=None,
            multitrack_url=None, license_file=None, note=None, bpm=None, tonalidade=None,
-           creditos_adicionais=None, request_log_id=None, storage=None):
+           creditos_adicionais=None, request_log_id=None, storage=None, stage_id=None):
     try:
         request_key = str(UUID(str(request_id)))
     except (TypeError, ValueError, AttributeError):
@@ -168,6 +170,10 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
     external = _multitrack_url(multitrack_url)
     bpm, tonalidade, credits = _technical_sheet(category, bpm, tonalidade, creditos_adicionais)
     _validate_files(category, main, wav, archive, license_file, external)
+    try:
+        stage_id = producao_arquivo_service.resolve_stage(db, production.id, stage_id)
+    except producao_arquivo_service.ProducaoArquivoError as exc:
+        raise ProducaoEntregaError(str(exc)) from None
     media_components = [item for item in (main, wav, archive) if item is not None]
     components = [*media_components, *([license_file] if license_file is not None else [])]
     request_hash = hashlib.sha256(json.dumps({
@@ -180,6 +186,7 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
         "creditos_adicionais": credits,
         "note": note,
         "multitrack_url": external,
+        "etapa_id": stage_id,
         "files": [
             {"name": item[0], "mime": item[1], "sha256": hashlib.sha256(item[2]).hexdigest()}
             for item in components
@@ -223,7 +230,7 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
     storage = storage or new_production_file_storage("entrega")
     saved = []
     try:
-        principal, key = _new_file(production, actor, main, "principal", storage)
+        principal, key = _new_file(production, actor, main, "principal", storage, stage_id)
         saved.append(key)
         db.add(principal)
         db.flush()
@@ -231,7 +238,7 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
         for item, role in ((wav, "WAV"), (archive, "multitrack"), (license_file, "licenca")):
             if item is None:
                 continue
-            model, key = _new_file(production, actor, item, role, storage)
+            model, key = _new_file(production, actor, item, role, storage, stage_id)
             saved.append(key)
             db.add(model)
             db.flush()

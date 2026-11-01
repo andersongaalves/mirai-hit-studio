@@ -59,7 +59,7 @@ function money(value) {
  */
 export function stagesPanel({
     role, data, error = "", heading = true, onChange, onDeadline, onGenerate,
-    producers = [], onAssign, onHistory,
+    producers = [], onAssign, onHistory, onSelect,
 }) {
     const stages = data?.etapas ?? [];
     const panel = element("section", "production-stages");
@@ -117,6 +117,15 @@ export function stagesPanel({
             element("span", `production-stage__status production-stage__status--${stage.status}`, STAGE_LABELS[stage.status] || stage.status),
         );
         if (stage.administrativa) head.append(element("span", "production-stage__tag", "Administrativa"));
+        if (onSelect) {
+            // Opens the files of this stage; the label and count come from stage_files.js.
+            const files = element("button", "production-stage__files btn-outline", "Arquivos");
+            files.type = "button";
+            files.dataset.stageSelect = String(stage.id);
+            files.setAttribute("aria-label", `Ver arquivos da etapa ${stage.nome}`);
+            files.addEventListener("click", () => onSelect(stage));
+            head.append(files);
+        }
         item.append(head);
         if (stage.bloqueio_creditos) item.append(element("p", "production-stage__meta", stage.bloqueio_creditos));
 

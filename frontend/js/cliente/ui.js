@@ -1,3 +1,4 @@
+import { applyStageFiles, resetStageFiles, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { renderMudancas } from "../modules/proposta_mudancas.js";
 import {
     FINAL_STATUSES,
@@ -137,6 +138,7 @@ function currentVersions(files) {
 
 function fileItem(file, handlers) {
     const item = element("li", "producer-file");
+    item.dataset.etapaId = file.etapa_id == null ? "" : String(file.etapa_id);
     if (file.tipo === "previa") item.dataset.previewFileId = String(file.id);
     if (file.processamento_tag === "pendente") item.dataset.tagPending = "true";
     const info = element("div");
@@ -219,6 +221,7 @@ function fileGroup(title, files, handlers, help = "") {
     group.append(element("h3", "", title));
     if (help) group.append(element("p", "producer-help", help));
     const list = element("ul", "producer-file-list");
+    list.dataset.stageGroup = "";
     if (!files.length) list.append(element("li", "producer-empty", "Nenhum arquivo liberado."));
     else files.forEach(file => list.append(fileItem(file, handlers)));
     group.append(list);
@@ -227,6 +230,7 @@ function fileGroup(title, files, handlers, help = "") {
 
 function finalDeliveryCard(delivery, handlers) {
     const card = element("article", "final-delivery-card");
+    card.dataset.etapaId = delivery.etapa_id == null ? "" : String(delivery.etapa_id);
     card.append(
         element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Entrega final"),
         element("h3", "", delivery.titulo),
@@ -274,6 +278,9 @@ function filesPanel(production, files, deliveries, handlers) {
     if (portalSettings?.textos?.ajuda_arquivos) {
         panel.append(element("p", "producer-help", portalSettings.textos.ajuda_arquivos));
     }
+    const stageFilter = element("div", "stage-filter hidden");
+    stageFilter.dataset.stageFilter = "";
+    panel.append(stageFilter);
     const linkedIds = new Set(deliveries.flatMap(delivery => [
         delivery.arquivo_principal?.id,
         delivery.wav_arquivo?.id,
@@ -283,6 +290,7 @@ function filesPanel(production, files, deliveries, handlers) {
     const looseFiles = files.filter(file => !linkedIds.has(file.id));
     if (deliveries.length) {
         const deliveryList = element("div", "final-delivery-list");
+        deliveryList.dataset.stageGroup = "";
         deliveries.forEach(delivery => deliveryList.append(finalDeliveryCard(delivery, handlers)));
         panel.append(deliveryList);
     }
@@ -372,6 +380,7 @@ function filesPanel(production, files, deliveries, handlers) {
         form.append(
             element("h3", "client-upload-form__title", "Enviar material ou referência"),
             field("Tipo", type),
+            stageField(),
             field("Arquivo", filePicker),
             field("Substitui", replaces),
             quotaHint,
@@ -382,7 +391,7 @@ function filesPanel(production, files, deliveries, handlers) {
         form.addEventListener("submit", event => {
             event.preventDefault();
             if (form.dataset.busy === "true" || !input.files[0]) return;
-            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback, note.value);
+            handlers.onUpload(production, input.files[0], type.value, replaces.value || null, form, setFeedback, note.value, stageFieldValue(form));
         });
         panel.append(form);
     }
@@ -471,8 +480,10 @@ export function renderDetail(production, files, deliveries, finance, handlers) {
     messagesSlot.id = "production-messages-slot";
     const pending = paymentPending(finance);
     if (pending) overview.append(sectionButton("project-section-payment", "Ver pagamento", "btn-cta client-detail-cta"));
+    resetStageFiles(production.id);
     detail.append(title, meta, sectionNavigation(pending), grid, filesPanel(production, files, deliveries, { ...handlers, finance }), messagesSlot, financePanel(finance));
     root.append(detail);
+    applyStageFiles(root);
 }
 
 // AUD6-S07-001: the detail is long on phones; sections are one tap away and the

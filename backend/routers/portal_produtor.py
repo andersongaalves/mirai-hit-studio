@@ -192,6 +192,7 @@ async def enviar_arquivo(
     tipo: Annotated[str, Form()],
     substitui_arquivo_id: Annotated[int | None, Form()] = None,
     observacao: Annotated[str | None, Form(max_length=1000)] = None,
+    etapa_id: Annotated[int | None, Form()] = None,
 ):
     production = crud_producao.buscar_por_produtor(db, producao_id, user.id)
     if not production:
@@ -218,6 +219,7 @@ async def enviar_arquivo(
             note=observacao,
             enforce_quota=True,  # 5.09: contractual file quotas.
             request_id=getattr(request.state, "request_id", None),
+            stage_id=etapa_id,
         )
     except producao_arquivo_service.ProducaoArquivoError as exc:
         raise _file_error(exc) from None
@@ -247,6 +249,7 @@ async def criar_entrega_final(
     bpm: Annotated[int | None, Form(ge=20, le=300)] = None,
     tonalidade: Annotated[str | None, Form(max_length=20)] = None,
     creditos_adicionais: Annotated[str | None, Form(max_length=1200)] = None,
+    etapa_id: Annotated[int | None, Form()] = None,
     wav: Annotated[UploadFile | None, File()] = None,
     multitrack: Annotated[UploadFile | None, File()] = None,
     licenca: Annotated[UploadFile | None, File()] = None,
@@ -265,6 +268,7 @@ async def criar_entrega_final(
             archive=await _delivery_file(multitrack), license_file=await _delivery_file(licenca),
             multitrack_url=multitrack_url, note=observacao,
             bpm=bpm, tonalidade=tonalidade, creditos_adicionais=creditos_adicionais,
+            stage_id=etapa_id,
             request_log_id=getattr(request.state, "request_id", None),
         )
         return producao_entrega_service.response(model)

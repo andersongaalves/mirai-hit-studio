@@ -8,6 +8,7 @@ import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { startAccountPassword } from "../modules/account_password.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
+import { selectStage, setStages } from "../modules/stage_files.js";
 import {
     applySettings,
     renderDashboard,
@@ -107,7 +108,12 @@ async function loadStages(production) {
     panel.replaceChildren(stagesPanel({
         role: "cliente",
         data,
+        onSelect: stage => {
+            selectStage(stage.id);
+            document.getElementById("project-section-files")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        },
     }));
+    setStages(production.id, data.etapas);
 }
 
 // Roadmap 5.09: quota hints load after the detail; the server enforces them anyway.
@@ -500,7 +506,7 @@ async function refreshFiles(production, setFeedback) {
     }
 }
 
-async function uploadFile(production, file, type, replacesId, form, setFeedback, note = "") {
+async function uploadFile(production, file, type, replacesId, form, setFeedback, note = "", stageId = "") {
     if (form.dataset.busy === "true") return;
     form.dataset.busy = "true";
     setFeedback("loading", "Adicionando à fila de envios...");
@@ -510,6 +516,7 @@ async function uploadFile(production, file, type, replacesId, form, setFeedback,
         body.append("tipo", type);
         if (replacesId) body.append("substitui_arquivo_id", String(replacesId));
         if (note.trim()) body.append("observacao", note.trim());
+        if (stageId) body.append("etapa_id", String(stageId));
         await enqueueUpload(`/portal/cliente/producoes/${production.id}/arquivos`, body, {
             label: `${file.name} · ${production.titulo}`,
             meta: { kind: "client-production", productionId: production.id },

@@ -74,7 +74,7 @@ let files = [{
     nome_exibicao: 'historical.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 1024,
     sha256: 'b'.repeat(64), grupo_versao: 'historical-group', versao: 1,
     substitui_arquivo_id: null, visivel_produtor: true, visivel_cliente: false,
-    observacao: 'Primeira ideia <i>sem master</i>',
+    observacao: 'Primeira ideia <i>sem master</i>', etapa_id: 32,
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
 }];
 let payouts = [{
@@ -397,7 +397,20 @@ async function staticResponse(route) {
         assert.doesNotMatch(await stagesPanel.textContent(), /R\$/);
         assert.equal(await stagesPanel.getByRole('button', { name: 'Aprovar e concluir' }).count(), 0);
         assert.match(await stagesPanel.locator('.production-stage').nth(2).textContent(), /Depende da etapa anterior/);
-        assert.equal(await stagesPanel.locator('.production-stage').nth(2).locator('button').count(), 0);
+        assert.equal(await stagesPanel.locator('.production-stage').nth(2).locator('button:not(.production-stage__files)').count(), 0);
+        // Files by stage: the stage shows only its files; "Todas" brings everything back.
+        const stageChips = page.locator('.producer-files [data-stage-filter]');
+        await page.waitForFunction(() => document.querySelector('.producer-files [data-stage-filter] .stage-chip'));
+        assert.deepEqual(await stageChips.locator('.stage-chip').allTextContents(), ['Todas', 'Briefing (0)', 'Rough <b>Mix</b> (1)', 'Mixagem (0)', 'Gerais (1)']);
+        await stagesPanel.locator('.production-stage').nth(1).getByRole('button', { name: /Ver arquivos da etapa Rough/ }).click();
+        assert.equal(await page.locator('.producer-file').filter({ hasText: 'historical.mp3' }).isVisible(), true);
+        assert.equal(await page.locator('.producer-file').filter({ hasText: '<img src=x>.pdf' }).isVisible(), false);
+        assert.equal(await stageChips.getByRole('button', { name: 'Rough <b>Mix</b> (1)' }).getAttribute('aria-pressed'), 'true');
+        await stageChips.getByRole('button', { name: 'Mixagem (0)' }).click();
+        assert.equal(await page.locator('.producer-files .stage-files-empty').first().isVisible(), true);
+        await stageChips.getByRole('button', { name: 'Todas' }).click();
+        assert.equal(await page.locator('.producer-file').filter({ hasText: '<img src=x>.pdf' }).isVisible(), true);
+        assert.equal(await page.locator('.producer-preview-form select[data-stage-field]').inputValue(), '32', 'upload defaults to the active stage');
         const review = stagesPanel.locator('.production-stage').nth(1).getByRole('button', { name: 'Enviar para revisão' });
         await review.click();
         await page.waitForFunction(() => document.querySelector('.production-stages__feedback')?.textContent.includes('Recarregue'));
@@ -443,6 +456,7 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.querySelector('.upload-tasks-dialog')?.textContent.includes('Concluído'));
         assert.equal(uploads, 1);
         assert.match(lastUploadBody, /name="observacao"[\s\S]*Mix com graves reduzidos/);
+        assert.match(lastUploadBody, /name="etapa_id"\r\n\r\n3[23]\r\n/);
         await page.getByRole('button', { name: 'Fechar' }).click();
         await page.waitForFunction(() => [...document.querySelectorAll('.producer-file')].some(item => item.textContent.includes('preview.mp3')));
         assert.match(await page.locator('.producer-file').filter({ hasText: 'preview.mp3' }).textContent(), /Compartilhada com o cliente/);

@@ -30,6 +30,7 @@ class ProducaoArquivoResponse(BaseModel):
     visivel_cliente: bool = Field(validation_alias=AliasChoices("visibilidade_cliente_efetiva", "visivel_cliente"))
     observacao: str | None = None
     processamento_tag: str | None = None
+    etapa_id: int | None = None
     created_at: datetime
     updated_at: datetime
 
