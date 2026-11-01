@@ -11,11 +11,13 @@ import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { loadAudioTag } from "../modules/audio_tags.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
+import { watchFilePickers } from "../modules/file_picker.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
 
 let productions = [];
 let beatUploadConfig = null;
 bindImageCrop(document.querySelector('#producer-beat-form [name="capa"]'), { ratio: 1, width: 1024 });
+watchFilePickers(document.getElementById("producer-content"));
 let payouts = [];
 const filters = { status: "todos", order: "prazo" };
 let filtersInitialized = false;

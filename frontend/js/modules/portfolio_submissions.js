@@ -21,7 +21,7 @@ async function request(path, payload) {
 
 function field(form, key, label, { options, type = "text", required = true, maxLength = 150 } = {}) {
     const wrap = node("label", label);
-    const input = node(options ? "select" : "input");
+    const input = node(options ? "select" : type === "textarea" ? "textarea" : "input");
     input.name = key;
     input.id = `portfolio-submit-${key}`;
     if (options) {
@@ -31,7 +31,8 @@ function field(form, key, label, { options, type = "text", required = true, maxL
             input.append(option);
         }
     } else {
-        input.type = type;
+        if (type !== "textarea") input.type = type;
+        else wrap.classList.add("portfolio-submission-form__full");
         input.maxLength = maxLength;
         if (type === "url") input.placeholder = "https://";
     }
@@ -108,7 +109,7 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
             field(form, "case_type", "Classificação", { options: [["client_case", "Caso de cliente"], ["demo", "Demo"], ["concept_project", "Projeto conceitual"], ["study", "Estudo"]] });
             field(form, "funcao", "Minha participação", { options: [["producao", "Produção"], ["mixagem", "Mixagem"], ["masterizacao", "Masterização"], ["composicao", "Composição"], ["gravacao", "Gravação"], ["beat", "Beat"]] });
             field(form, "producao_id", "Produção vinculada", { required: false, options: [["", "Sem vínculo"], ...productions.map(p => [String(p.id), p.titulo])] });
-            field(form, "descricao", "Descrição", { required: false, maxLength: 20000 });
+            field(form, "descricao", "Descrição", { type: "textarea", required: false, maxLength: 20000 });
             const consent = field(form, "autorizacao_artista", "Tenho autorização do artista para publicar este projeto e seus materiais.", { type: "checkbox" });
             const submit = node("button", "Enviar para revisão", "btn-cta");
             submit.type = "submit";

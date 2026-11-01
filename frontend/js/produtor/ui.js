@@ -466,7 +466,21 @@ function filesPanel(production, files, deliveries, handlers) {
     const quotaHint = element("p", "file-quota-hint hidden");
     quotaHint.dataset.quotaHint = "";
     quotaHint.setAttribute("aria-live", "polite");
-    form.append(type, filePicker, replaces, quotaHint, note, submit);
+    // Visible captions; the controls keep their accessible names (aria-label).
+    const field = (caption, control, className = "") => {
+        const wrapper = element("div", `portal-field ${className}`.trim());
+        wrapper.append(element("span", "portal-field__label", caption), control);
+        return wrapper;
+    };
+    form.classList.add("producer-preview-form");
+    form.append(
+        field("Tipo", type),
+        field("Arquivo", filePicker),
+        field("Substitui", replaces),
+        quotaHint,
+        field("Observação (opcional)", note, "portal-field--full"),
+        submit,
+    );
     form.addEventListener("submit", event => {
         event.preventDefault();
         if (input.files[0]) handlers.onUpload(production, input.files[0], type.value, replaces.value || null, submit, note.value);
