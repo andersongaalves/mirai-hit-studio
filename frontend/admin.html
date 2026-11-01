@@ -18,6 +18,7 @@
         <link rel="stylesheet" href="css/components/stage-payouts.css" />
         <link rel="stylesheet" href="css/components/upload-tasks.css" />
         <link rel="stylesheet" href="css/components/portal-notifications.css" />
+        <link rel="stylesheet" href="css/components/admin-forms.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -159,146 +160,81 @@
                         </section>
 
                         <div id="editor-servico" class="editor-panel hidden">
-                            <h3
-                                id="editor-title"
-                                style="color: var(--cor-ciano); margin-top: 0"
-                            >
-                                Editar Serviço
-                            </h3>
+                            <header class="admin-modal-header">
+                                <div>
+                                    <span class="admin-modal-header__eyebrow">Catálogo</span>
+                                    <h2 id="editor-title">Editar Serviço</h2>
+                                </div>
+                                <button type="button" class="btn-small" data-admin-action="fecharEditorServico">Fechar editor</button>
+                            </header>
                             <input type="hidden" id="srv_id" />
 
                             <div class="builder-layout">
                                 <div class="builder-editor">
-                                    <div
-                                        style="
-                                            display: grid;
-                                            grid-template-columns: 2fr 1fr;
-                                            gap: 10px;
-                                        "
-                                    >
+                                    <section class="admin-form-section" aria-labelledby="srv-basico-title">
+                                        <h3 id="srv-basico-title">Dados do serviço</h3>
+                                        <div class="admin-form-grid">
+                                            <div class="form-group">
+                                                <label for="srv_nome">Nome do Serviço</label>
+                                                <input type="text" id="srv_nome" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="srv_subtitulo">Subtítulo do Botão</label>
+                                                <input type="text" id="srv_subtitulo" placeholder="Ex: Tem uma ideia?" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="srv_valor">Valor Base (R$)</label>
+                                                <input type="number" id="srv_valor" min="0" step="0.01" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="srv_aplica_desconto">Aplicar Desconto?</label>
+                                                <select id="srv_aplica_desconto">
+                                                    <option value="false">Não</option>
+                                                    <option value="true">Sim (-10%)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div id="servico-promocao-editor"></div>
+                                    </section>
+
+                                    <section class="admin-form-section" aria-labelledby="srv-conteudo-title">
+                                        <h3 id="srv-conteudo-title">Conteúdo do Serviço</h3>
                                         <div class="form-group">
-                                            <label>Nome do Serviço</label
-                                            ><input type="text" id="srv_nome" />
+                                            <label for="builder-intro">Descrição Inicial</label>
+                                            <textarea id="builder-intro" rows="3"></textarea>
                                         </div>
+
+                                        <!-- Catalog rework: typed limits instead of free-text sections. -->
+                                        <fieldset id="builder-limites" class="servico-limites">
+                                            <legend>O que o serviço inclui</legend>
+                                            <p class="admin-help">Faixas e duração viram a cota de materiais do cliente e são conferidas no envio; as revisões valem na última etapa. Melodias e artistas aparecem no site e são conferidos por vocês. Deixe em branco o que não se aplica.</p>
+                                            <div class="servico-limites__grid">
+                                                <label>Faixas enviadas pelo cliente<input type="number" id="builder-lim-faixas" min="1" max="100" step="1" placeholder="sem limite"></label>
+                                                <label>Duração máxima por faixa (min)<input type="number" id="builder-lim-duracao_min" min="1" max="60" step="1" placeholder="sem limite"></label>
+                                                <label>Revisões incluídas<input type="number" id="builder-lim-revisoes" min="0" max="20" step="1" placeholder="sem limite"></label>
+                                                <label>Melodias (só exibição)<input type="number" id="builder-lim-melodias" min="1" max="50" step="1" placeholder="—"></label>
+                                                <label>Artistas (só exibição)<input type="number" id="builder-lim-artistas" min="1" max="20" step="1" placeholder="—"></label>
+                                            </div>
+                                        </fieldset>
+
                                         <div class="form-group">
-                                            <label>Subtítulo do Botão</label
-                                            ><input
-                                                type="text"
-                                                id="srv_subtitulo"
-                                                placeholder="Ex: Tem uma ideia?"
-                                            />
+                                            <label for="builder-destaques">Destaques (um por linha, até 20)</label>
+                                            <textarea id="builder-destaques" rows="4" placeholder="Ex.: Instrumentos eletrônicos"></textarea>
                                         </div>
-                                        <div class="form-group">
-                                            <label>Valor Base (R$)</label
-                                            ><input
-                                                type="number"
-                                                id="srv_valor"
-                                            />
+                                    </section>
+
+                                    <section class="admin-form-section" aria-labelledby="srv-parametros-title">
+                                        <h3 id="srv-parametros-title">Estrutura de Parâmetros</h3>
+                                        <p class="admin-help">Perguntas que o cliente responde ao montar o orçamento.</p>
+                                        <div class="admin-field-row">
+                                            <div class="admin-form-field">
+                                                <label for="param_selector">Bloco</label>
+                                                <select id="param_selector"></select>
+                                            </div>
+                                            <button class="btn-small" type="button" data-admin-action="adicionarParametroBloco">Adicionar Bloco</button>
                                         </div>
-                                    </div>
-
-                                    <div
-                                        style="
-                                            display: grid;
-                                            grid-template-columns: 1fr 1fr;
-                                            gap: 10px;
-                                        "
-                                    >
-                                        <div class="form-group">
-                                            <label>Aplicar Desconto?</label
-                                            ><select id="srv_aplica_desconto">
-                                                <option value="false">
-                                                    Não
-                                                </option>
-                                                <option value="true">
-                                                    Sim (-10%)
-                                                </option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div id="servico-promocao-editor"></div>
-                                    <h4
-                                        style="
-                                            color: var(--cor-roxo);
-                                            margin-top: 30px;
-                                        "
-                                    >
-                                        Conteúdo do Serviço
-                                    </h4>
-
-                                    <div class="form-group">
-                                        <label>Descrição Inicial</label>
-
-                                        <textarea
-                                            id="builder-intro"
-                                            rows="3"
-                                        ></textarea>
-                                    </div>
-
-                                    <!-- Catalog rework: typed limits instead of free-text sections. -->
-                                    <fieldset id="builder-limites" class="servico-limites">
-                                        <legend>O que o serviço inclui</legend>
-                                        <p class="admin-help">Faixas e duração viram a cota de materiais do cliente e são conferidas no envio; as revisões valem na última etapa. Melodias e artistas aparecem no site e são conferidos por vocês. Deixe em branco o que não se aplica.</p>
-                                        <div class="servico-limites__grid">
-                                            <label>Faixas enviadas pelo cliente<input type="number" id="builder-lim-faixas" min="1" max="100" step="1" placeholder="sem limite"></label>
-                                            <label>Duração máxima por faixa (min)<input type="number" id="builder-lim-duracao_min" min="1" max="60" step="1" placeholder="sem limite"></label>
-                                            <label>Revisões incluídas<input type="number" id="builder-lim-revisoes" min="0" max="20" step="1" placeholder="sem limite"></label>
-                                            <label>Melodias (só exibição)<input type="number" id="builder-lim-melodias" min="1" max="50" step="1" placeholder="—"></label>
-                                            <label>Artistas (só exibição)<input type="number" id="builder-lim-artistas" min="1" max="20" step="1" placeholder="—"></label>
-                                        </div>
-                                    </fieldset>
-
-                                    <div class="form-group">
-                                        <label for="builder-destaques">Destaques (um por linha, até 20)</label>
-                                        <textarea id="builder-destaques" rows="4" placeholder="Ex.: Instrumentos eletrônicos"></textarea>
-                                    </div>
-
-                                    <h4
-                                        style="
-                                            color: var(--cor-roxo);
-                                            margin-bottom: 5px;
-                                        "
-                                    >
-                                        Estrutura de Parâmetros
-                                    </h4>
-                                    <div
-                                        style="
-                                            display: flex;
-                                            gap: 10px;
-                                            margin-bottom: 15px;
-                                        "
-                                    >
-                                        <select
-                                            id="param_selector"
-                                            style="
-                                                flex: 1;
-                                                padding: 10px;
-                                                background: rgba(
-                                                    255,
-                                                    255,
-                                                    255,
-                                                    0.1
-                                                );
-                                                color: white;
-                                            "
-                                        ></select>
-                                        <button
-                                            class="btn-small"
-                                            data-admin-action="adicionarParametroBloco"
-                                            style="
-                                                background: var(--cor-ciano);
-                                                color: black;
-                                                font-weight: bold;
-                                            "
-                                        >
-                                            Adicionar Bloco
-                                        </button>
-                                    </div>
-                                    <div
-                                        id="param_list_render"
-                                        class="admin-list-container"
-                                    ></div>
+                                        <div id="param_list_render" class="admin-list-container"></div>
+                                    </section>
 
                                     <section class="servico-etapas" aria-labelledby="servico-creditos-title">
                                         <h4 id="servico-creditos-title">Créditos de serviço</h4>
@@ -352,27 +288,9 @@
                                         </div>
                                     </section>
 
-                                    <div style="display: flex; gap: 10px">
-                                        <button
-                                            class="btn-cta btn-submit"
-                                            style="
-                                                background: linear-gradient(
-                                                    45deg,
-                                                    #10b981,
-                                                    #059669
-                                                );
-                                            "
-                                            data-admin-action="salvarServico"
-                                        >
-                                            SALVAR SERVIÇO
-                                        </button>
-                                        <button
-                                            class="btn-cta btn-submit"
-                                            style="background: #444"
-                                            data-admin-action="fecharEditorServico"
-                                        >
-                                            CANCELAR
-                                        </button>
+                                    <div class="admin-form-footer admin-form-footer--inline">
+                                        <button class="btn-small" type="button" data-admin-action="fecharEditorServico">CANCELAR</button>
+                                        <button class="btn-cta btn-submit" type="button" data-admin-action="salvarServico">SALVAR SERVIÇO</button>
                                     </div>
                                 </div>
 
@@ -601,7 +519,7 @@
                                 <h1>Produções</h1>
                                 <p>Acompanhe os serviços contratados em execução.</p>
                             </div>
-                            <button id="nova-producao" class="btn-primary" type="button">Nova produção</button>
+                            <button id="nova-producao" class="btn-cta" type="button">Nova produção</button>
                         </header>
 
                         <div class="admin-filter-bar producoes-toolbar" aria-label="Filtros de produções">
@@ -990,155 +908,100 @@
                     aria-hidden="true"
                     aria-labelledby="modal-projeto-title"
                 >
-                    <div class="modal-content">
-                        <div class="admin-header">
-                            <h2 id="modal-projeto-title">Projeto do Portfólio</h2>
-                        </div>
-                        <div class="admin-info">
-                            <input type="hidden" id="proj_id" />
-
-                            <div class="form-group">
-                                <label>Título da Faixa</label>
-                                <input
-                                    type="text"
-                                    id="proj_titulo"
-                                    class="form-control"
-                                    placeholder="Ex: Cyberpunk Beat"
-                                />
+                    <div class="modal-content projeto-modal-content">
+                        <header class="admin-modal-header">
+                            <div>
+                                <span class="admin-modal-header__eyebrow">Portfólio</span>
+                                <h2 id="modal-projeto-title">Projeto do Portfólio</h2>
                             </div>
+                            <button type="button" class="btn-small" data-admin-action="fecharModalProjeto" aria-label="Fechar projeto">Fechar</button>
+                        </header>
+                        <input type="hidden" id="proj_id" />
 
-                            <div class="form-group">
-                                <label>Artista</label>
-                                <input
-                                    type="text"
-                                    id="proj_artista"
-                                    class="form-control"
-                                />
-                            </div>
-
-                            <div class="form-group">
-                                <label>Categoria</label>
-                                <input
-                                    type="text"
-                                    id="proj_categoria"
-                                    class="form-control"
-                                    placeholder="Ex: Mixagem"
-                                />
-                            </div>
-
-                            <div class="form-group">
-                                <label for="proj_vertical">Vertical pública</label>
-                                <select id="proj_vertical" class="form-control">
-                                    <option value="">Não classificado</option>
-                                    <option value="artists">Artists</option>
-                                    <option value="creators">Creators</option>
-                                    <option value="media_games">Media &amp; Games</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="proj_segmentos">Segmentos</label>
-                                <div id="proj_segmentos" class="portfolio-segment-picker">
-                                    <input
-                                        type="search"
-                                        id="proj_segmentos_busca"
-                                        class="form-control"
-                                        placeholder="Buscar segmento"
-                                        autocomplete="off"
-                                    />
-                                    <div
-                                        id="proj_segmentos_opcoes"
-                                        class="portfolio-segment-picker__options"
-                                        role="group"
-                                        aria-label="Segmentos disponíveis"
-                                    ></div>
-                                    <small id="proj_segmentos_status" aria-live="polite"></small>
+                        <section class="admin-form-section" aria-labelledby="proj-dados-title">
+                            <h3 id="proj-dados-title">Faixa</h3>
+                            <div class="admin-form-grid">
+                                <div class="form-group">
+                                    <label for="proj_titulo">Título da Faixa</label>
+                                    <input type="text" id="proj_titulo" class="form-control" placeholder="Ex: Cyberpunk Beat" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="proj_artista">Artista</label>
+                                    <input type="text" id="proj_artista" class="form-control" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="proj_categoria">Categoria</label>
+                                    <input type="text" id="proj_categoria" class="form-control" placeholder="Ex: Mixagem" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="proj_audio">Link do Áudio (YouTube)</label>
+                                    <input type="text" id="proj_audio" class="form-control" placeholder="https://youtube.com/..." />
+                                </div>
+                                <div class="form-group admin-form-field--full">
+                                    <label for="proj_descricao">Descrição</label>
+                                    <textarea id="proj_descricao" class="form-control" rows="3"></textarea>
                                 </div>
                             </div>
+                        </section>
 
-                            <div class="form-group">
-                                <label for="proj_case_type">Tipo de material</label>
-                                <select id="proj_case_type" class="form-control">
-                                    <option value="">Não classificado</option>
-                                    <option value="client_case">Case de cliente</option>
-                                    <option value="demo">Demo</option>
-                                    <option value="concept_project">Concept Project</option>
-                                    <option value="study">Estudo</option>
-                                </select>
-                                <small>Use Case de cliente somente com autorização de publicação.</small>
+                        <section class="admin-form-section" aria-labelledby="proj-classificacao-title">
+                            <h3 id="proj-classificacao-title">Classificação e destaque</h3>
+                            <div class="admin-form-grid">
+                                <div class="form-group">
+                                    <label for="proj_vertical">Vertical pública</label>
+                                    <select id="proj_vertical" class="form-control">
+                                        <option value="">Não classificado</option>
+                                        <option value="artists">Artists</option>
+                                        <option value="creators">Creators</option>
+                                        <option value="media_games">Media &amp; Games</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="proj_case_type">Tipo de material</label>
+                                    <select id="proj_case_type" class="form-control">
+                                        <option value="">Não classificado</option>
+                                        <option value="client_case">Case de cliente</option>
+                                        <option value="demo">Demo</option>
+                                        <option value="concept_project">Concept Project</option>
+                                        <option value="study">Estudo</option>
+                                    </select>
+                                    <small>Use Case de cliente somente com autorização de publicação.</small>
+                                </div>
+                                <div class="form-group admin-form-field--full">
+                                    <label for="proj_segmentos_busca">Segmentos</label>
+                                    <div id="proj_segmentos" class="portfolio-segment-picker">
+                                        <input type="search" id="proj_segmentos_busca" class="form-control" placeholder="Buscar segmento" autocomplete="off" />
+                                        <div id="proj_segmentos_opcoes" class="portfolio-segment-picker__options" role="group" aria-label="Segmentos disponíveis"></div>
+                                        <small id="proj_segmentos_status" aria-live="polite"></small>
+                                    </div>
+                                </div>
                             </div>
+                            <label class="admin-check" for="proj_destaque">
+                                <input type="checkbox" id="proj_destaque" />
+                                Destacar como Hit 🔥 (aparece na Home)
+                            </label>
+                        </section>
 
-                            <div
-                                class="form-group"
-                                style="
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 10px;
-                                    margin: 15px 0;
-                                "
-                            >
-                                <input
-                                    type="checkbox"
-                                    id="proj_destaque"
-                                    style="width: auto; transform: scale(1.5)"
-                                />
-                                <label
-                                    for="proj_destaque"
-                                    style="
-                                        margin: 0;
-                                        cursor: pointer;
-                                        color: white;
-                                    "
-                                    >Destacar como Hit 🔥 (Aparece na
-                                    Home)</label
-                                >
+                        <section class="admin-form-section" aria-labelledby="proj-capa-title">
+                            <h3 id="proj-capa-title">Capa</h3>
+                            <div class="admin-form-grid">
+                                <div class="form-group">
+                                    <label for="proj_capa">Link da Capa (Opcional)</label>
+                                    <input type="text" id="proj_capa" class="form-control" placeholder="https://..." />
+                                </div>
+                                <div class="form-group">
+                                    <label for="proj_capa_upload">Ou enviar nova capa</label>
+                                    <input id="proj_capa_upload" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
+                                    <small>JPG, PNG, WebP ou AVIF.</small>
+                                </div>
                             </div>
-
-                            <div class="form-group">
-                                <label>Link do Áudio (YouTube)</label>
-                                <input
-                                    type="text"
-                                    id="proj_audio"
-                                    class="form-control"
-                                />
+                            <div class="admin-inline-actions">
+                                <img id="proj_capa_preview" class="projeto-capa-preview" alt="Prévia da capa do projeto" hidden />
+                                <button id="proj_capa_remove" class="btn-small btn-danger" type="button" hidden>Remover capa gerenciada</button>
                             </div>
+                        </section>
 
-                            <div class="form-group">
-                                <label for="proj_capa">Link da Capa (Opcional)</label>
-                                <input
-                                    type="text"
-                                    id="proj_capa"
-                                    class="form-control"
-                                />
-                                <label for="proj_capa_upload">Ou enviar nova capa</label>
-                                <input
-                                    id="proj_capa_upload"
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp,image/avif"
-                                />
-                                <img
-                                    id="proj_capa_preview"
-                                    alt="Prévia da capa do projeto"
-                                    hidden
-                                    style="max-width: 240px; max-height: 160px; object-fit: contain"
-                                />
-                                <button
-                                    id="proj_capa_remove"
-                                    class="btn-small btn-danger"
-                                    type="button"
-                                    hidden
-                                >Remover capa gerenciada</button>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Descrição</label>
-                                <textarea
-                                    id="proj_descricao"
-                                    class="form-control"
-                                    rows="3"
-                                ></textarea>
-                            </div>
-
+                        <section class="admin-form-section projeto-modal-extras">
                             <fieldset class="portfolio-credits">
                                 <legend>Créditos</legend>
                                 <p class="portfolio-credits__help">Quem trabalhou no projeto, na ordem em que aparece no site. Produtores com conta podem ser vinculados; colaboradores externos entram só com o nome.</p>
@@ -1179,34 +1042,11 @@
                                 </div>
                                 <small id="proj_mix_help" class="admin-field-help">É necessário adicionar os áudios Antes e Depois para destacar este projeto.</small>
                             </fieldset>
-                        </div>
+                        </section>
 
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: flex-end;
-                                gap: 10px;
-                                margin-top: 20px;
-                            "
-                        >
-                            <button
-                                class="btn-small"
-                                style="background: #444"
-                                data-admin-action="fecharModalProjeto"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                class="btn-small"
-                                style="
-                                    background: var(--cor-ciano);
-                                    color: black;
-                                    font-weight: bold;
-                                "
-                                data-admin-action="salvarProjeto"
-                            >
-                                Salvar Projeto
-                            </button>
+                        <div class="admin-form-footer">
+                            <button type="button" class="btn-small" data-admin-action="fecharModalProjeto">Cancelar</button>
+                            <button type="button" class="btn-cta" data-admin-action="salvarProjeto">Salvar Projeto</button>
                         </div>
                     </div>
                 </div>
@@ -1219,83 +1059,38 @@
                     aria-hidden="true"
                     aria-labelledby="modal-orcamento-title"
                 >
-                    <div class="modal-content">
-                        <div class="admin-header">
-                            <h2 id="modal-orcamento-title">Detalhes do Orçamento</h2>
-                        </div>
-                        <div class="admin-info">
-                            <p>
-                                <strong>Cliente:</strong>
-                                <span id="orc_nome"></span>
-                                <button type="button" id="orc_cliente_abrir" class="btn-small entity-link hidden">Ver cliente</button>
-                            </p>
-                            <p>
-                                <strong>Email:</strong>
-                                <span id="orc_email"></span>
-                            </p>
-                            <p>
-                                <strong>WhatsApp:</strong>
-                                <span id="orc_whatsapp"></span>
-                            </p>
-                            <p>
-                                <strong>Serviço:</strong>
-                                <span id="orc_servico"></span>
-                            </p>
-                            <p>
-                                <strong>Valor:</strong>
-                                <span id="orc_valor"></span>
-                            </p>
-                            <p>
-                                <strong>Data:</strong>
-                                <span id="orc_data"></span>
-                            </p>
-                            <p>
-                                <strong>Guia:</strong>
-                                <a
-                                    id="orc_guia"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    >Abrir Guia</a
-                                >
-                            </p>
-                            <p><strong>Detalhes:</strong></p>
-                            <textarea
-                                id="orc_detalhes"
-                                readonly
-                                rows="10"
-                                style="
-                                    width: 100%;
-                                    resize: none;
-                                    margin-top: 10px;
-                                "
-                            ></textarea>
-                            <div class="form-group">
-                                <label> Observações internas </label>
-
-                                <textarea
-                                    id="orc_observacoes"
-                                    placeholder="Notas internas..."
-                                ></textarea>
-
-                                <button id="btn-save-observacoes">
-                                    Salvar observações
-                                </button>
+                    <div class="modal-content orcamento-modal-content">
+                        <header class="admin-modal-header">
+                            <div>
+                                <span class="admin-modal-header__eyebrow">Pedido do site</span>
+                                <h2 id="modal-orcamento-title">Detalhes do Orçamento</h2>
                             </div>
-                        </div>
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: flex-end;
-                                margin-top: 20px;
-                            "
-                        >
-                            <button
-                                class="btn-small"
-                                data-admin-action="fecharModalOrcamento"
-                            >
-                                Fechar
-                            </button>
-                        </div>
+                            <button type="button" class="btn-small" data-admin-action="fecharModalOrcamento" aria-label="Fechar orçamento">Fechar</button>
+                        </header>
+                        <section class="admin-form-section" aria-labelledby="orc-contato-title">
+                            <h3 id="orc-contato-title">Cliente e pedido</h3>
+                            <dl class="admin-detail-list">
+                                <div><dt>Cliente</dt><dd><span id="orc_nome"></span><button type="button" id="orc_cliente_abrir" class="btn-small entity-link hidden">Ver cliente</button></dd></div>
+                                <div><dt>E-mail</dt><dd id="orc_email"></dd></div>
+                                <div><dt>WhatsApp</dt><dd id="orc_whatsapp"></dd></div>
+                                <div><dt>Serviço</dt><dd id="orc_servico"></dd></div>
+                                <div><dt>Valor</dt><dd id="orc_valor"></dd></div>
+                                <div><dt>Data</dt><dd id="orc_data"></dd></div>
+                                <div><dt>Guia</dt><dd><a id="orc_guia" target="_blank" rel="noopener noreferrer">Abrir Guia</a></dd></div>
+                            </dl>
+                            <label class="admin-form-field" for="orc_detalhes">Detalhes enviados
+                                <textarea id="orc_detalhes" readonly rows="8"></textarea>
+                            </label>
+                        </section>
+                        <section class="admin-form-section" aria-labelledby="orc-notas-title">
+                            <h3 id="orc-notas-title">Observações internas</h3>
+                            <label class="admin-form-field" for="orc_observacoes">Notas visíveis só para a equipe
+                                <textarea id="orc_observacoes" rows="4" placeholder="Notas internas..."></textarea>
+                            </label>
+                            <div class="admin-inline-actions">
+                                <button id="btn-save-observacoes" type="button" class="btn-small">Salvar observações</button>
+                            </div>
+                        </section>
                     </div>
                 </div>
                 <div
@@ -1307,9 +1102,13 @@
                     aria-labelledby="proposta-title"
                 >
                     <div class="modal-content proposta-modal-content">
-                        <div class="admin-header">
-                            <h2 id="proposta-title">Editor de Proposta</h2>
-                        </div>
+                        <header class="admin-modal-header">
+                            <div>
+                                <span class="admin-modal-header__eyebrow">Comercial</span>
+                                <h2 id="proposta-title">Editor de Proposta</h2>
+                            </div>
+                            <button type="button" class="btn-small" data-admin-action="fecharEditorProposta" aria-label="Fechar proposta">Fechar</button>
+                        </header>
 
                         <div id="proposta-tabs" class="proposta-tabs"></div>
                         <div id="proposta-content" class="proposta-content"></div>
@@ -1326,43 +1125,15 @@
                             </div>
                         </section>
 
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                gap: 10px;
-                                margin-top: 20px;
-                            "
-                        >
-                            <span id="proposta-status">Rascunho local</span>
-                            <div style="display:flex; gap:10px;">
-                                <button
-                                    id="btn-save-proposta"
-                                    class="btn-small"
-                                    type="button"
-                                    disabled
-                                >
-                                    Salvar
-                                </button>
-                                <button
-                                    id="btn-gerar-pdf-proposta"
-                                    class="btn-small"
-                                    type="button"
-                                    disabled
-                                >
-                                    Gerar PDF
-                                </button>
-                                <button id="btn-enviar-proposta" class="btn-small" type="button" disabled>Enviar proposta</button>
-                                <button id="btn-aprovar-proposta" class="btn-small" type="button" disabled>Aprovar proposta</button>
+                        <div class="admin-form-footer proposta-footer">
+                            <span id="proposta-status" class="proposta-footer__status">Rascunho local</span>
+                            <div class="admin-inline-actions">
                                 <button id="btn-reabrir-proposta" class="btn-small hidden" type="button">Reabrir para atualizar</button>
+                                <button id="btn-gerar-pdf-proposta" class="btn-small" type="button" disabled>Gerar PDF</button>
+                                <button id="btn-save-proposta" class="btn-small" type="button" disabled>Salvar</button>
+                                <button id="btn-enviar-proposta" class="btn-small" type="button" disabled>Enviar proposta</button>
+                                <button id="btn-aprovar-proposta" class="btn-cta" type="button" disabled>Aprovar proposta</button>
                             </div>
-                            <button
-                                class="btn-small"
-                                data-admin-action="fecharEditorProposta"
-                            >
-                                Fechar
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -1409,11 +1180,11 @@
                                 <label id="usuario-beats-field" class="usuario-active-field">
                                     <input id="usuario-painel-beats" type="checkbox" /> Painel de beats
                                 </label>
-                                <fieldset id="usuario-especialidades-field" class="admin-form-field usuario-especialidades">
+                                <fieldset id="usuario-especialidades-field" class="usuario-especialidades admin-check-group">
                                     <legend>Especialidades</legend>
-                                    <label><input type="checkbox" name="usuario-especialidade" value="beatmaker" /> Beatmaker</label>
-                                    <label><input type="checkbox" name="usuario-especialidade" value="mixagem" /> Engenheiro de mixagem</label>
-                                    <label><input type="checkbox" name="usuario-especialidade" value="masterizacao" /> Engenheiro de masterização</label>
+                                    <label class="admin-check"><input type="checkbox" name="usuario-especialidade" value="beatmaker" /> Beatmaker</label>
+                                    <label class="admin-check"><input type="checkbox" name="usuario-especialidade" value="mixagem" /> Engenheiro de mixagem</label>
+                                    <label class="admin-check"><input type="checkbox" name="usuario-especialidade" value="masterizacao" /> Engenheiro de masterização</label>
                                 </fieldset>
                                 <label id="usuario-cpf-field" class="admin-form-field hidden">CPF do beatmaker
                                     <input id="usuario-cpf" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" />
@@ -1538,9 +1309,9 @@
                     aria-labelledby="financeiro-modal-title"
                 >
                     <div class="modal-content financeiro-modal-content">
-                        <header class="financeiro-modal-header">
+                        <header class="admin-modal-header">
                             <div>
-                                <span class="admin-page-header__eyebrow">Detalhes financeiros</span>
+                                <span class="admin-modal-header__eyebrow">Detalhes financeiros</span>
                                 <h2 id="financeiro-modal-title">Cobrança</h2>
                             </div>
                             <button id="financeiro-close-modal" type="button" class="btn-small">Fechar</button>
@@ -1553,14 +1324,18 @@
                             <summary>Registrar Pix recebido diretamente</summary>
                         <form id="financeiro-manual-form" class="financeiro-manual-form admin-disclosure__content">
                             <h3>Pix recebido diretamente</h3>
-                            <div class="financeiro-manual-options" role="radiogroup" aria-label="Tipo do registro">
+                            <div class="financeiro-manual-options admin-choice" role="radiogroup" aria-label="Tipo do registro">
                                 <label><input type="radio" name="modo" value="parcial" checked> Pagamento parcial</label>
                                 <label><input type="radio" name="modo" value="quitar"> Quitar saldo</label>
                             </div>
-                            <label>Valor recebido<input id="financeiro-manual-value" name="valor" type="number" min="0.01" step="0.01" required></label>
-                            <label>Referência do Pix<input name="referencia" minlength="3" maxlength="120" autocomplete="off" required></label>
+                            <div class="admin-form-grid">
+                                <label class="admin-form-field">Valor recebido<input id="financeiro-manual-value" name="valor" type="number" min="0.01" step="0.01" required></label>
+                                <label class="admin-form-field">Referência do Pix<input name="referencia" minlength="3" maxlength="120" autocomplete="off" required></label>
+                            </div>
                             <p class="admin-help">Registre somente depois de confirmar o crédito na conta. O histórico não substitui conciliação bancária.</p>
-                            <button id="financeiro-manual-submit" type="submit" class="btn-primary">Registrar Pix direto</button>
+                            <div class="admin-inline-actions">
+                                <button id="financeiro-manual-submit" type="submit" class="btn-cta">Registrar Pix direto</button>
+                            </div>
                         </form>
                         </details>
                         <section class="financeiro-payments-section" aria-labelledby="financeiro-payments-title">
@@ -1572,17 +1347,25 @@
 
                 <div id="modal-nova-producao" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="nova-producao-titulo">
                     <form id="nova-producao-form" class="modal-content admin-form">
-                        <h2 id="nova-producao-titulo">Nova produção</h2>
-                        <label class="admin-form-field">Cliente<select name="cliente_id" aria-label="Cliente" required><option value="">Selecione</option></select></label>
-                        <label class="admin-form-field">Título<input name="titulo" maxlength="150" required /></label>
-                        <label class="admin-form-field">Serviço<select name="servico_id" aria-label="Serviço" required><option value="">Selecione</option></select></label>
-                        <label class="admin-form-field">Produtor<select name="produtor_id" aria-label="Produtor"><option value="">Definir depois</option></select></label>
-                        <label class="admin-form-field">Prazo de entrega<input name="prazo_entrega" type="datetime-local" /></label>
-                        <label class="admin-form-field">Observações<textarea name="observacoes" maxlength="20000"></textarea></label>
-                        <p id="nova-producao-erro" role="alert"></p>
-                        <div class="admin-form-actions">
-                            <button type="button" id="nova-producao-cancelar" class="btn-secondary">Cancelar</button>
-                            <button type="submit" class="btn-primary">Criar produção</button>
+                        <header class="admin-modal-header">
+                            <div>
+                                <span class="admin-modal-header__eyebrow">Operação</span>
+                                <h2 id="nova-producao-titulo">Nova produção</h2>
+                            </div>
+                        </header>
+                        <p class="admin-help">Para produções sem proposta. Etapas e cobrança podem ser ligadas depois, ao aprovar uma proposta.</p>
+                        <div class="admin-form-grid">
+                            <label class="admin-form-field">Cliente<select name="cliente_id" aria-label="Cliente" required><option value="">Selecione</option></select></label>
+                            <label class="admin-form-field">Título<input name="titulo" maxlength="150" required /></label>
+                            <label class="admin-form-field">Serviço<select name="servico_id" aria-label="Serviço" required><option value="">Selecione</option></select></label>
+                            <label class="admin-form-field">Produtor<select name="produtor_id" aria-label="Produtor"><option value="">Definir depois</option></select></label>
+                            <label class="admin-form-field">Prazo de entrega<input name="prazo_entrega" type="datetime-local" /></label>
+                            <label class="admin-form-field admin-form-field--full">Observações<textarea name="observacoes" maxlength="20000"></textarea></label>
+                        </div>
+                        <p id="nova-producao-erro" class="admin-field-error" role="alert"></p>
+                        <div class="admin-form-footer">
+                            <button type="button" id="nova-producao-cancelar" class="btn-small">Cancelar</button>
+                            <button type="submit" class="btn-cta">Criar produção</button>
                         </div>
                     </form>
                 </div>

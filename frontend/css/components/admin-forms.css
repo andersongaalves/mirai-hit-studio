@@ -1,0 +1,324 @@
+/* Admin form system: one look for every Admin form and modal.
+   Loaded last on admin.html; scoped to the Admin shell. */
+
+/* ---- Modal header: eyebrow + title on the left, close on the right ---- */
+.integrado-admin .admin-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+.integrado-admin .admin-modal-header h2 {
+    margin: 6px 0 0;
+    padding: 0;
+    color: var(--integrado-primary);
+    font: 700 28px/34px var(--font-titulos);
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.integrado-admin .admin-modal-header h2::after { display: none; }
+.integrado-admin .admin-modal-header__eyebrow {
+    color: var(--integrado-secondary);
+    font: 700 12px/16px var(--font-texto);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* ---- Sections inside a form ---- */
+.integrado-admin .admin-form-section {
+    min-width: 0;
+    margin: 0;
+    padding: 20px 0 4px;
+    border: 0;
+    border-top: 1px solid var(--integrado-border);
+}
+.integrado-admin .admin-form-section > h3,
+.integrado-admin .admin-form-section > legend {
+    margin: 0 0 12px;
+    padding: 0;
+    color: var(--integrado-primary);
+    font: 700 18px/24px var(--font-subtitulos);
+}
+.integrado-admin .admin-form-section > h3::after { display: none; }
+.integrado-admin .admin-form-section > .admin-help,
+.integrado-admin .admin-form-section > .admin-field-help { margin: 0 0 12px; }
+
+/* ---- Fields: label above the control, help below ---- */
+.integrado-admin .admin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+    min-width: 0;
+}
+.integrado-admin .admin-form-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.integrado-admin .admin-form-field--full { grid-column: 1 / -1; }
+
+.integrado-admin .admin-form-field,
+.integrado-admin .modal-content .form-group,
+.integrado-admin .admin-section .form-group,
+.integrado-admin .editor-panel .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    margin: 0 0 16px;
+    color: var(--integrado-secondary);
+    font: 700 14px/20px var(--font-texto);
+    text-align: left;
+}
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) .form-group > label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+}
+
+/* Text controls share one height, border and background. */
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel)
+    :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="hidden"]), select, textarea) {
+    min-height: 48px;
+    border: 1px solid var(--integrado-control);
+    border-radius: var(--radius-sm);
+    background: var(--integrado-surface);
+    color: var(--integrado-primary);
+    font: 400 15px/22px var(--font-texto);
+}
+.integrado-admin :is(.admin-form-field, .form-group)
+    :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"]), select, textarea) {
+    width: 100%;
+    padding: 12px 14px;
+}
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) textarea { min-height: 96px; resize: vertical; }
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) textarea[readonly] { resize: none; color: var(--integrado-secondary); }
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) :is(input, select, textarea):focus-visible {
+    border-color: var(--integrado-cyan);
+    outline: 2px solid rgba(0, 212, 255, 0.25);
+    outline-offset: 1px;
+}
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) :is(input, select, textarea):disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Checkboxes and radios: compact, aligned with their text. */
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) :is(input[type="checkbox"], input[type="radio"]) {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    min-height: 0;
+    margin: 0;
+    accent-color: var(--integrado-cyan);
+}
+.integrado-admin .admin-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    margin: 0;
+    color: var(--integrado-primary);
+    font: 400 15px/22px var(--font-texto);
+    cursor: pointer;
+}
+.integrado-admin .admin-check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+}
+
+/* Segmented choice (radios shown as pills). */
+.integrado-admin .admin-choice {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 0 0 16px;
+    padding: 4px;
+    border: 1px solid var(--integrado-control);
+    border-radius: var(--radius-sm);
+    background: var(--integrado-surface);
+}
+.integrado-admin .admin-choice label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: calc(var(--radius-sm) - 2px);
+    color: var(--integrado-secondary);
+    font: 700 14px/20px var(--font-acoes);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.integrado-admin .admin-choice input {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0;
+    cursor: pointer;
+}
+.integrado-admin .admin-choice label:has(input:checked) { background: var(--integrado-cyan); color: #04121a; }
+.integrado-admin .admin-choice label:has(input:focus-visible) { outline: 2px solid var(--integrado-cyan); outline-offset: 2px; }
+
+/* File inputs look like the rest of the form. */
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) input[type="file"] {
+    width: 100%;
+    min-height: 48px;
+    padding: 6px;
+    border: 1px dashed var(--integrado-control);
+    border-radius: var(--radius-sm);
+    background: var(--integrado-surface);
+    color: var(--integrado-secondary);
+    font: 400 14px/20px var(--font-texto);
+}
+.integrado-admin :is(.modal-content, .admin-section, .editor-panel) input[type="file"]::file-selector-button {
+    min-height: 34px;
+    margin-right: 12px;
+    padding: 0 14px;
+    border: 1px solid var(--integrado-control);
+    border-radius: var(--radius-sm);
+    background: var(--integrado-page);
+    color: var(--integrado-primary);
+    font: 700 13px/20px var(--font-acoes);
+    cursor: pointer;
+}
+
+/* Help text below a field. */
+.integrado-admin :is(.admin-form-field, .form-group) :is(small, .admin-field-help) {
+    color: var(--integrado-secondary);
+    font: 400 13px/18px var(--font-texto);
+}
+
+/* ---- Read-only details (label + value pairs) ---- */
+.integrado-admin .admin-detail-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    margin: 0 0 16px;
+}
+.integrado-admin .admin-detail-list > div { min-width: 0; }
+.integrado-admin .admin-detail-list dt {
+    margin: 0 0 4px;
+    color: var(--integrado-secondary);
+    font: 700 12px/16px var(--font-texto);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.integrado-admin .admin-detail-list dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--integrado-primary);
+    font: 400 15px/22px var(--font-texto);
+    overflow-wrap: anywhere;
+}
+.integrado-admin .admin-detail-list dd:empty::before { content: "—"; color: var(--integrado-secondary); }
+
+/* ---- Actions: secondary on the left, primary on the right ---- */
+.integrado-admin .admin-form-footer {
+    position: sticky;
+    bottom: calc(-1 * var(--space-5));
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+    margin: 16px calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+    padding: 16px var(--space-5);
+    border-top: 1px solid var(--integrado-border);
+    background: var(--color-surface-elevated);
+}
+.integrado-admin .admin-form-footer--inline { position: static; margin: 16px 0 0; padding: 16px 0 0; background: transparent; }
+.integrado-admin .admin-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
+/* Bare inline field + button rows (e.g. pick a block and add it). */
+.integrado-admin .admin-field-row { display: flex; align-items: flex-end; gap: 12px; margin: 0 0 16px; }
+.integrado-admin .admin-field-row > .admin-form-field { flex: 1; margin: 0; }
+
+/* ---- Service editor ---- */
+.integrado-admin .editor-panel > .admin-modal-header h2 { font-size: 24px; line-height: 30px; }
+.integrado-admin .builder-preview { border-color: var(--integrado-border); background: var(--integrado-surface); }
+.integrado-admin .builder-preview h3 { color: var(--integrado-secondary); font: 700 12px/16px var(--font-texto); letter-spacing: 0.04em; text-transform: uppercase; }
+.integrado-admin .servico-limites { margin: 0 0 16px; border-color: var(--integrado-border); }
+.integrado-admin .servico-limites__grid label { font: 700 13px/18px var(--font-texto); color: var(--integrado-secondary); }
+.integrado-admin .servico-limites__grid input { min-height: 44px; padding: 0 12px; }
+.integrado-admin .servico-etapas :is(label, select, input) { display: block; }
+.integrado-admin .servico-etapas select,
+.integrado-admin .servico-etapas input:not([type="checkbox"], [type="radio"]) { width: 100%; margin: 6px 0 12px; padding: 0 12px; }
+
+/* ---- Small screens ---- */
+@media (max-width: 640px) {
+    .integrado-admin .admin-form-grid,
+    .integrado-admin .admin-form-grid--3,
+    .integrado-admin .admin-detail-list { grid-template-columns: minmax(0, 1fr); }
+    .integrado-admin .admin-modal-header h2 { font-size: 22px; line-height: 28px; }
+    .integrado-admin .admin-form-footer > * { flex: 1 1 auto; }
+    .integrado-admin .admin-field-row { flex-direction: column; align-items: stretch; }
+    .integrado-admin .admin-choice { display: flex; }
+    .integrado-admin .admin-choice label { flex: 1; justify-content: center; }
+}
+
+/* ---- Specific modals ---- */
+.integrado-admin .orcamento-modal-content,
+.integrado-admin .projeto-modal-content { width: min(760px, 100%); }
+.integrado-admin .projeto-capa-preview { max-width: 240px; max-height: 160px; border-radius: var(--radius-sm); object-fit: contain; }
+.integrado-admin .projeto-modal-extras { display: grid; gap: 16px; }
+.integrado-admin .proposta-footer { justify-content: space-between; align-items: center; }
+.integrado-admin .proposta-footer__status { color: var(--integrado-secondary); font: 700 14px/20px var(--font-texto); }
+.integrado-admin #nova-producao-erro:empty,
+.integrado-admin .admin-field-error:empty { display: none; }
+
+/* Promotion editor (service and combo). */
+.integrado-admin .catalog-promotion {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    min-width: 0;
+    margin: 0 0 16px;
+    padding: 16px;
+    border: 1px solid var(--integrado-border);
+    border-radius: var(--radius-sm);
+}
+.integrado-admin .catalog-promotion legend { padding: 0 6px; color: var(--integrado-primary); font: 700 14px/20px var(--font-texto); }
+.integrado-admin .catalog-promotion > label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    color: var(--integrado-secondary);
+    font: 700 14px/20px var(--font-texto);
+}
+.integrado-admin .catalog-promotion > label:has(input[type="checkbox"]) {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    align-items: center;
+    align-self: end;
+    min-height: 48px;
+    color: var(--integrado-primary);
+}
+.integrado-admin .catalog-promotion input:not([type="checkbox"]) { width: 100%; padding: 0 12px; }
+@media (max-width: 640px) { .integrado-admin .catalog-promotion { grid-template-columns: minmax(0, 1fr); } }
+
+/* Proposal editor tabs: the same underline tabs used in the production detail. */
+.integrado-admin #proposta-tabs {
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 0 0 20px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--integrado-border);
+}
+.integrado-admin #proposta-tabs .btn-small {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--integrado-secondary);
+    font: 700 14px/20px var(--font-acoes);
+    text-transform: none;
+}
+.integrado-admin #proposta-tabs .btn-small:hover { color: var(--integrado-primary); }
+.integrado-admin #proposta-tabs .btn-small.active { border-bottom-color: var(--integrado-cyan); background: transparent; color: var(--integrado-cyan); }
