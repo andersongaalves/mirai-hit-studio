@@ -206,3 +206,16 @@ def editar(db, actor, envio_id, payload):
     db.commit()
     db.refresh(item)
     return item
+
+
+def excluir(db, actor, envio_id):
+    """The producer withdraws a submission that is pending or was refused."""
+    item = db.scalar(select(PortfolioEnvioModel).where(PortfolioEnvioModel.id == envio_id).with_for_update())
+    if item is None or item.produtor_id != actor.id:
+        raise HTTPException(404, "Envio nao encontrado.")
+    if item.status not in ("pendente", "recusado"):
+        raise HTTPException(409, "Este envio ja foi publicado; peca ao estudio para retira-lo do portfolio.")
+    audit_service.record(db, actor=actor, action="portfolio.submission_deleted", entity_type="portfolio_submission",
+                         entity_id=item.id, metadata={"status": item.status})
+    db.delete(item)
+    db.commit()

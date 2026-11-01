@@ -175,6 +175,7 @@ async function openDetail(id) {
             onListen: listenFile,
             onEditFile: editFile,
             onEditDelivery: editDelivery,
+            onDeleteDelivery: deleteDelivery,
             onDelete: deletePreview,
         });
         showView("detail");
@@ -283,7 +284,13 @@ async function loadBeats() {
                 const edit = document.createElement("button"); edit.type = "button"; edit.className = "btn-outline beat-card__edit";
                 edit.textContent = "Editar"; edit.setAttribute("aria-label", `Editar ${beat.titulo}`);
                 edit.addEventListener("click", () => beatFormMode(beat));
-                card.append(edit); // over the cover: the square card keeps its content height
+                const remove = document.createElement("button"); remove.type = "button"; remove.className = "btn-outline beat-card__delete";
+                remove.textContent = "Excluir"; remove.setAttribute("aria-label", `Excluir ${beat.titulo}`);
+                remove.addEventListener("click", () => deleteBeat(beat, remove));
+                // Over the cover: the square card keeps its content height.
+                const tools = document.createElement("div"); tools.className = "beat-card__tools";
+                tools.append(edit, remove);
+                card.append(tools);
             }
             if (cover) card.append(cover);
             else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
@@ -349,6 +356,7 @@ async function updateStatus(id, status, button) {
                 onListen: listenFile,
                 onEditFile: editFile,
             onEditDelivery: editDelivery,
+            onDeleteDelivery: deleteDelivery,
                 onDelete: deletePreview,
             });
             loadMessages(updated, files);
@@ -404,13 +412,43 @@ async function editDelivery(delivery, changes) {
     setAlert("Entrega atualizada.");
 }
 
+async function deleteDelivery(delivery, button) {
+    if (!window.confirm(`Excluir a entrega "${delivery.titulo}" com todos os arquivos dela? Esta ação não pode ser desfeita.`)) return;
+    button.disabled = true;
+    setAlert();
+    try {
+        await api.excluirEntregaFinal(delivery.id);
+        await openDetail(delivery.producao_id);
+        setAlert("Entrega excluída.");
+    } catch (error) {
+        setAlert(error.message, true);
+        button.disabled = false;
+    }
+}
+
+async function deleteBeat(beat, button) {
+    if (!window.confirm(`Excluir o beat "${beat.titulo}" e os arquivos dele? Esta ação não pode ser desfeita.`)) return;
+    button.disabled = true;
+    setAlert();
+    try {
+        await api.excluirBeat(beat.id);
+        if (editingBeat?.id === beat.id) beatFormMode(null);
+        await loadBeats();
+        setAlert("Beat excluído.");
+    } catch (error) {
+        setAlert(error.message, true);
+        button.disabled = false;
+    }
+}
+
 async function deletePreview(file, button) {
-    if (!window.confirm(`Excluir a prévia "${file.nome_exibicao}"? Esta ação não pode ser desfeita.`)) return;
+    const kind = file.tipo === "previa" ? "a prévia" : "o arquivo";
+    if (!window.confirm(`Excluir ${kind} "${file.nome_exibicao}"? Esta ação não pode ser desfeita.`)) return;
     button.disabled = true;
     setAlert();
     try {
         await api.excluirPrevia(file.id);
-        setAlert("Prévia excluída.");
+        setAlert(file.tipo === "previa" ? "Prévia excluída." : "Arquivo excluído.");
         await openDetail(file.producao_id);
     } catch (error) {
         setAlert(error.message, true);

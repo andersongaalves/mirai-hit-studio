@@ -245,15 +245,22 @@
 .producer-body .beat-form__editing button { grid-column: 2; grid-row: 1 / span 2; width: auto; }
 .producer-body .beat-card__edit { justify-self: start; width: auto; min-height: 36px; padding: 0 14px; }
 .producer-body .producer-beat-card { position: relative; }
-.producer-body .producer-beat-card > .beat-card__edit {
+.producer-body .producer-beat-card > .beat-card__tools {
     position: absolute;
     top: 10px;
     right: 10px;
     z-index: 1;
+    display: flex;
+    gap: 6px;
+}
+.producer-body .beat-card__tools button {
+    width: auto;
     min-height: 34px;
+    padding: 0 12px;
     background: rgba(4, 12, 24, 0.82);
     backdrop-filter: blur(4px);
 }
+.producer-body .beat-card__tools .beat-card__delete { border-color: rgba(255, 107, 107, 0.7); color: #ff8a8a; }
 .producer-body .edit-panel {
     display: grid;
     gap: 12px;
@@ -276,3 +283,7 @@
     .producer-body .beat-form__editing button { grid-column: 1; grid-row: auto; width: 100%; }
 }
 .producer-body .beat-form__editing[hidden] { display: none; }
+.producer-body .portfolio-submission__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.producer-body .portfolio-submission__actions button { width: auto; }
+.producer-body .final-delivery-card__manage { display: flex; flex-wrap: wrap; gap: 8px; }
+.producer-body .final-delivery-card__manage button { width: auto; min-height: 36px; padding: 0 14px; }

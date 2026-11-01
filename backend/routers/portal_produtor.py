@@ -304,6 +304,26 @@ def editar_entrega_final(
         raise _delivery_error(exc) from None
 
 
+@router.delete("/entregas-finais/{entrega_id}", status_code=204)
+def excluir_entrega_final(entrega_id: int, request: Request, db: Db, user: CurrentProducer):
+    try:
+        try:
+            model = producao_entrega_service.get(db, entrega_id)
+        except producao_entrega_service.ProducaoEntregaError:
+            raise HTTPException(status_code=404, detail="Entrega final nao encontrada.") from None
+        production = crud_producao.buscar_por_produtor(db, model.producao_id, user.id)
+        if not production:
+            raise HTTPException(status_code=404, detail="Entrega final nao encontrada.")
+        producao_entrega_service.delete(
+            db, model=model, production=production, actor=user,
+            request_log_id=getattr(request.state, "request_id", None),
+        )
+    except producao_entrega_service.ProducaoEntregaError as exc:
+        db.rollback()
+        raise _delivery_error(exc) from None
+    return Response(status_code=204)
+
+
 @router.get("/entregas-finais/{entrega_id}/multitrack")
 def abrir_multitrack_entrega(entrega_id: int, db: Db, user: CurrentProducer):
     try:

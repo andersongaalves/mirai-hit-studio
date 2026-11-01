@@ -266,6 +266,55 @@ locked = api.patch(path, headers=bearer('producer-a'), json={'titulo': 'Depois'}
 assert locked.status_code == 409 and 'entregue' in locked.json()['detail']
 ''')
 
+    def test_producer_deletes_delivery_and_loose_files(self):
+        self.run_case('''
+with Session(engine) as db:
+    db.add(UsuarioModel(id=31, username='producer-y', password_hash='unused', role='produtor', is_admin=False, ativo=True))
+    db.commit()
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    created = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('producer-a'),
+        data={'request_id': '550e8400-e29b-41d4-a716-446655440098', 'categoria': 'instrumental', 'titulo': 'Beat',
+              'bpm': '90', 'tonalidade': 'Am', 'multitrack_url': 'https://drive.example.test/stems'},
+        files={'arquivo_principal': ('final.mp3', b'mp3', 'audio/mpeg'), 'wav': ('final.wav', b'wav', 'audio/wav')})
+    assert created.status_code == 201, created.text
+    delivery = created.json()
+    path = f"/portal/produtor/entregas-finais/{delivery['id']}"
+    # A second license version (reissued) goes too.
+    assert api.patch(path, headers=bearer('producer-a'), json={'bpm': 91}).status_code == 200
+    principal = f"/portal/produtor/arquivos/{delivery['arquivo_principal']['id']}"
+    with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage):
+        part = api.delete(principal, headers=bearer('producer-a'))
+    assert part.status_code == 409 and 'entrega inteira' in part.json()['detail']
+    assert api.delete(path, headers=bearer('producer-y')).status_code == 404
+    assert api.delete('/portal/produtor/entregas-finais/999999', headers=bearer('producer-a')).status_code == 404
+    with Session(engine) as db:
+        keys = [row.object_key for row in db.query(ProducaoArquivoModel).filter_by(producao_id=PRODUCTION_ID, tipo='entrega')]
+    assert len(keys) == 4
+    removed = api.delete(path, headers=bearer('producer-a'))
+    assert removed.status_code == 204, removed.text
+with Session(engine) as db:
+    assert db.get(ProducaoEntregaFinalModel, delivery['id']) is None
+    assert db.query(ProducaoArquivoModel).filter_by(producao_id=PRODUCTION_ID, tipo='entrega').count() == 0
+assert all(key not in storage.objects for key in keys)
+
+# Loose files the producer sent: previews and single delivery files.
+loose = upload('entrega', 'avulso.wav', 'audio/wav')
+with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage):
+    assert api.delete(f'/portal/produtor/arquivos/{loose}', headers=bearer('producer-a')).status_code == 204
+
+# Delivered to the client: locked.
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    second = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('producer-a'),
+        data={'request_id': '550e8400-e29b-41d4-a716-446655440097', 'categoria': 'outro', 'titulo': 'Outro'},
+        files={'arquivo_principal': ('final.mp3', b'mp3', 'audio/mpeg')})
+assert second.status_code == 201, second.text
+with Session(engine) as db:
+    db.get(ProducaoModel, PRODUCTION_ID).status = 'entregue'
+    db.commit()
+locked = api.delete(f"/portal/produtor/entregas-finais/{second.json()['id']}", headers=bearer('producer-a'))
+assert locked.status_code == 409 and 'entregue' in locked.json()['detail']
+''')
+
     def test_delivery_held_until_paid(self):
         self.run_case('''
 preview_id = upload('previa', 'mix.mp3')

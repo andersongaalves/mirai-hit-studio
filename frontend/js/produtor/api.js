@@ -223,3 +223,19 @@ export async function editarEnvioPortfolio(id, dados) {
         body: JSON.stringify(dados),
     }), "Não foi possível salvar o envio.");
 }
+
+async function excluir(path, fallback) {
+    const response = await authFetch(path, { method: "DELETE" });
+    if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(typeof data?.detail === "string" ? data.detail : fallback);
+    }
+}
+
+export function excluirEntregaFinal(id) {
+    return excluir(`/portal/produtor/entregas-finais/${id}`, "Não foi possível excluir a entrega.");
+}
+
+export function excluirBeat(id) {
+    return excluir(`/portal/produtor/beats/${id}`, "Não foi possível excluir o beat.");
+}

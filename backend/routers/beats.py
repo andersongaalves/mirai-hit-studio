@@ -273,6 +273,12 @@ async def edit_beat(
                              multitrack_url=multitrack_url)
 
 
+@router.delete("/portal/produtor/beats/{beat_id}", status_code=204)
+def producer_delete_beat(beat_id: int, db: Db, user: Producer):
+    beat_service.producer_delete(db, beat_id, user)
+    return Response(status_code=204)
+
+
 @router.put("/portal/produtor/beats/{beat_id}")
 async def producer_edit_beat(
     beat_id: int, db: Db, user: Producer, titulo: Annotated[str, Form()],

@@ -215,7 +215,29 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                 edit.type = "button";
                 edit.setAttribute("aria-label", `Editar envio ${item.dados.titulo}`);
                 edit.addEventListener("click", () => root.querySelector(".portfolio-submission-form")?.dispatchEvent(new CustomEvent("portfolio:edit", { detail: item })));
-                content.append(edit);
+                const remove = node("button", "Excluir", "btn-small btn-danger");
+                remove.type = "button";
+                remove.setAttribute("aria-label", `Excluir envio ${item.dados.titulo}`);
+                remove.addEventListener("click", async () => {
+                    if (!window.confirm(`Excluir o envio "${item.dados.titulo}"? Esta ação não pode ser desfeita.`)) return;
+                    remove.disabled = true;
+                    try {
+                        const response = await authFetch(`/portal/produtor/portfolio/${item.id}`, { method: "DELETE" });
+                        if (!response.ok) {
+                            const data = await response.json().catch(() => null);
+                            throw new Error(typeof data?.detail === "string" ? data.detail : "Não foi possível excluir o envio.");
+                        }
+                        if (root.dataset.serial !== serial) return;
+                        await loadPortfolioSubmissions(root, { productions });
+                        root.querySelector('[role="status"]').textContent = "Envio excluído.";
+                    } catch (error) {
+                        message.textContent = error.message;
+                        remove.disabled = false;
+                    }
+                });
+                const tools = node("div", "", "portfolio-submission__actions");
+                tools.append(edit, remove);
+                content.append(tools);
             }
             if (admin) {
                 content.append(node("p", `Produtor #${item.produtor_id} · ${item.dados.categoria} · ${item.dados.vertical} · ${item.dados.case_type}`));
