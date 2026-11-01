@@ -17,12 +17,19 @@ from services.documento_storage import DocumentoIndisponivel
 from services.pdf_service import BRASILIA, ROOT, TEMPLATES, gerar_pdf, moeda
 
 # Business terms of the non-exclusive (lease) license; reviewed by the studio.
+# Streams and video views depend on the format bought: MP3 200 mil; WAV and multitrack 500 mil.
 LIMITES_LEASE = {
     "streams": "500.000",
     "vendas": "5.000",
     "videos": "1",
     "visualizacoes": "500.000",
     "radio": "permitida em até 2 emissoras",
+}
+LIMITES_POR_LICENCA = {
+    "lease": {**LIMITES_LEASE, "streams": "200.000", "visualizacoes": "200.000"},
+    "lease_mp3": {**LIMITES_LEASE, "streams": "200.000", "visualizacoes": "200.000"},
+    "lease_wav": LIMITES_LEASE,
+    "multitrack": LIMITES_LEASE,
 }
 
 ROTULOS = {
@@ -50,7 +57,7 @@ def gerar_documento(*, numero, data, proposta_numero, exclusivo, licenca_rotulo,
                     formatos, valor_texto, beat_titulo, produtor, produtor_cpf,
                     cliente_nome, cliente_email, sob_encomenda=False,
                     valor_rotulo="Valor pago", confirmacao_texto=None,
-                    bpm=None, tonalidade=None, creditos_adicionais=None):
+                    bpm=None, tonalidade=None, creditos_adicionais=None, limites=None):
     """Render a private beat license from already-authorized business data."""
     try:
         logo = "data:image/png;base64," + base64.b64encode(
@@ -69,7 +76,7 @@ def gerar_documento(*, numero, data, proposta_numero, exclusivo, licenca_rotulo,
             produtor_cpf=produtor_cpf,
             cliente_nome=cliente_nome,
             cliente_email=cliente_email,
-            limites=LIMITES_LEASE,
+            limites=limites or LIMITES_LEASE,
             logo=logo,
             sob_encomenda=sob_encomenda,
             confirmacao_texto=(confirmacao_texto or f"Confirmação do pagamento em {data}."),
@@ -125,6 +132,7 @@ def gerar(db, licenca_id, *, cliente_id=None):
         cliente_email=client.email or "-",
         bpm=beat.bpm,
         tonalidade=beat.tonalidade,
+        limites=LIMITES_POR_LICENCA.get(license.tipo, LIMITES_LEASE),
     )
     filename = _download_name(beat, f"-contrato-{license.tipo.replace('_', '-')}", "pdf")
     return content, filename
