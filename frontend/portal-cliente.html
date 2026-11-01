@@ -17,6 +17,7 @@
         <link rel="stylesheet" href="/css/components/portal-notifications.css" />
         <link rel="stylesheet" href="/css/components/service-credits.css" />
         <link rel="stylesheet" href="/css/components/upload-tasks.css" />
+        <link rel="stylesheet" href="/css/components/portal-forms.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -71,7 +72,7 @@
                                 <h1 id="dashboard-title">Seus projetos</h1>
                                 <p id="client-dashboard-lead" class="producer-lead">Acompanhe o que está acontecendo e saiba quando precisa agir.</p>
                             </div>
-                            <div><button class="btn-cta" type="button" data-new-production>Nova produção</button> <a class="btn-outline" href="/cliente/projetos" data-route="projects">Ver projetos</a></div>
+                            <div class="producer-page-heading__actions"><button class="btn-cta" type="button" data-new-production>Nova produção</button> <a class="btn-outline" href="/cliente/projetos" data-route="projects">Ver projetos</a></div>
                         </div>
                         <div id="client-metrics" class="producer-metrics" aria-label="Resumo dos projetos"></div>
                         <section id="client-proposal-summary" class="producer-section hidden" aria-labelledby="proposal-summary-title">
@@ -161,12 +162,16 @@
 
         <dialog id="client-request-dialog" class="client-request-dialog" aria-labelledby="client-request-title">
             <form id="client-request-form">
-                <h2 id="client-request-title">Nova produção</h2>
-                <label>Título<input name="titulo" maxlength="150" required /></label>
-                <label>Serviço<select name="servico_id" required><option value="">Selecione</option></select></label>
-                <label>Conte sobre o projeto<textarea name="descricao" maxlength="10000" rows="5" required></textarea></label>
+                <header class="client-dialog-header">
+                    <p class="producer-eyebrow">Novo pedido</p>
+                    <h2 id="client-request-title">Nova produção</h2>
+                    <p class="portal-form-help">Conte o que você precisa. A equipe responde com uma proposta.</p>
+                </header>
+                <label class="portal-field">Título<input name="titulo" maxlength="150" required placeholder="Ex.: Meu novo single" /></label>
+                <label class="portal-field">Serviço<select name="servico_id" required><option value="">Selecione</option></select></label>
+                <label class="portal-field">Conte sobre o projeto<textarea name="descricao" maxlength="10000" rows="5" required placeholder="Referências, prazo desejado, número de faixas..."></textarea></label>
                 <p id="client-request-error" role="alert"></p>
-                <div class="producer-actions">
+                <div class="portal-form-footer">
                     <button id="client-request-close" class="btn-outline" type="button">Cancelar</button>
                     <button class="btn-cta" type="submit">Enviar para análise</button>
                 </div>
