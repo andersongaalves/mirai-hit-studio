@@ -684,6 +684,38 @@ def producer_edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=No
     return edit(db, beat_id, payload, actor, mp3=mp3, wav=wav, archive=archive, cover=cover, multitrack_url=multitrack_url)
 
 
+def producer_delete(db, beat_id, actor):
+    """The producer deletes a beat they sent that was never sold or reserved; its files go too.
+    A beat with a sale history stays (the studio can take it out of the catalog)."""
+    from models import OrcamentoModel
+
+    if not actor.painel_beats:
+        raise HTTPException(403, "Painel de beats nao habilitado para esta conta.")
+    model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
+    if model is None or model.produtor_id != actor.id:
+        raise HTTPException(404, "Beat nao encontrado.")
+    if model.status == "vendido" or db.scalar(select(BeatLicencaModel.id).where(BeatLicencaModel.beat_id == beat_id)) \
+            or db.scalar(select(OrcamentoModel.id).where(OrcamentoModel.beat_id == beat_id)):
+        raise HTTPException(409, "Este beat ja teve pedido ou venda e nao pode ser excluido. Peca ao estudio para retira-lo do catalogo.")
+    references = [ref for ref in (model.original_ref, model.preview_ref, model.mp3_ref, model.wav_ref, model.multitrack_ref) if ref]
+    cover = model.capa_ref
+    audit_service.record(db, actor=actor, action="beat.deleted_by_producer", entity_type="beat", entity_id=beat_id,
+                         metadata={"status": model.status})
+    db.delete(model)
+    db.commit()
+    storage = new_production_file_storage("previa")
+    for reference in dict.fromkeys(references):
+        try:
+            storage.delete(reference)
+        except ProducaoArquivoStorageError:
+            logger.warning("beat_delete_cleanup_failed beat_id=%s", beat_id)
+    if cover:
+        try:
+            storage_for(StorageScope.PUBLIC_IMAGE).delete(cover)
+        except StorageError:
+            logger.warning("beat_cover_delete_failed beat_id=%s", beat_id)
+
+
 def preview(db, beat_id, actor):
     model = db.get(BeatModel, beat_id)
     if model is None:

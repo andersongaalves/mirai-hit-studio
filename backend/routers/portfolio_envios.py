@@ -2,6 +2,7 @@ from core.dependencies import require_admin, require_producer
 from database import get_db
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import Response
 from models import PortfolioEnvioModel
 from pydantic import ValidationError
 from schemas.portfolio_envio import (
@@ -59,6 +60,16 @@ def editar(envio_id: int, payload: PortfolioEnvioEdicao, db: Session = Depends(g
     except HTTPException:
         db.rollback()
         raise
+
+
+@router.delete("/portal/produtor/portfolio/{envio_id}", status_code=204)
+def excluir(envio_id: int, db: Session = Depends(get_db), user=Depends(require_producer)):
+    try:
+        portfolio_envio_service.excluir(db, user, envio_id)
+    except HTTPException:
+        db.rollback()
+        raise
+    return Response(status_code=204)
 
 
 @router.get("/projetos/envios/admin", response_model=list[PortfolioEnvioResponse])

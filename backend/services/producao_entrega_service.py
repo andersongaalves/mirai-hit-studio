@@ -386,6 +386,48 @@ def update(db, *, model, production, actor, changes, request_log_id=None, storag
     return model
 
 
+def delete(db, *, model, production, actor, request_log_id=None, storage=None):
+    """The producer removes a final delivery they sent, with all its files (and earlier
+    versions of its license). Locked once the production is delivered to the client."""
+    from models import ProducaoMensagemModel
+
+    if model.produtor_id != actor.id:
+        raise ProducaoEntregaConflict("So quem enviou a entrega pode exclui-la.")
+    if production.status in LOCKED_STATUSES:
+        raise ProducaoEntregaConflict("A producao ja foi entregue ao cliente; a entrega nao pode mais ser excluida.")
+    files = [item for item in (model.arquivo_principal, model.wav_arquivo, model.multitrack_arquivo, model.licenca_arquivo) if item]
+    previous = model.licenca_arquivo
+    while previous is not None and previous.substitui_arquivo_id is not None:
+        previous = db.get(ProducaoArquivoModel, previous.substitui_arquivo_id)
+        if previous is not None:
+            files.append(previous)
+    ids = [item.id for item in files]
+    if db.query(ProducaoArquivoModel.id).filter(
+        ProducaoArquivoModel.substitui_arquivo_id.in_(ids), ProducaoArquivoModel.id.notin_(ids),
+    ).first() or db.query(ProducaoMensagemModel.id).filter(ProducaoMensagemModel.arquivo_id.in_(ids)).first():
+        raise ProducaoEntregaConflict("Um arquivo desta entrega esta em uso em outro lugar (mensagem ou nova versao).")
+    keys = [item.object_key for item in files]
+    delivery_id = model.id
+    audit_service.record(
+        db, actor=actor, action="production.final_delivery_deleted",
+        entity_type="production_final_delivery", entity_id=delivery_id,
+        metadata={"production_id": production.id, "files": len(files)}, request_id=request_log_id,
+    )
+    db.delete(model)
+    db.flush()
+    # Newest first: an older license version is referenced by the newer one.
+    for item in sorted(files, key=lambda file: (file.versao, file.id), reverse=True):
+        db.delete(item)
+        db.flush()
+    db.commit()
+    storage = storage or new_production_file_storage("entrega")
+    for key in dict.fromkeys(keys):
+        try:
+            storage.delete(key)
+        except ProducaoArquivoStorageError:
+            logger.error("final_delivery_delete_cleanup_failed delivery_id=%s", delivery_id)
+
+
 def list_for_production(db, production_id, *, blocked=False):
     models = db.query(ProducaoEntregaFinalModel).filter_by(producao_id=production_id).order_by(
         ProducaoEntregaFinalModel.created_at.desc(), ProducaoEntregaFinalModel.id.desc(),

@@ -453,8 +453,15 @@ def update_details(db, *, model, actor, changes, request_id=None):
 
 
 def delete_preview_for_producer(db, *, file_id, actor, request_id=None, storage=None):
-    """Delete only the producer's latest preview and its exact private objects."""
-    from models import PreviaTagJobModel, ProducaoMensagemModel
+    """Delete a file the producer sent (preview or loose delivery file): only the latest
+    version, never a message attachment or a file of a final delivery package (those go
+    with the delivery). Removes the exact private objects."""
+    from models import (
+        PreviaTagJobModel,
+        ProducaoEntregaFinalModel,
+        ProducaoMensagemModel,
+    )
+    from sqlalchemy import or_
 
     actor_id = getattr(actor, "id", None)
     model = (
@@ -470,16 +477,23 @@ def delete_preview_for_producer(db, *, file_id, actor, request_id=None, storage=
     )
     if model is None:
         raise ProducaoArquivoNotFound("Arquivo nao encontrado.")
-    if model.tipo != "previa" or model.remetente_usuario_id != actor_id:
-        raise ProducaoArquivoConflict("Somente a propria previa enviada pode ser excluida.")
+    if model.tipo not in PRODUCER_UPLOAD_TYPES or model.remetente_usuario_id != actor_id:
+        raise ProducaoArquivoConflict("Somente arquivos enviados por voce podem ser excluidos.")
     if db.query(ProducaoArquivoModel.id).filter(
         ProducaoArquivoModel.substitui_arquivo_id == model.id,
     ).first():
-        raise ProducaoArquivoConflict("Esta previa possui uma versao posterior e deve permanecer no historico.")
+        raise ProducaoArquivoConflict("Este arquivo possui uma versao posterior e deve permanecer no historico.")
     if db.query(ProducaoMensagemModel.id).filter(
         ProducaoMensagemModel.arquivo_id == model.id,
     ).first():
-        raise ProducaoArquivoConflict("Esta previa esta vinculada a uma mensagem e deve permanecer no historico.")
+        raise ProducaoArquivoConflict("Este arquivo esta vinculado a uma mensagem e deve permanecer no historico.")
+    if db.query(ProducaoEntregaFinalModel.id).filter(or_(
+        ProducaoEntregaFinalModel.arquivo_principal_id == model.id,
+        ProducaoEntregaFinalModel.wav_arquivo_id == model.id,
+        ProducaoEntregaFinalModel.multitrack_arquivo_id == model.id,
+        ProducaoEntregaFinalModel.licenca_arquivo_id == model.id,
+    )).first():
+        raise ProducaoArquivoConflict("Este arquivo faz parte de uma entrega final; exclua a entrega inteira.")
 
     job = (
         db.query(PreviaTagJobModel)
@@ -491,18 +505,20 @@ def delete_preview_for_producer(db, *, file_id, actor, request_id=None, storage=
     if job is not None and job.object_key:
         references.append(job.object_key)
     production_id = model.producao_id
+    file_type = model.tipo
     audit_service.record(
         db,
         actor=actor,
-        action="production.preview_deleted",
+        action="production.preview_deleted" if file_type == "previa" else "production.file_deleted",
         entity_type="production_file",
         entity_id=model.id,
+        metadata={"production_id": production_id, "tipo": file_type},
         request_id=request_id,
     )
     db.delete(model)
     db.commit()
 
-    storage = storage or new_production_file_storage("previa")
+    storage = storage or new_production_file_storage(file_type)
     cleanup_failed = False
     for reference in dict.fromkeys(references):
         try:

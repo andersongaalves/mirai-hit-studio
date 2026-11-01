@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const items = [];
 const posts = [];
 const edits = [];
+const deletes = [];
 const imagePosts = [];
 const errors = [];
 const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
@@ -89,6 +90,11 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
                     return route.fulfill({ status: 201, json: item });
                 }
                 const editMatch = url.pathname.match(/^\/portal\/produtor\/portfolio\/(\d+)$/);
+                if (editMatch && req.method() === "DELETE") {
+                    deletes.push(Number(editMatch[1]));
+                    items.splice(items.findIndex(entry => entry.id === Number(editMatch[1])), 1);
+                    return route.fulfill({ status: 204 });
+                }
                 if (editMatch && req.method() === "PUT") {
                     const data = req.postDataJSON();
                     edits.push(data);
@@ -149,6 +155,7 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         assert.equal(edits[0].versao, 1);
         assert.ok(!("request_id" in edits[0]) && !("link_capa" in edits[0]));
         assert.equal(posts.length, 1, "editing does not create a new submission");
+        assert.equal(await page.getByRole("button", { name: "Excluir envio Faixa sintética corrigida" }).count(), 1);
         await page.screenshot({ path: path.join(screenDir, "producer-desktop.png"), fullPage: true });
         await page.setViewportSize({ width: 390, height: 844 });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

@@ -17,6 +17,8 @@ let beatUploads = 0;
 const beatEdits = [];
 const fileEdits = [];
 const deliveryEdits = [];
+const deliveryDeletes = [];
+let beatDeletes = 0;
 let deliveries = [];
 // Roadmap 5.06: contract stages of production 1 (server-decided actions, no values).
 const PRODUCER_ACTIONS = { pendente: ['em_andamento'], em_andamento: ['em_revisao'], em_revisao: ['em_andamento'], concluida: [] };
@@ -197,6 +199,10 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/produtor/beats/configuracao' && request.method() === 'GET') {
             return route.fulfill({ json: { limits: { capa_mb: 10, mp3_mb: 1, wav_mb: 50, multitrack_mb: 50, multitrack_mode: 'arquivo' }, ready: true, message: '' } });
         }
+        if (url.pathname === '/portal/produtor/beats/71' && request.method() === 'DELETE') {
+            beatDeletes++;
+            return route.fulfill({ status: 409, json: { detail: 'Este beat ja teve pedido ou venda e nao pode ser excluido.' } });
+        }
         if (url.pathname === '/portal/produtor/beats/71' && request.method() === 'PUT') {
             beatEdits.push(request.postDataBuffer().toString('utf8'));
             return route.fulfill({ json: { id: 71, status: 'revisao' } });
@@ -258,6 +264,11 @@ async function staticResponse(route) {
             return route.fulfill({ status: 201, json: files.at(-1) });
         }
         const deliveryEdit = url.pathname.match(/^\/portal\/produtor\/entregas-finais\/(\d+)$/);
+        if (deliveryEdit && request.method() === 'DELETE') {
+            deliveryDeletes.push(Number(deliveryEdit[1]));
+            deliveries = deliveries.filter(item => item.id !== Number(deliveryEdit[1]));
+            return route.fulfill({ status: 204 });
+        }
         if (deliveryEdit && request.method() === 'PATCH') {
             deliveryEdits.push(request.postDataJSON());
             Object.assign(deliveries[0], request.postDataJSON());
@@ -359,6 +370,11 @@ async function staticResponse(route) {
         assert.doesNotMatch(beatEdits[0], /name="(?:mp3|capa|wav|multitrack)"/);
         assert.equal(await beatForm.locator('.beat-form__editing').count(), 0);
         assert.equal(await page.getByRole('button', { name: 'Enviar para revisão' }).count(), 1);
+        // A beat with a sale history cannot be deleted: the reason is shown.
+        page.once('dialog', dialog => dialog.accept());
+        await page.getByRole('button', { name: 'Excluir <Beat seguro>' }).click();
+        await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('nao pode ser excluido'));
+        assert.equal(beatDeletes, 1);
         await page.getByRole('link', { name: 'Dashboard' }).click();
         await page.setViewportSize({ width: 390, height: 900 });
         const producerMenu = page.locator('.integrado-portal__menu-toggle');
@@ -438,6 +454,14 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.querySelector('.producer-alert, #producer-alert')?.textContent.includes('Entrega atualizada.'));
         assert.deepEqual(deliveryEdits, [{ bpm: 92, creditos_adicionais: ['Melodista Um', 'Programador Dois'] }]);
         assert.match(await page.locator('.final-delivery-card').first().textContent(), /92 BPM · Am/);
+        // Deleting the whole delivery asks first.
+        page.once('dialog', dialog => dialog.dismiss());
+        await page.getByRole('button', { name: 'Excluir entrega Beat final' }).click();
+        assert.deepEqual(deliveryDeletes, []);
+        page.once('dialog', dialog => dialog.accept());
+        await page.getByRole('button', { name: 'Excluir entrega Beat final' }).click();
+        await page.waitForFunction(() => !document.querySelector('.final-delivery-card'));
+        assert.deepEqual(deliveryDeletes, [501]);
         deliveries = [];
         await page.reload();
         await page.locator('.producer-file').first().waitFor();

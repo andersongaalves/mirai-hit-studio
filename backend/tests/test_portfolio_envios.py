@@ -215,6 +215,13 @@ asyncio.run(check())
                         assert any(':reenviado:3' in key for key in keys), keys
                     rejected = await client.post(review2, json={'versao':3,'decisao':'recusar','motivo':'Ainda sem material'}, headers=headers)
                     assert rejected.json()['status'] == 'recusado', rejected.text
+                    # The producer withdraws a pending or refused submission; a published one stays.
+                    assert (await client.delete(f"/portal/produtor/portfolio/{item['id']}", headers=producer)).status_code == 409
+                    extra = await client.post(path, json={**data, 'request_id': str(uuid4())}, headers=producer)
+                    extra_path = f"/portal/produtor/portfolio/{extra.json()['id']}"
+                    assert (await client.delete(extra_path, headers=other)).status_code == 404
+                    assert (await client.delete(extra_path, headers=producer)).status_code == 204
+                    assert (await client.delete(extra_path, headers=producer)).status_code == 404
                     assert len((await client.get('/projetos')).json()) == 1
                     third = await client.post(path, json={**data,'request_id':str(uuid4())}, headers=producer)
                     with Session(engine) as db:

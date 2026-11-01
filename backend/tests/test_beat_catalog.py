@@ -131,6 +131,20 @@ async def check():
             assert (await api.get('/portal/cliente/beats/adquiridos', headers=bearer('client-a'))).json() == []
             replay = await api.post(f'/portal/cliente/beats/{beat_id}/solicitar', headers={**bearer('client-a'),'Idempotency-Key':key}, json={'licenca':'lease_wav'})
             assert replay.status_code == 201 and replay.json()['id'] == requested.json()['id']
+            # The producer deletes beats: one with a purchase request stays; a new one goes with its files.
+            kept = await api.delete(f'/portal/produtor/beats/{beat_id}', headers=bearer('producer-a'))
+            assert kept.status_code == 409 and 'retira' in kept.json()['detail'], kept.text
+            extra = await api.post('/portal/produtor/beats', headers=bearer('producer-a'), data={'titulo':'Rascunho','preco_lease':'90'}, files={'mp3':('r.mp3',mp3(),'audio/mpeg'),'capa':('c.png',png(),'image/png')})
+            assert extra.status_code == 201, extra.text
+            with Session(engine) as db:
+                extra_model = db.get(BeatModel, extra.json()['id'])
+                extra_refs = {extra_model.original_ref, extra_model.preview_ref}
+                extra_cover = extra_model.capa_ref
+            assert (await api.delete(f"/portal/produtor/beats/{extra.json()['id']}", headers=bearer('producer-b'))).status_code in (403, 404)
+            assert (await api.delete(f"/portal/produtor/beats/{extra.json()['id']}", headers=bearer('producer-a'))).status_code == 204
+            assert extra_refs <= set(storage.deleted) and extra_cover in images.deleted
+            with Session(engine) as db:
+                assert db.get(BeatModel, extra.json()['id']) is None
             blocked_edit = await api.put(f'/admin/beats/{beat_id}', headers=bearer('client-a'), data={'titulo':'Again','preco_lease':'110'})
             assert blocked_edit.status_code == 403
     with Session(engine) as db:

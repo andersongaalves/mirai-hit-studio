@@ -269,11 +269,11 @@ function fileItem(file, handlers) {
     actions.append(button);
     if (
         own
-        && file.tipo === "previa"
+        && ["previa", "entrega"].includes(file.tipo)
         && !handlers.replacedIds?.has(file.id)
         && handlers.onDelete
     ) {
-        const remove = element("button", "btn-small btn-danger", "Excluir prévia");
+        const remove = element("button", "btn-small btn-danger", file.tipo === "previa" ? "Excluir prévia" : "Excluir arquivo");
         remove.type = "button";
         remove.addEventListener("click", () => handlers.onDelete(file, remove));
         actions.append(remove);
@@ -350,6 +350,15 @@ function deliveryCard(delivery, handlers) {
     }
     addFile(delivery.licenca_arquivo, "Baixar licença");
     card.append(actions, element("small", "", `Enviada em ${formatDate(delivery.created_at, true)}`));
+    // Corrections by the producer: edit and delete, side by side below the files.
+    const manage = element("div", "final-delivery-card__manage");
+    if (handlers.onDeleteDelivery && !handlers.deliveryLocked) {
+        const remove = element("button", "btn-small btn-danger final-delivery-card__delete", "Excluir entrega");
+        remove.type = "button";
+        remove.setAttribute("aria-label", `Excluir entrega ${delivery.titulo}`);
+        remove.addEventListener("click", () => handlers.onDeleteDelivery(delivery, remove));
+        manage.append(remove);
+    }
     if (handlers.onEditDelivery && !handlers.deliveryLocked) {
         const instrumental = delivery.categoria === "instrumental";
         const edit = element("button", "btn-outline btn-small final-delivery-card__edit", "Editar entrega");
@@ -375,7 +384,11 @@ function deliveryCard(delivery, handlers) {
             onSave: changes => handlers.onEditDelivery(delivery, changes),
         });
         edit.addEventListener("click", () => { panel.open(); edit.hidden = true; });
-        card.append(edit, panel.element);
+        manage.prepend(edit);
+        if (manage.children.length) card.append(manage);
+        card.append(panel.element);
+    } else if (manage.children.length) {
+        card.append(manage);
     }
     return card;
 }
