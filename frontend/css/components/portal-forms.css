@@ -114,7 +114,7 @@
 
 /* ---- Preview upload ---- */
 .producer-body .producer-preview-form {
-    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
     align-items: end;
     gap: 16px;
 }
@@ -199,7 +199,7 @@
 
 /* Project detail: send form and payment summary. */
 .client-body .client-upload-form {
-    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
     align-items: end;
     gap: 16px;
 }

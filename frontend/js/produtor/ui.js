@@ -256,6 +256,17 @@ function deliveryCard(delivery, handlers) {
         card.append(element("p", "file-note", `${delivery.bpm} BPM · ${delivery.tonalidade}`));
     }
     if (delivery.observacao) card.append(element("p", "file-note", delivery.observacao));
+    // Listen to the MP3 and, when present, the WAV of the package without downloading.
+    const sources = [[delivery.arquivo_principal, "MP3"], [delivery.wav_arquivo, "WAV"]]
+        .filter(([file]) => file && podeOuvir(file));
+    if (handlers.onListen && sources.length) {
+        const byKey = new Map(sources.map(([file, label]) => [label, file]));
+        card.append(controlesOuvir(sources[0][0], {
+            opcoes: sources.map(([, label]) => ({ versao: label, rotulo: label })),
+            load: key => handlers.onListen(byKey.get(key), null),
+            onError: error => setAlert(error.message, true),
+        }));
+    }
     const actions = element("div", "final-delivery-card__actions");
     const addFile = (file, label) => {
         if (!file) return;

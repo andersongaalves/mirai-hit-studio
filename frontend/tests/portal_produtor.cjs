@@ -374,8 +374,9 @@ async function staticResponse(route) {
             [...document.querySelectorAll('.producer-file')].find(item => item.textContent.includes('historical.mp3'))?.textContent || ''));
         assert.deepEqual(noteEdits, [{ observacao: 'Segunda ideia, voz mais alta' }]);
         // Listen in the page without saving a file.
-        await own.getByRole('button', { name: 'Ouvir' }).click();
-        await own.locator('audio.ouvir-arquivo__media').waitFor({ state: 'attached' });
+        await own.getByRole('button', { name: 'Reproduzir historical.mp3' }).click();
+        await page.waitForFunction(() => [...document.querySelectorAll('.producer-file audio.ouvir-arquivo__media')].some(audio => audio.src.startsWith('blob:')));
+        assert.equal(await own.locator('.file-player__timeline input[type=range]').count(), 1);
         assert.ok(listens.includes('?ouvir=true'), JSON.stringify(listens));
         const studio = await page.evaluate(async () => {
             const module = await import('/js/modules/ouvir_arquivo.js');
@@ -383,8 +384,8 @@ async function staticResponse(route) {
                 module.podeOuvir({ mime_type: 'application/pdf' })];
         });
         assert.deepEqual(studio, [
-            [{ versao: 'processada', rotulo: 'Ouvir com tag' }, { versao: 'original', rotulo: 'Ouvir original' }],
-            [{ versao: null, rotulo: 'Ouvir' }], false,
+            [{ versao: 'processada', rotulo: 'Com tag' }, { versao: 'original', rotulo: 'Original' }],
+            [{ versao: null, rotulo: 'Áudio' }], false,
         ]);
         assert.equal(await page.locator('.file-note i').count(), 0);
         // Roadmap 5.06: contract stages replace the legacy checklist; producers send to review, never conclude.
