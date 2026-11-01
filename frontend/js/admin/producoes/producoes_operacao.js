@@ -3,6 +3,7 @@ import * as Notify from "../../utils/notifications.js";
 import * as API from "./producoes_api.js";
 import { messagesPanel } from "../../modules/production_messages.js";
 import { stagesPanel } from "../../modules/production_stages.js";
+import { beforeAfterSection, pickBeforeAfter } from "../../modules/before_after.js";
 import { applyStageFiles, resetStageFiles, selectStage, setStages, stageFieldValue } from "../../modules/stage_files.js";
 import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
 import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
@@ -13,6 +14,7 @@ import { enqueueUpload } from "../../modules/upload_tasks.js";
 
 let productionId = null;
 let files = [];
+let stages = [];
 let payout = null;
 let loadRevision = 0;
 
@@ -114,6 +116,28 @@ function renderFiles() {
     receipt.replaceChildren(new Option("Sem comprovante", ""));
     files.filter(file => file.tipo === "comprovante").forEach(file => receipt.append(new Option(file.nome_exibicao, String(file.id))));
     applyStageFiles(byId("modal-producao") || document);
+    renderBeforeAfter();
+}
+
+// Rough Mix vs final, as the client will hear it at the final delivery.
+// The Admin hears both untagged and without the payment gate.
+function renderBeforeAfter() {
+    const slot = byId("prod_antes_depois");
+    if (!slot) return;
+    const pair = pickBeforeAfter(stages, files);
+    slot.hidden = !pair;
+    if (!pair) { slot.replaceChildren(); return; }
+    const untagged = file => (file.processamento_tag === "pronto" ? "original" : null);
+    slot.replaceChildren(beforeAfterSection(pair, {
+        heading: "h3",
+        id: "prod-antes-depois-title",
+        eyebrow: "Comparação da entrega",
+        lead: "Rough Mix e versão final desta produção. O cliente vê esta comparação quando a entrega final é liberada. Troque entre as duas durante a reprodução: a música continua do mesmo ponto.",
+        beforeVersion: untagged(pair.before),
+        afterVersion: untagged(pair.after),
+        load: async (file, versao) => (await API.baixarArquivo(productionId, file.id, { versao, ouvir: true })).blob,
+        onError: error => Notify.error(error.message || "Não foi possível tocar o áudio."),
+    }));
 }
 
 function renderPayout() {
@@ -277,7 +301,9 @@ async function carregarEtapas(id, revision) {
             await reload();
         },
     }));
-    setStages(id, data?.etapas || []);
+    stages = data?.etapas || [];
+    setStages(id, stages);
+    renderBeforeAfter();
 }
 
 // Roadmap 5.09: quotas load independently; the editor saves an admin exception.
@@ -517,8 +543,11 @@ export function limparOperacao() {
     loadRevision++;
     productionId = null;
     files = [];
+    stages = [];
     payout = null;
     byId("prod_arquivo_form")?.reset();
+    const comparison = byId("prod_antes_depois");
+    if (comparison) { comparison.hidden = true; comparison.replaceChildren(); }
     byId("prod_mensagens")?.replaceChildren();
     byId("prod_etapas_contratuais")?.replaceChildren();
     byId("prod_cotas")?.replaceChildren();

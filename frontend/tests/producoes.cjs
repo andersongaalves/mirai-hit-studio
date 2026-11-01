@@ -26,7 +26,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
 <input id="producoes-search"><select id="producoes-status-filter"><option value="todos">Todos</option><option value="aguardando_inicio">Aguardando</option><option value="em_producao">Produção</option><option value="revisao">Revisão</option><option value="finalizado">Finalizado</option><option value="entregue">Entregue</option></select><select id="producoes-prazo-filter"><option value="todos">Todos</option><option value="atrasado">Atrasado</option><option value="proximo">Próximo</option><option value="sem_prazo">Sem prazo</option></select><button id="producoes-clear-filters" class="hidden">Limpar filtros</button>
 <p id="producoes-summary"></p>
 <div id="producoes-list"></div>
-<div id="modal-producao" class="hidden" aria-labelledby="prod_titulo"><div class="modal-content producao-modal-content"><div class="producao-modal-header"><div><span id="prod_id"></span><h2 id="prod_titulo"></h2></div><button aria-label="Fechar detalhes">Fechar</button></div><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><div class="producao-add-etapa"><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button></div><div id="prod_cotas"></div><div id="prod_politicas"></div><div id="prod_arquivos"></div><form id="prod_arquivo_form"><select id="prod_arquivo_tipo"><option value="material">Material</option></select><input id="prod_arquivo_input" type="file"><select id="prod_arquivo_substitui"></select><input id="prod_arquivo_produtor" type="checkbox"><input id="prod_arquivo_cliente" type="checkbox"><button id="prod_arquivo_enviar">Enviar arquivo</button></form><div id="prod_repasse_resumo"></div><input id="prod_repasse_valor" type="number"><input id="prod_repasse_referencia"><select id="prod_repasse_comprovante"></select><button id="prod_repasse_salvar">Definir repasse</button><button id="prod_repasse_liberar" class="hidden">Liberar repasse</button><button id="prod_repasse_pagar" class="hidden">Registrar pagamento</button><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div></div>
+<div id="modal-producao" class="hidden" aria-labelledby="prod_titulo"><div class="modal-content producao-modal-content"><div class="producao-modal-header"><div><span id="prod_id"></span><h2 id="prod_titulo"></h2></div><button aria-label="Fechar detalhes">Fechar</button></div><span id="prod_cliente"></span><span id="prod_email"></span><span id="prod_servico"></span><span id="prod_data"></span><select id="prod_status"></select><span id="prod_produtor"></span><input id="prod_prazo" type="datetime-local"><span id="prod_prazo_status"></span><span id="prod_orcamento"></span><span id="prod_proposta"></span><div id="prod_etapas"></div><div class="producao-add-etapa"><input id="prod_nova_etapa"><button id="btn-add-etapa">Adicionar etapa</button></div><div id="prod_cotas"></div><div id="prod_politicas"></div><div id="prod_antes_depois" hidden></div><div id="prod_arquivos"></div><form id="prod_arquivo_form"><select id="prod_arquivo_tipo"><option value="material">Material</option></select><input id="prod_arquivo_input" type="file"><select id="prod_arquivo_substitui"></select><input id="prod_arquivo_produtor" type="checkbox"><input id="prod_arquivo_cliente" type="checkbox"><button id="prod_arquivo_enviar">Enviar arquivo</button></form><div id="prod_repasse_resumo"></div><input id="prod_repasse_valor" type="number"><input id="prod_repasse_referencia"><select id="prod_repasse_comprovante"></select><button id="prod_repasse_salvar">Definir repasse</button><button id="prod_repasse_liberar" class="hidden">Liberar repasse</button><button id="prod_repasse_pagar" class="hidden">Registrar pagamento</button><textarea id="prod_observacoes"></textarea><button id="btn-save-observacoes">Salvar observações</button><button id="btn-save-prazo">Salvar prazo</button></div></div>
 <script type="module">localStorage.setItem('mirai.auth.admin.access_token','test-token'); const module = await import('/js/admin/producoes/producoes.js'); window.productionModule = module; await module.initProducoes();</script>
 </body></html>`;
 
@@ -54,6 +54,14 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
     ];
     let payout = null;
     const releaseBodies = [];
+    const contentRequests = [];
+    // Production 3: a Rough Mix preview (tag processed) and the final delivery.
+    const finishedFiles = [
+        { id: 30, producao_id: 3, tipo: 'previa', nome_exibicao: 'Rough Mix v1.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 2048, versao: 1,
+            visivel_produtor: true, visivel_cliente: true, processamento_tag: 'pronto', etapa_id: null, created_at: new Date(now - 5 * 86400000).toISOString() },
+        { id: 31, producao_id: 3, tipo: 'entrega', nome_exibicao: 'Master final.wav', mime_type: 'audio/wav', tamanho_bytes: 4096, versao: 1,
+            visivel_produtor: true, visivel_cliente: true, processamento_tag: null, etapa_id: null, created_at: new Date(now).toISOString() },
+    ];
     const files = [{ id: 8, producao_id: 1, tipo: 'material', nome_exibicao: '<b>material</b>.pdf', tamanho_bytes: 800, versao: 1, visivel_produtor: true, visivel_cliente: false }];
 
     const context = await browser.newContext();
@@ -119,7 +127,11 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         const filesMatch = url.pathname.match(/^\/producoes\/(\d+)\/arquivos$/);
         if (filesMatch && route.request().method() === 'GET') {
             while (holdFiles && filesMatch[1] === '2') await new Promise(resolve => setTimeout(resolve, 10));
-            return route.fulfill({ json: files });
+            return route.fulfill({ json: filesMatch[1] === '3' ? finishedFiles : files });
+        }
+        if (/^\/producoes\/\d+\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
+            contentRequests.push(url.pathname + url.search);
+            return route.fulfill({ body: 'synthetic-audio', contentType: 'audio/mpeg', headers: { 'content-disposition': "attachment; filename*=UTF-8''audio.mp3" } });
         }
         const stagePayoutMatch = url.pathname.match(/^\/producoes\/(\d+)\/repasses-etapas$/);
         if (stagePayoutMatch) return route.fulfill({ json: [{ id: null, etapa_id: 89,
@@ -328,6 +340,21 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         holdFiles = false;
         await page.evaluate(() => switchOperation);
         await page.locator('#prod_repasses_etapas').getByText('Mix 2', { exact: true }).waitFor();
+
+        // Before and after: hidden without a rough; Rough Mix vs final, both untagged, for the Admin.
+        assert.equal(await page.locator('#prod_antes_depois').isVisible(), false);
+        await page.evaluate(() => operationModule.carregarOperacao(3));
+        const comparison = page.locator('#prod_antes_depois .before-after');
+        await comparison.waitFor();
+        assert.match(await comparison.textContent(), /Antes e depois/);
+        assert.match(await comparison.textContent(), /Master final\.wav/);
+        await comparison.getByRole('button', { name: /^Reproduzir / }).click();
+        await page.waitForFunction(() => document.querySelector('#prod_antes_depois audio')?.src.startsWith('blob:'));
+        assert.ok(contentRequests.includes('/producoes/3/arquivos/31/conteudo?ouvir=true'), JSON.stringify(contentRequests));
+        await comparison.getByRole('button', { name: 'Antes · Rough Mix' }).click();
+        await page.waitForFunction(() => document.querySelector('#prod_antes_depois [aria-pressed="true"]')?.textContent.includes('Antes'));
+        await page.waitForTimeout(300);
+        assert.ok(contentRequests.includes('/producoes/3/arquivos/30/conteudo?versao=original&ouvir=true'), JSON.stringify(contentRequests));
 
         failList = true;
         await page.evaluate(() => window.productionModule.carregarProducoes());
