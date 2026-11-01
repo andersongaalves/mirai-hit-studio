@@ -166,9 +166,10 @@ def beat_revisado(db, beat):
     _inserir(db, [produtor], tipo, f"beat:{beat.id}:{beat.status}:{_marca(beat.revisado_em)}", beat_id=beat.id)
 
 
-def portfolio_proposto(db, envio):
-    _inserir(db, _admins(db), "admin_portfolio_revisao", f"portfolio_envio:{envio.id}:proposto",
-             portfolio_envio_id=envio.id)
+def portfolio_proposto(db, envio, *, reenvio=False):
+    # A refused submission edited by the producer is a new review request.
+    chave = f"portfolio_envio:{envio.id}:reenviado:{envio.versao}" if reenvio else f"portfolio_envio:{envio.id}:proposto"
+    _inserir(db, _admins(db), "admin_portfolio_revisao", chave, portfolio_envio_id=envio.id)
 
 
 def falha_tag(db, arquivo):

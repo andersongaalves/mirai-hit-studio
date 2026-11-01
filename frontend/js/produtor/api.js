@@ -202,3 +202,24 @@ export async function editarObservacao(id, observacao) {
         body: JSON.stringify({ observacao: observacao || null }),
     }), "Não foi possível salvar a observação.");
 }
+
+export async function editarArquivo(id, alteracoes) {
+    return responseData(await authFetch(`/portal/produtor/arquivos/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(alteracoes),
+    }), "Não foi possível salvar o arquivo.");
+}
+
+export async function editarEntregaFinal(id, alteracoes) {
+    return responseData(await authFetch(`/portal/produtor/entregas-finais/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(alteracoes),
+    }), "Não foi possível salvar a entrega.");
+}
+
+export async function editarEnvioPortfolio(id, dados) {
+    return responseData(await authFetch(`/portal/produtor/portfolio/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(dados),
+    }), "Não foi possível salvar o envio.");
+}

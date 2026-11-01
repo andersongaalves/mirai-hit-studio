@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from schemas.portfolio_envio import (
     PortfolioEnvioCreate,
     PortfolioEnvioDados,
+    PortfolioEnvioEdicao,
     PortfolioEnvioResponse,
     PortfolioEnvioRevisao,
 )
@@ -46,6 +47,15 @@ async def enviar_com_capa(dados: str = Form(..., max_length=30000), imagem: Uplo
         return await run_in_threadpool(
             portfolio_envio_service.enviar_com_capa, db, user, payload, contents, imagem.content_type or "",
         )
+    except HTTPException:
+        db.rollback()
+        raise
+
+
+@router.put("/portal/produtor/portfolio/{envio_id}", response_model=PortfolioEnvioResponse)
+def editar(envio_id: int, payload: PortfolioEnvioEdicao, db: Session = Depends(get_db), user=Depends(require_producer)):
+    try:
+        return portfolio_envio_service.editar(db, user, envio_id, payload)
     except HTTPException:
         db.rollback()
         raise

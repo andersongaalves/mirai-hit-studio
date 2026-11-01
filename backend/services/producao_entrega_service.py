@@ -292,6 +292,100 @@ def create(db, *, production, actor, request_id, category, title, main, wav=None
         raise
 
 
+LOCKED_STATUSES = {"entregue"}
+
+
+def update(db, *, model, production, actor, changes, request_log_id=None, storage=None):
+    """The producer corrects a final delivery they sent: title, note, stage and, for beats,
+    the technical sheet. Files are replaced by sending a new delivery. A beat's license is
+    issued again (as a new version of the license file) when its sheet or title changes.
+    Locked once the production is delivered to the client.
+    """
+    if model.produtor_id != actor.id:
+        raise ProducaoEntregaConflict("So quem enviou a entrega pode edita-la.")
+    if production.status in LOCKED_STATUSES:
+        raise ProducaoEntregaConflict("A producao ja foi entregue ao cliente; a entrega nao pode mais ser editada.")
+    title = _text(changes.get("titulo", model.titulo), field="Titulo", limit=150)
+    note = producao_arquivo_service._normalize_note(changes["observacao"]) if "observacao" in changes else model.observacao
+    current_stage = getattr(model.arquivo_principal, "etapa_id", None)
+    stage_id = current_stage
+    if "etapa_id" in changes:
+        try:
+            stage_id = (
+                producao_arquivo_service.resolve_stage(db, production.id, changes["etapa_id"])
+                if changes["etapa_id"] is not None else None
+            )
+        except producao_arquivo_service.ProducaoArquivoError as exc:
+            raise ProducaoEntregaError(str(exc)) from None
+    if model.categoria == "instrumental":
+        bpm, key, credits = _technical_sheet(
+            "instrumental",
+            changes.get("bpm", model.bpm),
+            changes.get("tonalidade", model.tonalidade),
+            "\n".join(changes["creditos_adicionais"]) if "creditos_adicionais" in changes else "\n".join(model.creditos_adicionais or []),
+        )
+    else:
+        bpm, key, credits = _technical_sheet("outro", None, None, None)
+    changed = {
+        field for field, old, new in (
+            ("titulo", model.titulo, title),
+            ("observacao", model.observacao, note),
+            ("etapa_id", current_stage, stage_id),
+            ("bpm", model.bpm, bpm),
+            ("tonalidade", model.tonalidade, key),
+            ("creditos_adicionais", list(model.creditos_adicionais or []), credits),
+        ) if old != new
+    }
+    if not changed:
+        return model
+    reissue = model.categoria == "instrumental" and bool(changed & {"titulo", "bpm", "tonalidade", "creditos_adicionais"})
+    storage = storage or (new_production_file_storage("entrega") if reissue else None)
+    saved_key = None
+    try:
+        model.titulo = title
+        model.observacao = note
+        model.bpm = bpm
+        model.tonalidade = key
+        model.creditos_adicionais = credits
+        files = [model.arquivo_principal, model.wav_arquivo, model.multitrack_arquivo, model.licenca_arquivo]
+        for item in files:
+            if item is not None:
+                item.etapa_id = stage_id
+        if reissue:
+            previous = model.licenca_arquivo
+            license_file = producao_licenca_service.gerar(
+                db, production=production, producer=actor, title=title,
+                request_id=model.request_id, bpm=bpm, tonalidade=key, creditos_adicionais=credits,
+            )
+            new_license, saved_key = _new_file(production, actor, license_file, "licenca", storage, stage_id)
+            if previous is not None:
+                new_license.grupo_versao = previous.grupo_versao
+                new_license.versao = previous.versao + 1
+                new_license.substitui_arquivo_id = previous.id
+            db.add(new_license)
+            db.flush()
+            model.licenca_arquivo_id = new_license.id
+        audit_service.record(
+            db, actor=actor, action="production.final_delivery_edited",
+            entity_type="production_final_delivery", entity_id=model.id,
+            metadata={"production_id": production.id, "fields": sorted(changed), "license_reissued": reissue},
+            request_id=request_log_id,
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        if saved_key is not None:
+            try:
+                storage.delete(saved_key)
+            except ProducaoArquivoStorageError:
+                logger.error("final_delivery_edit_cleanup_failed delivery_id=%s", model.id)
+        if isinstance(exc, ProducaoArquivoStorageError):
+            raise ProducaoEntregaUnavailable(str(exc)) from None
+        raise
+    db.refresh(model)
+    return model
+
+
 def list_for_production(db, production_id, *, blocked=False):
     models = db.query(ProducaoEntregaFinalModel).filter_by(producao_id=production_id).order_by(
         ProducaoEntregaFinalModel.created_at.desc(), ProducaoEntregaFinalModel.id.desc(),

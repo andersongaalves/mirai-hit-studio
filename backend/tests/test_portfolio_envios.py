@@ -198,6 +198,23 @@ asyncio.run(check())
                     assert (await client.post(review2, json={'versao':1,'decisao':'recusar'}, headers=headers)).status_code == 422
                     rejected = await client.post(review2, json={'versao':1,'decisao':'recusar','motivo':'Sem material publicado'}, headers=headers)
                     assert rejected.json()['status'] == 'recusado'
+                    # The producer corrects a refused submission: it goes back to the queue.
+                    edit = {k: v for k, v in data.items() if k not in ('link_capa', 'request_id')}
+                    edit_path = f"/portal/produtor/portfolio/{second.json()['id']}"
+                    assert (await client.put(edit_path, json={**edit, 'versao': 2}, headers=other)).status_code == 404
+                    assert (await client.put(f"/portal/produtor/portfolio/{item['id']}", json={**edit, 'versao': 2}, headers=producer)).status_code == 409
+                    assert (await client.put(edit_path, json={**edit, 'versao': 1}, headers=producer)).status_code == 409
+                    assert (await client.put(edit_path, json={**edit, 'versao': 2, 'link_capa': 'https://x.test/a.png'}, headers=producer)).status_code == 422
+                    edited = await client.put(edit_path, json={**edit, 'versao': 2, 'titulo': 'Titulo corrigido'}, headers=producer)
+                    assert edited.status_code == 200, edited.text
+                    assert edited.json()['status'] == 'pendente' and edited.json()['versao'] == 3 and edited.json()['motivo'] is None
+                    assert edited.json()['dados']['titulo'] == 'Titulo corrigido' and edited.json()['dados']['link_capa'] == data['link_capa']
+                    with Session(engine) as db:
+                        from models import PortalNotificacaoModel
+                        keys = {row.chave_evento for row in db.query(PortalNotificacaoModel).filter_by(portfolio_envio_id=second.json()['id'])}
+                        assert any(':reenviado:3' in key for key in keys), keys
+                    rejected = await client.post(review2, json={'versao':3,'decisao':'recusar','motivo':'Ainda sem material'}, headers=headers)
+                    assert rejected.json()['status'] == 'recusado', rejected.text
                     assert len((await client.get('/projetos')).json()) == 1
                     third = await client.post(path, json={**data,'request_id':str(uuid4())}, headers=producer)
                     with Session(engine) as db:

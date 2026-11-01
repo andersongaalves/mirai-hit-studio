@@ -100,6 +100,20 @@ async def check():
             assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330 and catalog[0]['capa_url']
             # Catalog filters: genre, mood, producer, key and BPM come with each beat.
             assert catalog[0]['moods'] == 'Dark, Energético' and catalog[0]['tonalidade'] == 'Am' and catalog[0]['bpm'] == 142
+            # The producer edits their beat: catalog details apply at once; other changes go back to review.
+            same = {'titulo':'Horizonte revisado','descricao':'Nova descricao','bpm':'142','tonalidade':'Am','generos':'Trap','moods':'Dark, Energético','preco_lease':'110','preco_wav':'220','preco_multitrack':'330','preco_exclusivo':'550'}
+            mine = f'/portal/produtor/beats/{beat_id}'
+            assert (await api.put(mine, headers=bearer('client-a'), data=same)).status_code == 403
+            assert (await api.put(mine, headers=bearer('producer-b'), data=same)).status_code in (403, 404)
+            tags = await api.put(mine, headers=bearer('producer-a'), data={**same, 'bpm':'144', 'moods':'Dark, Épico'})
+            assert tags.status_code == 200, tags.text
+            assert tags.json()['status'] == 'aprovado' and tags.json()['moods'] == 'Dark, Épico' and tags.json()['bpm'] == 144
+            retitled = await api.put(mine, headers=bearer('producer-a'), data={**same, 'bpm':'144', 'moods':'Dark, Épico', 'titulo':'Horizonte final'})
+            assert retitled.status_code == 200, retitled.text
+            assert retitled.json()['status'] == 'revisao' and retitled.json()['titulo'] == 'Horizonte final'
+            assert (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json() == []
+            assert (await api.patch(f'/admin/beats/{beat_id}', headers=bearer('admin'), json={'decisao':'aprovar','motivo':''})).status_code == 200
+            assert [item['id'] for item in (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json()] == [beat_id]
             assert not {'produtor_id', 'status', 'ativo', 'motivo_rejeicao'} & set(catalog[0])
             preview = await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))
             assert preview.content == mp3()+b'tag' and preview.headers['cache-control'] == 'private, no-store'

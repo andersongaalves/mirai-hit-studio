@@ -8,6 +8,7 @@ const { expectAccessPage, openAdminSection, signIn } = require('./support/access
 const root = path.resolve(__dirname, "..");
 const items = [];
 const posts = [];
+const edits = [];
 const imagePosts = [];
 const errors = [];
 const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
@@ -87,6 +88,16 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
                     items.push(item);
                     return route.fulfill({ status: 201, json: item });
                 }
+                const editMatch = url.pathname.match(/^\/portal\/produtor\/portfolio\/(\d+)$/);
+                if (editMatch && req.method() === "PUT") {
+                    const data = req.postDataJSON();
+                    edits.push(data);
+                    const item = items.find(entry => entry.id === Number(editMatch[1]));
+                    const { versao, ...fields } = data;
+                    assert.equal(versao, item.versao);
+                    Object.assign(item, { dados: { ...item.dados, ...fields }, versao: item.versao + 1, status: "pendente", motivo: null });
+                    return route.fulfill({ json: item });
+                }
                 if (["/portal/produtor/portfolio", "/projetos/envios/admin"].includes(url.pathname)) return route.fulfill({ json: items });
                 if (/^\/projetos\/envios\/\d+\/revisao$/.test(url.pathname)) {
                     const data = req.postDataJSON();
@@ -124,6 +135,20 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         assert.equal(posts[0].autorizacao_artista, true);
         assert.match(posts[0].request_id, /^[a-f\d-]{36}$/);
         assert.equal(await page.locator(".portfolio-submission img").count(), 0, "Untrusted title is text, not HTML");
+        // The producer corrects a pending submission in the same form (the cover is kept).
+        await page.getByRole("button", { name: "Editar envio <img src=x> Faixa sintética" }).click();
+        assert.match(await form.locator(".portfolio-submission-form__editing").textContent(), /Editando/);
+        assert.equal(await page.locator("#portfolio-submit-titulo").inputValue(), "<img src=x> Faixa sintética");
+        assert.equal(await page.locator("#portfolio-submit-capa_origem").isVisible(), false);
+        await page.locator("#portfolio-submit-titulo").fill("Faixa sintética corrigida");
+        await page.locator("#portfolio-submit-autorizacao_artista").check();
+        await form.getByRole("button", { name: "Salvar alterações" }).click();
+        await page.getByText("Envio atualizado.").waitFor();
+        assert.equal(edits.length, 1);
+        assert.equal(edits[0].titulo, "Faixa sintética corrigida");
+        assert.equal(edits[0].versao, 1);
+        assert.ok(!("request_id" in edits[0]) && !("link_capa" in edits[0]));
+        assert.equal(posts.length, 1, "editing does not create a new submission");
         await page.screenshot({ path: path.join(screenDir, "producer-desktop.png"), fullPage: true });
         await page.setViewportSize({ width: 390, height: 844 });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -139,7 +164,7 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         await review.getByRole("button", { name: "Aprovar e publicar" }).click();
         await admin.page.getByText("Publicado", { exact: true }).waitFor();
         assert.equal(posts.length, 2);
-        assert.deepEqual(posts[1], { versao: 1, decisao: "aprovar", motivo: null });
+        assert.deepEqual(posts[1], { versao: 2, decisao: "aprovar", motivo: null });
         await admin.page.screenshot({ path: path.join(screenDir, "admin-desktop.png"), fullPage: true });
         const upload = await setup("produtor", 1280);
         const imageForm = upload.page.locator(".portfolio-submission-form");

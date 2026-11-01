@@ -18,6 +18,58 @@ import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts
 
 let productions = [];
 let beatUploadConfig = null;
+let editingBeat = null;
+const BEAT_STATUS = { revisao: "Em revisão", aprovado: "Publicado", rejeitado: "Recusado", vendido: "Vendido" };
+
+// Beat edit: the upload form switches to edit mode, prefilled; files become optional.
+function beatFormMode(beat = null) {
+    const form = document.getElementById("producer-beat-form");
+    editingBeat = beat;
+    form.classList.toggle("beat-form--editing", Boolean(beat));
+    let banner = form.querySelector(".beat-form__editing");
+    if (!beat) {
+        banner?.remove();
+        form.reset();
+        form.elements.capa.required = true;
+        form.elements.mp3.required = true;
+        form.querySelector("button[type=submit]").textContent = "Enviar para revisão";
+        if (beatUploadConfig) applyBeatUploadLimits(form, beatUploadConfig.limits);
+        return;
+    }
+    if (!banner) {
+        banner = document.createElement("div");
+        banner.className = "beat-form__editing";
+        banner.setAttribute("role", "status");
+        form.prepend(banner);
+    }
+    const title = document.createElement("strong");
+    title.textContent = `Editando "${beat.titulo}"`;
+    const help = document.createElement("p");
+    help.textContent = beat.status === "aprovado"
+        ? "BPM, key, gêneros e moods mudam na hora. Título, descrição, preços ou arquivos novos tiram o beat do catálogo até a Mirai revisar de novo."
+        : "Envie arquivos só se quiser substituí-los. Ao salvar, o beat vai (de novo) para revisão.";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "btn-outline";
+    cancel.textContent = "Cancelar edição";
+    cancel.addEventListener("click", () => beatFormMode(null));
+    banner.replaceChildren(title, help, cancel);
+    form.reset();
+    for (const [name, value] of Object.entries({
+        titulo: beat.titulo, bpm: beat.bpm, tonalidade: beat.tonalidade, generos: beat.generos, moods: beat.moods,
+        descricao: beat.descricao, preco_lease: beat.preco_lease_base, preco_wav: beat.preco_wav_base,
+        preco_multitrack: beat.preco_multitrack_base, preco_multitrack_link: beat.preco_multitrack_base,
+        preco_exclusivo: beat.preco_exclusivo_base,
+    })) {
+        if (form.elements[name]) form.elements[name].value = value ?? "";
+    }
+    form.elements.capa.required = false;
+    form.elements.mp3.required = false;
+    form.querySelector("button[type=submit]").textContent = "Salvar alterações";
+    if (beatUploadConfig) applyBeatUploadLimits(form, beatUploadConfig.limits);
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+    form.elements.titulo.focus({ preventScroll: true });
+}
 bindImageCrop(document.querySelector('#producer-beat-form [name="capa"]'), { ratio: 1, width: 1024 });
 watchFilePickers(document.getElementById("producer-content"));
 let payouts = [];
@@ -121,7 +173,8 @@ async function openDetail(id) {
             onDeliveryLink: openDeliveryLink,
             onDownload: downloadFile,
             onListen: listenFile,
-            onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
+            onEditFile: editFile,
+            onEditDelivery: editDelivery,
             onDelete: deletePreview,
         });
         showView("detail");
@@ -221,11 +274,17 @@ async function loadBeats() {
             const title = document.createElement("h3"); title.textContent = beat.titulo;
             let cover = null;
             if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; }
-            const meta = document.createElement("p"); meta.textContent = `${beat.produtor} · ${beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.generos || "Sem gênero"}`;
+            const meta = document.createElement("p"); meta.textContent = `${BEAT_STATUS[beat.status] || beat.status} · ${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.tonalidade ? `${beat.tonalidade} · ` : ""}${beat.generos || "Sem gênero"}${beat.moods ? ` · ${beat.moods}` : ""}`;
             const prices = document.createElement("p"); prices.className = "beat-card__prices"; prices.textContent = [["MP3", beat.preco_lease], ["WAV", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
             const audio = beatPreview(() => api.ouvirBeat(beat.id));
             content.append(title, meta, prices, audio);
             if (beat.motivo_rejeicao) { const reason = document.createElement("p"); reason.textContent = beat.motivo_rejeicao; content.append(reason); }
+            if (beat.status !== "vendido") {
+                const edit = document.createElement("button"); edit.type = "button"; edit.className = "btn-outline beat-card__edit";
+                edit.textContent = "Editar"; edit.setAttribute("aria-label", `Editar ${beat.titulo}`);
+                edit.addEventListener("click", () => beatFormMode(beat));
+                card.append(edit); // over the cover: the square card keeps its content height
+            }
             if (cover) card.append(cover);
             else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
             card.append(content);
@@ -288,7 +347,8 @@ async function updateStatus(id, status, button) {
                 onDeliveryLink: openDeliveryLink,
                 onDownload: downloadFile,
                 onListen: listenFile,
-                onEditNote: (file, observacao) => api.editarObservacao(file.id, observacao),
+                onEditFile: editFile,
+            onEditDelivery: editDelivery,
                 onDelete: deletePreview,
             });
             loadMessages(updated, files);
@@ -329,6 +389,19 @@ async function downloadFile(id, button) {
     } finally {
         button.disabled = false;
     }
+}
+
+// Corrections to what the producer sent; the detail reloads so stages and lists stay in sync.
+async function editFile(file, changes) {
+    await api.editarArquivo(file.id, changes);
+    await openDetail(file.producao_id);
+    setAlert("Arquivo atualizado.");
+}
+
+async function editDelivery(delivery, changes) {
+    await api.editarEntregaFinal(delivery.id, changes);
+    await openDetail(delivery.producao_id);
+    setAlert("Entrega atualizada.");
 }
 
 async function deletePreview(file, button) {
@@ -478,7 +551,10 @@ document.getElementById("producer-beat-form").addEventListener("submit", async e
     const button = form.querySelector("button[type=submit]");
     if (button.disabled) return;
     const status = document.getElementById("producer-beat-upload-status");
-    const validation = validateBeatUpload(form, beatUploadConfig);
+    const beat = editingBeat;
+    const validation = validateBeatUpload(form, beatUploadConfig, beat
+        ? { requireFiles: false, existing: { tem_wav: beat.tem_wav, tem_multitrack: beat.tem_multitrack } }
+        : undefined);
     if (!validation.valid) {
         if (status) textStatus(status, validation.message, true);
         return;
@@ -495,17 +571,25 @@ document.getElementById("producer-beat-form").addEventListener("submit", async e
             body.delete("multitrack_url");
             body.delete("preco_multitrack_link");
         }
-        for (const name of ["wav", "multitrack"]) {
+        for (const name of beat ? ["capa", "mp3", "wav", "multitrack"] : ["wav", "multitrack"]) {
             if (!body.get(name)?.size) body.delete(name);
         }
-        await enqueueUpload("/portal/produtor/beats", body, {
-            label: `Beat · ${body.get("titulo")}`,
+        if (beat && !body.get("multitrack_url")) body.delete("multitrack_url");
+        await enqueueUpload(beat ? `/portal/produtor/beats/${beat.id}` : "/portal/produtor/beats", body, {
+            label: `${beat ? "Edição do beat" : "Beat"} · ${body.get("titulo")}`,
             meta: { kind: "producer-beat" },
+            method: beat ? "PUT" : "POST",
         });
-        form.reset();
-        applyBeatUploadLimits(form, beatUploadConfig.limits);
-        setAlert("Beat adicionado aos envios. Você pode sair desta tela.");
-        if (status) textStatus(status, "Envio iniciado. Acompanhe em Envios.", false);
+        if (beat) {
+            beatFormMode(null);
+            setAlert("Alterações enviadas. Acompanhe em Envios.");
+            if (status) textStatus(status, "Edição enviada. Acompanhe em Envios.", false);
+        } else {
+            form.reset();
+            applyBeatUploadLimits(form, beatUploadConfig.limits);
+            setAlert("Beat adicionado aos envios. Você pode sair desta tela.");
+            if (status) textStatus(status, "Envio iniciado. Acompanhe em Envios.", false);
+        }
     }
     catch (error) { setAlert(error.message, true); if (status) textStatus(status, error.message, true); }
     finally { button.disabled = false; }

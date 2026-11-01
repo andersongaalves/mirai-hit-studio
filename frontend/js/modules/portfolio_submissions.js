@@ -10,9 +10,9 @@ const node = (tag, text, className) => {
     if (className) el.className = className;
     return el;
 };
-async function request(path, payload) {
+async function request(path, payload, method = "POST") {
     const response = await authFetch(path, payload ? {
-        method: "POST", body: payload instanceof FormData ? payload : JSON.stringify(payload),
+        method, body: payload instanceof FormData ? payload : JSON.stringify(payload),
     } : {});
     const data = await response.json().catch(() => null);
     if (!response.ok) throw new Error(typeof data?.detail === "string" ? data.detail : "Não foi possível salvar o envio.");
@@ -114,6 +114,46 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
             const submit = node("button", "Enviar para revisão", "btn-cta");
             submit.type = "submit";
             form.append(submit);
+            // Edit mode: a pending or refused submission is corrected in this same form.
+            let editing = null;
+            const banner = node("div", "", "beat-form__editing portfolio-submission-form__editing portfolio-submission-form__full");
+            banner.setAttribute("role", "status");
+            banner.hidden = true;
+            form.prepend(banner);
+            const coverFields = [coverMode, coverFile, coverUrl].map(input => input.closest("label"));
+            const setMode = item => {
+                editing = item;
+                form.classList.toggle("portfolio-submission-form--editing", Boolean(item));
+                banner.hidden = !item;
+                coverFields.forEach(label => { label.hidden = Boolean(item); });
+                if (!item) {
+                    form.reset();
+                    banner.replaceChildren();
+                    submit.textContent = "Enviar para revisão";
+                    updateCoverMode();
+                    return;
+                }
+                coverFile.disabled = true; coverFile.required = false;
+                coverUrl.disabled = true; coverUrl.required = false;
+                const cancel = node("button", "Cancelar edição", "btn-outline");
+                cancel.type = "button";
+                cancel.addEventListener("click", () => setMode(null));
+                banner.replaceChildren(
+                    node("strong", `Editando "${item.dados.titulo}"`),
+                    node("p", item.status === "recusado"
+                        ? "Corrija o que foi apontado e envie de novo: o projeto volta para a revisão do estúdio. A capa enviada é mantida."
+                        : "O projeto continua aguardando revisão com os dados corrigidos. A capa enviada é mantida."),
+                    cancel,
+                );
+                form.reset();
+                for (const key of ["titulo", "artista", "categoria", "link_audio", "vertical", "case_type", "funcao", "descricao"]) {
+                    if (form.elements[key]) form.elements[key].value = item.dados[key] ?? "";
+                }
+                form.elements.producao_id.value = item.producao_id ? String(item.producao_id) : "";
+                submit.textContent = item.status === "recusado" ? "Salvar e reenviar" : "Salvar alterações";
+                form.scrollIntoView({ behavior: "smooth", block: "start" });
+                form.elements.titulo.focus({ preventScroll: true });
+            };
             form.addEventListener("submit", async event => {
                 event.preventDefault();
                 if (submit.disabled) return;
@@ -126,6 +166,15 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                 data.producao_id = data.producao_id ? Number(data.producao_id) : null;
                 data.autorizacao_artista = consent.checked;
                 try {
+                    if (editing) {
+                        delete data.request_id;
+                        delete data.link_capa;
+                        await request(`/portal/produtor/portfolio/${editing.id}`, { ...data, versao: editing.versao }, "PUT");
+                        if (root.dataset.serial !== serial) return;
+                        await loadPortfolioSubmissions(root, { productions });
+                        root.querySelector('[role="status"]').textContent = "Envio atualizado.";
+                        return;
+                    }
                     if (coverMode.value === "arquivo") {
                         const multipart = new FormData();
                         multipart.append("dados", JSON.stringify(data));
@@ -149,6 +198,7 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                     finish();
                 }
             });
+            form.addEventListener("portfolio:edit", event => setMode(event.detail));
             root.append(form);
         }
         const list = node("div", "", "producer-list");
@@ -160,6 +210,13 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
             content.append(node("h3", item.dados.titulo), node("p", item.dados.artista), node("p", labels[item.status]));
             if (item.motivo) content.append(node("p", item.motivo));
             card.append(content);
+            if (!admin && ["pendente", "recusado"].includes(item.status)) {
+                const edit = node("button", item.status === "recusado" ? "Corrigir e reenviar" : "Editar", "btn-outline beat-card__edit");
+                edit.type = "button";
+                edit.setAttribute("aria-label", `Editar envio ${item.dados.titulo}`);
+                edit.addEventListener("click", () => root.querySelector(".portfolio-submission-form")?.dispatchEvent(new CustomEvent("portfolio:edit", { detail: item })));
+                content.append(edit);
+            }
             if (admin) {
                 content.append(node("p", `Produtor #${item.produtor_id} · ${item.dados.categoria} · ${item.dados.vertical} · ${item.dados.case_type}`));
                 if (item.producao_id) content.append(node("p", `Produção #${item.producao_id}`));

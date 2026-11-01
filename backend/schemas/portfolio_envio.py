@@ -59,6 +59,13 @@ class PortfolioEnvioDados(BaseModel):
         return value
 
 
+class PortfolioEnvioEdicao(PortfolioEnvioDados):
+    """The producer corrects a submission still under review (or refused). The cover is kept."""
+
+    request_id: UUID | None = None
+    versao: int = Field(ge=1)
+
+
 class PortfolioEnvioCreate(PortfolioEnvioDados):
     link_capa: str = Field(min_length=8, max_length=500)
 

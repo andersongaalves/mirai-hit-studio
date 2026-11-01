@@ -46,3 +46,13 @@ class ProducaoArquivoObservacaoRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     observacao: str | None = Field(default=None, max_length=1000)
+
+
+class ProducaoArquivoEdicaoRequest(BaseModel):
+    """The sender corrects a file: display name, stage and note. Only the fields sent change."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    nome_exibicao: str | None = Field(default=None, min_length=1, max_length=255)
+    etapa_id: int | None = Field(default=None, gt=0)
+    observacao: str | None = Field(default=None, max_length=1000)

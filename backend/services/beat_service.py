@@ -644,6 +644,46 @@ def edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover
     return _response(db, model, include_base=True)
 
 
+# Catalog details a producer may fix on a published beat without a new review.
+CATALOG_FIELDS = ("bpm", "tonalidade", "generos", "moods")
+
+
+def producer_edit(db, beat_id, payload, actor, *, mp3=None, wav=None, archive=None, cover=None, multitrack_url=None):
+    """The producer edits a beat they sent.
+
+    Pending or refused beats go (back) to review. On a published beat, changing only the
+    catalog details (BPM, key, genres, moods) applies at once; any other change (title,
+    description, prices or files) takes it out of the catalog until the Mirai reviews it again.
+    """
+    if not actor.painel_beats:
+        raise HTTPException(403, "Painel de beats nao habilitado para esta conta.")
+    model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
+    if model is None or model.produtor_id != actor.id:
+        raise HTTPException(404, "Beat nao encontrado.")
+    files = (mp3, wav, archive, cover)
+    new_values = payload.model_dump()
+    changed = {key for key, value in new_values.items() if getattr(model, key) != value}
+    if (
+        model.status == "aprovado"
+        and all(item is None for item in files)
+        and not (multitrack_url or "").strip()
+        and changed <= set(CATALOG_FIELDS)
+    ):
+        if changed:
+            for key in changed:
+                setattr(model, key, new_values[key])
+            audit_service.record(db, actor=actor, action="beat.catalog_details_edited", entity_type="beat",
+                                 entity_id=beat_id, metadata={"fields": sorted(changed)})
+            db.commit()
+            db.refresh(model)
+        return _response(db, model, include_base=True)
+    if not changed and all(item is None for item in files) and not (multitrack_url or "").strip() and model.status == "revisao":
+        db.rollback()
+        return _response(db, model, include_base=True)
+    db.rollback()  # release the lock; edit() takes it again
+    return edit(db, beat_id, payload, actor, mp3=mp3, wav=wav, archive=archive, cover=cover, multitrack_url=multitrack_url)
+
+
 def preview(db, beat_id, actor):
     model = db.get(BeatModel, beat_id)
     if model is None:
