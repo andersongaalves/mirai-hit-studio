@@ -21,6 +21,8 @@
         <link rel="stylesheet" href="css/components/portal-notifications.css" />
         <link rel="stylesheet" href="css/components/admin-forms.css" />
         <link rel="stylesheet" href="css/components/portal-popup.css" />
+        <link rel="stylesheet" href="css/components/confirm-dialog.css" />
+        <link rel="stylesheet" href="css/components/file-manager.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -81,6 +83,7 @@
                                 <button type="button" class="admin-nav__item" data-admin-target="section-custos">Configurações</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-usuarios">Usuários</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-auditoria">Auditoria</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-arquivos">Arquivos</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-uso">Infraestrutura</button>
                             </details>
                         </nav>
@@ -828,6 +831,19 @@
                             <span id="financeiro-page-label"></span>
                             <button id="financeiro-next-page" type="button" class="btn-small">Próxima</button>
                         </nav>
+                    </div>
+
+                    <div id="section-arquivos" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Armazenamento</span>
+                                <h1>Arquivos</h1>
+                                <p>Tudo o que está guardado no site, por pasta, tipo, função e serviço. Arquivos com cadeado são protegidos e não podem ser apagados.</p>
+                            </div>
+                            <button id="arquivos-atualizar" type="button" class="btn-small">Atualizar</button>
+                        </header>
+                        <div id="arquivos-content" class="files-manager"></div>
+                        <aside id="arquivos-detalhes" class="files-details" aria-labelledby="arquivos-detalhes-titulo" hidden></aside>
                     </div>
 
                     <div id="section-uso" class="admin-section hidden admin-access-hidden" data-admin-only>

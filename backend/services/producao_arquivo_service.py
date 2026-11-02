@@ -554,6 +554,49 @@ def delete_preview_for_producer(db, *, file_id, actor, request_id=None, storage=
             )
 
 
+def delete_for_admin(db, *, file_id, actor, motivo, request_id=None, storage=None):
+    """The Admin deletes a stored production file from the file manager. Files that are
+    part of the history (later versions, message attachments, final deliveries, payout
+    receipts) stay; the caller already explained why."""
+    from models import PreviaTagJobModel, ProducaoEntregaFinalModel, ProducaoMensagemModel, RepasseProdutorModel
+    from models.repasse_etapa import RepasseEtapaPagamentoModel
+    from sqlalchemy import or_
+
+    model = db.query(ProducaoArquivoModel).filter(ProducaoArquivoModel.id == file_id).with_for_update().first()
+    if model is None:
+        raise ProducaoArquivoNotFound("Arquivo nao encontrado.")
+    blocked = (
+        db.query(ProducaoArquivoModel.id).filter(ProducaoArquivoModel.substitui_arquivo_id == model.id).first()
+        or db.query(ProducaoMensagemModel.id).filter(ProducaoMensagemModel.arquivo_id == model.id).first()
+        or db.query(ProducaoEntregaFinalModel.id).filter(or_(
+            ProducaoEntregaFinalModel.arquivo_principal_id == model.id,
+            ProducaoEntregaFinalModel.wav_arquivo_id == model.id,
+            ProducaoEntregaFinalModel.multitrack_arquivo_id == model.id,
+            ProducaoEntregaFinalModel.licenca_arquivo_id == model.id,
+        )).first()
+        or db.query(RepasseProdutorModel.id).filter(RepasseProdutorModel.comprovante_arquivo_id == model.id).first()
+        or db.query(RepasseEtapaPagamentoModel.id).filter(RepasseEtapaPagamentoModel.comprovante_arquivo_id == model.id).first()
+    )
+    if blocked:
+        raise ProducaoArquivoConflict("Este arquivo faz parte do historico da producao e nao pode ser excluido.")
+    job = db.query(PreviaTagJobModel).filter(PreviaTagJobModel.arquivo_id == model.id).with_for_update().first()
+    references = [model.object_key] + ([job.object_key] if job is not None and job.object_key else [])
+    file_type = model.tipo
+    audit_service.record(
+        db, actor=actor, action="file_manager.production_file_deleted", entity_type="production_file",
+        entity_id=model.id, metadata={"production_id": model.producao_id, "tipo": file_type, "motivo": motivo},
+        request_id=request_id,
+    )
+    db.delete(model)
+    db.commit()
+    storage = storage or new_production_file_storage(file_type)
+    for reference in dict.fromkeys(references):
+        try:
+            storage.delete(reference)
+        except ProducaoArquivoStorageError:
+            logger.error("file_manager_cleanup_failed file_id=%s", file_id)
+
+
 def update_visibility(db, *, model, actor, producer, client, request_id=None):
     if model.tipo == "comprovante" and client:
         raise ProducaoArquivoConflict("Comprovantes de repasse nao podem ser visiveis ao cliente.")

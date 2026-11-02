@@ -120,6 +120,8 @@ class ProducaoArquivoModel(Base):
     )
     # Integrated loudness (LUFS), measured once for the before/after comparison.
     lufs_integrado = Column(Float, nullable=True)
+    # Previews of delivered productions are compressed once (MP3 96 kbps) to save storage.
+    comprimido_em = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),

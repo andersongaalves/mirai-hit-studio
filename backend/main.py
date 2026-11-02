@@ -20,6 +20,7 @@ from routers.combos import public_router as combos_public_router
 from routers.combos import router as combos_router
 from routers.comparativo import router as comparativo_router
 from routers.portal_popups import router as portal_popups_router
+from routers.arquivos_admin import router as arquivos_admin_router
 from routers.config import router as config_router
 from routers.cotas_arquivo import router as cotas_arquivo_router
 from routers.credito_alocacao import router as credito_alocacao_router
@@ -125,6 +126,7 @@ app.include_router(combos_public_router)
 app.include_router(beats_router)
 app.include_router(comparativo_router)
 app.include_router(portal_popups_router)
+app.include_router(arquivos_admin_router)
 
 
 @app.get("/")
@@ -164,6 +166,11 @@ async def startup():
                 continue
             try:
                 processed = await asyncio.to_thread(processar_um, SessionLocal)
+                if not processed:
+                    # Idle: compress one preview of a delivered production (saves storage).
+                    from services.arquivos_admin_service import comprimir_uma
+
+                    processed = await asyncio.to_thread(comprimir_uma, SessionLocal)
             except Exception:
                 logger.warning("audio_tag_worker_unavailable")
                 processed = False
