@@ -226,7 +226,31 @@ def _visiveis(db, user):
     return query.filter(or_(PortalNotificacaoModel.arquivo_id.is_(None), PortalNotificacaoModel.arquivo_id.in_(arquivos)))
 
 
-def _resposta(row, user):
+def _contextos(db, rows):
+    """Labels and cover images for a page of notifications, loaded in three queries."""
+    from models import BeatModel
+
+    producoes = {item.id: item for item in db.scalars(select(ProducaoModel).where(
+        ProducaoModel.id.in_({row.producao_id for row in rows if row.producao_id})))} if rows else {}
+    arquivos = {item.id: item for item in db.scalars(select(ProducaoArquivoModel).where(
+        ProducaoArquivoModel.id.in_({row.arquivo_id for row in rows if row.arquivo_id})))} if rows else {}
+    beats = {item.id: item for item in db.scalars(select(BeatModel).where(
+        BeatModel.id.in_({row.beat_id for row in rows if row.beat_id})))} if rows else {}
+    result = {}
+    for row in rows:
+        parts, cover = [], None
+        if row.producao_id in producoes:
+            parts.append(f"#{row.producao_id} {producoes[row.producao_id].titulo}")
+        if row.arquivo_id in arquivos:
+            parts.append(arquivos[row.arquivo_id].nome_exibicao)
+        if row.beat_id in beats:
+            parts.append(beats[row.beat_id].titulo)
+            cover = beats[row.beat_id].capa_url or None
+        result[row.id] = (" · ".join(parts) or None, cover)
+    return result
+
+
+def _resposta(row, user, contexto=None):
     if user.is_admin:
         url = f"/admin.html#{ADMIN_SECOES.get(row.tipo, 'dashboard-menu')}"
     elif row.beat_id is not None and row.producao_id is None:
@@ -236,8 +260,10 @@ def _resposta(row, user):
         url = f"{prefix}/{row.producao_id}"
     else:
         url = f"/cliente/propostas/{row.proposta_id}"
+    label, cover = contexto or (None, None)
     return {"id": row.id, "tipo": row.tipo, "texto": TEXTOS.get(row.tipo, "Há uma atualização no seu projeto."),
-            "url": url, "created_at": row.created_at, "vista_em": row.vista_em}
+            "url": url, "created_at": row.created_at, "vista_em": row.vista_em, "contexto": label,
+            "miniatura": cover}
 
 
 def listar(db, user, *, antes_id=None, limite=30, somente_nao_vistas=False):
@@ -248,7 +274,10 @@ def listar(db, user, *, antes_id=None, limite=30, somente_nao_vistas=False):
     if antes_id is not None:
         query = query.filter(PortalNotificacaoModel.id < antes_id)
     rows = query.order_by(PortalNotificacaoModel.id.desc()).limit(limite + 1).all()
-    return {"itens": [_resposta(row, user) for row in rows[:limite]], "nao_vistas": nao_vistas, "tem_mais": len(rows) > limite}
+    page = rows[:limite]
+    labels = _contextos(db, page)
+    return {"itens": [_resposta(row, user, labels.get(row.id)) for row in page], "nao_vistas": nao_vistas,
+            "tem_mais": len(rows) > limite}
 
 
 def marcar_vistas(db, user, ids):
@@ -261,6 +290,7 @@ def marcar_vistas(db, user, ids):
     agora = datetime.now(timezone.utc)
     for row in rows:
         row.vista_em = agora
-    result = [_resposta(row, user) for row in rows]
+    labels = _contextos(db, rows)
+    result = [_resposta(row, user, labels.get(row.id)) for row in rows]
     db.commit()
     return result

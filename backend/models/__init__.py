@@ -25,7 +25,7 @@ from .cota_arquivo import ProducaoCotaArquivoModel, ServicoCotaArquivoModel
 from .politica import PoliticaGlobalModel, ProducaoPoliticaModel, ServicoPoliticaModel
 from .portal_notificacao import PortalNotificacaoModel
 from .portfolio_envio import PortfolioEnvioModel
-from .audio_tag import AudioTagModel, AudioTagPerfilModel, PreviaTagJobModel
+from .audio_tag import AudioTagModel, AudioTagPerfilModel, PreviaLoteModel, PreviaTagJobModel
 from .carteira_creditos import CreditoContratoItemModel, CreditoLancamentoModel, CreditoLoteModel
 from .credito_alocacao import CreditoAlocacaoModel, CreditoMovimentoModel
 from .credito_etapa import CreditoEtapaModel

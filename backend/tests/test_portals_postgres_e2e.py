@@ -1291,7 +1291,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
                 SELECT relname, relrowsecurity FROM pg_class
                 WHERE relnamespace = 'public'::regnamespace
                   AND relname IN ('audio_tag_perfis', 'audio_tags', 'portal_notificacoes', 'portal_popups', 'portal_popup_vistos',
-                                  'portfolio_envios', 'previa_tag_jobs', 'projeto_creditos',
+                                  'portfolio_envios', 'previa_lotes', 'previa_tag_jobs', 'projeto_creditos',
                                   'credito_lotes', 'credito_lancamentos', 'credito_contrato_itens',
                                   'credito_alocacoes', 'credito_movimentos', 'credito_etapas',
                                   'repasse_etapas', 'repasse_etapa_pagamentos')
@@ -1300,7 +1300,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
             self.assertEqual(rows, [('audio_tag_perfis', True), ('audio_tags', True),
                                     ('credito_alocacoes', True), ('credito_contrato_itens', True),
                                     ('credito_etapas', True), ('credito_lancamentos', True), ('credito_lotes', True), ('credito_movimentos', True), ('portal_notificacoes', True), ('portal_popup_vistos', True), ('portal_popups', True),
-                                    ('portfolio_envios', True), ('previa_tag_jobs', True), ('projeto_creditos', True),
+                                    ('portfolio_envios', True), ('previa_lotes', True), ('previa_tag_jobs', True), ('projeto_creditos', True),
                                     ('repasse_etapa_pagamentos', True), ('repasse_etapas', True)])
             for role in ('anon', 'authenticated'):
                 exists = db.execute(text('SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=:role)'),

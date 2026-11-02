@@ -52,6 +52,10 @@ class BeatModel(Base):
             "length(original_sha256) = 64 AND length(preview_sha256) = 64",
             name="ck_beats_hashes",
         ),
+        CheckConstraint(
+            "previa_estado IS NULL OR previa_estado IN ('pendente', 'pronto', 'erro')",
+            name="ck_beats_previa_estado",
+        ),
     )
     id = Column(Integer, primary_key=True)
     produtor_id = Column(
@@ -95,6 +99,10 @@ class BeatModel(Base):
     capa_ref = Column(String(180), nullable=True)
     capa_url = Column(String(1000), nullable=True)
     capa_sha256 = Column(String(64), nullable=True)
+    # Queue state when the Admin regenerates every tagged preview (None outside a batch).
+    previa_lote_id = Column(Integer, ForeignKey("previa_lotes.id", ondelete="SET NULL", use_alter=True,
+                                                name="fk_beats_previa_lote"), nullable=True)
+    previa_estado = Column(String(12), nullable=True, index=True)
     tamanho_bytes = Column(BigInteger, nullable=False)
     mime_type = Column(String(100), nullable=False)
     revisado_por_id = Column(
