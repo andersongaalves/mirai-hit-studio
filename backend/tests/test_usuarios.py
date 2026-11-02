@@ -247,6 +247,8 @@ with engine.connect() as connection:
     def test_producer_specialties_and_beatmaker_cpf(self):
         self.run_case(r'''
 from models import AuditLogModel
+from routers.portal_produtor import router as producer_router
+app.include_router(producer_router)
 async def check():
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
         admin = bearer('admin')
@@ -281,6 +283,18 @@ async def check():
         assert (await client.patch(f'/usuarios/{identifier}', headers=admin, json={'nome_exibicao':'BM'})).json()['especialidades'] == ['beatmaker']
         admin_user = await client.post('/usuarios', headers=admin, json={**base, 'username':'adm2', 'role':'admin', 'especialidades':['beatmaker'], 'cpf':'52998224725'})
         assert admin_user.status_code == 201 and admin_user.json()['especialidades'] == [] and admin_user.json()['cpf'] is None
+        # The producer registers or corrects their own CPF in "Meu perfil"; it comes back masked.
+        profile = await client.get('/portal/produtor/perfil', headers=bearer('mix'))
+        assert profile.json() == {'especialidades': ['mixagem'], 'beatmaker': False, 'cpf_cadastrado': False, 'cpf_mascarado': None}, profile.text
+        assert (await client.put('/portal/produtor/perfil/cpf', headers=bearer('mix'), json={'cpf': '111.111.111-11'})).status_code == 422
+        assert (await client.put('/portal/produtor/perfil/cpf', headers=bearer('mix'), json={'cpf': '529.982.247-25', 'role': 'admin'})).status_code == 422
+        assert (await client.put('/portal/produtor/perfil/cpf', headers=admin, json={'cpf': '529.982.247-25'})).status_code == 403
+        saved = await client.put('/portal/produtor/perfil/cpf', headers=bearer('mix'), json={'cpf': '529.982.247-25'})
+        assert saved.status_code == 200, saved.text
+        assert saved.json()['cpf_cadastrado'] is True and saved.json()['cpf_mascarado'] == '***.***.***-25'
+        assert '52998224725' not in saved.text
+        mix_id = ignored.json()['id']
+        assert (await client.get(f'/usuarios/{mix_id}', headers=admin)).json()['cpf'] == '52998224725'
         # The session never carries the CPF.
         me = (await client.get('/auth/me', headers=bearer('bm'))).json()
         assert 'cpf' not in me

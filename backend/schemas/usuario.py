@@ -286,3 +286,34 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
     user: SessaoUsuarioResponse
+
+
+
+def mascarar_cpf(cpf: str | None) -> str | None:
+    """Only the last two digits are shown back; the full CPF never returns to the browser."""
+    if not cpf or len(cpf) != 11:
+        return None
+    return f"***.***.***-{cpf[9:]}"
+
+
+class PerfilProdutorResponse(BaseModel):
+    """The producer's own profile: what the contracts need, never the full CPF."""
+
+    especialidades: list[str] = []
+    beatmaker: bool = False
+    cpf_cadastrado: bool = False
+    cpf_mascarado: str | None = None
+
+
+class PerfilProdutorCpfUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cpf: str = Field(min_length=11, max_length=20)
+
+    @field_validator("cpf")
+    @classmethod
+    def cpf_valido(cls, value):
+        digits = validar_cpf(value)
+        if digits is None:
+            raise ValueError("cpf_invalido")
+        return digits
