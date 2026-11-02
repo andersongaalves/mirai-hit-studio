@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["d1f3a5c7e9b2"], heads
+                  assert heads == ["e3a5c7e9b1d4"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -211,6 +211,7 @@ jobs:
                     test_promocoes.py \
                     test_portal_notificacoes.py \
                     test_portal_popups.py \
+                    test_arquivos_admin.py \
                     test_portfolio_creditos.py \
                     test_portfolio_envios.py \
                     test_audio_tags.py \
@@ -430,6 +431,10 @@ jobs:
                     backend/migrations/versions/b2d4f6a8c0e1_beat_moods.py \
                     backend/migrations/versions/c9e1a3b5d7f2_comparativo_loudness.py \
                     backend/migrations/versions/d1f3a5c7e9b2_portal_popups.py \
+                    backend/migrations/versions/e3a5c7e9b1d4_previas_comprimidas.py \
+                    backend/services/arquivos_admin_service.py \
+                    backend/routers/arquivos_admin.py \
+                    backend/tests/test_arquivos_admin.py \
                     backend/models/portal_popup.py \
                     backend/schemas/portal_popup.py \
                     backend/services/portal_popup_service.py \
@@ -507,7 +512,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic d1f3a5c7e9b2: passed"
+                    echo "- PostgreSQL 17 and Alembic e3a5c7e9b1d4: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

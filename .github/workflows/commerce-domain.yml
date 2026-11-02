@@ -125,6 +125,7 @@ jobs:
                   python -m unittest discover -s tests -p 'test_promocoes.py' -v
                   python -m unittest discover -s tests -p 'test_portal_notificacoes.py' -v
                   python -m unittest discover -s tests -p 'test_portal_popups.py' -v
+                  python -m unittest discover -s tests -p 'test_arquivos_admin.py' -v
                   python -m unittest discover -s tests -p 'test_catalogo.py' -v
                   python -m unittest discover -s tests -p 'test_emails.py' -v
                   python -m unittest discover -s tests -p 'test_portal_produtor.py' -v
