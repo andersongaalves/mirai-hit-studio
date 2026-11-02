@@ -142,6 +142,13 @@ export function applyStageFiles(root = document) {
         }
     });
 
+    // Stage names on final deliveries (and anything else that asks for it).
+    const names = new Map(orderedStages(state.stages).map(({ stage, parent }) => [String(stage.id), parent ? `${parent.nome} › ${stage.nome}` : stage.nome]));
+    root.querySelectorAll("[data-stage-label]").forEach(label => {
+        const id = label.dataset.stageLabel;
+        label.textContent = id ? names.get(id) || "Etapa" : "Entrega geral";
+    });
+
     root.querySelectorAll("[data-stage-select]").forEach(control => {
         const id = Number(control.dataset.stageSelect);
         const count = total.get(String(id)) || 0;

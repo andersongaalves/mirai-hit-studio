@@ -315,6 +315,48 @@ locked = api.delete(f"/portal/produtor/entregas-finais/{second.json()['id']}", h
 assert locked.status_code == 409 and 'entregue' in locked.json()['detail']
 ''')
 
+    def test_one_final_delivery_per_stage(self):
+        self.run_case('''
+from models import ProducaoEtapaModel
+with Session(engine) as db:
+    stages = []
+    for order, name in ((97, 'Rough Mix'), (98, 'Mixagem')):
+        stage = ProducaoEtapaModel(producao_id=PRODUCTION_ID, proposta_id=PROPOSAL_ID, item_indice=1, ordem=order,
+                                   ordem_no_item=order - 96, nome=name, peso_percentual=Decimal('50'), valor=Decimal('50'))
+        db.add(stage)
+        db.flush()
+        stages.append(stage.id)
+    db.commit()
+ROUGH, MIX = stages
+def send(request_id, title, stage):
+    with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+        response = api.post(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('producer-a'),
+            data={'request_id': request_id, 'categoria': 'outro', 'titulo': title, **({'etapa_id': str(stage)} if stage else {})},
+            files={'arquivo_principal': (f'{title}.mp3', title.encode(), 'audio/mpeg')})
+    assert response.status_code == 201, response.text
+    return response.json()
+first = send('550e8400-e29b-41d4-a716-446655440081', 'rough-1', ROUGH)
+mix = send('550e8400-e29b-41d4-a716-446655440082', 'mix-1', MIX)
+general_a = send('550e8400-e29b-41d4-a716-446655440083', 'geral-a', None)
+general_b = send('550e8400-e29b-41d4-a716-446655440084', 'geral-b', None)
+with Session(engine) as db:
+    old_key = db.get(ProducaoArquivoModel, first['arquivo_principal']['id']).object_key
+second = send('550e8400-e29b-41d4-a716-446655440085', 'rough-2', ROUGH)
+# The new Rough delivery replaced the first; other stages and general deliveries stay.
+with Session(engine) as db:
+    ids = {row.id for row in db.query(ProducaoEntregaFinalModel).filter_by(producao_id=PRODUCTION_ID)}
+    assert ids == {mix['id'], general_a['id'], general_b['id'], second['id']}, ids
+    assert db.get(ProducaoArquivoModel, first['arquivo_principal']['id']) is None
+assert old_key not in storage.objects
+# Moving the mix delivery to the Rough stage makes it that stage's final one.
+with patch.object(producao_entrega_service, 'new_production_file_storage', return_value=storage):
+    moved = api.patch(f"/portal/produtor/entregas-finais/{mix['id']}", headers=bearer('producer-a'), json={'etapa_id': ROUGH})
+assert moved.status_code == 200, moved.text
+with Session(engine) as db:
+    assert db.get(ProducaoEntregaFinalModel, second['id']) is None
+    assert db.get(ProducaoEntregaFinalModel, mix['id']) is not None
+''')
+
     def test_delivery_held_until_paid(self):
         self.run_case('''
 preview_id = upload('previa', 'mix.mp3')

@@ -1,6 +1,7 @@
 import { controlesOuvir, podeOuvir } from "../modules/ouvir_arquivo.js";
 import { applyStageFiles, resetStageFiles, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { renderMudancas } from "../modules/proposta_mudancas.js";
+import { deliveriesSection, stageLabel } from "../modules/final_deliveries.js";
 import { beforeAfterSection, pickBeforeAfter } from "../modules/before_after.js";
 import {
     FINAL_STATUSES,
@@ -265,6 +266,7 @@ function finalDeliveryCard(delivery, handlers) {
     const card = element("article", "final-delivery-card");
     card.dataset.etapaId = delivery.etapa_id == null ? "" : String(delivery.etapa_id);
     card.append(
+        stageLabel(delivery),
         element("span", "final-delivery-card__type", delivery.categoria === "instrumental" ? "Beat exclusivo" : "Entrega final"),
         element("h3", "", delivery.titulo),
     );
@@ -323,10 +325,8 @@ function filesPanel(production, files, deliveries, handlers) {
     ]).filter(Boolean));
     const looseFiles = files.filter(file => !linkedIds.has(file.id));
     if (deliveries.length) {
-        const deliveryList = element("div", "final-delivery-list");
-        deliveryList.dataset.stageGroup = "";
-        deliveries.forEach(delivery => deliveryList.append(finalDeliveryCard(delivery, handlers)));
-        panel.append(deliveryList);
+        // One final version per stage; older duplicates are not shown to the client.
+        panel.append(deliveriesSection(deliveries, delivery => finalDeliveryCard(delivery, handlers), { older: false }));
     }
     panel.append(
         fileGroup("Prévias", looseFiles.filter(file => file.tipo === "previa"), handlers),

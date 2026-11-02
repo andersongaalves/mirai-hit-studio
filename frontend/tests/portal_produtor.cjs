@@ -271,8 +271,9 @@ async function staticResponse(route) {
         }
         if (deliveryEdit && request.method() === 'PATCH') {
             deliveryEdits.push(request.postDataJSON());
-            Object.assign(deliveries[0], request.postDataJSON());
-            return route.fulfill({ json: deliveries[0] });
+            const target = deliveries.find(item => item.id === Number(deliveryEdit[1]));
+            Object.assign(target, request.postDataJSON());
+            return route.fulfill({ json: target });
         }
         if (/^\/portal\/produtor\/producoes\/\d+\/entregas-finais$/.test(url.pathname) && request.method() === 'GET') {
             return route.fulfill({ json: deliveries });
@@ -436,13 +437,37 @@ async function staticResponse(route) {
         assert.ok(listens.includes('?ouvir=true'), JSON.stringify(listens));
         // The coordinator corrects a final delivery: only changed fields go out.
         const packageFile = (id, nome, mime) => ({ ...files[0], id, nome_exibicao: nome, mime_type: mime, tipo: 'entrega', etapa_id: null });
-        deliveries = [{ id: 501, producao_id: 1, categoria: 'instrumental', titulo: 'Beat final', etapa_id: null, bpm: 90, tonalidade: 'Am',
+        deliveries = [{ id: 500, producao_id: 1, categoria: 'outro', titulo: 'Rough antiga', etapa_id: 32, bpm: null, tonalidade: null,
+            creditos_adicionais: [], observacao: null, arquivo_principal: packageFile(904, 'rough-old.mp3', 'audio/mpeg'),
+            wav_arquivo: null, multitrack_arquivo: null, multitrack_disponivel: false, licenca_arquivo: null,
+            bloqueado_pagamento: false, created_at: new Date(Date.now() - 86400000).toISOString() },
+        { id: 502, producao_id: 1, categoria: 'outro', titulo: 'Rough nova', etapa_id: 32, bpm: null, tonalidade: null,
+            creditos_adicionais: [], observacao: null, arquivo_principal: packageFile(905, 'rough-new.mp3', 'audio/mpeg'),
+            wav_arquivo: null, multitrack_arquivo: null, multitrack_disponivel: false, licenca_arquivo: null,
+            bloqueado_pagamento: false, created_at: new Date().toISOString() },
+        { id: 501, producao_id: 1, categoria: 'instrumental', titulo: 'Beat final', etapa_id: null, bpm: 90, tonalidade: 'Am',
             creditos_adicionais: ['Melodista Um'], observacao: null, arquivo_principal: packageFile(901, 'final.mp3', 'audio/mpeg'),
             wav_arquivo: packageFile(902, 'final.wav', 'audio/wav'), multitrack_arquivo: null, multitrack_disponivel: true,
             licenca_arquivo: packageFile(903, 'licenca.pdf', 'application/pdf'), bloqueado_pagamento: false, created_at: new Date().toISOString() }];
         await page.reload();
         const deliveryCard = page.locator('.final-delivery-card').filter({ hasText: 'Beat final' });
         await deliveryCard.waitFor();
+        // Headings scrolled under the fixed header stay behind it.
+        const covered = await page.evaluate(() => {
+            const heading = [...document.querySelectorAll('.final-delivery-card h3')].find(item => item.textContent === 'Beat final');
+            const header = document.querySelector('.producer-brand').getBoundingClientRect();
+            window.scrollBy(0, heading.getBoundingClientRect().top - header.height / 2);
+            const box = heading.getBoundingClientRect();
+            const top = document.elementFromPoint(box.left + 10, header.height / 2);
+            return Boolean(top && !heading.contains(top) && top.closest('.producer-sidebar'));
+        });
+        assert.equal(covered, true, 'the header must paint above headings in the content');
+        // Final deliveries per stage, apart from previews: the newest of a stage is the final one.
+        const finals = page.locator('.final-deliveries');
+        assert.deepEqual(await finals.locator(':scope > .final-delivery-list > .final-delivery-card h3').allTextContents(), ['Rough nova', 'Beat final']);
+        assert.match(await finals.locator('.final-deliveries__older summary').textContent(), /Versões anteriores \(1\)/);
+        assert.match(await finals.locator('.final-delivery-card').filter({ hasText: 'Rough nova' }).locator('.final-delivery-card__stage').textContent(), /Rough/);
+        assert.equal(await finals.locator('.final-delivery-card').filter({ hasText: 'Beat final' }).locator('.final-delivery-card__stage').textContent(), 'Entrega geral');
         await deliveryCard.getByRole('button', { name: 'Editar entrega Beat final' }).click();
         const deliveryForm = deliveryCard.getByRole('form', { name: 'Editar entrega Beat final' });
         assert.equal(await deliveryForm.getByLabel('BPM').inputValue(), '90');
@@ -453,14 +478,14 @@ async function staticResponse(route) {
         await deliveryForm.getByRole('button', { name: 'Salvar alterações' }).click();
         await page.waitForFunction(() => document.querySelector('.producer-alert, #producer-alert')?.textContent.includes('Entrega atualizada.'));
         assert.deepEqual(deliveryEdits, [{ bpm: 92, creditos_adicionais: ['Melodista Um', 'Programador Dois'] }]);
-        assert.match(await page.locator('.final-delivery-card').first().textContent(), /92 BPM · Am/);
+        assert.match(await page.locator('.final-delivery-card').filter({ hasText: 'Beat final' }).textContent(), /92 BPM · Am/);
         // Deleting the whole delivery asks first.
         page.once('dialog', dialog => dialog.dismiss());
         await page.getByRole('button', { name: 'Excluir entrega Beat final' }).click();
         assert.deepEqual(deliveryDeletes, []);
         page.once('dialog', dialog => dialog.accept());
         await page.getByRole('button', { name: 'Excluir entrega Beat final' }).click();
-        await page.waitForFunction(() => !document.querySelector('.final-delivery-card'));
+        await page.waitForFunction(() => ![...document.querySelectorAll('.final-delivery-card h3')].some(title => title.textContent === 'Beat final'));
         assert.deepEqual(deliveryDeletes, [501]);
         deliveries = [];
         await page.reload();
