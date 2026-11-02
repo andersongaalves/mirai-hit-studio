@@ -57,6 +57,13 @@ class CrossOriginDownloadContractTests(unittest.TestCase):
         assert as_json == 421, as_json
         login_form = direct.post('/auth/login', files={'x': ('a.bin', b'a')}).status_code
         assert login_form == 421, login_form
+        # Pages of the site itself (an older copy cached in a browser) still work there.
+        from core.config import settings
+        site = settings.ALLOWED_ORIGINS.split(',')[0].strip()
+        cached_page = direct.get('/servicos', headers={'Origin': site}).status_code
+        assert cached_page == 200, cached_page
+        other_site = direct.get('/servicos', headers={'Origin': 'https://example.com'}).status_code
+        assert other_site == 421, other_site
         preflight = direct.options('/portal/produtor/beats', headers={
             'Origin': 'http://localhost', 'Access-Control-Request-Method': 'POST'})
         assert preflight.status_code != 421, (preflight.status_code, preflight.text)
