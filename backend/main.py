@@ -21,6 +21,7 @@ from routers.combos import router as combos_router
 from routers.comparativo import router as comparativo_router
 from routers.portal_popups import router as portal_popups_router
 from routers.arquivos_admin import router as arquivos_admin_router
+from routers.marketing import router as marketing_router
 from routers.config import router as config_router
 from routers.cotas_arquivo import router as cotas_arquivo_router
 from routers.credito_alocacao import router as credito_alocacao_router
@@ -127,6 +128,7 @@ app.include_router(beats_router)
 app.include_router(comparativo_router)
 app.include_router(portal_popups_router)
 app.include_router(arquivos_admin_router)
+app.include_router(marketing_router)
 
 
 @app.get("/")
