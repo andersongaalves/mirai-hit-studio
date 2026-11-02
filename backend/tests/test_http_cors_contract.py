@@ -50,9 +50,13 @@ class CrossOriginDownloadContractTests(unittest.TestCase):
                              ('POST', '/portal/produtor/producoes/1/arquivos')):
             status = direct.request(method, path, files={'x': ('a.bin', b'a')}).status_code
             assert status != 421, (method, path, status)
-        # A form route under another method is not opened by accident.
+        # Only multipart bodies to write methods pass: not reads, deletes, JSON, nor sign-in.
         removed = direct.delete('/portal/produtor/beats/1').status_code
         assert removed == 421, removed
+        as_json = direct.post('/portal/produtor/beats', json={'titulo': 'x'}).status_code
+        assert as_json == 421, as_json
+        login_form = direct.post('/auth/login', files={'x': ('a.bin', b'a')}).status_code
+        assert login_form == 421, login_form
         preflight = direct.options('/portal/produtor/beats', headers={
             'Origin': 'http://localhost', 'Access-Control-Request-Method': 'POST'})
         assert preflight.status_code != 421, (preflight.status_code, preflight.text)

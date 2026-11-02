@@ -5,34 +5,23 @@ accepts what cannot go through Cloudflare (file uploads above its 100 MB body li
 what external parties may still call there (health checks, signed webhooks, the
 unsubscribe link of newsletters already sent).
 """
-from fastapi import params
-from starlette.routing import Match
-
 DIRECT_SUFFIX = ".onrender.com"
 ALWAYS_ALLOWED = ("/health",)
 ALLOWED_PREFIXES = ("/webhooks/", "/newsletter/unsubscribe")
+# Sign-in and account routes always go through Cloudflare's rate limiting.
+NEVER_DIRECT = ("/auth/",)
+UPLOAD_METHODS = ("POST", "PUT", "PATCH")
 MESSAGE = "Use https://api.miraihitstudio.com.br."
-
-_upload_routes = None
-
-
-def _has_file(dependant):
-    if any(isinstance(field.field_info, params.Form) for field in dependant.body_params):
-        return True
-    return any(_has_file(sub) for sub in dependant.dependencies)
-
-
-def upload_routes(app):
-    """Routes that take form bodies (multipart uploads; File is a Form), computed once."""
-    global _upload_routes
-    if _upload_routes is None:
-        _upload_routes = [route for route in app.routes
-                          if getattr(route, "dependant", None) is not None and _has_file(route.dependant)]
-    return _upload_routes
 
 
 def is_direct(host):
     return (host or "").split(":", 1)[0].lower().endswith(DIRECT_SUFFIX)
+
+
+def is_upload(request):
+    """A file upload: a multipart body sent to a write method (only upload routes read it)."""
+    content_type = request.headers.get("content-type", "").lower()
+    return request.method in UPLOAD_METHODS and content_type.startswith("multipart/form-data")
 
 
 def allowed(request):
@@ -44,8 +33,6 @@ def allowed(request):
         return True
     if path.startswith(ALLOWED_PREFIXES):
         return True
-    for route in upload_routes(request.app):
-        match, _ = route.matches(request.scope)
-        if match == Match.FULL:
-            return True
-    return False
+    if path.startswith(NEVER_DIRECT):
+        return False
+    return is_upload(request)
