@@ -123,3 +123,18 @@ def reprocessar(arquivo_id: int, db: Db, user=Depends(require_admin)):
         db.commit()
         service.sinalizar_fila()
     return {"estado": job.estado}
+
+
+# Regenerate every tagged preview of the site, in the background queue.
+@router.get("/admin/audio-tag/previas/lote")
+def lote_atual(db: Db, user=Depends(require_admin)):
+    from services import previa_lote_service
+
+    return {"lote": previa_lote_service.atual(db)}
+
+
+@router.post("/admin/audio-tag/previas/lote", status_code=202)
+def iniciar_lote(request: Request, db: Db, user=Depends(require_admin)):
+    from services import previa_lote_service
+
+    return {"lote": previa_lote_service.iniciar(db, user, request_id=getattr(request.state, "request_id", None))}

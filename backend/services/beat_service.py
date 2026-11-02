@@ -716,12 +716,9 @@ def producer_delete(db, beat_id, actor):
             logger.warning("beat_cover_delete_failed beat_id=%s", beat_id)
 
 
-def regenerar_previa(db, beat_id, actor):
-    """Admin: mix the beat's original again with its producer's tag (own, else the studio's)
-    and the current settings; the new tagged MP3 replaces the previous one."""
-    model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
-    if model is None:
-        raise HTTPException(404, "Beat nao encontrado.")
+def _remixar(db, model, *, actor=None):
+    """Mix the beat's original again with its producer's tag (own, else the studio's) and the
+    current settings; the new tagged MP3 replaces the previous one. Raises HTTPException."""
     tag, profile = _tag(db, model.produtor_id)
     storage = new_production_file_storage("previa")
     try:
@@ -736,7 +733,7 @@ def regenerar_previa(db, beat_id, actor):
             **audio_tag_service.level_values(profile),
         )
     except Exception:
-        logger.warning("beat_preview_regenerate_failed beat_id=%s", beat_id)
+        logger.warning("beat_preview_regenerate_failed beat_id=%s", model.id)
         raise HTTPException(503, "Nao foi possivel gerar a previa agora.") from None
     new_ref = storage.save(tagged, "audio/mpeg")
     old_refs = {ref for ref in (model.mp3_ref, model.preview_ref) if ref and ref != model.original_ref}
@@ -745,8 +742,11 @@ def regenerar_previa(db, beat_id, actor):
             model.mp3_ref = new_ref
         model.preview_ref = new_ref
         model.preview_sha256 = hashlib.sha256(tagged).hexdigest()
-        audit_service.record(db, actor=actor, action="beat.preview_regenerated", entity_type="beat", entity_id=beat_id,
-                             metadata={"tag_id": tag.id})
+        if model.previa_estado == "pendente":
+            model.previa_estado = "pronto"
+        if actor is not None:
+            audit_service.record(db, actor=actor, action="beat.preview_regenerated", entity_type="beat",
+                                 entity_id=model.id, metadata={"tag_id": tag.id})
         db.commit()
         db.refresh(model)
     except Exception:
@@ -760,8 +760,38 @@ def regenerar_previa(db, beat_id, actor):
         try:
             storage.delete(reference)
         except ProducaoArquivoStorageError:
-            logger.warning("beat_preview_old_cleanup_failed beat_id=%s", beat_id)
+            logger.warning("beat_preview_old_cleanup_failed beat_id=%s", model.id)
+    return model
+
+
+def regenerar_previa(db, beat_id, actor):
+    """Admin: mix the beat's original again with its producer's tag (own, else the studio's)
+    and the current settings; the new tagged MP3 replaces the previous one."""
+    model = db.scalar(select(BeatModel).where(BeatModel.id == beat_id).with_for_update())
+    if model is None:
+        raise HTTPException(404, "Beat nao encontrado.")
+    _remixar(db, model, actor=actor)
     return _response(db, model, include_base=True)
+
+
+def processar_previa_em_fila(session_factory):
+    """Worker: regenerate one queued beat preview (one per idle tick). False when none."""
+    with session_factory() as db:
+        model = db.scalar(select(BeatModel).where(BeatModel.previa_estado == "pendente")
+                          .order_by(BeatModel.id).with_for_update(skip_locked=True).limit(1))
+        if model is None:
+            return False
+        beat_id = model.id
+        try:
+            _remixar(db, model)
+        except Exception:  # noqa: BLE001 - one broken beat must not stop the queue.
+            db.rollback()
+            failed = db.get(BeatModel, beat_id)
+            if failed is not None and failed.previa_estado == "pendente":
+                failed.previa_estado = "erro"
+                db.commit()
+            logger.warning("beat_preview_queue_failed beat_id=%s", beat_id)
+        return True
 
 
 def preview(db, beat_id, actor):

@@ -1,4 +1,6 @@
 import { authFetch } from "../admin/auth.js";
+import { activityItem } from "./activity_item.js";
+import { confirmarAcao } from "./confirm_dialog.js";
 import { enqueueUpload } from "./upload_tasks.js";
 
 const roots = new Set();
@@ -145,6 +147,87 @@ async function previewGenerator(root, form, feedback) {
     });
 }
 
+// Admin: regenerate every tagged preview of the site in the background queue, with progress.
+const batchTimers = new WeakMap();
+
+function batchItem(lote) {
+    let detail = `${lote.concluidos} de ${lote.total} prontas`;
+    if (lote.erros) detail += ` · ${lote.erros} com erro`;
+    if (lote.sem_tag) detail += ` · ${lote.sem_tag} sem tag cadastrada`;
+    return {
+        id: `lote:${lote.id}`,
+        titulo: lote.em_andamento ? "Gerando todas as prévias de novo" : "Última geração concluída",
+        detalhe: detail,
+        estado: lote.em_andamento ? "processando" : lote.erros ? "erro" : "concluido",
+        mensagem: lote.em_andamento ? `${Math.round(lote.progresso * 100)}% · uma por vez, sem pesar no site` : undefined,
+        progresso: lote.progresso,
+        criado_em: lote.created_at,
+        concluido_em: lote.concluido_em,
+        icone: "audio",
+    };
+}
+
+async function batchPanel(root, serial) {
+    const panel = node("section", "", "audio-tag-batch");
+    panel.setAttribute("aria-labelledby", "audio-tag-batch-title");
+    const title = node("h3", "Gerar todas as prévias de novo");
+    title.id = "audio-tag-batch-title";
+    const help = node("p", "Refaz as prévias com tag de todas as produções e beats com a tag do produtor responsável e o nivelamento atual. Roda em fila, uma por vez, quando o servidor está livre; enquanto isso a prévia antiga continua tocando.");
+    const status = node("ul", "", "activity-list");
+    status.setAttribute("aria-live", "polite");
+    const start = node("button", "Gerar todas as prévias de novo", "btn-outline");
+    start.type = "button";
+    const feedback = node("p");
+    feedback.setAttribute("role", "status");
+    panel.append(title, help, status, start, feedback);
+    root.append(panel);
+    const alive = () => root.isConnected && root.dataset.serial === serial;
+    const show = lote => {
+        status.replaceChildren(...(lote ? [activityItem(batchItem(lote))] : []));
+        start.disabled = Boolean(lote?.em_andamento);
+        start.textContent = lote?.em_andamento ? "Geração em andamento" : "Gerar todas as prévias de novo";
+        clearTimeout(batchTimers.get(root));
+        if (lote?.em_andamento && alive()) batchTimers.set(root, setTimeout(refresh, 4000));
+    };
+    async function refresh() {
+        if (!alive()) return;
+        try {
+            const body = await data(await authFetch("/admin/audio-tag/previas/lote"));
+            if (alive()) show(body.lote);
+        } catch (error) {
+            if (alive()) feedback.textContent = error.message;
+        }
+    }
+    start.onclick = async () => {
+        const confirmed = await confirmarAcao({
+            titulo: "Gerar todas as prévias do site de novo?",
+            mensagem: "Cada prévia com tag de produção e de beat é refeita com a tag do produtor responsável e o nivelamento atual.",
+            consequencias: [
+                "Roda em fila, uma por vez, só quando o servidor está livre: os envios novos passam na frente.",
+                "A prévia antiga continua tocando até a nova ficar pronta e então é substituída.",
+                "Clientes não recebem aviso de prévia nova por causa disso.",
+            ],
+            palavra: "GERAR",
+            botao: "Gerar todas",
+            tom: "aviso",
+        });
+        if (!confirmed) return;
+        start.disabled = true;
+        feedback.textContent = "";
+        try {
+            const body = await data(await authFetch("/admin/audio-tag/previas/lote", { method: "POST" }));
+            if (!alive()) return;
+            show(body.lote);
+            feedback.textContent = body.lote.total ? `${body.lote.total} prévias na fila.` : "Nenhuma prévia para gerar.";
+            document.dispatchEvent(new CustomEvent("mirai:activities-refresh"));
+        } catch (error) {
+            feedback.textContent = error.message;
+            start.disabled = false;
+        }
+    };
+    await refresh();
+}
+
 export async function loadAudioTag(root, { admin = false } = {}) {
     if (!root) return;
     roots.add(root);
@@ -232,6 +315,7 @@ export async function loadAudioTag(root, { admin = false } = {}) {
             settingsContent.append(form);
             root.append(disclosure("Editar nivelamento", settingsContent, "audio-tag-settings-disclosure"));
             await previewGenerator(root, form, feedback);
+            await batchPanel(root, serial);
         }
     } catch (error) {
         if (root.dataset.serial !== serial) return;

@@ -400,8 +400,10 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
     arquivo_id, key = None, None
     with session_factory() as db:
         try:
+            # New uploads first; a "regenerate every preview" batch only uses the idle time.
             job = db.scalar(select(PreviaTagJobModel).where(PreviaTagJobModel.estado == "pendente")
-                            .order_by(PreviaTagJobModel.arquivo_id).with_for_update(skip_locked=True).limit(1))
+                            .order_by(PreviaTagJobModel.lote_id.is_not(None), PreviaTagJobModel.arquivo_id)
+                            .with_for_update(skip_locked=True).limit(1))
             if job is None:
                 return False
             arquivo_id = job.arquivo_id
@@ -425,7 +427,9 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
             previous_key = job.object_key
             job.object_key, job.sha256, job.tamanho_bytes = key, hashlib.sha256(content).hexdigest(), len(content)
             job.estado, job.concluido_em = "pronto", datetime.now(timezone.utc)
-            portal_notificacao_service.arquivo_compartilhado(db, model)
+            # A regenerated preview is the same file for the client: no new "preview sent" notice.
+            if not previous_key:
+                portal_notificacao_service.arquivo_compartilhado(db, model)
             db.commit()
             if previous_key and previous_key != key:
                 try:
@@ -452,17 +456,37 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
                         logger.error("audio_tag_compensation_failed file_id=%s", arquivo_id)
                 if job is not None and job.estado == "pendente":
                     job.estado = "erro"
+                    in_batch = job.lote_id is not None
                     try:
                         # AUD6-S08-002: the studio hears about the failure; the job state never depends on it.
                         with db.begin_nested():
                             failed = db.get(ProducaoArquivoModel, arquivo_id)
-                            if failed is not None:
+                            # Batch failures are counted on the batch instead of one notice each.
+                            if failed is not None and not in_batch:
                                 portal_notificacao_service.falha_tag(db, failed)
                     except Exception:
                         logger.warning("audio_tag_failure_notice_failed file_id=%s", arquivo_id)
                     db.commit()
                 logger.warning("audio_tag_processing_failed file_id=%s", arquivo_id)
             return False
+
+
+def enfileirar_regeneracao(db, job, model, production, *, lote_id=None):
+    """Put a preview's tag job back in the queue with the responsible producer's tag and the
+    current studio settings. Returns the tag owner id, or False when no tag exists."""
+    owner = dono_da_tag(db, production, model.etapa_id)
+    tag_id, studio = tag_para(db, owner)
+    if not tag_id:
+        return False
+    job.tag_id = tag_id
+    job.intervalo_segundos = studio.intervalo_segundos if studio else 10
+    job.volume_percentual = studio.volume_percentual if studio else 40
+    for key, value in level_values(studio).items():
+        setattr(job, key, value)
+    job.estado = "pendente"
+    job.concluido_em = None
+    job.lote_id = lote_id
+    return owner
 
 
 def regenerar_previa(db, *, arquivo_id, actor, request_id=None):
@@ -479,17 +503,10 @@ def regenerar_previa(db, *, arquivo_id, actor, request_id=None):
     if job.estado == "pendente":
         return job
     production = db.get(ProducaoModel, model.producao_id)
-    owner = dono_da_tag(db, production, model.etapa_id)
-    tag_id, studio = tag_para(db, owner)
-    if not tag_id:
+    owner = enfileirar_regeneracao(db, job, model, production)
+    if owner is False:
         raise HTTPException(409, "Cadastre a tag do produtor ou a tag padrao antes de gerar a previa.")
-    job.tag_id = tag_id
-    job.intervalo_segundos = studio.intervalo_segundos if studio else 10
-    job.volume_percentual = studio.volume_percentual if studio else 40
-    for key, value in level_values(studio).items():
-        setattr(job, key, value)
-    job.estado = "pendente"
-    job.concluido_em = None
+    tag_id = job.tag_id
     audit_service.record(db, actor=actor, action="audio_tag.preview_regenerated", entity_type="production_file",
                          entity_id=arquivo_id, metadata={"tag_id": tag_id, "tag_owner_id": owner},
                          request_id=request_id)

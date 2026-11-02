@@ -167,10 +167,18 @@ async def startup():
             try:
                 processed = await asyncio.to_thread(processar_um, SessionLocal)
                 if not processed:
+                    # Idle: a beat preview queued by "regenerate every preview".
+                    from services.beat_service import processar_previa_em_fila
+
+                    processed = await asyncio.to_thread(processar_previa_em_fila, SessionLocal)
+                if not processed:
                     # Idle: compress one preview of a delivered production (saves storage).
                     from services.arquivos_admin_service import comprimir_uma
 
                     processed = await asyncio.to_thread(comprimir_uma, SessionLocal)
+                from services.previa_lote_service import fechar_concluidos
+
+                await asyncio.to_thread(fechar_concluidos, SessionLocal)
             except Exception:
                 logger.warning("audio_tag_worker_unavailable")
                 processed = False

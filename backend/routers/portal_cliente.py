@@ -72,7 +72,8 @@ def _file_error(exc):
 
 def _client_file(model, user_id, entrega_bloqueada=False):
     job = getattr(model, "tag_processamento", None)
-    ready = job is not None and job.estado == "pronto"
+    # A queued regeneration keeps the previous tagged version available to the client.
+    ready = job is not None and (job.estado == "pronto" or job.disponivel)
     return {
         "id": model.id,
         "producao_id": model.producao_id,
@@ -81,7 +82,7 @@ def _client_file(model, user_id, entrega_bloqueada=False):
         "mime_type": "audio/mpeg" if ready else model.mime_type,
         "tamanho_bytes": job.tamanho_bytes if ready else model.tamanho_bytes,
         "sha256": job.sha256 if ready else model.sha256,
-        "processamento_tag": job.estado if job is not None else None,
+        "processamento_tag": ("pronto" if ready else job.estado) if job is not None else None,
         "grupo_versao": model.grupo_versao,
         "versao": model.versao,
         "substitui_arquivo_id": model.substitui_arquivo_id,

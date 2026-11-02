@@ -294,6 +294,84 @@ class AudioTagTests(unittest.TestCase):
             assert first_key in storage.deleted and first_key not in storage.objects
         ''')
 
+    def test_admin_regenerates_every_preview_in_a_queue_without_breaking_playback(self):
+        self.run_case('''
+            from models import PortalNotificacaoModel, PreviaLoteModel
+            from routers.portal_notificacoes import admin_router as admin_notices, router as notices
+            from services import beat_service, previa_lote_service
+            app.include_router(notices)
+            app.include_router(admin_notices)
+            with Session(engine) as db:
+                admin = db.get(UsuarioModel, 1)
+                tags.salvar(db, actor=admin, chave='studio', data=wav(), filename='studio.wav', mime_type='audio/wav', versao=0)
+                ids = []
+                for name in ('a.wav', 'b.wav'):
+                    sent = files.upload(db, production=db.get(ProducaoModel, 1), actor=admin, file_type='previa', filename=name,
+                        mime_type='audio/wav', data=wav(), visible_to_client=True, visible_to_producer=True, storage=storage)
+                    ids.append(sent.id)
+            for _ in ids:
+                assert tags.processar_um(session_factory, storage=storage, renderer=lambda *args, **kwargs: b'tagged-1')
+            def client_notices():
+                with Session(engine) as db:
+                    return db.query(PortalNotificacaoModel).filter_by(tipo='nova_previa', papel='cliente').count()
+            before = client_notices()
+            async def start():
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
+                    assert (await api.post('/admin/audio-tag/previas/lote', headers=bearer('producer-a'))).status_code == 403
+                    assert (await api.get('/admin/audio-tag/previas/lote', headers=bearer('admin'))).json() == {'lote': None}
+                    started = await api.post('/admin/audio-tag/previas/lote', headers=bearer('admin'))
+                    assert started.status_code == 202, started.text
+                    lote = started.json()['lote']
+                    assert lote['total'] == 2 and lote['pendentes'] == 2 and lote['em_andamento'] and lote['progresso'] == 0
+                    # One batch at a time.
+                    assert (await api.post('/admin/audio-tag/previas/lote', headers=bearer('admin'))).status_code == 409
+                    activity = (await api.get('/admin/notificacoes/atividades', headers=bearer('admin'))).json()
+                    batch = [item for item in activity['itens'] if item['tipo'] == 'lote_previas']
+                    assert batch and batch[0]['estado'] == 'processando' and batch[0]['detalhe'].startswith('0 de 2'), activity
+                    assert activity['ativas'] >= 1
+                    # Batch items are the Admin's business: the producer's list stays clean.
+                    mine = (await api.get('/portal/notificacoes/atividades', headers=bearer('producer-a'))).json()
+                    assert all(not item['id'].startswith('previa:') or 'fila' not in item['titulo'] for item in mine['itens']), mine
+                    assert (await api.get('/portal/notificacoes/atividades', headers=bearer('client-a'))).json() == {'itens': [], 'ativas': 0}
+            asyncio.run(start())
+            # While queued the previous tagged version keeps playing for the client.
+            with Session(engine) as db:
+                model = db.get(ProducaoArquivoModel, ids[0])
+                assert model.tag_processamento.estado == 'pendente'
+                assert files.read(model, storage=storage, client=True) == b'tagged-1'
+                # A new upload jumps ahead of the batch.
+                fresh = files.upload(db, production=db.get(ProducaoModel, 1), actor=db.get(UsuarioModel, 1), file_type='previa',
+                    filename='new.wav', mime_type='audio/wav', data=wav(), visible_to_client=True, visible_to_producer=True,
+                    storage=storage)
+                fresh_id = fresh.id
+            assert tags.processar_um(session_factory, storage=storage, renderer=lambda *args, **kwargs: b'fresh')
+            with Session(engine) as db:
+                assert db.get(PreviaTagJobModel, fresh_id).estado == 'pronto'
+                assert all(db.get(PreviaTagJobModel, item).estado == 'pendente' for item in ids)
+            for _ in ids:
+                assert tags.processar_um(session_factory, storage=storage, renderer=lambda *args, **kwargs: b'tagged-2')
+            assert not tags.processar_um(session_factory, storage=storage)
+            assert not beat_service.processar_previa_em_fila(session_factory)
+            previa_lote_service.fechar_concluidos(session_factory)
+            with Session(engine) as db:
+                for item in ids:
+                    job = db.get(PreviaTagJobModel, item)
+                    assert job.estado == 'pronto' and storage.objects[job.object_key] == b'tagged-2'
+                summary = previa_lote_service.atual(db)
+                assert summary['concluidos'] == 2 and not summary['em_andamento'] and summary['progresso'] == 1.0
+                assert db.query(PreviaLoteModel).count() == 1
+            # Only the brand-new upload told the client about a preview; regenerations did not.
+            assert client_notices() == before + 1
+            # Notifications carry what they are about (production and file) for the panel.
+            from services import portal_notificacao_service
+            with Session(engine) as db:
+                client = db.query(UsuarioModel).filter_by(username='client-a').one()
+                page = portal_notificacao_service.listar(db, client)
+                previews = [item for item in page['itens'] if item['tipo'] == 'nova_previa']
+                assert previews and all(item['contexto'].startswith('#1 ') for item in previews), page
+                assert any(item['contexto'].endswith('new.wav') for item in previews), page
+        ''')
+
     def test_admin_preview_generator_uses_selected_tag_and_controls(self):
         self.run_case('''
             with Session(engine) as db:
@@ -492,7 +570,7 @@ class AudioTagTests(unittest.TestCase):
     def test_additive_migration_roundtrip(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
-assert bootstrap(engine) == 'e3a5c7e9b1d4'
+assert bootstrap(engine) == 'f4b6d8a0c2e3'
 assert 'audio_tags' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'd7f9a1c3e568')
 assert 'audio_tags' not in inspect(engine).get_table_names()

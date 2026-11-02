@@ -366,7 +366,8 @@ def read(model, storage=None, *, client=False, versao=None):
         job = tag_job if client else None
     if client and versao is None and getattr(model, "original_restrito", False) and job is None:
         raise ProducaoArquivoUnavailable("Previa em processamento.")
-    if job is not None and job.estado != "pronto":
+    # While a regeneration is queued the previous tagged version keeps playing.
+    if job is not None and job.estado != "pronto" and not job.disponivel:
         raise ProducaoArquivoUnavailable("Previa em processamento. Tente novamente em instantes.")
     key = job.object_key if job is not None else model.object_key
     checksum = job.sha256 if job is not None else model.sha256

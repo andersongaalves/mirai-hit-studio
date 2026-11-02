@@ -94,9 +94,33 @@ class PreviaTagJobModel(Base):
     visivel_cliente = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     concluido_em = Column(DateTime(timezone=True), nullable=True)
+    # Set while this job belongs to a "regenerate every preview" batch.
+    lote_id = Column(Integer, ForeignKey("previa_lotes.id", ondelete="SET NULL", use_alter=True,
+                                         name="fk_previa_tag_jobs_lote"), nullable=True, index=True)
+
+    @property
+    def disponivel(self):
+        """A tagged version can be served: the current one, or the previous one while a
+        regeneration is queued (the worker swaps it only once the new one is ready)."""
+        return bool(self.object_key and self.sha256 and self.tamanho_bytes)
 
 
-for table in (AudioTagModel.__table__, AudioTagPerfilModel.__table__, PreviaTagJobModel.__table__):
+class PreviaLoteModel(Base):
+    """One "regenerate every preview" request from the Admin; progress is counted live."""
+
+    __tablename__ = "previa_lotes"
+    __table_args__ = (CheckConstraint("total >= 0 AND sem_tag >= 0", name="ck_previa_lotes_contagens"),)
+
+    id = Column(Integer, primary_key=True)
+    autor_usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    total = Column(Integer, nullable=False, default=0, server_default="0")
+    sem_tag = Column(Integer, nullable=False, default=0, server_default="0")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    concluido_em = Column(DateTime(timezone=True), nullable=True)
+
+
+for table in (AudioTagModel.__table__, AudioTagPerfilModel.__table__, PreviaTagJobModel.__table__,
+              PreviaLoteModel.__table__):
     event.listen(table, "after_create", DDL(
         "ALTER TABLE %(fullname)s ENABLE ROW LEVEL SECURITY"
     ).execute_if(dialect="postgresql"))
