@@ -1,11 +1,10 @@
 """Contract stages of a production (Roadmap 3.0, 5.06)."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request
-from sqlalchemy.orm import Session
-
 from core.dependencies import require_admin, require_client, require_producer
 from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from pydantic import BaseModel, ConfigDict, Field
 from schemas.producao_etapa import (
     EtapaAdminUpdate,
     EtapaAtribuicaoResponse,
@@ -14,6 +13,7 @@ from schemas.producao_etapa import (
     EtapaStatusUpdate,
 )
 from services import producao_etapa_service as service
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Etapas da producao"])
 Db = Annotated[Session, Depends(get_db)]
@@ -109,6 +109,24 @@ def admin_assign_stage(producao_id: IdPath, etapa_id: IdPath, dados: EtapaRespon
             request_id=_request_id(request),
         )
     except service.EtapaError as exc:
+        raise _error(exc) from None
+
+
+class EtapaExclusao(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    motivo: str = Field(min_length=3, max_length=300)
+
+
+@router.delete("/producoes/{producao_id}/etapas-contratuais/{etapa_id}", response_model=EtapasProducaoResponse)
+def admin_delete_stage(producao_id: IdPath, etapa_id: IdPath, dados: EtapaExclusao, request: Request,
+                       db: Db, user=Depends(require_admin)):
+    try:
+        producao = service.producao_para(db, "admin", producao_id, user)
+        return service.excluir(db, producao, etapa_id, usuario=user, motivo=dados.motivo,
+                               request_id=_request_id(request))
+    except service.EtapaError as exc:
+        db.rollback()
         raise _error(exc) from None
 
 

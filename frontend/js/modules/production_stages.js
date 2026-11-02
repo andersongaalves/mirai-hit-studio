@@ -61,7 +61,7 @@ function money(value) {
  */
 export function stagesPanel({
     role, data, error = "", heading = true, onChange, onDeadline, onGenerate,
-    producers = [], onAssign, onHistory, onSelect,
+    producers = [], onAssign, onHistory, onSelect, onDelete,
 }) {
     const stages = data?.etapas ?? [];
     const panel = element("section", "production-stages");
@@ -169,7 +169,7 @@ export function stagesPanel({
 
         const actions = Array.isArray(stage.acoes) ? stage.acoes : [];
         if (role === "produtor" && stage.minha) item.classList.add("production-stage--mine");
-        if ((actions.length && onChange) || (role === "admin" && (onDeadline || onAssign))) {
+        if ((actions.length && onChange) || (role === "admin" && (onDeadline || onAssign || onDelete))) {
             const controls = element("div", "production-stage__actions");
             actions.forEach(destino => {
                 const button = element("button", destino === "concluida" ? "btn-cta" : "btn-outline", actionLabel(stage.status, destino));
@@ -288,6 +288,25 @@ export function stagesPanel({
                 } else {
                     controls.append(assign);
                 }
+            }
+            if (role === "admin" && onDelete) {
+                // Removes the stage from this production's contract; asks first, with a reason.
+                const remove = element("button", "btn-small btn-danger production-stage__delete", "Excluir etapa");
+                remove.type = "button";
+                remove.setAttribute("aria-label", `Excluir a etapa ${stage.nome}`);
+                remove.addEventListener("click", async () => {
+                    const reason = window.prompt(`Excluir a etapa "${stage.nome}" desta produção? Os arquivos dela passam a ser gerais.\nInforme o motivo:`);
+                    if (!reason?.trim()) return;
+                    remove.disabled = true;
+                    try {
+                        await onDelete(stage, reason.trim());
+                        feedback.textContent = "";
+                    } catch (deleteError) {
+                        feedback.textContent = deleteError.message || "Não foi possível excluir a etapa.";
+                        remove.disabled = false;
+                    }
+                });
+                controls.append(remove);
             }
             item.append(controls);
         }

@@ -146,3 +146,9 @@
 }
 .final-deliveries__older > summary { cursor: pointer; color: var(--integrado-secondary, #a8b3c7); font-weight: 700; padding: 6px 0; }
 .final-deliveries__older .final-delivery-list { margin-top: 12px; opacity: 0.85; }
+.before-after__loudness { margin: 0; color: var(--integrado-secondary, var(--color-text-secondary, #a8b3c7)); font-size: 13px; }
+.before-after__editor { display: grid; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px dashed var(--integrado-border, rgba(255, 255, 255, 0.14)); }
+.before-after__editor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.before-after__editor label { display: grid; gap: 6px; font-weight: 700; font-size: 13px; }
+.before-after__editor select { min-height: 40px; max-width: 100%; }
+.before-after__editor-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }

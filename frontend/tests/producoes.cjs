@@ -56,6 +56,8 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
     const releaseBodies = [];
     const contentRequests = [];
     const regenerated = [];
+    const comparisonPuts = [];
+    let comparisonState = { origem: 'automatica', antes_arquivo_id: null, depois_arquivo_id: null, lufs_antes: -12.5, lufs_depois: -9, ganho_antes_db: 3.5 };
     // Production 3: a Rough Mix preview (tag processed) and the final delivery.
     const finishedFiles = [
         { id: 30, producao_id: 3, tipo: 'previa', nome_exibicao: 'Rough Mix v1.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 2048, versao: 1,
@@ -134,6 +136,16 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         if (regenerate && route.request().method() === 'POST') {
             regenerated.push(Number(regenerate[1]));
             return route.fulfill({ json: { estado: 'pendente' } });
+        }
+        if (url.pathname === '/producoes/3/comparativo') {
+            if (route.request().method() === 'PUT') {
+                comparisonPuts.push(route.request().postDataJSON());
+                const body = route.request().postDataJSON();
+                comparisonState = body.antes_arquivo_id
+                    ? { origem: 'manual', antes_arquivo_id: body.antes_arquivo_id, depois_arquivo_id: body.depois_arquivo_id, lufs_antes: -20, lufs_depois: -9, ganho_antes_db: 11 }
+                    : { origem: 'automatica', antes_arquivo_id: null, depois_arquivo_id: null, lufs_antes: -12.5, lufs_depois: -9, ganho_antes_db: 3.5 };
+            }
+            return route.fulfill({ json: comparisonState });
         }
         if (/^\/producoes\/\d+\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
             contentRequests.push(url.pathname + url.search);
@@ -366,6 +378,21 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         await page.getByRole('button', { name: 'Gerar prévia com tag de novo: Rough Mix v1.mp3' }).click();
         await page.waitForFunction(() => document.body.textContent.includes('substitui a anterior'));
         assert.deepEqual(regenerated, [30]);
+        // Loudness match: the rough plays at the final's integrated loudness.
+        assert.match(await comparison.textContent(), /Volumes igualados pela versão final \(-9,0 LUFS integrados\): a Rough Mix toca com \+3,5 dB/);
+        assert.deepEqual(JSON.parse(await comparison.locator('.file-player').getAttribute('data-ganhos')), { antes: 3.5, depois: 0 });
+        // The Admin chooses the pair: both selects, then back to automatic.
+        await comparison.locator('summary').click();
+        await comparison.getByLabel('Antes (Rough Mix)').selectOption('31');
+        await comparison.getByLabel('Depois (versão final)').selectOption('30');
+        await comparison.getByRole('button', { name: 'Salvar comparativo' }).click();
+        await page.waitForFunction(() => document.querySelector('#prod_antes_depois .file-player__title')?.textContent === 'Rough Mix v1.mp3');
+        assert.deepEqual(comparisonPuts, [{ antes_arquivo_id: 31, depois_arquivo_id: 30 }]);
+        assert.match(await page.locator('#prod_antes_depois').textContent(), /\+11,0 dB/);
+        await page.locator('#prod_antes_depois summary').click();
+        await page.locator('#prod_antes_depois').getByRole('button', { name: 'Voltar ao automático' }).click();
+        await page.waitForFunction(() => document.querySelector('#prod_antes_depois .file-player__title')?.textContent === 'Master final.wav');
+        assert.deepEqual(comparisonPuts.at(-1), { antes_arquivo_id: null, depois_arquivo_id: null });
 
         failList = true;
         await page.evaluate(() => window.productionModule.carregarProducoes());

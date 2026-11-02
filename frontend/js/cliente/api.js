@@ -225,3 +225,14 @@ export async function listarCotas(producaoId) {
         "Não foi possível carregar as cotas de arquivos.",
     );
 }
+
+// Before/after: the studio's choice (if any) and the loudness match for the pair.
+export async function obterComparativo(producaoId, antes, depois) {
+    const query = new URLSearchParams();
+    if (antes) query.set("antes", antes);
+    if (depois) query.set("depois", depois);
+    return responseData(
+        await authFetch(`/portal/cliente/producoes/${producaoId}/comparativo?${query}`),
+        "Não foi possível carregar o comparativo.",
+    );
+}

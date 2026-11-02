@@ -504,3 +504,35 @@ def historico(db: Session, producao: ProducaoModel, etapa_id: int):
         "motivo": linha.motivo,
         "created_at": linha.created_at,
     } for linha in linhas]
+
+
+def excluir(db: Session, producao: ProducaoModel, etapa_id: int, *, usuario, motivo: str, request_id=None):
+    """The Admin removes a stage from the production contract. Files of the stage become
+    general; its responsible history goes with it. Stages with a producer payout or backed
+    by service credits stay (their money trail must not lose its stage)."""
+    from models import ProducaoArquivoModel
+    from models.credito_etapa import CreditoEtapaModel
+
+    motivo = (motivo or "").strip()
+    if len(motivo) < 3:
+        raise EtapaInvalida("Informe o motivo da exclusao da etapa.")
+    etapa = db.get(ProducaoEtapaModel, etapa_id)
+    if etapa is None or etapa.producao_id != producao.id:
+        raise EtapaNaoEncontrada("Etapa nao encontrada.")
+    if db.scalar(select(RepasseEtapaModel.id).where(RepasseEtapaModel.etapa_id == etapa.id)) is not None:
+        raise EtapaConflito("Esta etapa tem repasse ao produtor registrado e nao pode ser excluida.")
+    if db.scalar(select(CreditoEtapaModel.id).where(CreditoEtapaModel.etapa_id == etapa.id)) is not None:
+        raise EtapaConflito("Esta etapa usa creditos de servico do cliente e nao pode ser excluida.")
+    db.query(ProducaoArquivoModel).filter(ProducaoArquivoModel.etapa_id == etapa.id).update(
+        {ProducaoArquivoModel.etapa_id: None}, synchronize_session=False)
+    db.query(ProducaoEtapaAtribuicaoModel).filter(ProducaoEtapaAtribuicaoModel.etapa_id == etapa.id).delete(
+        synchronize_session=False)
+    audit_service.record(
+        db, actor=usuario, action="production.stage_deleted", entity_type="production_stage", entity_id=etapa.id,
+        metadata={"production_id": producao.id, "nome": etapa.nome, "status": etapa.status,
+                  "valor": str(etapa.valor), "motivo": motivo},
+        request_id=request_id,
+    )
+    db.delete(etapa)
+    db.commit()
+    return listar(db, producao, papel="admin", usuario=usuario)
