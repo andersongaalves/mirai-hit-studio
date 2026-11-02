@@ -23,6 +23,7 @@ import { initUso } from "./uso/uso.js";
 import { initFinanceiro } from "./financeiro/financeiro.js";
 import { initInbox } from "./inbox/inbox.js";
 import { initBeats } from "./beats.js";
+import { initAvisos } from "./avisos/avisos.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
@@ -47,6 +48,7 @@ const sectionLoaders = {
     "section-inbox": initInbox,
     "section-beats": initBeats,
     "section-uso": initUso,
+    "section-avisos": initAvisos,
 };
 
 const loadedSections = new Set();

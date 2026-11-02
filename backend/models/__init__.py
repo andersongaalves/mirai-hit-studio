@@ -16,6 +16,7 @@ from .ai_usage import AIUsageEventModel
 from .portal_produtor import ProducaoArquivoModel, ProducaoEntregaFinalModel, RepasseProdutorModel
 from .client_access import AuthRateLimitModel, ClienteAcessoModel
 from .portal_config import PortalConfiguracaoModel
+from .portal_popup import PortalPopupModel, PortalPopupVistoModel
 from .producao_mensagem import ProducaoMensagemModel
 from .servico_etapa import ServicoEtapaModel
 from .producao_etapa import ProducaoEtapaAtribuicaoModel, ProducaoEtapaModel
