@@ -55,6 +55,7 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
     let payout = null;
     const releaseBodies = [];
     const contentRequests = [];
+    const regenerated = [];
     // Production 3: a Rough Mix preview (tag processed) and the final delivery.
     const finishedFiles = [
         { id: 30, producao_id: 3, tipo: 'previa', nome_exibicao: 'Rough Mix v1.mp3', mime_type: 'audio/mpeg', tamanho_bytes: 2048, versao: 1,
@@ -128,6 +129,11 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         if (filesMatch && route.request().method() === 'GET') {
             while (holdFiles && filesMatch[1] === '2') await new Promise(resolve => setTimeout(resolve, 10));
             return route.fulfill({ json: filesMatch[1] === '3' ? finishedFiles : files });
+        }
+        const regenerate = url.pathname.match(/^\/admin\/audio-tag\/previas\/(\d+)\/regenerar$/);
+        if (regenerate && route.request().method() === 'POST') {
+            regenerated.push(Number(regenerate[1]));
+            return route.fulfill({ json: { estado: 'pendente' } });
         }
         if (/^\/producoes\/\d+\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
             contentRequests.push(url.pathname + url.search);
@@ -355,6 +361,11 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         await page.waitForFunction(() => document.querySelector('#prod_antes_depois [aria-pressed="true"]')?.textContent.includes('Antes'));
         await page.waitForTimeout(300);
         assert.ok(contentRequests.includes('/producoes/3/arquivos/30/conteudo?versao=original&ouvir=true'), JSON.stringify(contentRequests));
+        // The tagged preview can be generated again (fixes the tag level); only previews with a tag offer it.
+        assert.equal(await page.getByRole('button', { name: /^Gerar prévia com tag de novo/ }).count(), 1);
+        await page.getByRole('button', { name: 'Gerar prévia com tag de novo: Rough Mix v1.mp3' }).click();
+        await page.waitForFunction(() => document.body.textContent.includes('substitui a anterior'));
+        assert.deepEqual(regenerated, [30]);
 
         failList = true;
         await page.evaluate(() => window.productionModule.carregarProducoes());

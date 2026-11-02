@@ -251,6 +251,19 @@ function beatCard(beat, config) {
         };
         actions.append(button);
     }
+    // New tagged preview from the original, with the producer's tag; replaces the old one.
+    const regenerate = document.createElement("button"); regenerate.type = "button"; regenerate.className = "btn-small";
+    regenerate.textContent = "Gerar prévia com tag de novo";
+    regenerate.setAttribute("aria-label", `Gerar prévia com tag de novo: ${beat.titulo}`);
+    regenerate.onclick = async () => {
+        regenerate.disabled = true;
+        message.textContent = "Gerando a prévia com a tag do produtor...";
+        try {
+            await data(await authFetch(`/admin/beats/${beat.id}/regenerar-previa`, { method: "POST" }));
+            await initBeats();
+        } catch (error) { message.textContent = error.message; regenerate.disabled = false; }
+    };
+    actions.append(regenerate);
     form.append(actions, message);
     content.append(title, meta, audio);
     const licenses = licensesSection(beat, message);

@@ -287,3 +287,12 @@
 .producer-body .portfolio-submission__actions button { width: auto; }
 .producer-body .final-delivery-card__manage { display: flex; flex-wrap: wrap; gap: 8px; }
 .producer-body .final-delivery-card__manage button { width: auto; min-height: 36px; padding: 0 14px; }
+
+/* ---- Profile: CPF for the beat contracts ---- */
+.producer-body #producer-cpf { max-width: 720px; margin-bottom: 24px; }
+.producer-body .producer-cpf { display: grid; gap: 12px; }
+.producer-body .producer-cpf h2 { margin: 0; }
+.producer-body .producer-cpf__status { margin: 0; padding: 10px 14px; border: 1px solid var(--color-warning, #f5b84b); border-radius: var(--radius-sm); color: var(--integrado-primary, var(--color-text-primary)); font: 600 14px/20px var(--font-texto); }
+.producer-body .producer-cpf__status--ok { border-color: var(--color-success, #2fbf71); }
+.producer-body .producer-cpf .portal-field { max-width: 320px; }
+.producer-body .producer-cpf__feedback { flex: 1 1 200px; margin: 0; color: var(--integrado-secondary, var(--color-text-secondary)); font: 400 14px/20px var(--font-texto); }

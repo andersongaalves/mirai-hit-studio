@@ -2,7 +2,7 @@ from typing import Annotated
 
 from core.dependencies import require_admin, require_producer
 from database import get_db
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from models import AudioTagModel, AudioTagPerfilModel, PreviaTagJobModel
 from schemas.audio_tag import AudioTagPreviewRequest, AudioTagSettings
@@ -101,6 +101,13 @@ def falhas(db: Db, user=Depends(require_admin)):
          "producao_titulo": titulo, "created_at": created_at}
         for arquivo_id, created_at, nome, producao_id, titulo in rows
     ]
+
+
+@router.post("/admin/audio-tag/previas/{arquivo_id}/regenerar")
+def regenerar(arquivo_id: int, request: Request, db: Db, user=Depends(require_admin)):
+    job = service.regenerar_previa(db, arquivo_id=arquivo_id, actor=user,
+                                   request_id=getattr(request.state, "request_id", None))
+    return {"estado": job.estado}
 
 
 @router.post("/admin/audio-tag/previas/{arquivo_id}/reprocessar")

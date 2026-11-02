@@ -22,6 +22,11 @@ from schemas.producao_entrega import (
     ProducaoEntregaFinalUpdate,
 )
 from schemas.repasse_produtor import RepasseProdutorResponse
+from schemas.usuario import (
+    PerfilProdutorCpfUpdate,
+    PerfilProdutorResponse,
+    mascarar_cpf,
+)
 from services import (
     audit_service,
     politica_service,
@@ -460,3 +465,36 @@ def baixar_comprovante(
         media_type=model.mime_type,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
     )
+
+
+def _perfil(user):
+    especialidades = [item for item in (user.especialidades or "").split(",") if item]
+    return PerfilProdutorResponse(
+        especialidades=especialidades,
+        beatmaker="beatmaker" in especialidades,
+        cpf_cadastrado=bool(user.cpf),
+        cpf_mascarado=mascarar_cpf(user.cpf),
+    )
+
+
+@router.get("/perfil", response_model=PerfilProdutorResponse)
+def meu_perfil(user: CurrentProducer):
+    return _perfil(user)
+
+
+@router.put("/perfil/cpf", response_model=PerfilProdutorResponse)
+def salvar_cpf(payload: PerfilProdutorCpfUpdate, request: Request, db: Db, user: CurrentProducer):
+    """The producer registers or corrects their own CPF (it appears only in private beat contracts)."""
+    current = db.get(UsuarioModel, user.id)
+    changed = current.cpf != payload.cpf
+    if changed:
+        replaced = bool(current.cpf)
+        current.cpf = payload.cpf
+        # The audit never stores the CPF itself.
+        audit_service.record(
+            db, actor=user, action="user.cpf_set_by_producer", entity_type="user", entity_id=user.id,
+            metadata={"replaced": replaced}, request_id=getattr(request.state, "request_id", None),
+        )
+        db.commit()
+        db.refresh(current)
+    return _perfil(current)
