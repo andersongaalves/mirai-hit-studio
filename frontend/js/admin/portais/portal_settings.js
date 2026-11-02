@@ -46,7 +46,7 @@ const LABELS = {
     },
 };
 
-const state = { portal: "cliente", versao: 0, padrao: null, loaded: false, busy: false };
+const state = { portal: "cliente", versao: 0, padrao: null, loaded: false, busy: false, aviso: null };
 const byId = id => document.getElementById(id);
 
 function node(tag, text = "", className = "") {
@@ -100,15 +100,9 @@ function renderForm(config) {
     const form = byId("portal-settings-form");
     form.replaceChildren();
 
-    const noticeActive = checkbox("aviso.ativo", config.aviso.ativo);
-    const activeLabel = node("label", "", "portal-settings__check");
-    activeLabel.append(noticeActive, document.createTextNode(" Exibir aviso no topo do portal"));
-    form.append(fieldset(
-        "Aviso",
-        activeLabel,
-        field("Tipo", selectControl("aviso.nivel", { info: "Informativo", atencao: "Atenção" }, config.aviso.nivel)),
-        field("Texto do aviso (até 280 caracteres)", textControl("aviso.texto", config.aviso.texto, 280, true)),
-    ));
+    // The notice at the top lives in "Avisos e pop-ups"; publishing here keeps it as it is.
+    state.aviso = config.aviso;
+    form.append(node("p", "O aviso no topo do portal agora fica em Comunicação > Avisos e pop-ups.", "admin-help"));
 
     form.append(fieldset("Textos", ...Object.entries(labels.textos).map(([key, [label, max, multiline]]) => (
         field(label, textControl(`textos.${key}`, config.textos[key], max, multiline))
@@ -141,11 +135,7 @@ function readForm() {
     const form = byId("portal-settings-form");
     const value = name => form.elements.namedItem(name);
     const config = {
-        aviso: {
-            ativo: value("aviso.ativo").checked,
-            nivel: value("aviso.nivel").value,
-            texto: value("aviso.texto").value,
-        },
+        aviso: state.aviso || { ativo: false, nivel: "info", texto: "" },
         textos: Object.fromEntries(Object.keys(labels.textos).map(key => [key, value(`textos.${key}`).value])),
         // Keep the canonical order of the indicators the admin selected.
         indicadores: Object.keys(labels.indicadores).filter(key => (

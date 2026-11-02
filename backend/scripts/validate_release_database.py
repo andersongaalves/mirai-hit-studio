@@ -39,6 +39,8 @@ RLS_TABLES = {
     "previa_tag_jobs",
     "portal_notificacoes",
     "portfolio_envios",
+    "portal_popups",
+    "portal_popup_vistos",
     "projeto_creditos",
     "ai_conversations",
     "ai_messages",

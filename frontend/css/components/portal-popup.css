@@ -1,0 +1,59 @@
+/* Pop-ups sent by the Admin (portals) and their live preview (Admin). */
+.portal-popup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(2, 8, 18, 0.62);
+}
+.portal-popup {
+    --popup-accent: #00d4ff;
+    position: relative;
+    display: grid;
+    gap: 12px;
+    width: min(100%, 380px);
+    padding: 28px 24px 22px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-top: 3px solid var(--popup-accent);
+    border-radius: 10px;
+    background: #0b1626;
+    color: #f4f7fb;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    text-align: left;
+}
+.portal-popup--medio { width: min(100%, 520px); }
+.portal-popup--roxo { --popup-accent: #b066ff; }
+.portal-popup--amarelo { --popup-accent: #f5c542; }
+.portal-popup--verde { --popup-accent: #2fbf71; }
+.portal-popup--vermelho { --popup-accent: #ff6b6b; }
+.portal-popup__close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #a8b3c7;
+    font: 400 26px/1 system-ui, sans-serif;
+    cursor: pointer;
+}
+.portal-popup__close:hover, .portal-popup__close:focus-visible { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.portal-popup__close:focus-visible { outline: 2px solid var(--popup-accent); outline-offset: 1px; }
+.portal-popup__title { margin: 0; padding-right: 28px; color: #fff; font: 700 20px/26px var(--font-titulos, system-ui, sans-serif); text-align: left; }
+.portal-popup__title::after { display: none; }
+.portal-popup__message { margin: 0; color: #d5dce8; font: 400 15px/22px var(--font-texto, system-ui, sans-serif); white-space: pre-line; overflow-wrap: anywhere; }
+.portal-popup__action {
+    justify-self: start;
+    margin-top: 4px;
+    border-color: var(--popup-accent);
+    background: var(--popup-accent);
+    color: #04121a;
+    text-decoration: none;
+}

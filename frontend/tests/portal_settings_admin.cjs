@@ -133,9 +133,9 @@ function current(portal) {
             await page.locator('#admin-config-portals').screenshot({ path: path.join(process.env.VISUAL_OUTPUT, 'portal-settings-1280.png') });
         }
 
-        await form.getByLabel('Exibir aviso no topo do portal').check();
-        await form.locator('[name="aviso.nivel"]').selectOption('atencao');
-        await form.locator('[name="aviso.texto"]').fill('Recesso de 20 a 27/12');
+        // The notice at the top moved to "Avisos e pop-ups"; publishing here keeps it unchanged.
+        assert.equal(await form.locator('[name^="aviso."]').count(), 0);
+        assert.match(await form.textContent(), /Avisos e pop-ups/);
         await form.getByLabel('Projetos concluídos').uncheck();
         await form.locator('[name="filtros.situacao_padrao"]').selectOption('ativos');
         await form.getByLabel('Mostrar a área de propostas').uncheck();
@@ -146,7 +146,7 @@ function current(portal) {
             body: {
                 base_versao: 0,
                 config: {
-                    aviso: { ativo: true, nivel: 'atencao', texto: 'Recesso de 20 a 27/12' },
+                    aviso: DEFAULTS.cliente.aviso,
                     textos: DEFAULTS.cliente.textos,
                     indicadores: ['andamento', 'avaliacao', 'pagamentos'],
                     filtros: { situacao_padrao: 'ativos', ordenacao_padrao: 'recente' },
@@ -165,7 +165,7 @@ function current(portal) {
         await page.getByRole('button', { name: 'Usar valores padrão' }).click();
         forceConflict = true;
         await page.getByRole('button', { name: 'Publicar nova versão' }).click();
-        await page.waitForFunction(() => document.querySelector('#portal-settings-form [name="aviso.texto"]').value === 'Recesso de 20 a 27/12');
+        await page.waitForFunction(() => document.querySelector('#portal-settings-form [name="filtros.situacao_padrao"]').value === 'ativos');
         assert.equal(store.cliente.length, 1);
 
         await page.getByRole('button', { name: 'Usar valores padrão' }).click();

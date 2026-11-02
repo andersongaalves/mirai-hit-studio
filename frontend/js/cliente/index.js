@@ -5,6 +5,7 @@ import { messagesPanel } from "../modules/production_messages.js";
 import { stagesPanel } from "../modules/production_stages.js";
 import { syncUploadHints } from "../modules/file_quotas.js";
 import { startPortalNotifications } from "../modules/portal_notifications.js";
+import { startPortalPopups } from "../modules/portal_popup.js";
 import { startAccountPassword } from "../modules/account_password.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
 import { beatPreview } from "../modules/beat_preview.js";
@@ -560,6 +561,7 @@ async function enterPortal() {
     const shownName = user.nome_exibicao?.trim() || user.username;
     document.getElementById("client-username").textContent = shownName;
     startPortalNotifications(user);
+    startPortalPopups();
     startAccountPassword(user);
     document.getElementById("client-greeting").textContent = shownName;
     document.getElementById("client-loading").classList.remove("hidden");

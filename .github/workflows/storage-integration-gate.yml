@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["c9e1a3b5d7f2"], heads
+                  assert heads == ["d1f3a5c7e9b2"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -210,6 +210,7 @@ jobs:
                     test_catalogo_prazo.py \
                     test_promocoes.py \
                     test_portal_notificacoes.py \
+                    test_portal_popups.py \
                     test_portfolio_creditos.py \
                     test_portfolio_envios.py \
                     test_audio_tags.py \
@@ -263,6 +264,7 @@ jobs:
                   node frontend/tests/usuarios.cjs
                   node frontend/tests/client_signup.cjs
                   node frontend/tests/portal_settings_admin.cjs
+                  node frontend/tests/avisos_popups.cjs
                   node frontend/tests/servico_etapas_admin.cjs
                   node frontend/tests/proposta_editor.cjs
                   node frontend/tests/proposta_catalogo.cjs
@@ -427,6 +429,14 @@ jobs:
                     backend/migrations/versions/f8b0d2e4a6c7_arquivos_por_etapa.py \
                     backend/migrations/versions/b2d4f6a8c0e1_beat_moods.py \
                     backend/migrations/versions/c9e1a3b5d7f2_comparativo_loudness.py \
+                    backend/migrations/versions/d1f3a5c7e9b2_portal_popups.py \
+                    backend/models/portal_popup.py \
+                    backend/schemas/portal_popup.py \
+                    backend/services/portal_popup_service.py \
+                    backend/routers/portal_popups.py \
+                    backend/tests/test_portal_popups.py \
+                    backend/services/comparativo_service.py \
+                    backend/routers/comparativo.py \
                     backend/core/proposta_mudancas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
@@ -497,7 +507,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic c9e1a3b5d7f2: passed"
+                    echo "- PostgreSQL 17 and Alembic d1f3a5c7e9b2: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"
