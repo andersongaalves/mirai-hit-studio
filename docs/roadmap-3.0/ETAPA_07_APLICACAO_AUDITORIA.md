@@ -147,7 +147,7 @@ ou `Decisao` (aguarda escolha), `Descartado` (com motivo).
 | APL-S12-03 | S12-003 | P2 | Limitador persistente (tabela `auth_rate_limits`) para login, orcamento e newsletter | Codigo; inclui APL-S02-07 | Publicado | #105 |
 | APL-S12-04 | S12-005 | P3 | Estabilizar o passo instavel do Portals E2E | Testes | Em observacao | - (5 repeticoes locais de cada suite do passo sem falha; nao reproduzido) |
 | APL-S12-06 | Pedido do responsavel | P3 | Aba "Uso" no Admin: memoria (Render), Supabase, Cloudinary e Cloudflare, com contagens da protecao contra robos | Codigo | Publicado | #131 |
-| APL-S12-07 | Pedido do responsavel | P3 | Camada 1 contra robos na API: varreduras -> 404 e bloqueio de 15 min; excesso -> 429. Camada 2 (Cloudflare WAF/Bot Fight e subdominio da API) adiada pelo responsavel | Codigo | Publicado (camada 1) | #132 |
+| APL-S12-07 | Pedido do responsavel | P3 | Camada 1 contra robos na API: varreduras -> 404 e bloqueio de 15 min; excesso -> 429. Camada 2: API pela Cloudflare em `api.miraihitstudio.com.br` (WAF: webhooks livres, varreduras e metodos bloqueados; limite de 10 req/10 s por IP em `/auth/`; Bot Fight Mode desligado para nao barrar webhooks; SSL Full strict); envios de arquivo seguem direto no Render, que recusa o resto com 421 | Codigo + painel | Camada 1 publicada; camada 2 em publicacao | #132, este PR |
 | APL-S12-05 | S12-006, S12-007 | P3 | Limpeza de branches descartaveis; README atualizado | Manutencao | Em correcao | #117 (README); limpeza de branches aguarda o responsavel |
 
 ## 4. Lotes de execucao

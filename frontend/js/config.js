@@ -1,5 +1,9 @@
 const LOCAL_API = "http://localhost:8000";
-const PROD_API = "https://mirai-hit-studio.onrender.com";
+// Everything goes through Cloudflare (WAF, rate limiting) on the API subdomain.
+const PROD_API = "https://api.miraihitstudio.com.br";
+// Cloudflare's free plan refuses request bodies above 100 MB, so file uploads (beats,
+// final deliveries) go straight to Render; that address accepts only uploads.
+const PROD_UPLOAD_API = "https://mirai-hit-studio.onrender.com";
 // Reserved TLD (RFC 2606): never resolves, so non-production hosts cannot reach real data.
 const NO_API = "https://api-indisponivel-fora-de-producao.invalid";
 
@@ -19,3 +23,12 @@ export const API_URL = LOCAL_HOSTS.has(hostname)
     : PRODUCTION_HOSTS.has(hostname)
         ? PROD_API
         : NO_API;
+
+export const UPLOAD_API = LOCAL_HOSTS.has(hostname)
+    ? LOCAL_API
+    : PRODUCTION_HOSTS.has(hostname)
+        ? PROD_UPLOAD_API
+        : NO_API;
+
+// Base address for a request: multipart file uploads use the direct upload address.
+export const apiPara = body => (typeof FormData !== "undefined" && body instanceof FormData ? UPLOAD_API : API_URL);

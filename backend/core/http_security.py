@@ -35,8 +35,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         response = None
         path = request.url.path.rstrip("/")
+        # The direct Render address only takes uploads; the rest goes through Cloudflare.
+        from core import host_direto
+
+        if not host_direto.allowed(request):
+            response = JSONResponse({"detail": host_direto.MESSAGE}, status_code=421)
         # Scanner probes get a plain 404; repeated probes or floods get a temporary block.
-        if path != "/health":
+        if path != "/health" and response is None:
             from core.protecao import protecao
 
             decision, retry = protecao.avaliar(request.client.host if request.client else "unknown", path)

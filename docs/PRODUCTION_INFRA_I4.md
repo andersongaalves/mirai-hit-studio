@@ -13,7 +13,7 @@ All I.4 external gates are now confirmed. No secret value is recorded here.
 | Component | Service | Configuration | Secret names | Status |
 | --- | --- | --- | --- | --- |
 | Frontend | Cloudflare Pages | project `mirai-hit-studio`, branch `main` | none required by static pages | public site healthy |
-| Backend | Render | Python/Uvicorn, service URL `mirai-hit-studio.onrender.com` | runtime env | health healthy after cold start |
+| Backend | Render | Python/Uvicorn behind Cloudflare at `api.miraihitstudio.com.br` (proxied CNAME, SSL Full strict, WAF custom rules and `/auth/` rate limiting); the direct `mirai-hit-studio.onrender.com` address only accepts form uploads (over Cloudflare's 100 MB body limit), `/health`, `/webhooks/*` and `/newsletter/unsubscribe` (421 otherwise) | runtime env | health healthy after cold start |
 | Database | Supabase PostgreSQL 17.6 | Alembic `93c2cf108202` | `DATABASE_URL` | connected, at head and Data API restricted |
 | Generative AI | Groq Responses API | `openai/gpt-oss-20b` | `AI_API_KEY` | production smoke and telemetry passed |
 | Email | Resend | sending domain plus inbound webhook | `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` | outbound and inbound validated |

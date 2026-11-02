@@ -138,8 +138,9 @@ async function staticResponse(route) {
                 if (securityFailure) return route.abort();
                 return route.fulfill({ contentType: 'text/javascript', body: "window.MP_DEVICE_SESSION_ID = 'official-device-123';" });
             }
-            if (url.origin === 'http://localhost:8000' || url.origin === 'https://mirai-hit-studio.onrender.com') {
-                const previewRequest = url.origin === 'https://mirai-hit-studio.onrender.com';
+            const productionApi = ['https://api.miraihitstudio.com.br', 'https://mirai-hit-studio.onrender.com'].includes(url.origin);
+            if (url.origin === 'http://localhost:8000' || productionApi) {
+                const previewRequest = productionApi;
                 const corsHeaders = previewRequest ? {
                     'Access-Control-Allow-Origin': 'https://deploy-preview-19--miraihitstudio.netlify.app',
                     'Access-Control-Allow-Headers': 'Authorization, Content-Type',

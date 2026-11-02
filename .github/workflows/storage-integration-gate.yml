@@ -267,6 +267,7 @@ jobs:
                   node frontend/tests/portal_settings_admin.cjs
                   node frontend/tests/avisos_popups.cjs
                   node frontend/tests/arquivos_admin.cjs
+                  node frontend/tests/api_hosts.cjs
                   node frontend/tests/servico_etapas_admin.cjs
                   node frontend/tests/proposta_editor.cjs
                   node frontend/tests/proposta_catalogo.cjs
@@ -446,6 +447,7 @@ jobs:
                     backend/core/proposta_mudancas.py \
                     backend/services/rate_limit_service.py \
                     backend/core/http_security.py \
+                    backend/core/host_direto.py \
                     backend/routers/auth.py \
                     backend/services/busca_admin_service.py \
                     backend/routers/busca_admin.py \

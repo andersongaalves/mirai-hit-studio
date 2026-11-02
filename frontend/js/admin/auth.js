@@ -1,4 +1,4 @@
-import { API_URL } from "../config.js";
+import { API_URL, apiPara } from "../config.js";
 import { accessPath } from "../auth_next.js";
 import { $ } from "../utils/dom.js";
 
@@ -187,7 +187,7 @@ export function createAuthContext(config) {
             headers["Content-Type"] = "application/json";
         }
 
-        const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+        const response = await fetch(`${apiPara(options.body)}${endpoint}`, { ...options, headers });
         ensureSession();
         if (response.status === 401) {
             logout("sessao_expirada");
