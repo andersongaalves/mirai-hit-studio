@@ -246,10 +246,37 @@ def gerar_preview(db, actor, payload):
     return output
 
 
-def preparar(db, *, actor, file_type, mime_type, data):
+def dono_da_tag(db, production, etapa_id=None, actor=None):
+    """Producer whose tag marks a production preview: the responsible for the work.
+
+    The stage's responsible, else the production's producer, else the uploading producer.
+    """
+    from models import ProducaoEtapaModel
+
+    if etapa_id is not None:
+        stage = db.get(ProducaoEtapaModel, etapa_id)
+        if stage is not None and stage.producao_id == production.id and stage.responsavel_usuario_id:
+            return stage.responsavel_usuario_id
+    if getattr(production, "produtor_id", None):
+        return production.produtor_id
+    if getattr(actor, "role", None) == "produtor":
+        return actor.id
+    return None
+
+
+def tag_para(db, owner_id):
+    """(tag_id, studio profile): the producer's own tag, else the studio's; settings are the studio's."""
+    own = perfil(db, f"producer:{owner_id}") if owner_id else None
+    studio = perfil(db, "studio")
+    tag_id = own.tag_id if own and own.tag_id else studio.tag_id if studio else None
+    return tag_id, studio
+
+
+def preparar(db, *, actor, file_type, mime_type, data, tag_owner_id=None):
     if file_type != "previa" or not mime_type.startswith("audio/"):
         return None
-    own = perfil(db, f"producer:{actor.id}") if getattr(actor, "role", None) == "produtor" else None
+    owner = tag_owner_id if tag_owner_id is not None else (actor.id if getattr(actor, "role", None) == "produtor" else None)
+    own = perfil(db, f"producer:{owner}") if owner else None
     studio = perfil(db, "studio")
     tag_id = own.tag_id if own and own.tag_id else studio.tag_id if studio else None
     if not tag_id:
@@ -394,10 +421,17 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
                 raise RuntimeError("audio_render_exceeds_reservation")
             provider = storage or new_production_file_storage("previa")
             key = provider.save(content, "audio/mpeg")
+            # A regenerated preview replaces the previous tagged version.
+            previous_key = job.object_key
             job.object_key, job.sha256, job.tamanho_bytes = key, hashlib.sha256(content).hexdigest(), len(content)
             job.estado, job.concluido_em = "pronto", datetime.now(timezone.utc)
             portal_notificacao_service.arquivo_compartilhado(db, model)
             db.commit()
+            if previous_key and previous_key != key:
+                try:
+                    provider.delete(previous_key)
+                except Exception:
+                    logger.warning("audio_tag_previous_cleanup_failed file_id=%s", arquivo_id)
             return True
         except Exception:
             db.rollback()
@@ -429,3 +463,36 @@ def processar_um(session_factory, *, storage=None, renderer=mixar):
                     db.commit()
                 logger.warning("audio_tag_processing_failed file_id=%s", arquivo_id)
             return False
+
+
+def regenerar_previa(db, *, arquivo_id, actor, request_id=None):
+    """Queue a new tagged version of a production preview, with the tag of the producer
+    responsible for the work and the current studio settings (fixes the tag level).
+    The worker replaces the previous tagged version once the new one is ready."""
+    from models import ProducaoArquivoModel, ProducaoModel
+    from services import audit_service
+
+    job = db.scalar(select(PreviaTagJobModel).where(PreviaTagJobModel.arquivo_id == arquivo_id).with_for_update())
+    model = db.get(ProducaoArquivoModel, arquivo_id)
+    if job is None or model is None or model.tipo != "previa":
+        raise HTTPException(404, "Esta previa nao tem versao com tag.")
+    if job.estado == "pendente":
+        return job
+    production = db.get(ProducaoModel, model.producao_id)
+    owner = dono_da_tag(db, production, model.etapa_id)
+    tag_id, studio = tag_para(db, owner)
+    if not tag_id:
+        raise HTTPException(409, "Cadastre a tag do produtor ou a tag padrao antes de gerar a previa.")
+    job.tag_id = tag_id
+    job.intervalo_segundos = studio.intervalo_segundos if studio else 10
+    job.volume_percentual = studio.volume_percentual if studio else 40
+    for key, value in level_values(studio).items():
+        setattr(job, key, value)
+    job.estado = "pendente"
+    job.concluido_em = None
+    audit_service.record(db, actor=actor, action="audio_tag.preview_regenerated", entity_type="production_file",
+                         entity_id=arquivo_id, metadata={"tag_id": tag_id, "tag_owner_id": owner},
+                         request_id=request_id)
+    db.commit()
+    sinalizar_fila()
+    return job

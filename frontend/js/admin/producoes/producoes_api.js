@@ -1,5 +1,9 @@
 import { authFetch } from "../auth.js";
 
+export async function regenerarTag(arquivoId) {
+    return handleResponse(await authFetch(`/admin/audio-tag/previas/${arquivoId}/regenerar`, { method: "POST" }), "Erro ao gerar a prévia com tag.");
+}
+
 export async function reprocessarTag(arquivoId) {
     return handleResponse(await authFetch(`/admin/audio-tag/previas/${arquivoId}/reprocessar`, { method: "POST" }), "Erro ao reprocessar tag.");
 }

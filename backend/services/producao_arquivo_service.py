@@ -137,7 +137,11 @@ def upload(
     note = _normalize_note(note)
     from services import audio_tag_service
 
-    tag_job = audio_tag_service.preparar(db, actor=actor, file_type=file_type, mime_type=mime_type, data=data)
+    # The tag is the one of the producer responsible for the work (stage or production).
+    tag_job = audio_tag_service.preparar(
+        db, actor=actor, file_type=file_type, mime_type=mime_type, data=data,
+        tag_owner_id=audio_tag_service.dono_da_tag(db, production, stage_id, actor) if file_type == "previa" else None,
+    )
     if file_type == "comprovante" and visible_to_client:
         raise ProducaoArquivoError("Comprovantes de repasse nao podem ser visiveis ao cliente.")
     if enforce_quota:
