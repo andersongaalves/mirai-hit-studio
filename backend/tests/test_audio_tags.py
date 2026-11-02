@@ -273,7 +273,7 @@ class AudioTagTests(unittest.TestCase):
             with Session(engine) as db:
                 first_key = db.get(PreviaTagJobModel, file_id).object_key
                 # producer-b replaces the tag (e.g. louder); the Admin generates the preview again.
-                newer = tags.salvar(db, actor=producer_b, chave='producer:3', data=wav(frequency=700), filename='b2.wav', mime_type='audio/wav', versao=1)
+                newer = tags.salvar(db, actor=db.get(UsuarioModel, 3), chave='producer:3', data=wav(frequency=700), filename='b2.wav', mime_type='audio/wav', versao=1)
             async def regenerate():
                 async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
                     endpoint = f'/admin/audio-tag/previas/{file_id}/regenerar'
