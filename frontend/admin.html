@@ -20,6 +20,7 @@
         <link rel="stylesheet" href="css/components/upload-tasks.css" />
         <link rel="stylesheet" href="css/components/portal-notifications.css" />
         <link rel="stylesheet" href="css/components/admin-forms.css" />
+        <link rel="stylesheet" href="css/components/portal-popup.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
         <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
@@ -73,6 +74,7 @@
                                 <summary>Atendimento</summary>
                                 <button type="button" class="admin-nav__item" data-admin-target="section-inbox">Inbox IA</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-newsletter">Newsletter</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-avisos">Avisos e pop-ups</button>
                             </details>
                             <details class="admin-nav-group">
                                 <summary>Sistema</summary>
@@ -709,6 +711,22 @@
                         </div>
                         <p id="usuarios-summary" class="usuarios-summary" aria-live="polite"></p>
                         <div id="usuarios-list" class="admin-list-container" aria-live="polite"></div>
+                    </div>
+
+                    <div id="section-avisos" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Comunicação</span>
+                                <h1>Avisos e pop-ups</h1>
+                                <p>Tudo o que aparece para clientes e produtores fora do fluxo: pop-ups na tela e o aviso fixo no topo dos portais.</p>
+                            </div>
+                        </header>
+                        <div class="newsletter-tabs avisos-tabs" role="tablist" aria-label="Avisos e pop-ups">
+                            <button id="avisos-tab-popups" type="button" role="tab" aria-selected="true" aria-controls="avisos-popups-panel">Pop-ups</button>
+                            <button id="avisos-tab-topo" type="button" role="tab" aria-selected="false" aria-controls="avisos-topo-panel">Aviso no topo</button>
+                        </div>
+                        <section id="avisos-popups-panel" role="tabpanel" aria-labelledby="avisos-tab-popups"></section>
+                        <section id="avisos-topo-panel" role="tabpanel" aria-labelledby="avisos-tab-topo" hidden></section>
                     </div>
 
                     <div id="section-newsletter" class="admin-section hidden admin-access-hidden" data-admin-only>
