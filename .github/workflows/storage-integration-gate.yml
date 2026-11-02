@@ -266,6 +266,7 @@ jobs:
                   node frontend/tests/client_signup.cjs
                   node frontend/tests/portal_settings_admin.cjs
                   node frontend/tests/avisos_popups.cjs
+                  node frontend/tests/arquivos_admin.cjs
                   node frontend/tests/servico_etapas_admin.cjs
                   node frontend/tests/proposta_editor.cjs
                   node frontend/tests/proposta_catalogo.cjs
