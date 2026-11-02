@@ -313,6 +313,16 @@ with Session(engine) as db:
     db.commit()
 locked = api.delete(f"/portal/produtor/entregas-finais/{second.json()['id']}", headers=bearer('producer-a'))
 assert locked.status_code == 409 and 'entregue' in locked.json()['detail']
+
+# Listing while a delivery is being deleted: the half-gone one is skipped, not a 500.
+from types import SimpleNamespace
+class HalfDeleted:
+    def filter_by(self, **kwargs): return self
+    def order_by(self, *args): return self
+    def all(self): return [SimpleNamespace(arquivo_principal=None)]
+assert producao_entrega_service.list_for_production(SimpleNamespace(query=lambda model: HalfDeleted()), PRODUCTION_ID) == []
+listed = api.get(f'/portal/produtor/producoes/{PRODUCTION_ID}/entregas-finais', headers=bearer('producer-a'))
+assert listed.status_code == 200 and [item['id'] for item in listed.json()] == [second.json()['id']]
 ''')
 
     def test_one_final_delivery_per_stage(self):

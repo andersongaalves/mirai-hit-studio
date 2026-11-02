@@ -472,7 +472,9 @@ def list_for_production(db, production_id, *, blocked=False):
     models = db.query(ProducaoEntregaFinalModel).filter_by(producao_id=production_id).order_by(
         ProducaoEntregaFinalModel.created_at.desc(), ProducaoEntregaFinalModel.id.desc(),
     ).all()
-    return [response(model, blocked=blocked) for model in models]
+    # A delivery being deleted right now may already have lost its main file in this
+    # read; it is skipped instead of failing the whole list.
+    return [response(model, blocked=blocked) for model in models if model.arquivo_principal is not None]
 
 
 def get(db, delivery_id):
