@@ -17,6 +17,7 @@ import { mountBeatFilters } from "../modules/beat_filters.js";
 import { watchFilePickers } from "../modules/file_picker.js";
 import { selectStage, setStages } from "../modules/stage_files.js";
 import { applySettings, renderDashboard, renderDetail, renderList, renderPayouts, setAlert, setCurrentUserId, showView } from "./ui.js";
+import { confirmarAcao } from "../modules/confirm_dialog.js";
 
 let productions = [];
 let beatUploadConfig = null;
@@ -416,7 +417,7 @@ async function editDelivery(delivery, changes) {
 }
 
 async function deleteDelivery(delivery, button) {
-    if (!window.confirm(`Excluir a entrega "${delivery.titulo}" com todos os arquivos dela? Esta ação não pode ser desfeita.`)) return;
+    if (!await confirmarAcao({ titulo: `Excluir a entrega "${delivery.titulo}"?`, consequencias: ["Todos os arquivos dela são apagados.", "Esta ação não pode ser desfeita."], botao: "Excluir entrega" })) return;
     button.disabled = true;
     setAlert();
     try {
@@ -430,7 +431,7 @@ async function deleteDelivery(delivery, button) {
 }
 
 async function deleteBeat(beat, button) {
-    if (!window.confirm(`Excluir o beat "${beat.titulo}" e os arquivos dele? Esta ação não pode ser desfeita.`)) return;
+    if (!await confirmarAcao({ titulo: `Excluir o beat "${beat.titulo}"?`, consequencias: ["O beat sai do catálogo e os arquivos dele são apagados.", "Esta ação não pode ser desfeita."], botao: "Excluir beat" })) return;
     button.disabled = true;
     setAlert();
     try {
@@ -446,7 +447,7 @@ async function deleteBeat(beat, button) {
 
 async function deletePreview(file, button) {
     const kind = file.tipo === "previa" ? "a prévia" : "o arquivo";
-    if (!window.confirm(`Excluir ${kind} "${file.nome_exibicao}"? Esta ação não pode ser desfeita.`)) return;
+    if (!await confirmarAcao({ titulo: `Excluir ${kind} "${file.nome_exibicao}"?`, consequencias: [file.tipo === "previa" ? "A versão com tag sai junto." : "", "Esta ação não pode ser desfeita."], botao: "Excluir" })) return;
     button.disabled = true;
     setAlert();
     try {

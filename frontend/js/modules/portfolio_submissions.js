@@ -2,6 +2,7 @@ import { authFetch } from "../admin/auth.js";
 import { bindImageCrop } from "./image_crop.js";
 import { uploadBusy } from "./upload_feedback.js";
 import { enqueueUpload } from "./upload_tasks.js";
+import { confirmarAcao } from "./confirm_dialog.js";
 
 const labels = { pendente: "Aguardando revisão", aprovado: "Publicado", recusado: "Recusado" };
 const node = (tag, text, className) => {
@@ -219,7 +220,7 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                 remove.type = "button";
                 remove.setAttribute("aria-label", `Excluir envio ${item.dados.titulo}`);
                 remove.addEventListener("click", async () => {
-                    if (!window.confirm(`Excluir o envio "${item.dados.titulo}"? Esta ação não pode ser desfeita.`)) return;
+                    if (!await confirmarAcao({ titulo: `Excluir o envio "${item.dados.titulo}"?`, consequencias: ["O envio e os arquivos dele são apagados.", "Esta ação não pode ser desfeita."], botao: "Excluir envio" })) return;
                     remove.disabled = true;
                     try {
                         const response = await authFetch(`/portal/produtor/portfolio/${item.id}`, { method: "DELETE" });
@@ -265,6 +266,12 @@ export async function loadPortfolioSubmissions(root, { admin = false, production
                                 reason.reportValidity();
                                 return;
                             }
+                            const decided = await confirmarAcao(decision === "aprovar"
+                                ? { titulo: `Publicar "${item.dados.titulo}" no portfólio?`, mensagem: "O projeto aparece no site público.",
+                                    consequencias: ["O envio sai da fila de revisão."], palavra: "PUBLICAR", botao: "Aprovar e publicar", tom: "envio" }
+                                : { titulo: `Recusar "${item.dados.titulo}"?`, mensagem: `Motivo: ${reason.value.trim()}`,
+                                    consequencias: ["O produtor recebe a recusa com o motivo.", "A decisão não pode ser desfeita."], palavra: "RECUSAR", botao: "Recusar envio", tom: "aviso" });
+                            if (!decided) return;
                             review.querySelectorAll("button").forEach(b => { b.disabled = true; });
                             try {
                                 await request(`/projetos/envios/${item.id}/revisao`, { versao: item.versao, decisao: decision, motivo: reason.value.trim() || null });

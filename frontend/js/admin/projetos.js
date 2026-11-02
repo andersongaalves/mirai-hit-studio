@@ -11,6 +11,7 @@ import { closeAdminModal, openAdminModal } from "./admin_modal.js";
 import { normalizeCredits } from "../modules/portfolio_credits.js";
 import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { bindCreditControls, readCredits, setCredits, setProducers } from "./portfolio_creditos.js";
+import { confirmarAcao } from "../modules/confirm_dialog.js";
 
 // ===========================
 // STATE
@@ -583,7 +584,7 @@ export async function removerCapa() {
 // ===========================
 
 export async function deletarProjeto(id) {
-    if (!confirm("Deseja excluir este projeto?")) {
+    if (!await confirmarAcao({ titulo: "Excluir este projeto do portfólio?", consequencias: ["Ele sai do site público.", "Esta ação não pode ser desfeita."], botao: "Excluir projeto" })) {
         return;
     }
 

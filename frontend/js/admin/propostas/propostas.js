@@ -21,6 +21,7 @@ import {
     getPropostaPayload,
     podeEditar
 } from "./proposta_state.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 let contexto = 0;
 let orcamentoCarregando = null;
@@ -163,7 +164,10 @@ async function executarAcaoAcesso(action) {
         reenviar: "Invalidar o convite anterior e enviar um novo?",
         revogar: "Revogar este convite ainda não utilizado?",
     };
-    if (!confirm(messages[action])) return;
+    if (!await confirmarAcao({ titulo: "Acesso do cliente", mensagem: messages[action],
+        palavra: action === "revogar" || action === "reenviar" ? "CONFIRMAR" : null,
+        botao: { convidar: "Enviar convite", notificar: "Notificar", reenviar: "Reenviar convite", revogar: "Revogar convite" }[action],
+        tom: action === "revogar" ? "perigo" : "envio" })) return;
     acessoProcessando = true;
     renderizarAcessoCliente();
     try {
@@ -470,8 +474,12 @@ async function executarAcaoComercial(acao) {
     if (!proposta || dirty || carregando || salvando || gerando || processando) return;
     const envio = acao === "enviar";
     if (!(envio ? ["rascunho", "pronta"].includes(proposta.status) : proposta.status === "enviada")) return;
-    if (!confirm(envio ? "Enviar esta proposta por e-mail ao cliente do snapshot?"
-        : "Confirmar o aceite do cliente e criar a produção desta proposta?")) return;
+    if (!await confirmarAcao(envio
+        ? { titulo: `Enviar a proposta ${proposta.numero || ""}?`.replace(" ?", "?"), mensagem: "Vai por e-mail ao cliente do snapshot.",
+            consequencias: ["Depois de enviada, ela não pode mais ser editada; mudanças exigem uma nova versão."],
+            palavra: "ENVIAR", botao: "Enviar proposta", tom: "envio" }
+        : { titulo: "Confirmar o aceite do cliente?", mensagem: "A produção desta proposta é criada agora.",
+            consequencias: ["O aceite não pode ser desfeito."], palavra: "CONFIRMAR", botao: "Confirmar aceite", tom: "aviso" })) return;
     const atual = contexto;
     propostaState.processando = true;
     atualizarStatusLocal();
@@ -504,7 +512,7 @@ function formatarValidade(value) {
 export async function reabrirProposta() {
     const { proposta, dirty, carregando, salvando, gerando, processando } = propostaState;
     if (!proposta?.expirada || dirty || carregando || salvando || gerando || processando) return;
-    if (!confirm("Reabrir a proposta vencida? Ela volta a rascunho para você atualizar os valores e enviar de novo.")) return;
+    if (!await confirmarAcao({ titulo: "Reabrir a proposta vencida?", mensagem: "Ela volta a rascunho para você atualizar os valores e enviar de novo.", palavra: null, botao: "Reabrir", tom: "aviso" })) return;
     const atual = contexto;
     propostaState.processando = true;
     atualizarStatusLocal();

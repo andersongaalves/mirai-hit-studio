@@ -5,6 +5,7 @@ import { renderAdminState } from "../ui.js";
 import * as Notify from "../../utils/notifications.js";
 import { getCurrentUser } from "../auth.js";
 import { initMetrics, resetMetrics } from "./inbox_metrics.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 let initialized = false;
 
@@ -174,7 +175,7 @@ function handlers() {
             }
         },
         onClose: async () => {
-            if (!window.confirm("Encerrar esta conversa?")) return;
+            if (!await confirmarAcao({ titulo: "Encerrar esta conversa?", mensagem: "O atendimento é finalizado para o visitante.", palavra: null, botao: "Encerrar", tom: "aviso" })) return;
             try { await atualizarDetalhe(await Api.encerrarConversa(id)); Notify.success("Conversa encerrada."); }
             catch (error) { Notify.error(error.message || "Não foi possível encerrar a conversa."); }
         },

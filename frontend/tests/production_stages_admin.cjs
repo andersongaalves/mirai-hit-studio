@@ -2,6 +2,7 @@
 // responsible per stage and history) and the producer view of stage ownership.
 // Browser-only: the shared module is rendered on a local page; no backend is contacted.
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -241,10 +242,10 @@ const STAGES = {
         await page.evaluate(data => window.render && window.renderDelete(data), STAGES);
         assert.equal(await page.getByRole('button', { name: /^Excluir a etapa/ }).count(), STAGES.etapas.length);
         await page.evaluate(() => { window.calls = []; });
-        page.once('dialog', dialog => dialog.dismiss());
+        await armConfirm(page, { accept: false });
         await page.getByRole('button', { name: 'Excluir a etapa Rough Mix' }).click();
         assert.deepEqual(await page.evaluate(() => window.calls), []);
-        page.once('dialog', dialog => dialog.accept('Etapa duplicada'));
+        await armConfirm(page, { motivo: 'Etapa duplicada' });
         await page.getByRole('button', { name: 'Excluir a etapa Rough Mix' }).click();
         await page.waitForFunction(() => window.calls.length === 1);
         assert.deepEqual(await page.evaluate(() => window.calls), [['delete', 1, 'Etapa duplicada']]);

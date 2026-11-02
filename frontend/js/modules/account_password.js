@@ -1,4 +1,5 @@
 import { authFetch, getCurrentUser, logout, renovarSessao } from "../admin/auth.js";
+import { confirmarAcao } from "./confirm_dialog.js";
 
 // AUD6-S02-004: every account changes its own password with the current one.
 // The backend ends every other session and returns a new token for this tab.
@@ -87,7 +88,7 @@ export function startAccountPassword(user) {
     const everywhereButton = element("button", "Sair de todos os aparelhos", "btn-outline");
     everywhereButton.type = "button";
     everywhereButton.addEventListener("click", async () => {
-        if (!window.confirm("Sair da conta em todos os aparelhos, inclusive neste?")) return;
+        if (!await confirmarAcao({ titulo: "Sair de todos os aparelhos?", mensagem: "Todas as sessões abertas desta conta são encerradas, inclusive esta aba.", consequencias: ["Você precisa entrar de novo em cada aparelho."], palavra: null, botao: "Sair de todos", tom: "aviso" })) return;
         everywhereButton.disabled = true;
         everywhereStatus.textContent = "Encerrando sessões...";
         try {

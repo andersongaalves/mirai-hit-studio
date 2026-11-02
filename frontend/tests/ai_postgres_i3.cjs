@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const { autoConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const { openAdminSection } = require('./support/access.cjs');
 
@@ -58,7 +59,7 @@ async function sendChat(page, text) {
     admin.on('response', async response => {
         if (response.url().includes('/suggestions')) console.log('I3_SUGGESTION', response.status(), await response.text());
     });
-    admin.on('dialog', dialog => dialog.accept());
+    await autoConfirm(admin);
     // AUD6-S02-003: the Admin signs in through /acesso and returns to the panel.
     await admin.goto(`http://127.0.0.1:5500/acesso.html?next=${encodeURIComponent('/admin.html')}`);
     await admin.locator('#username').fill(username);

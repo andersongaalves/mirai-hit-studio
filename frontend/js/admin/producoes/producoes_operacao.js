@@ -11,6 +11,7 @@ import { creditAllocationsPanel } from "../../modules/credit_allocations.js";
 import { stagePayoutsPanel } from "../../modules/stage_payouts.js";
 import { uploadBusy } from "../../modules/upload_feedback.js";
 import { enqueueUpload } from "../../modules/upload_tasks.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 let productionId = null;
 let files = [];
@@ -284,19 +285,26 @@ function bindActions() {
         run(byId("prod_repasse_salvar"), action, "Repasse atualizado.");
     };
     // AUD6-S10-002: paying the producer before the client paid needs a stated reason.
-    const confirmation = action => {
+    const confirmation = async action => {
         const pending = payout?.situacao_cliente?.pendencias || [];
-        if (!pending.length) return "";
-        const reason = window.prompt(`${pending.join(" ")}\nInforme o motivo para ${action} mesmo assim:`);
-        return reason?.trim() ? reason.trim() : null;
+        const confirmed = await confirmarAcao({
+            titulo: `Confirmar: ${action}?`,
+            mensagem: pending.join(" "),
+            consequencias: ["O registro fica no histórico financeiro da produção."],
+            palavra: "CONFIRMAR",
+            botao: action.charAt(0).toUpperCase() + action.slice(1),
+            tom: "aviso",
+            motivo: pending.length ? { rotulo: `Motivo para ${action} mesmo assim`, minimo: 3 } : null,
+        });
+        return confirmed ? confirmed.motivo : null;
     };
-    byId("prod_repasse_liberar").onclick = () => {
-        const reason = confirmation("liberar o repasse");
+    byId("prod_repasse_liberar").onclick = async () => {
+        const reason = await confirmation("liberar o repasse");
         if (reason === null) return;
         run(byId("prod_repasse_liberar"), () => API.liberarRepasse(productionId, reason || null), "Repasse liberado.");
     };
-    byId("prod_repasse_pagar").onclick = () => {
-        const reason = confirmation("registrar o pagamento");
+    byId("prod_repasse_pagar").onclick = async () => {
+        const reason = await confirmation("registrar o pagamento");
         if (reason === null) return;
         run(
             byId("prod_repasse_pagar"),

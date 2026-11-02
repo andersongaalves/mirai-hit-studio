@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 
 const FRONTEND = 'http://localhost:4173';
@@ -171,7 +172,7 @@ function syntheticWav() {
         await page.getByRole('button', { name: 'Baixar PDF' }).click();
         const proposalDownload = await proposalDownloadPromise;
         assert.match(proposalDownload.suggestedFilename(), /^proposta-\d+(?:-v1)?\.pdf$/);
-        page.once('dialog', dialog => dialog.accept());
+        await armConfirm(page);
         await page.getByRole('button', { name: 'Aceitar proposta' }).click();
         await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Proposta aceita'));
         const acceptedProposal = expectStatus(

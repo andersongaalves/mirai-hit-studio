@@ -1,7 +1,8 @@
 // Double confirmation for deletions, irreversible actions and submissions that go to
 // review without a chance to edit: the dialog explains what happens and the button only
 // unlocks after the person types the confirmation word (and the reason, when asked).
-// Resolves to false when cancelled, or to { motivo } when confirmed.
+// Resolves to false when cancelled, or to { motivo } when confirmed. palavra: null makes
+// it a plain confirmation (no typing) for actions that can be undone.
 
 const FOCUSABLE = "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href]";
 let open = null;
@@ -62,26 +63,28 @@ export function confirmarAcao({
             field.append(reason);
             form.append(field);
         }
-        const typed = el("label", "confirm-dialog__field");
-        const hint = el("span");
-        hint.append("Para confirmar, digite ", el("strong", "", palavra));
-        typed.append(hint);
-        const input = document.createElement("input");
-        input.type = "text";
-        input.name = "confirmacao";
-        input.autocomplete = "off";
-        input.spellcheck = false;
-        input.setAttribute("autocapitalize", "characters");
-        input.setAttribute("aria-label", `Digite ${palavra} para confirmar`);
-        typed.append(input);
-        form.append(typed);
+        let input = null;
+        if (palavra) {
+            const typed = el("label", "confirm-dialog__field");
+            const hint = el("span");
+            hint.append("Para confirmar, digite ", el("strong", "", palavra));
+            typed.append(hint);
+            input = document.createElement("input");
+            input.type = "text";
+            input.name = "confirmacao";
+            input.autocomplete = "off";
+            input.spellcheck = false;
+            input.setAttribute("autocapitalize", "characters");
+            input.setAttribute("aria-label", `Digite ${palavra} para confirmar`);
+            typed.append(input);
+            form.append(typed);
+        }
 
         const actions = el("div", "confirm-dialog__actions");
         const cancel = el("button", "btn-small", "Cancelar");
         cancel.type = "button";
         const confirm = el("button", "btn-small confirm-dialog__confirm", botao);
         confirm.type = "submit";
-        confirm.disabled = true;
         actions.append(cancel, confirm);
         form.append(actions);
 
@@ -89,11 +92,12 @@ export function confirmarAcao({
         overlay.append(dialog);
 
         const minimum = motivo ? (motivo.minimo ?? 3) : 0;
-        const ready = () => normalize(input.value) === normalize(palavra)
+        const ready = () => (!input || normalize(input.value) === normalize(palavra))
             && (!reason || reason.value.trim().length >= minimum);
         const update = () => { confirm.disabled = !ready(); };
-        input.addEventListener("input", update);
+        input?.addEventListener("input", update);
         reason?.addEventListener("input", update);
+        update();
 
         const finish = value => {
             if (open?.overlay !== overlay) return;
@@ -130,6 +134,6 @@ export function confirmarAcao({
         document.addEventListener("keydown", onKey, true);
         document.body.classList.add("confirm-dialog-open");
         document.body.append(overlay);
-        (reason || input).focus();
+        (reason || input || confirm).focus();
     });
 }

@@ -1,5 +1,6 @@
 // AUD6-S02-004: own password change from the panels, synthetic API only.
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -91,10 +92,10 @@ async function scenario(browser, role, next) {
     assert.ok(stored.includes(`${role}-token-2`), JSON.stringify(stored));
     assert.equal(await page.locator('.account-password__status').textContent(), 'Senha alterada. Os outros aparelhos foram desconectados.');
     // AUD6-S02-006: "Sair de todos os aparelhos" ends this session too.
-    page.once('dialog', confirmation => confirmation.dismiss());
+    await armConfirm(page, { accept: false });
     await dialog.getByRole('button', { name: 'Sair de todos os aparelhos' }).click();
     assert.equal(revokes.length, 0);
-    page.once('dialog', confirmation => confirmation.accept());
+    await armConfirm(page);
     await expectAccessPage(page, () => dialog.getByRole('button', { name: 'Sair de todos os aparelhos' }).click());
     assert.deepEqual(revokes, [`Bearer ${role}-token-2`]);
     assert.equal(await page.evaluate(() => Object.values(localStorage).filter(value => /token-\d$/.test(value)).length), 0);

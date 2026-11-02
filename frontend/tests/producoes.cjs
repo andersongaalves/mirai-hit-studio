@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -249,16 +250,16 @@ const pageHtml = `<!doctype html><html><head><link rel="stylesheet" href="/css/m
         // AUD6-S10-002: the client situation is shown and releasing asks for a reason.
         assert.match(await page.locator('#prod_repasse_resumo').textContent(), /Cliente pagou R\$\s?250,00 de R\$\s?500,00/);
         assert.match(await page.locator('#prod_repasse_resumo').textContent(), /parcialmente paga/);
-        page.once('dialog', dialog => dialog.dismiss());
+        await armConfirm(page, { accept: false });
         await page.locator('#prod_repasse_liberar').click();
         await page.waitForTimeout(100);
         assert.equal(releaseBodies.length, 0);
-        page.once('dialog', dialog => dialog.accept('Acordo com o produtor'));
+        await armConfirm(page, { motivo: 'Acordo com o produtor' });
         await page.locator('#prod_repasse_liberar').click();
         await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('· liberado ·'));
         assert.deepEqual(releaseBodies, [{ motivo_confirmacao: 'Acordo com o produtor' }]);
         await page.locator('#prod_repasse_referencia').fill('PIX-SYNTHETIC');
-        page.once('dialog', dialog => dialog.accept('Acordo com o produtor'));
+        await armConfirm(page, { motivo: 'Acordo com o produtor' });
         await page.locator('#prod_repasse_pagar').click();
         await page.waitForFunction(() => document.getElementById('prod_repasse_resumo').textContent.includes('· pago ·'));
         await page.locator('#prod_repasse_valor').fill('275.00');

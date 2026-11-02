@@ -2,6 +2,7 @@
 // deletes them, publishes the notice at the top of each portal; the portals show the
 // pop-ups centered with an X and remember who closed them.
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -143,7 +144,7 @@ async function staticResponse(route) {
         await editForm.getByRole('button', { name: 'Salvar alterações' }).click();
         await page.locator('.avisos-card').filter({ hasText: 'Manutenção programada' }).filter({ hasText: 'No ar' }).waitFor();
         assert.equal(writes.at(-1)[0], 'PUT');
-        page.once('dialog', dialog => dialog.accept());
+        await armConfirm(page);
         await page.getByRole('button', { name: 'Excluir pop-up Manutenção programada' }).click();
         await page.getByText('Nenhum pop-up enviado ainda.').waitFor();
         assert.equal(writes.at(-1)[0], 'DELETE');

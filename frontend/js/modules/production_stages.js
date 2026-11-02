@@ -3,6 +3,7 @@
 // only present in the admin response. Everything is rendered as text.
 
 import { groupKey, stageTree } from "./stage_tree.js";
+import { confirmarAcao } from "./confirm_dialog.js";
 
 export const STAGE_LABELS = Object.freeze({
     pendente: "Pendente",
@@ -295,11 +296,18 @@ export function stagesPanel({
                 remove.type = "button";
                 remove.setAttribute("aria-label", `Excluir a etapa ${stage.nome}`);
                 remove.addEventListener("click", async () => {
-                    const reason = window.prompt(`Excluir a etapa "${stage.nome}" desta produção? Os arquivos dela passam a ser gerais.\nInforme o motivo:`);
-                    if (!reason?.trim()) return;
+                    const confirmed = await confirmarAcao({
+                        titulo: `Excluir a etapa "${stage.nome}"?`,
+                        mensagem: "A etapa sai do contrato desta produção.",
+                        consequencias: ["Os arquivos dela passam a ser gerais da produção.", "Não dá para desfazer; o motivo fica na auditoria."],
+                        botao: "Excluir etapa",
+                        motivo: { rotulo: "Motivo (fica na auditoria)", minimo: 3 },
+                    });
+                    if (!confirmed) return;
+                    const reason = confirmed.motivo;
                     remove.disabled = true;
                     try {
-                        await onDelete(stage, reason.trim());
+                        await onDelete(stage, reason);
                         feedback.textContent = "";
                     } catch (deleteError) {
                         feedback.textContent = deleteError.message || "Não foi possível excluir a etapa.";

@@ -8,6 +8,7 @@ import * as ServicosParametros from "./servicos_parametros.js";
 
 import { servicosState } from "./servicos_state.js";
 import { carregarCombos } from "./combos.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 function getUiHandlers() {
     return {
@@ -138,7 +139,7 @@ export async function salvarServico() {
 }
 
 export async function deletarServico(id) {
-    if (!confirm("Deseja realmente excluir este serviço?")) {
+    if (!await confirmarAcao({ titulo: "Excluir este serviço?", consequencias: ["Ele sai do catálogo e da calculadora.", "Esta ação não pode ser desfeita."], botao: "Excluir serviço" })) {
         return;
     }
 

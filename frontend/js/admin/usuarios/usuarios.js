@@ -6,6 +6,7 @@ import { usuariosState } from "./usuarios_state.js";
 import * as UI from "./usuarios_ui.js";
 import { filtrarUsuarios } from "./usuarios_utils.js";
 import { confirmarClassificacao } from "../classificacao.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 export async function classificarConta(user, button) {
     button.disabled = true;
@@ -123,9 +124,12 @@ export async function abrirUsuario(id) {
 
 
 async function salvarUsuario(original, payload) {
-    if (original?.ativo && !payload.ativo && !confirm(`Desativar ${original.username}?`)) return false;
-    if (original?.role === "admin" && payload.role !== "admin"
-        && !confirm(`Remover permissao administrativa de ${original.username}?`)) return false;
+    if (original?.ativo && !payload.ativo && !await confirmarAcao({ titulo: `Desativar ${original.username}?`,
+        consequencias: ["A pessoa perde o acesso e as sessões abertas são encerradas.", "Dá para reativar depois."],
+        palavra: "DESATIVAR", botao: "Desativar", tom: "aviso" })) return false;
+    if (original?.role === "admin" && payload.role !== "admin" && !await confirmarAcao({
+        titulo: `Remover a permissão de administrador de ${original.username}?`,
+        consequencias: ["A pessoa deixa de ver o Admin na hora."], palavra: "CONFIRMAR", botao: "Remover permissão", tom: "aviso" })) return false;
     try {
         if (original) await API.atualizarUsuario(original.id, payload);
         else await API.criarUsuario(payload);

@@ -1,6 +1,7 @@
 // Etapa 07, APL-S06-01/02: Admin sees beat licenses, releases a reservation and relists a refunded exclusive.
 // Browser-only integration. Every request is fulfilled locally; no backend is contacted.
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -83,17 +84,17 @@ const beats = () => [
         assert.match(await cards.filter({ hasText: 'Reembolsado' }).locator('.admin-beat-licenses').innerText(), /pagamento revertido/);
 
         // Cancelling the reason prompt sends nothing.
-        page.once('dialog', dialog => dialog.dismiss());
+        await armConfirm(page, { accept: false });
         await reserved.getByRole('button', { name: 'Liberar reserva' }).click();
         await page.waitForTimeout(100);
         assert.equal(posts.length, 0);
 
-        page.once('dialog', dialog => dialog.accept('Cliente desistiu'));
+        await armConfirm(page, { motivo: 'Cliente desistiu' });
         await reserved.getByRole('button', { name: 'Liberar reserva' }).click();
         await page.waitForTimeout(150);
         assert.deepEqual(posts.shift(), { path: '/admin/beats/licencas/31/liberar', body: { motivo: 'Cliente desistiu' } });
 
-        page.once('dialog', dialog => dialog.accept('Reembolso confirmado'));
+        await armConfirm(page, { motivo: 'Reembolso confirmado' });
         await cards.filter({ hasText: 'Reembolsado' }).getByRole('button', { name: 'Devolver ao catálogo' }).click();
         await page.waitForTimeout(150);
         assert.deepEqual(posts.shift(), { path: '/admin/beats/8/voltar-ao-catalogo', body: { motivo: 'Reembolso confirmado' } });
