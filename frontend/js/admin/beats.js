@@ -4,6 +4,7 @@ import { uploadBusy } from "../modules/upload_feedback.js";
 import { applyBeatUploadLimits, validateBeatUpload } from "../modules/beat_upload_validation.js";
 import { beatPreview } from "../modules/beat_preview.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
+import { confirmarAcao } from "../modules/confirm_dialog.js";
 
 async function data(response) {
     const payload = await response.json().catch(() => null);
@@ -100,8 +101,10 @@ function dateTime(value) {
 }
 
 async function adminAction(path, question, button, message) {
-    const motivo = window.prompt(question);
-    if (!motivo?.trim()) return;
+    const confirmed = await confirmarAcao({ titulo: question.replace(/^Motivo para /, "").replace(/:$/, "?").replace(/^./, c => c.toUpperCase()),
+        palavra: "CONFIRMAR", botao: "Confirmar", tom: "aviso", motivo: { rotulo: "Motivo (fica no histórico)", minimo: 3 } });
+    if (!confirmed) return;
+    const motivo = confirmed.motivo;
     button.disabled = true;
     try {
         await data(await authFetch(path, { method: "POST", body: JSON.stringify({ motivo: motivo.trim() }) }));
@@ -241,8 +244,12 @@ function beatCard(beat, config) {
         button.className = decisao === "aprovar" ? "btn-cta" : "btn-small";
         button.textContent = label; button.disabled = beat.status === "vendido";
         button.onclick = async () => {
-            const motivo = decisao === "rejeitar" ? window.prompt("Motivo da rejeição:") : "";
-            if (decisao === "rejeitar" && !motivo?.trim()) return;
+            const decided = await confirmarAcao(decisao === "aprovar"
+                ? { titulo: `Aprovar "${beat.titulo}"?`, mensagem: "O beat entra no catálogo público.", palavra: "PUBLICAR", botao: "Aprovar", tom: "envio" }
+                : { titulo: `Rejeitar "${beat.titulo}"?`, consequencias: ["O produtor recebe a rejeição com o motivo."], palavra: "REJEITAR",
+                    botao: "Rejeitar", tom: "aviso", motivo: { rotulo: "Motivo da rejeição", minimo: 3 } });
+            if (!decided) return;
+            const motivo = decided.motivo;
             button.disabled = true;
             try {
                 await data(await authFetch(`/admin/beats/${beat.id}`, { method: "PATCH", body: JSON.stringify({ decisao, motivo: motivo || "" }) }));

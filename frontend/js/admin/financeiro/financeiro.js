@@ -5,6 +5,7 @@ import { closeFinanceiroModal, renderFinanceiroModal } from "./financeiro_modal.
 import { financeiroState } from "./financeiro_state.js";
 import { renderList, renderSummary } from "./financeiro_ui.js";
 import { adicionarFiltroAmbiente } from "../classificacao.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 document.addEventListener("classificacao:atualizada", carregarFinanceiro);
 
 
@@ -83,9 +84,11 @@ function renderSelected() {
 // AUD6-S10-001: a direct Pix recorded by mistake is voided with a reason, never edited in the database.
 async function voidManualPayment(payment) {
     if (financeiroState.voidingPaymentId || !financeiroState.selected) return;
-    const reason = window.prompt("Motivo da anulação deste Pix direto (fica no histórico):");
-    if (!reason?.trim()) return;
-    if (reason.trim().length < 5) { Notify.error("Descreva o motivo com pelo menos 5 caracteres."); return; }
+    const confirmed = await confirmarAcao({ titulo: "Anular este Pix direto?", mensagem: "A cobrança é recalculada sem este pagamento.",
+        consequencias: ["A anulação fica no histórico financeiro e não pode ser desfeita."], palavra: "ANULAR", botao: "Anular pagamento",
+        motivo: { rotulo: "Motivo da anulação (fica no histórico)", minimo: 5 } });
+    if (!confirmed) return;
+    const reason = confirmed.motivo;
     financeiroState.voidingPaymentId = payment.id;
     renderSelected();
     const selectedId = financeiroState.selected.id;
@@ -106,7 +109,8 @@ async function voidManualPayment(payment) {
 async function registerManualPayment(payload) {
     if (financeiroState.registeringManualPayment || !financeiroState.selected) return;
     const action = payload.modo === "quitar" ? "quitar todo o saldo" : `registrar R$ ${Number(payload.valor).toFixed(2)} como recebido`;
-    if (!window.confirm(`Confirma ${action} por Pix direto? Esta operação ficará no histórico financeiro.`)) return;
+    if (!await confirmarAcao({ titulo: `Confirmar ${action} por Pix direto?`, consequencias: ["A operação fica no histórico financeiro; só sai por anulação com motivo."],
+        palavra: "CONFIRMAR", botao: "Registrar pagamento", tom: "aviso" })) return;
     financeiroState.registeringManualPayment = true;
     renderSelected();
     const selectedId = financeiroState.selected.id;
@@ -136,7 +140,7 @@ async function copyCheckoutLink(value) {
 
 async function reconcilePayment(paymentId) {
     if (financeiroState.reconcilingPaymentId !== null) return;
-    if (!window.confirm("Consultar o provider e conciliar este pagamento agora?")) return;
+    if (!await confirmarAcao({ titulo: "Conciliar este pagamento?", mensagem: "Consulta o provedor e atualiza o status agora.", palavra: null, botao: "Conciliar", tom: "envio" })) return;
     financeiroState.reconcilingPaymentId = paymentId;
     renderSelected();
     try {

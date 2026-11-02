@@ -5,6 +5,7 @@ import { closeCampaignModal, openCampaignModal } from "./newsletter_modal.js";
 import { newsletterState } from "./newsletter_state.js";
 import * as UI from "./newsletter_ui.js";
 import { filtrarSubscribers } from "./newsletter_utils.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 
 function syncAccess() {
@@ -81,7 +82,8 @@ async function salvarCampanha(campaign, payload) {
 
 
 async function enviarCampanha(campaign) {
-    if (!confirm(`Enviar para ${campaign.eligible_subscribers || 0} inscritos ativos?`)) return;
+    if (!await confirmarAcao({ titulo: "Enviar a campanha?", mensagem: `Vai para ${campaign.eligible_subscribers || 0} inscritos ativos.`,
+        consequencias: ["E-mails enviados não podem ser recolhidos."], palavra: "ENVIAR", botao: "Enviar campanha", tom: "envio" })) return;
     try {
         const result = await API.enviarCampanha(campaign.id);
         await carregarNewsletter();
@@ -98,7 +100,8 @@ async function solicitarEnvio(id) {
 
 
 async function cancelarSubscriber(subscriber) {
-    if (!confirm(`Cancelar a inscrição de ${subscriber.email}?`)) return;
+    if (!await confirmarAcao({ titulo: "Cancelar a inscrição?", mensagem: subscriber.email,
+        consequencias: ["A pessoa deixa de receber as campanhas."], palavra: "CONFIRMAR", botao: "Cancelar inscrição", tom: "aviso" })) return;
     try {
         await API.cancelarSubscriber(subscriber.id);
         await carregarNewsletter();

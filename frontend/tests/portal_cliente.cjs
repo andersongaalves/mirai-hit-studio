@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -478,7 +479,7 @@ async function staticResponse(route) {
         const proposalDownloadPromise = page.waitForEvent('download');
         await page.getByRole('button', { name: 'Baixar PDF' }).click();
         assert.match((await proposalDownloadPromise).suggestedFilename(), /^proposta-11(?:-v1)?\.pdf$/);
-        page.once('dialog', dialog => dialog.accept());
+        await armConfirm(page);
         await page.getByRole('button', { name: 'Aceitar proposta' }).click();
         await page.waitForFunction(() => document.getElementById('client-alert').textContent.includes('Proposta aceita'));
         assert.equal(await page.getByRole('button', { name: 'Aceitar proposta' }).count(), 0);

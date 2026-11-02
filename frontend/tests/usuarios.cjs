@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const { autoConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -39,7 +40,7 @@ async function staticResponse(route) {
     let listFailure = false;
     const createdProfiles = [];
     page.on('pageerror', error => errors.push(error.message));
-    page.on('dialog', dialog => dialog.accept());
+    await autoConfirm(page);
     await context.route('**/*', async route => {
         const request = route.request();
         const url = new URL(request.url());

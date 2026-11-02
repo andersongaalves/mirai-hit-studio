@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const { armConfirm } = require('./support/confirm.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -396,7 +397,7 @@ async function staticResponse(route) {
         assert.equal(await beatForm.locator('.beat-form__editing').count(), 0);
         assert.equal(await page.getByRole('button', { name: 'Enviar para revisão' }).count(), 1);
         // A beat with a sale history cannot be deleted: the reason is shown.
-        page.once('dialog', dialog => dialog.accept());
+        await armConfirm(page);
         await page.getByRole('button', { name: 'Excluir <Beat seguro>' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('nao pode ser excluido'));
         assert.equal(beatDeletes, 1);
@@ -504,10 +505,10 @@ async function staticResponse(route) {
         assert.deepEqual(deliveryEdits, [{ bpm: 92, creditos_adicionais: ['Melodista Um', 'Programador Dois'] }]);
         assert.match(await page.locator('.final-delivery-card').filter({ hasText: 'Beat final' }).textContent(), /92 BPM · Am/);
         // Deleting the whole delivery asks first.
-        page.once('dialog', dialog => dialog.dismiss());
+        await armConfirm(page, { accept: false });
         await page.getByRole('button', { name: 'Excluir entrega Beat final' }).click();
         assert.deepEqual(deliveryDeletes, []);
-        page.once('dialog', dialog => dialog.accept());
+        await armConfirm(page);
         await page.getByRole('button', { name: 'Excluir entrega Beat final' }).click();
         await page.waitForFunction(() => ![...document.querySelectorAll('.final-delivery-card h3')].some(title => title.textContent === 'Beat final'));
         assert.deepEqual(deliveryDeletes, [501]);
@@ -604,7 +605,7 @@ async function staticResponse(route) {
         await page.getByRole('button', { name: 'Confirmar início' }).click();
         await page.waitForFunction(() => document.getElementById('producer-alert').textContent.includes('Andamento atualizado'));
         assert.equal(productions[0].status, 'em_producao');
-        page.once('dialog', dialog => dialog.accept());
+        await armConfirm(page);
         await page.locator('.producer-file').filter({ hasText: 'historical.mp3' })
             .getByRole('button', { name: 'Excluir prévia' }).click();
         await page.waitForFunction(() => !document.body.textContent.includes('historical.mp3'));

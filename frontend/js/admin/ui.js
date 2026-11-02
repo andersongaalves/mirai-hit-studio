@@ -118,14 +118,6 @@ export function mostrarSucesso(mensagem) {
 }
 
 // ===========================
-// CONFIRM
-// ===========================
-
-export function confirmar(mensagem) {
-    return confirm(mensagem);
-}
-
-// ===========================
 // FORM
 // ===========================
 

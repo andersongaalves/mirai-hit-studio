@@ -1,4 +1,5 @@
 const { chromium } = require("playwright");
+const { armConfirm } = require("./support/confirm.cjs");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -168,8 +169,10 @@ const screenDir = path.join(os.tmpdir(), "mirai-portfolio-submissions");
         const review = admin.page.locator(".portfolio-submission-review");
         await review.getByRole("button", { name: "Recusar", exact: true }).click();
         assert.equal(posts.length, 1, "Refusal needs a reason");
+        await armConfirm(admin.page);
         await review.getByRole("button", { name: "Aprovar e publicar" }).click();
         await admin.page.getByText("Publicado", { exact: true }).waitFor();
+        assert.match((await admin.page.evaluate(() => window.__confirmLog))[0], /no portfólio\?.*site público/);
         assert.equal(posts.length, 2);
         assert.deepEqual(posts[1], { versao: 2, decisao: "aprovar", motivo: null });
         await admin.page.screenshot({ path: path.join(screenDir, "admin-desktop.png"), fullPage: true });

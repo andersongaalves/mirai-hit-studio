@@ -1,4 +1,5 @@
 const { chromium } = require("playwright");
+const { armConfirm, autoConfirm } = require('./support/confirm.cjs');
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -8,7 +9,6 @@ const root = path.resolve(__dirname, "..");
 let reconciliations = 0;
 const manualPayments = [];
 const voids = [];
-let promptAnswer = "";
 const financeQueries = [];
 
 async function staticResponse(route) {
@@ -27,7 +27,7 @@ async function staticResponse(route) {
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", error => errors.push(error.message));
-        page.on("dialog", dialog => dialog.type() === "prompt" ? dialog.accept(promptAnswer) : dialog.accept());
+        await autoConfirm(page);
         await context.route("**/*", async route => {
             const request = route.request();
             const url = new URL(request.url());
@@ -114,11 +114,11 @@ async function staticResponse(route) {
 
         // AUD6-S10-001: only the direct Pix can be voided, and only with a reason.
         assert.equal(await page.getByRole("button", { name: "Anular Pix direto" }).count(), 1);
-        promptAnswer = "";
+        await armConfirm(page, { accept: false });
         await page.getByRole("button", { name: "Anular Pix direto" }).click();
         await page.waitForTimeout(100);
         assert.equal(voids.length, 0);
-        promptAnswer = "Pix registrado na cobrança errada";
+        await armConfirm(page, { motivo: "Pix registrado na cobrança errada" });
         const reopened = page.waitForResponse(response => new URL(response.url()).pathname === "/financeiro/cobrancas/7");
         await page.getByRole("button", { name: "Anular Pix direto" }).click();
         await reopened;

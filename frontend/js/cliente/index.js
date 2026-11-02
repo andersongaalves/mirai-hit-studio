@@ -25,6 +25,7 @@ import {
     showView,
     updateProcessedPreviews,
 } from "./ui.js";
+import { confirmarAcao } from "../modules/confirm_dialog.js";
 
 let productions = [];
 let proposals = [];
@@ -428,7 +429,7 @@ async function refreshProposals(selectedId = null) {
 }
 
 async function acceptProposal(proposal, button) {
-    if (!confirm(`Aceitar a proposta ${proposal.numero}, versão ${proposal.versao}?`)) return;
+    if (!await confirmarAcao({ titulo: `Aceitar a proposta ${proposal.numero}?`, mensagem: `Versão ${proposal.versao}.`, consequencias: ["O aceite vale como concordância com escopo, valores e condições.", "Depois de aceita, a proposta não pode ser recusada por aqui."], palavra: "ACEITAR", botao: "Aceitar proposta", tom: "envio" })) return;
     button.disabled = true;
     setAlert();
     try {
@@ -442,7 +443,7 @@ async function acceptProposal(proposal, button) {
 }
 
 async function refuseProposal(proposal, button) {
-    if (!confirm(`Recusar a proposta ${proposal.numero}, versão ${proposal.versao}?`)) return;
+    if (!await confirmarAcao({ titulo: `Recusar a proposta ${proposal.numero}?`, mensagem: `Versão ${proposal.versao}.`, consequencias: ["A recusa não pode ser desfeita; para seguir, o estúdio precisa enviar uma nova proposta."], palavra: "RECUSAR", botao: "Recusar proposta", tom: "aviso" })) return;
     button.disabled = true;
     setAlert();
     try {

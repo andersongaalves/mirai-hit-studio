@@ -9,6 +9,7 @@ import * as Propostas from "../propostas/propostas.js";
 import { orcamentosState } from "./orcamentos_state.js";
 import { filtrarOrcamentos } from "./orcamentos_filters.js";
 import { adicionarFiltroAmbiente } from "../classificacao.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 const STATUS_MESSAGES = {
     em_analise: "Orçamento colocado em análise.",
@@ -112,7 +113,7 @@ export function visualizarOrcamento(id) {
 export const fecharModalOrcamento = OrcamentosModal.fecharModalOrcamento;
 
 export async function deletarOrcamento(id) {
-    if (!confirm("Deseja realmente excluir este orçamento?")) {
+    if (!await confirmarAcao({ titulo: "Excluir este orçamento?", consequencias: ["O pedido do cliente é apagado.", "Esta ação não pode ser desfeita."], botao: "Excluir orçamento" })) {
         return;
     }
 

@@ -4,6 +4,7 @@
 import { authFetch } from "../auth.js";
 import * as Notify from "../../utils/notifications.js";
 import { buildPopup } from "../../modules/portal_popup.js";
+import { confirmarAcao } from "../../modules/confirm_dialog.js";
 
 const PUBLICOS = { cliente: "Clientes", produtor: "Produtores", todos: "Clientes e produtores" };
 const TEMAS = { ciano: "Ciano", roxo: "Roxo", amarelo: "Amarelo", verde: "Verde", vermelho: "Vermelho" };
@@ -285,7 +286,7 @@ function popupCard(popup) {
     remove.type = "button";
     remove.setAttribute("aria-label", `Excluir pop-up ${popup.titulo}`);
     remove.addEventListener("click", async () => {
-        if (!window.confirm(`Excluir o pop-up "${popup.titulo}"? Ele deixa de aparecer nos portais.`)) return;
+        if (!await confirmarAcao({ titulo: `Excluir o pop-up "${popup.titulo}"?`, consequencias: ["Ele deixa de aparecer nos portais.", "O histórico de quem fechou é apagado junto."], botao: "Excluir pop-up" })) return;
         remove.disabled = true;
         try {
             await data(await authFetch(`/admin/popups/${popup.id}`, { method: "DELETE" }), "Não foi possível excluir o pop-up.");
