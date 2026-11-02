@@ -6,6 +6,7 @@ when it cannot be deleted), never by listing buckets blindly.
 import logging
 import mimetypes
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 from models import (
@@ -44,20 +45,57 @@ def categoria(mime, nome=""):
     return "outro"
 
 
+SERVICOS = {
+    "r2": "Cloudflare R2",
+    "supabase": "Supabase Storage",
+    "cloudinary": "Cloudinary",
+    "memory": "Memória (teste)",
+    "legacy_document": "Servidor (local)",
+    "local": "Servidor (local)",
+}
+BANCO = "Banco de dados"
+
+
+def servico_de(key):
+    """Storage service that holds an object, from the reference stored for it."""
+    if not key:
+        return "Desconhecido"
+    if key.startswith(("http://", "https://")):
+        host = (urlsplit(key).hostname or "").lower()
+        if "cloudinary" in host:
+            return "Cloudinary"
+        if "supabase" in host:
+            return "Supabase Storage"
+        if host.endswith(("r2.dev", "r2.cloudflarestorage.com")):
+            return "Cloudflare R2"
+        return "Link externo"
+    if "://" not in key:
+        # Bare keys are the legacy Supabase bucket layout.
+        return "Supabase Storage"
+    return SERVICOS.get(key.split("://", 1)[0], key.split("://", 1)[0])
+
+
 def _iso(value):
     return value.isoformat() if isinstance(value, datetime) else value
 
 
-def _entry(ref, pasta, nome, mime, tamanho, criado_em, *, contexto, protegido=None, baixar="api", url=None, detalhes=None):
+def _entry(ref, pasta, nome, mime, tamanho, criado_em, *, contexto, funcao, servico, protegido=None, baixar="api",
+           url=None, miniatura=None, detalhes=None):
+    mime = mime or (mimetypes.guess_type(nome or "")[0] or "application/octet-stream")
+    if miniatura is None and url and categoria(mime, nome) == "imagem":
+        miniatura = url
     return {
         "ref": ref,
         "pasta": pasta,
         "nome": nome,
-        "mime_type": mime or (mimetypes.guess_type(nome or "")[0] or "application/octet-stream"),
+        "mime_type": mime,
         "categoria": categoria(mime, nome),
         "tamanho_bytes": tamanho,
         "criado_em": _iso(criado_em),
         "contexto": contexto,
+        "funcao": funcao,
+        "servico": servico,
+        "miniatura": miniatura,
         "protegido": bool(protegido),
         "motivo_protecao": protegido or None,
         "baixar": baixar,
@@ -89,6 +127,15 @@ def protecao_arquivo(model, *, replaced, attached, delivery, receipts, productio
     return None
 
 
+FUNCOES_PRODUCAO = {
+    "previa": "Prévia",
+    "entrega": "Entrega final",
+    "material": "Material do cliente",
+    "referencia": "Referência",
+    "comprovante": "Comprovante de repasse",
+}
+
+
 def _production_files(db):
     from models import ProducaoMensagemModel
 
@@ -116,16 +163,25 @@ def _production_files(db):
             "lufs_integrado": getattr(model, "lufs_integrado", None),
         }
         entries.append(_entry(f"arq:{model.id}", pasta, model.nome_exibicao, model.mime_type, model.tamanho_bytes,
-                              model.created_at, contexto=contexto, protegido=protected, detalhes=detalhes))
+                              model.created_at, contexto=contexto, funcao=FUNCOES_PRODUCAO.get(model.tipo, model.tipo),
+                              servico=servico_de(model.object_key), protegido=protected, detalhes=detalhes))
         job = model.tag_processamento
         if job is not None and job.object_key:
             entries.append(_entry(
                 f"tag:{model.id}", pasta, f"{model.nome_exibicao} (versão com tag)", "audio/mpeg", job.tamanho_bytes,
-                job.concluido_em or model.created_at, contexto=contexto,
-                protegido="Versão com tag de uma prévia: sai junto com a prévia (ou gere de novo pelo Admin).",
+                job.concluido_em or model.created_at, contexto=contexto, funcao="Prévia com tag",
+                servico=servico_de(job.object_key), protegido="Versão com tag de uma prévia: sai junto com a prévia (ou gere de novo pelo Admin).",
                 detalhes={"tipo": "previa_com_tag", "sha256": job.sha256, "estado": job.estado, "tag_id": job.tag_id},
             ))
     return entries
+
+
+FUNCOES_BEAT = {
+    "original": "Original do beat",
+    "previa": "Prévia do beat (com tag)",
+    "wav": "WAV do beat",
+    "multitrack": "Multitrack do beat",
+}
 
 
 def _beat_files(db):
@@ -136,6 +192,7 @@ def _beat_files(db):
         contexto = {"tipo": "beat", "id": beat.id, "titulo": beat.titulo}
         reason = ("Beat com pedido ou venda: os arquivos ficam para os contratos." if beat.id in sold or beat.status == "vendido"
                   else "Arquivo de um beat: exclua o beat inteiro (o produtor pode, pelo portal).")
+        cover = beat.capa_url or None
         slots = [
             ("original", "Original (sem tag)", beat.original_ref, beat.mime_type or "audio/mpeg", beat.tamanho_bytes),
             ("previa", "Prévia com tag (MP3)", beat.mp3_ref or beat.preview_ref, "audio/mpeg", None),
@@ -145,15 +202,18 @@ def _beat_files(db):
         for slot, label, ref, mime, size in slots:
             if ref and not (slot == "previa" and ref == beat.original_ref):
                 entries.append(_entry(f"beat:{beat.id}:{slot}", pasta, f"{beat.titulo} · {label}", mime, size,
-                                      beat.created_at, contexto=contexto, protegido=reason,
+                                      beat.created_at, contexto=contexto, funcao=FUNCOES_BEAT[slot],
+                                      servico=servico_de(ref), protegido=reason, miniatura=cover,
                                       detalhes={"status": beat.status, "slot": slot}))
         if beat.multitrack_url:
             entries.append(_entry(f"beat:{beat.id}:multitrack_link", pasta, f"{beat.titulo} · Multitrack (link externo)", "", None,
-                                  beat.created_at, contexto=contexto, protegido="Link externo: fica no serviço do produtor.",
-                                  baixar="url", url=beat.multitrack_url))
+                                  beat.created_at, contexto=contexto, funcao="Multitrack do beat",
+                                  servico="Link externo", protegido="Link externo: fica no serviço do produtor.",
+                                  baixar="url", url=beat.multitrack_url, miniatura=cover))
         if beat.capa_url:
             entries.append(_entry(f"beat:{beat.id}:capa", pasta, f"{beat.titulo} · Capa", "image/jpeg", None, beat.created_at,
-                                  contexto=contexto, protegido=reason, baixar="url", url=beat.capa_url))
+                                  contexto=contexto, funcao="Capa do beat", servico=servico_de(beat.capa_url),
+                                  protegido=reason, baixar="url", url=beat.capa_url))
     return entries
 
 
@@ -175,10 +235,12 @@ def _portfolio_files(db):
             except Exception:  # noqa: BLE001 - storage not configured here; the entry still lists.
                 url = None
             entries.append(_entry(f"proj:{project.id}:{slot}", pasta, f"{project.titulo} · {label}", "audio/mpeg", None, None,
-                                  contexto=contexto, protegido=reason, baixar="url", url=url))
+                                  contexto=contexto, funcao="Áudio do portfólio", servico="Supabase Storage",
+                                  protegido=reason, baixar="url", url=url, miniatura=project.link_capa or None))
         if project.link_capa:
             entries.append(_entry(f"proj:{project.id}:capa", pasta, f"{project.titulo} · Capa", "image/jpeg", None, None,
-                                  contexto=contexto, protegido=reason, baixar="url", url=project.link_capa))
+                                  contexto=contexto, funcao="Capa do portfólio", servico=servico_de(project.link_capa),
+                                  protegido=reason, baixar="url", url=project.link_capa))
     return entries
 
 
@@ -189,6 +251,8 @@ def _documents(db):
         entries.append(_entry(f"doc:{proposal.id}", ["Documentos", "Propostas"], f"Proposta {numero}.pdf", "application/pdf",
                               None, getattr(proposal, "updated_at", None) or getattr(proposal, "created_at", None),
                               contexto={"tipo": "proposta", "id": proposal.id, "titulo": str(numero)},
+                              funcao="Proposta (PDF)",
+                              servico=servico_de(proposal.pdf_path) if "://" in proposal.pdf_path else "Servidor (local)",
                               protegido="Documento comercial enviado ao cliente."))
     return entries
 
@@ -200,6 +264,7 @@ def _audio_tags(db):
     for tag in db.scalars(select(AudioTagModel).order_by(AudioTagModel.created_at.desc())):
         entries.append(_entry(f"audiotag:{tag.id}", ["Tags de áudio"], tag.nome, tag.mime_type, len(tag.conteudo or b""),
                               tag.created_at, contexto={"tipo": "tag", "id": tag.id, "titulo": tag.nome},
+                              funcao="Tag de áudio", servico=BANCO,
                               protegido="Tag em uso (perfil atual ou prévias geradas com ela)." if tag.id in in_use else None,
                               detalhes={"duracao_s": tag.duracao, "sha256": tag.sha256, "usuario_id": tag.usuario_id}))
     return entries
@@ -216,7 +281,17 @@ def indice(db):
     return entries
 
 
-def listar(db, *, pasta=None, categoria_filtro=None, busca=None, ordem="recentes"):
+def _facet(entries, field):
+    counts = {}
+    for entry in entries:
+        item = counts.setdefault(entry[field], {"valor": entry[field], "arquivos": 0, "tamanho_bytes": 0})
+        item["arquivos"] += 1
+        item["tamanho_bytes"] += entry["tamanho_bytes"] or 0
+    return sorted(counts.values(), key=lambda item: (-item["arquivos"], item["valor"]))
+
+
+def listar(db, *, pasta=None, categoria_filtro=None, funcao=None, servico=None, protegido=None, busca=None,
+           ordem="recentes"):
     entries = indice(db)
     folders = {}
     for entry in entries:
@@ -236,20 +311,32 @@ def listar(db, *, pasta=None, categoria_filtro=None, busca=None, ordem="recentes
                     and ("/".join(entry["pasta"]) == pasta or "/".join(entry["pasta"]).startswith(pasta + "/"))]
     if categoria_filtro:
         selected = [entry for entry in selected if entry["categoria"] == categoria_filtro]
+    if funcao:
+        selected = [entry for entry in selected if entry["funcao"] == funcao]
+    if servico:
+        selected = [entry for entry in selected if entry["servico"] == servico]
+    if protegido is not None:
+        selected = [entry for entry in selected if entry["protegido"] is bool(protegido)]
     if busca:
         words = busca.lower().split()
         selected = [entry for entry in selected
-                    if all(word in f"{entry['nome']} {entry['contexto'].get('titulo', '')}".lower() for word in words)]
+                    if all(word in f"{entry['nome']} {entry['contexto'].get('titulo', '')} {entry['funcao']}".lower()
+                           for word in words)]
     if ordem == "maiores":
         selected = sorted(selected, key=lambda entry: entry["tamanho_bytes"] or 0, reverse=True)
     elif ordem == "nome":
         selected = sorted(selected, key=lambda entry: entry["nome"].lower())
+    elif ordem == "antigos":
+        selected = sorted(selected, key=lambda entry: entry["criado_em"] or "")
     else:
         selected = sorted(selected, key=lambda entry: entry["criado_em"] or "", reverse=True)
     return {
         "arquivos": selected,
         "pastas": sorted(folders.values(), key=lambda item: item["caminho"]),
         "totais": totals,
+        "funcoes": _facet(entries, "funcao"),
+        "servicos": _facet(entries, "servico"),
+        "total": {"arquivos": len(entries), "tamanho_bytes": sum(entry["tamanho_bytes"] or 0 for entry in entries)},
         "compressao": compressao_resumo(db),
     }
 
@@ -421,7 +508,7 @@ def comprimir_uma(session_factory, *, storage=None, transcoder=None):
                         job.object_key, job.sha256, job.tamanho_bytes = key, hashlib.sha256(smaller_tagged).hexdigest(), len(smaller_tagged)
             model.comprimido_em = datetime.now(timezone.utc)
             db.commit()
-        except Exception:
+        except Exception:  # noqa: BLE001 - any transcode/storage failure rolls back and moves on.
             db.rollback()
             for key in saved:
                 try:

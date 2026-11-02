@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin/arquivos", tags=["Arquivos (Admin)"])
 Db = Annotated[Session, Depends(get_db)]
+Admin = Annotated[object, Depends(require_admin)]
 
 
 class Exclusao(BaseModel):
@@ -22,16 +23,20 @@ class Exclusao(BaseModel):
 
 
 @router.get("")
-def listar(db: Db, user=Depends(require_admin),
+def listar(db: Db, user: Admin,
            pasta: Annotated[str | None, Query(max_length=300)] = None,
            categoria: Literal["audio", "pdf", "imagem", "compactado", "outro"] | None = None,
+           funcao: Annotated[str | None, Query(max_length=60)] = None,
+           servico: Annotated[str | None, Query(max_length=60)] = None,
+           protegido: bool | None = None,
            busca: Annotated[str | None, Query(max_length=120)] = None,
-           ordem: Literal["recentes", "maiores", "nome"] = "recentes"):
-    return service.listar(db, pasta=pasta, categoria_filtro=categoria, busca=busca, ordem=ordem)
+           ordem: Literal["recentes", "antigos", "maiores", "nome"] = "recentes"):
+    return service.listar(db, pasta=pasta, categoria_filtro=categoria, funcao=funcao, servico=servico,
+                          protegido=protegido, busca=busca, ordem=ordem)
 
 
 @router.get("/conteudo")
-def baixar(ref: Annotated[str, Query(min_length=3, max_length=80)], db: Db, user=Depends(require_admin)):
+def baixar(ref: Annotated[str, Query(min_length=3, max_length=80)], db: Db, user: Admin):
     result = service.conteudo(db, ref)
     if isinstance(result, dict):
         return result
@@ -44,7 +49,7 @@ def baixar(ref: Annotated[str, Query(min_length=3, max_length=80)], db: Db, user
 
 @router.delete("", status_code=204)
 def excluir(ref: Annotated[str, Query(min_length=3, max_length=80)], dados: Exclusao, request: Request, db: Db,
-            user=Depends(require_admin)):
+            user: Admin):
     try:
         service.excluir(db, ref, user, dados.motivo, request_id=getattr(request.state, "request_id", None))
     except producao_arquivo_service.ProducaoArquivoError as exc:

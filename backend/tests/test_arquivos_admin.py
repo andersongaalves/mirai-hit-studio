@@ -74,6 +74,21 @@ class ArquivosAdminTests(unittest.TestCase):
                     assert [item['ref'] for item in found] == [f'arq:{pdf}']
                     in_folder = (await api.get('/admin/arquivos', headers=admin, params={'pasta': 'Produções/#1 Faixa A/Materiais'})).json()['arquivos']
                     assert [item['ref'] for item in in_folder] == [f'arq:{pdf}']
+                    assert by_ref[f'arq:{second}']['funcao'] == 'Prévia'
+                    assert by_ref[f'arq:{pdf}']['funcao'] == 'Material do cliente'
+                    assert by_ref[f'arq:{second}']['servico'] == 'Supabase Storage'
+                    assert {item['valor'] for item in listing['funcoes']} >= {'Prévia', 'Material do cliente'}
+                    assert listing['servicos'][0]['valor'] == 'Supabase Storage' and listing['total']['arquivos'] >= 4
+                    by_role = (await api.get('/admin/arquivos', headers=admin, params={'funcao': 'Material do cliente'})).json()['arquivos']
+                    assert [item['ref'] for item in by_role] == [f'arq:{pdf}']
+                    by_service = (await api.get('/admin/arquivos', headers=admin, params={'servico': 'Cloudflare R2'})).json()['arquivos']
+                    assert by_service == []
+                    unlocked = (await api.get('/admin/arquivos', headers=admin, params={'protegido': 'false'})).json()['arquivos']
+                    assert f'arq:{first}' not in {item['ref'] for item in unlocked} and f'arq:{second}' in {item['ref'] for item in unlocked}
+                    assert manager.servico_de('r2://mirai-files/a/b') == 'Cloudflare R2'
+                    assert manager.servico_de('https://res.cloudinary.com/x/image/upload/a.jpg') == 'Cloudinary'
+                    assert manager.servico_de('arquivos/abc') == 'Supabase Storage'
+                    assert manager.servico_de('https://drive.example.com/x') == 'Link externo'
                     with patch.object(files, 'new_production_file_storage', return_value=storage):
                         download = await api.get('/admin/arquivos/conteudo', headers=admin, params={'ref': f'arq:{pdf}'})
                         assert download.status_code == 200 and download.content == b'%PDF-1.4 synthetic'
