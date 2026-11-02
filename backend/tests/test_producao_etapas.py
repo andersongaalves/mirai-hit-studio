@@ -316,5 +316,94 @@ assert sorted((item['id'], item['etapa_id']) for item in listed) == sorted([
     (rough.json()['id'], ids[1]), (second.json()['id'], ids[1]), (general.json()['id'], None)])
 ''')
 
+    def test_admin_comparison_loudness_and_stage_deletion(self):
+        self.run_case('''
+os.environ.setdefault('RATE_LIMIT_DB', os.path.join(tempfile.mkdtemp(), 'limits.sqlite3'))
+client = make_api()
+from routers.comparativo import router as comparison_router
+client.app.include_router(comparison_router)
+from services import comparativo_service, producao_arquivo_service
+from models import ProducaoArquivoModel
+
+class MemoryStorage:
+    def __init__(self): self.objects = {}
+    def save(self, data, mime_type):
+        key = f'arquivos/{len(self.objects) + 1:032x}/{len(self.objects) + 101:032x}'
+        self.objects[key] = data
+        return key
+    def read(self, key): return self.objects[key]
+    def delete(self, key): self.objects.pop(key, None)
+storage = MemoryStorage()
+
+with Session(engine) as db:
+    seed_service(db)
+    db.get(OrcamentoModel, 1).produtor_id = 2
+    db.commit()
+    production, _ = approved_production(db)
+    production_id = production.id
+ids = [stage['id'] for stage in client.get(f'/producoes/{production_id}/etapas-contratuais', headers=bearer('admin')).json()['etapas']]
+url = f'/portal/produtor/producoes/{production_id}/arquivos'
+def send(name, content, **data):
+    with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage):
+        response = client.post(url, headers=bearer('producer-a'), data={'tipo': 'previa', **data},
+                               files={'arquivo': (name, content, 'audio/mpeg')})
+    assert response.status_code == 201, response.text
+    return response.json()['id']
+rough = send('rough.mp3', b'ID3rough', etapa_id=str(ids[1]))
+master = send('master.mp3', b'ID3master', etapa_id=str(ids[-1]))
+measured = []
+def loudness(path):
+    content = open(path, 'rb').read()
+    measured.append(content)
+    return {b'ID3rough': -20.04, b'ID3master': -9.0}[content]
+path = f'/producoes/{production_id}/comparativo'
+with patch.object(producao_arquivo_service, 'new_production_file_storage', return_value=storage), \
+        patch.object(comparativo_service.audio_tag_service, 'medir_loudness', side_effect=loudness):
+    auto = client.get(path, params={'antes': rough, 'depois': master}, headers=bearer('admin'))
+    assert auto.status_code == 200, auto.text
+    assert auto.json() == {'origem': 'automatica', 'antes_arquivo_id': None, 'depois_arquivo_id': None,
+                           'lufs_antes': -20.04, 'lufs_depois': -9.0, 'ganho_antes_db': 11.0}, auto.json()
+    # Measured once and kept on the file.
+    client.get(path, params={'antes': rough, 'depois': master}, headers=bearer('admin'))
+    assert len(measured) == 2
+    assert client.get(path, headers=bearer('producer-a')).status_code == 403
+    assert client.put(path, json={'antes_arquivo_id': rough}, headers=bearer('admin')).status_code == 422
+    assert client.put(path, json={'antes_arquivo_id': rough, 'depois_arquivo_id': rough}, headers=bearer('admin')).status_code == 422
+    chosen = client.put(path, json={'antes_arquivo_id': rough, 'depois_arquivo_id': master}, headers=bearer('admin'))
+    assert chosen.status_code == 200, chosen.text
+    assert chosen.json()['origem'] == 'manual' and chosen.json()['antes_arquivo_id'] == rough and chosen.json()['ganho_antes_db'] == 11.0
+    # The client gets the manual choice only when both files are visible to them.
+    client_path = f'/portal/cliente/producoes/{production_id}/comparativo'
+    with Session(engine) as db:
+        hidden = db.get(ProducaoArquivoModel, rough)
+        hidden.visivel_cliente = False
+        if hidden.tag_processamento is not None:
+            hidden.tag_processamento.visivel_cliente = False
+        db.commit()
+    assert client.get(client_path, headers=bearer('client-a')).json()['origem'] == 'automatica'
+    with Session(engine) as db:
+        for file_id in (rough, master):
+            db.get(ProducaoArquivoModel, file_id).visivel_cliente = True
+        db.commit()
+    seen = client.get(client_path, headers=bearer('client-a'))
+    assert seen.json()['origem'] == 'manual' and seen.json()['ganho_antes_db'] == 11.0, seen.text
+    assert client.get(client_path, headers=bearer('client-b')).status_code == 404
+    reset = client.put(path, json={'antes_arquivo_id': None, 'depois_arquivo_id': None}, headers=bearer('admin'))
+    assert reset.json()['origem'] == 'automatica'
+
+# The Admin deletes a stage: its files become general; a reason is required.
+stage_path = f'/producoes/{production_id}/etapas-contratuais/{ids[1]}'
+assert client.request('DELETE', stage_path, json={'motivo': 'x'}, headers=bearer('admin')).status_code == 422
+assert client.request('DELETE', stage_path, json={'motivo': 'Etapa duplicada'}, headers=bearer('producer-a')).status_code == 403
+removed = client.request('DELETE', stage_path, json={'motivo': 'Etapa duplicada'}, headers=bearer('admin'))
+assert removed.status_code == 200, removed.text
+assert ids[1] not in [stage['id'] for stage in removed.json()['etapas']]
+with Session(engine) as db:
+    assert db.get(ProducaoEtapaModel, ids[1]) is None
+    assert db.get(ProducaoArquivoModel, rough).etapa_id is None
+assert client.request('DELETE', stage_path, json={'motivo': 'Etapa duplicada'}, headers=bearer('admin')).status_code == 404
+''')
+
+
 if __name__ == "__main__":
     unittest.main()

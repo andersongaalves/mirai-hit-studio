@@ -255,3 +255,25 @@ export async function salvarExcecaoPoliticas(id, politicas, motivo) {
 export async function removerExcecaoPoliticas(id) {
     return handleResponse(await authFetch(`/producoes/${id}/politicas`, { method: "DELETE" }), "Erro ao remover a exceção.");
 }
+
+export async function excluirEtapaContratual(id, etapaId, motivo) {
+    return handleResponse(await authFetch(`/producoes/${id}/etapas-contratuais/${etapaId}`, {
+        method: "DELETE",
+        body: JSON.stringify({ motivo }),
+    }), "Erro ao excluir etapa.");
+}
+
+// Before/after: the Admin's choice (null = automatic) and the loudness match.
+export async function obterComparativo(id, antes, depois) {
+    const query = new URLSearchParams();
+    if (antes) query.set("antes", antes);
+    if (depois) query.set("depois", depois);
+    return handleResponse(await authFetch(`/producoes/${id}/comparativo?${query}`), "Erro ao carregar o comparativo.");
+}
+
+export async function salvarComparativo(id, antes, depois) {
+    return handleResponse(await authFetch(`/producoes/${id}/comparativo`, {
+        method: "PUT",
+        body: JSON.stringify({ antes_arquivo_id: antes, depois_arquivo_id: depois }),
+    }), "Erro ao salvar o comparativo.");
+}

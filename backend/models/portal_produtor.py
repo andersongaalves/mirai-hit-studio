@@ -7,6 +7,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -117,6 +118,8 @@ class ProducaoArquivoModel(Base):
         nullable=True,
         index=True,
     )
+    # Integrated loudness (LUFS), measured once for the before/after comparison.
+    lufs_integrado = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
@@ -125,7 +128,7 @@ class ProducaoArquivoModel(Base):
         nullable=False,
     )
 
-    producao = relationship("ProducaoModel")
+    producao = relationship("ProducaoModel", foreign_keys=[producao_id])
     remetente = relationship("UsuarioModel", foreign_keys=[remetente_usuario_id])
     substitui = relationship("ProducaoArquivoModel", remote_side=[id], uselist=False)
 

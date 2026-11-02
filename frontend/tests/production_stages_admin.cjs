@@ -42,6 +42,12 @@ window.renderAssign = data => {
         },
     }));
 };
+window.renderDelete = data => {
+    document.getElementById('root').replaceChildren(stagesPanel({
+        role: 'admin', heading: false, data,
+        onDelete: async (stage, motivo) => { window.calls.push(['delete', stage.id, motivo]); },
+    }));
+};
 window.renderProducer = data => {
     document.getElementById('root').replaceChildren(stagesPanel({
         role: 'produtor', data, onChange: async (stage, destino) => { window.calls.push(['producer', stage.id, destino]); },
@@ -230,6 +236,21 @@ const STAGES = {
         assert.match(await parent.locator('.production-stage__substages-title').textContent(), /Etapas internas · 🎧 Masterização/);
         const { orderedStages } = await import('../js/modules/stage_tree.js').catch(() => ({}));
         if (orderedStages) assert.deepEqual(orderedStages(combo.etapas).map(item => item.label), ['Rough Mix', 'Mixagem', 'Masterização', '↳ Planejamento', '↳ Masterização']);
+
+        // The Admin removes a stage, with a reason; cancelling the prompt does nothing.
+        await page.evaluate(data => window.render && window.renderDelete(data), STAGES);
+        assert.equal(await page.getByRole('button', { name: /^Excluir a etapa/ }).count(), STAGES.etapas.length);
+        await page.evaluate(() => { window.calls = []; });
+        page.once('dialog', dialog => dialog.dismiss());
+        await page.getByRole('button', { name: 'Excluir a etapa Rough Mix' }).click();
+        assert.deepEqual(await page.evaluate(() => window.calls), []);
+        page.once('dialog', dialog => dialog.accept('Etapa duplicada'));
+        await page.getByRole('button', { name: 'Excluir a etapa Rough Mix' }).click();
+        await page.waitForFunction(() => window.calls.length === 1);
+        assert.deepEqual(await page.evaluate(() => window.calls), [['delete', 1, 'Etapa duplicada']]);
+        // Producers never see it.
+        await page.evaluate(data => window.renderProducer(data), STAGES);
+        assert.equal(await page.getByRole('button', { name: /^Excluir a etapa/ }).count(), 0);
 
         assert.deepEqual(errors, []);
         console.log('PASS: admin stages show values and grouping, approve/reopen/resume, refusal feedback, deadlines, generation, responsible/history (5.07), producer ownership view and narrow layout.');

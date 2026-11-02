@@ -3,7 +3,7 @@ import * as Notify from "../../utils/notifications.js";
 import * as API from "./producoes_api.js";
 import { messagesPanel } from "../../modules/production_messages.js";
 import { stagesPanel } from "../../modules/production_stages.js";
-import { beforeAfterSection, pickBeforeAfter } from "../../modules/before_after.js";
+import { beforeAfterSection, pairFromIds, pickBeforeAfter } from "../../modules/before_after.js";
 import { applyStageFiles, resetStageFiles, selectStage, setStages, stageFieldValue } from "../../modules/stage_files.js";
 import { quotaEditor, quotaList } from "../../modules/file_quotas.js";
 import { POLICIES, policyForm, policySummary } from "../../modules/policies.js";
@@ -124,14 +124,84 @@ function renderFiles() {
 
 // Rough Mix vs final, as the client will hear it at the final delivery.
 // The Admin hears both untagged and without the payment gate.
-function renderBeforeAfter() {
+let comparisonSerial = 0;
+
+const audioFiles = () => files.filter(file => podeOuvir(file) && file.processamento_tag !== "pendente");
+
+function comparisonEditor(choice, pair, id) {
+    const editor = node("details", "admin-disclosure before-after__editor-wrap");
+    editor.append(node("summary", "", choice?.origem === "manual" ? "Editar comparativo (escolhido pelo estúdio)" : "Editar comparativo"));
+    const form = node("form", "before-after__editor");
+    const grid = node("div", "before-after__editor-grid");
+    const selectFor = (label, selected) => {
+        const wrap = node("label", "", label);
+        const select = node("select");
+        select.append(new Option("Automático", ""));
+        audioFiles().forEach(file => select.append(new Option(`${file.nome_exibicao} · ${file.tipo} v${file.versao}`, String(file.id))));
+        select.value = selected ? String(selected) : "";
+        wrap.append(select);
+        grid.append(wrap);
+        return select;
+    };
+    const manual = choice?.origem === "manual";
+    const before = selectFor("Antes (Rough Mix)", manual ? choice.antes_arquivo_id : pair?.before.id);
+    const after = selectFor("Depois (versão final)", manual ? choice.depois_arquivo_id : pair?.after.id);
+    const help = node("p", "admin-help", "Os dois tocam com o mesmo volume integrado (LUFS), usando a versão final como referência. \"Automático\" volta para a escolha da Rough Mix e da master pelas etapas.");
+    const actions = node("div", "before-after__editor-actions");
+    const reset = node("button", "btn-small", "Voltar ao automático");
+    reset.type = "button";
+    const save = node("button", "btn-small btn-cta", "Salvar comparativo");
+    save.type = "submit";
+    actions.append(reset, save);
+    form.append(grid, help, actions);
+    const persist = async (antes, depois, button) => {
+        const finish = uploadBusy(button, "Salvando...");
+        try {
+            await API.salvarComparativo(id, antes, depois);
+            Notify.success(antes ? "Comparativo salvo." : "Comparativo automático.");
+            if (productionId === id) await renderBeforeAfter();
+        } catch (error) {
+            Notify.error(error.message || "Não foi possível salvar o comparativo.");
+        } finally {
+            finish();
+        }
+    };
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        const antes = Number(before.value) || null;
+        const depois = Number(after.value) || null;
+        if (!antes !== !depois) { Notify.error("Escolha os dois arquivos ou volte para o automático."); return; }
+        persist(antes, depois, save);
+    });
+    reset.addEventListener("click", () => persist(null, null, reset));
+    editor.append(form);
+    if (manual) editor.open = false;
+    return editor;
+}
+
+async function renderBeforeAfter() {
     const slot = byId("prod_antes_depois");
     if (!slot) return;
-    const pair = pickBeforeAfter(stages, files);
-    slot.hidden = !pair;
-    if (!pair) { slot.replaceChildren(); return; }
+    const serial = ++comparisonSerial;
+    const id = productionId;
+    let pair = pickBeforeAfter(stages, files);
+    let choice = null;
+    try {
+        choice = await API.obterComparativo(id, pair?.before.id, pair?.after.id);
+    } catch {
+        choice = null;
+    }
+    if (serial !== comparisonSerial || productionId !== id) return;
+    if (choice?.origem === "manual") pair = pairFromIds(files, choice.antes_arquivo_id, choice.depois_arquivo_id) || pair;
+    const hasAudio = audioFiles().length >= 2;
+    slot.hidden = !pair && !hasAudio;
+    if (!pair) {
+        slot.replaceChildren(...(hasAudio ? [node("h3", "", "Antes e depois"), node("p", "admin-help", "Sem Rough Mix e versão final identificadas: escolha os dois arquivos."), comparisonEditor(choice, null, id)] : []));
+        return;
+    }
     const untagged = file => (file.processamento_tag === "pronto" ? "original" : null);
-    slot.replaceChildren(beforeAfterSection(pair, {
+    const section = beforeAfterSection(pair, {
+        loudness: choice,
         heading: "h3",
         id: "prod-antes-depois-title",
         eyebrow: "Comparação da entrega",
@@ -140,7 +210,9 @@ function renderBeforeAfter() {
         afterVersion: untagged(pair.after),
         load: async (file, versao) => (await API.baixarArquivo(productionId, file.id, { versao, ouvir: true })).blob,
         onError: error => Notify.error(error.message || "Não foi possível tocar o áudio."),
-    }));
+    });
+    section.append(comparisonEditor(choice, pair, id));
+    slot.replaceChildren(section);
 }
 
 function renderPayout() {
@@ -290,6 +362,11 @@ async function carregarEtapas(id, revision) {
             await reload();
         },
         onHistory: stage => API.historicoEtapaContratual(id, stage.id),
+        onDelete: async (stage, motivo) => {
+            await API.excluirEtapaContratual(id, stage.id, motivo);
+            Notify.success("Etapa excluída.");
+            await carregarOperacao(id);
+        },
         onSelect: stage => {
             selectStage(stage.id);
             byId("prod-files-tab")?.click();

@@ -2,7 +2,7 @@ import { controlesOuvir, podeOuvir } from "../modules/ouvir_arquivo.js";
 import { applyStageFiles, resetStageFiles, stageField, stageFieldValue } from "../modules/stage_files.js";
 import { renderMudancas } from "../modules/proposta_mudancas.js";
 import { deliveriesSection, stageLabel } from "../modules/final_deliveries.js";
-import { beforeAfterSection, pickBeforeAfter } from "../modules/before_after.js";
+import { beforeAfterSection, pairFromIds, pickBeforeAfter } from "../modules/before_after.js";
 import {
     FINAL_STATUSES,
     deadlineState,
@@ -231,15 +231,33 @@ function fileGroup(title, files, handlers, help = "") {
 // and the final audio is released to the client.
 let beforeAfterContext = null;
 
-export function renderBeforeAfter(stages = []) {
+let beforeAfterSerial = 0;
+
+export async function renderBeforeAfter(stages = []) {
     const slot = document.getElementById("project-before-after");
     if (!slot || !beforeAfterContext) return;
+    const serial = ++beforeAfterSerial;
     const { files, deliveries, handlers } = beforeAfterContext;
-    const pair = handlers.onListen ? pickBeforeAfter(stages, files, deliveries) : null;
+    let pair = handlers.onListen ? pickBeforeAfter(stages, files, deliveries) : null;
+    let loudness = null;
+    // The studio may have chosen the pair; both play at the final's loudness.
+    if (pair && handlers.onComparison) {
+        try {
+            loudness = await handlers.onComparison(pair.before.id, pair.after.id);
+        } catch {
+            loudness = null;
+        }
+        if (serial !== beforeAfterSerial) return;
+        if (loudness?.origem === "manual") {
+            const playable = files.filter(file => podeOuvir(file) && !file.bloqueado_pagamento);
+            pair = pairFromIds(playable, loudness.antes_arquivo_id, loudness.depois_arquivo_id) || pair;
+        }
+    }
     slot.hidden = !pair;
     if (!pair) { slot.replaceChildren(); return; }
     // The untagged original of the rough is released together with the final delivery.
     slot.replaceChildren(beforeAfterSection(pair, {
+        loudness,
         eyebrow: "Entrega final",
         lead: "Compare a primeira mix (Rough Mix) com a versão final. Troque entre as duas durante a reprodução: a música continua do mesmo ponto.",
         beforeVersion: pair.before.original_disponivel ? "original" : null,

@@ -37,3 +37,14 @@ class ProducaoModel(Base):
     etapas = Column(Text, default="[]", nullable=False)
 
     prazo_entrega = Column(DateTime(timezone=True), nullable=True)
+    # Before/after chosen by the Admin; null = automatic (Rough Mix x final).
+    comparativo_antes_arquivo_id = Column(
+        Integer,
+        ForeignKey("producao_arquivos.id", ondelete="SET NULL", name="fk_producoes_comparativo_antes", use_alter=True),
+        nullable=True,
+    )
+    comparativo_depois_arquivo_id = Column(
+        Integer,
+        ForeignKey("producao_arquivos.id", ondelete="SET NULL", name="fk_producoes_comparativo_depois", use_alter=True),
+        nullable=True,
+    )
