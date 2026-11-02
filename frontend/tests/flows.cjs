@@ -153,8 +153,8 @@ const root = path.resolve(__dirname, '..');
         await openAndLoad();
         assert.equal(await page.locator('#admin-area').evaluate(el => el.classList.contains('hidden')), false);
         const expected = ['GET /dashboard'];
-        // The notification bell polls on its own schedule; it is checked apart from the entry loads.
-        const entryCalls = () => calls.filter(call => call.startsWith('GET') && !['GET /auth/me', 'GET /admin/notificacoes'].includes(call)).sort();
+        // The notification bell (history and "Em andamento") polls on its own schedule; it is checked apart.
+        const entryCalls = () => calls.filter(call => call.startsWith('GET') && !['GET /auth/me', 'GET /admin/notificacoes', 'GET /admin/notificacoes/atividades'].includes(call)).sort();
         assert.deepEqual(entryCalls(), expected);
         assert.ok(calls.includes('GET /admin/notificacoes'));
         assert.equal(calls.filter(call => call === 'POST /auth/login').length, 1);
@@ -186,7 +186,7 @@ const root = path.resolve(__dirname, '..');
         calls.length = 0;
         await page.reload();
         await openAndLoad();
-        assert.deepEqual(calls.filter(call => call !== 'GET /admin/notificacoes').sort(), ['GET /auth/me', ...expected].sort());
+        assert.deepEqual(calls.filter(call => !['GET /admin/notificacoes', 'GET /admin/notificacoes/atividades'].includes(call)).sort(), ['GET /auth/me', ...expected].sort());
         const registrations = await page.evaluate(() => ({ ...window.testRegistrations }));
         await expectAccessPage(page, () => page.evaluate(() => window.fazerLogout()));
         calls.length = 0;
