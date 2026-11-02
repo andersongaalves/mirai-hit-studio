@@ -1,4 +1,4 @@
-import { API_URL } from "../config.js";
+import { UPLOAD_API } from "../config.js";
 import { getContextName, getCurrentUser, getToken } from "../admin/auth.js";
 
 const tasks = new Map();
@@ -94,7 +94,7 @@ export async function enqueueUpload(endpoint, formData, { label = "Arquivo", met
         owner,
         meta,
         method,
-        url: `${API_URL}${endpoint}`,
+        url: `${UPLOAD_API}${endpoint}`,
         token,
         entries: [...formData.entries()],
     });
