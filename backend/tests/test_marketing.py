@@ -23,7 +23,7 @@ class MarketingTests(unittest.TestCase):
             os.environ.pop(name, None)
         with Session(engine) as db:
             # The public form sends where the visit came from; it is stored as clean JSON.
-            payload = {'nome_cliente': 'Ana', 'email': 'ana@example.invalid', 'servico': 'Mixagem', 'valor_total': 100,
+            payload = {'nome_cliente': 'Ana', 'email': 'ana@example.com', 'servico': 'Mixagem', 'valor_total': 100,
                        'origem_marketing': {'utm_source': ' instagram ', 'utm_medium': 'social', 'utm_campaign': 'nov',
                                             'referrer': 'l.instagram.com', 'landing': '/artists',
                                             'primeiro_acesso': '2026-11-01T10:00:00Z', 'extra': 'ignored'}}
@@ -31,15 +31,15 @@ class MarketingTests(unittest.TestCase):
             assert created.origem_marketing == {'utm_source': 'instagram', 'utm_medium': 'social', 'utm_campaign': 'nov',
                                                 'referrer': 'l.instagram.com', 'landing': '/artists',
                                                 'primeiro_acesso': '2026-11-01T10:00:00Z'}, created.origem_marketing
-            plain = orcamento_service.criar(db, OrcamentoCreate(nome_cliente='Bia', email='bia@example.invalid',
+            plain = orcamento_service.criar(db, OrcamentoCreate(nome_cliente='Bia', email='bia@example.com',
                                                                  servico='Beat', valor_total=50))
             assert plain.origem_marketing is None
-            google = OrcamentoModel(nome_cliente='Caio', email='caio@example.invalid', servico='Mixagem',
+            google = OrcamentoModel(nome_cliente='Caio', email='caio@example.com', servico='Mixagem',
                                     origem_marketing={'referrer': 'www.google.com', 'landing': '/'})
-            old = OrcamentoModel(nome_cliente='Dan', email='dan@example.invalid', servico='Beat',
+            old = OrcamentoModel(nome_cliente='Dan', email='dan@example.com', servico='Beat',
                                  data_solicitacao=datetime.now(timezone.utc) - timedelta(days=40))
-            test = OrcamentoModel(nome_cliente='QA', email='qa@example.invalid', servico='Beat', is_test=True)
-            db.add_all([google, old, test, NewsletterModel(email='n@example.invalid', origem='Footer')])
+            test = OrcamentoModel(nome_cliente='QA', email='qa@example.com', servico='Beat', is_test=True)
+            db.add_all([google, old, test, NewsletterModel(email='n@example.com', origem='Footer')])
             db.commit()
             data = mkt.carregar(db, 28)
             assert data['google_analytics']['status'] == 'nao_configurado'
