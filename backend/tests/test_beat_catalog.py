@@ -27,9 +27,11 @@ def wav(seconds=0.2):
 def mp3(): return b'ID3' + b'\0' * 32
 
 class MemoryStorage:
-    def __init__(self): self.objects, self.deleted = {}, []
+    def __init__(self): self.objects, self.deleted, self.saved = {}, [], 0
     def save(self, data, mime):
-        key = f'r2://temp/arquivos/{len(self.objects)+1:032x}/{len(self.objects)+2:032x}'
+        # Keys never repeat, even after deletions (like the real storage).
+        self.saved += 1
+        key = f'r2://temp/arquivos/{self.saved:032x}/{self.saved+1000:032x}'
         self.objects[key] = data; return key
     def read(self, key): return self.objects[key]
     def delete(self, key): self.deleted.append(key); self.objects.pop(key, None)
