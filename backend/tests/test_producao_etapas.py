@@ -374,6 +374,12 @@ with patch.object(producao_arquivo_service, 'new_production_file_storage', retur
     assert chosen.json()['origem'] == 'manual' and chosen.json()['antes_arquivo_id'] == rough and chosen.json()['ganho_antes_db'] == 11.0
     # The client gets the manual choice only when both files are visible to them.
     client_path = f'/portal/cliente/producoes/{production_id}/comparativo'
+    with Session(engine) as db:
+        hidden = db.get(ProducaoArquivoModel, rough)
+        hidden.visivel_cliente = False
+        if hidden.tag_processamento is not None:
+            hidden.tag_processamento.visivel_cliente = False
+        db.commit()
     assert client.get(client_path, headers=bearer('client-a')).json()['origem'] == 'automatica'
     with Session(engine) as db:
         for file_id in (rough, master):
