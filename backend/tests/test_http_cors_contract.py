@@ -29,7 +29,8 @@ class CrossOriginDownloadContractTests(unittest.TestCase):
         bootstrap(engine)
         import main
         from fastapi.testclient import TestClient
-        direct = TestClient(main.app, base_url='https://mirai-hit-studio.onrender.com')
+        # Reaching a route is what matters here; its own errors (fake settings) are not.
+        direct = TestClient(main.app, base_url='https://mirai-hit-studio.onrender.com', raise_server_exceptions=False)
         api = TestClient(main.app, base_url='https://api.miraihitstudio.com.br')
         # Through Cloudflare (API subdomain) everything is served as before.
         assert api.get('/servicos').status_code == 200
@@ -40,18 +41,21 @@ class CrossOriginDownloadContractTests(unittest.TestCase):
         assert direct.get('/portal/produtor/producoes').status_code == 421
         # ...but keeps health, signed webhooks, unsubscribe links and every form (upload) route.
         assert direct.get('/health').status_code == 200
-        assert direct.post('/webhooks/mercado-pago', json={}).status_code != 421
-        assert direct.get('/newsletter/unsubscribe', params={'token': 'x' * 32}).status_code != 421
+        webhook = direct.post('/webhooks/mercado-pago', json={}).status_code
+        assert webhook != 421, webhook
+        unsubscribe = direct.get('/newsletter/unsubscribe', params={'token': 'x' * 32}).status_code
+        assert unsubscribe != 421, unsubscribe
         for method, path in (('POST', '/portal/produtor/beats'), ('PUT', '/portal/produtor/beats/1'),
                              ('POST', '/portal/produtor/producoes/1/entregas-finais'),
                              ('POST', '/portal/produtor/producoes/1/arquivos')):
             status = direct.request(method, path, files={'x': ('a.bin', b'a')}).status_code
             assert status != 421, (method, path, status)
         # A form route under another method is not opened by accident.
-        assert direct.delete('/portal/produtor/beats/1').status_code == 421
+        removed = direct.delete('/portal/produtor/beats/1').status_code
+        assert removed == 421, removed
         preflight = direct.options('/portal/produtor/beats', headers={
             'Origin': 'http://localhost', 'Access-Control-Request-Method': 'POST'})
-        assert preflight.status_code != 421
+        assert preflight.status_code != 421, (preflight.status_code, preflight.text)
         """))
 
 
