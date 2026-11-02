@@ -2,6 +2,7 @@ import "./modules/globals.js";
 
 import { initComponents } from "./modules/components.js";
 import { initAnalytics } from "./analytics.js";
+import { registrarOrigem } from "./modules/origem.js";
 import { initSiteChatLauncher } from "./chat/chat_launcher.js";
 
 import {$} from "./utils/dom.js";
@@ -27,6 +28,7 @@ async function loadModule(elementId, path, callback) {
 async function initApp() {
     try {
         await initComponents();
+        registrarOrigem();
         initAnalytics();
 
         await loadModule(

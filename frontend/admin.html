@@ -23,6 +23,7 @@
         <link rel="stylesheet" href="css/components/portal-popup.css" />
         <link rel="stylesheet" href="css/components/confirm-dialog.css" />
         <link rel="stylesheet" href="css/components/activity.css" />
+        <link rel="stylesheet" href="css/components/marketing.css" />
         <link rel="stylesheet" href="css/components/file-manager.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
@@ -62,6 +63,7 @@
                                 <button type="button" class="admin-nav__item" data-admin-target="section-clientes">Clientes</button>
                                 <button type="button" class="admin-nav__item" data-admin-target="section-orcamentos">Propostas e Orçamentos</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-financeiro">Financeiro</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-marketing">Marketing</button>
                             </details>
                             <details class="admin-nav-group">
                                 <summary>Operação</summary>
@@ -773,6 +775,29 @@
                             <p id="newsletter-subscribers-summary" class="newsletter-summary" aria-live="polite"></p>
                             <div id="newsletter-subscribers-list" class="admin-list-container" aria-live="polite"></div>
                         </section>
+                    </div>
+
+                    <div id="section-marketing" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Comercial</span>
+                                <h1>Marketing</h1>
+                                <p>Quem visita o site, de onde vem, o que faz e quanto vira pedido e venda: Google Analytics, Cloudflare e os dados do próprio site.</p>
+                            </div>
+                            <div class="mkt-toolbar">
+                                <div id="marketing-periodos" class="mkt-toolbar" role="group" aria-label="Período"></div>
+                                <button id="marketing-atualizar" type="button" class="btn-small">Atualizar</button>
+                                <details class="mkt-export">
+                                    <summary class="btn-small">Exportar</summary>
+                                    <div class="mkt-export__menu">
+                                        <button id="marketing-exportar-pdf" type="button">Relatório (PDF)</button>
+                                        <button id="marketing-exportar-csv" type="button">Planilha (CSV)</button>
+                                    </div>
+                                </details>
+                            </div>
+                        </header>
+                        <p id="marketing-exportar-status" class="admin-field-help" role="status"></p>
+                        <div id="marketing-content" aria-live="polite"></div>
                     </div>
 
                     <div id="section-financeiro" class="admin-section hidden admin-access-hidden" data-admin-only>

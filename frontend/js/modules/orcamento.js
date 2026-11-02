@@ -4,6 +4,7 @@ import * as Notify from "../utils/notifications.js";
 import { $ } from "../utils/dom.js";
 import { PARAM_TEMPLATES } from "../ui.js";
 import { track } from "../analytics.js";
+import { origemMarketing } from "./origem.js";
 
 function obterDetalhes() {
     const partes = [];
@@ -88,6 +89,8 @@ export function initOrcamento() {
 
                 selecao: obterSelecao(),
             };
+            const origem = origemMarketing();
+            if (origem) payload.origem_marketing = origem;
             const trap = $("contato_site")?.value.trim();
             if (trap) payload.contato_site = trap;
 
