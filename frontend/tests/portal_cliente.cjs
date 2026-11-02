@@ -51,6 +51,7 @@ let productions = [
     },
 ];
 const contentRequests = [];
+const comparisonQueries = [];
 let files = [{
     id: 7, producao_id: 1, tipo: 'previa', nome_exibicao: '<script>preview</script>.mp3',
     mime_type: 'audio/mpeg', tamanho_bytes: 2048, sha256: 'a'.repeat(64),
@@ -284,6 +285,10 @@ async function staticResponse(route) {
         if (/^\/portal\/cliente\/producoes\/\d+\/entregas-finais$/.test(url.pathname) && request.method() === 'GET') {
             const productionId = Number(url.pathname.split('/').at(-2));
             return route.fulfill({ json: deliveries.filter(item => item.producao_id === productionId) });
+        }
+        if (/^\/portal\/cliente\/producoes\/\d+\/comparativo$/.test(url.pathname)) {
+            comparisonQueries.push(url.search);
+            return route.fulfill({ json: { origem: 'automatica', antes_arquivo_id: null, depois_arquivo_id: null, lufs_antes: -15.2, lufs_depois: -8.7, ganho_antes_db: 6.5 } });
         }
         if (/^\/portal\/cliente\/arquivos\/\d+\/conteudo$/.test(url.pathname)) {
             contentRequests.push(url.pathname + url.search);
@@ -733,6 +738,9 @@ async function staticResponse(route) {
         const comparison = page.locator('#project-before-after .before-after');
         await comparison.waitFor();
         assert.match(await comparison.textContent(), /Antes e depois/);
+        // Both play at the final's integrated loudness.
+        assert.match(await comparison.textContent(), /a Rough Mix toca com \+6,5 dB/);
+        assert.ok(comparisonQueries.includes('?antes=31&depois=32'), JSON.stringify(comparisonQueries));
         await comparison.getByRole('button', { name: /^Reproduzir / }).click();
         await page.waitForFunction(() => document.querySelector('#project-before-after audio')?.src.startsWith('blob:'));
         assert.ok(contentRequests.includes('/portal/cliente/arquivos/32/conteudo?ouvir=true'), JSON.stringify(contentRequests));

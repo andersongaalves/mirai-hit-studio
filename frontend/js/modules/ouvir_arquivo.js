@@ -29,8 +29,10 @@ function formatTime(value) {
 
 /**
  * opcoes: [{ versao: "processada"|"original"|null, rotulo }]; load(versao) resolves a Blob.
+ * ganhos: { [versao]: dB } plays each version with that gain (loudness match); a boost goes
+ * through a limiter so it never clips.
  */
-export function controlesOuvir(file, { opcoes, load, onError, titulo = "", inicial }) {
+export function controlesOuvir(file, { opcoes, load, onError, titulo = "", inicial, ganhos = null }) {
     const wrap = el("div", "file-player");
     const audio = document.createElement("audio");
     audio.preload = "none";
@@ -108,8 +110,45 @@ export function controlesOuvir(file, { opcoes, load, onError, titulo = "", inici
         }
     }
 
+    // Loudness match (Web Audio): gain per version; a limiter only while boosting.
+    let graph = null;
+    function ensureGraph() {
+        if (!ganhos || graph) return;
+        const Context = window.AudioContext || window.webkitAudioContext;
+        if (!Context) return;
+        try {
+            const context = new Context();
+            const source = context.createMediaElementSource(audio);
+            const gain = context.createGain();
+            const limiter = context.createDynamicsCompressor();
+            limiter.threshold.value = -1;
+            limiter.knee.value = 0;
+            limiter.ratio.value = 20;
+            limiter.attack.value = 0.003;
+            limiter.release.value = 0.25;
+            limiter.connect(context.destination);
+            source.connect(gain);
+            graph = { context, gain, limiter, boosting: null };
+        } catch {
+            graph = null;
+        }
+    }
+    function applyGain() {
+        if (!graph) return;
+        const db = Number(ganhos?.[current]) || 0;
+        graph.gain.gain.value = Math.pow(10, db / 20);
+        const boosting = db > 0;
+        if (graph.boosting === boosting) return;
+        graph.gain.disconnect();
+        graph.gain.connect(boosting ? graph.limiter : graph.context.destination);
+        graph.boosting = boosting;
+    }
+
     async function start() {
         try {
+            ensureGraph();
+            if (graph?.context.state === "suspended") await graph.context.resume();
+            applyGain();
             const url = await ensure(current);
             if (audio.src !== url) audio.src = url;
             if (playing && playing !== api) playing.pause();
@@ -126,6 +165,7 @@ export function controlesOuvir(file, { opcoes, load, onError, titulo = "", inici
         const ratio = Number.isFinite(audio.duration) && audio.duration ? audio.currentTime / audio.duration : 0;
         const resume = !audio.paused;
         current = versao;
+        applyGain();
         versionButtons.forEach(choice => choice.setAttribute("aria-pressed", String((choice.dataset.versao || null) === (versao ?? null))));
         if (!audio.src && !resume) return;
         try {
@@ -153,11 +193,13 @@ export function controlesOuvir(file, { opcoes, load, onError, titulo = "", inici
         pause: () => audio.pause(),
         destroy: () => {
             audio.pause();
+            graph?.context.close().catch(() => {});
             sources.forEach(url => URL.revokeObjectURL(url));
             sources.clear();
         },
     };
     players.add(api);
+    wrap.dataset.ganhos = ganhos ? JSON.stringify(ganhos) : "";
     return wrap;
 }
 

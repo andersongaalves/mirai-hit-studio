@@ -18,6 +18,7 @@ from routers.client_access import router as client_access_router
 from routers.clientes import router as clientes_router
 from routers.combos import public_router as combos_public_router
 from routers.combos import router as combos_router
+from routers.comparativo import router as comparativo_router
 from routers.config import router as config_router
 from routers.cotas_arquivo import router as cotas_arquivo_router
 from routers.credito_alocacao import router as credito_alocacao_router
@@ -121,6 +122,7 @@ app.include_router(politicas_router)
 app.include_router(combos_router)
 app.include_router(combos_public_router)
 app.include_router(beats_router)
+app.include_router(comparativo_router)
 
 
 @app.get("/")

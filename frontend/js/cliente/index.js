@@ -192,6 +192,7 @@ async function openDetail(id) {
             onDownload: downloadFile,
             onDeliveryLink: openDeliveryLink,
             onListen: listenFile,
+            onComparison: (antes, depois) => api.obterComparativo(production.id, antes, depois),
             uploadFeedback,
         });
         showView("detail");
@@ -484,6 +485,7 @@ async function refreshFiles(production, setFeedback) {
             onDownload: downloadFile,
             onDeliveryLink: openDeliveryLink,
             onListen: listenFile,
+            onComparison: (antes, depois) => api.obterComparativo(production.id, antes, depois),
             uploadFeedback,
         });
         watchTaggedPreviews(production, files);
