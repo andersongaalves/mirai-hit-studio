@@ -65,16 +65,19 @@ a.activity-title:hover { text-decoration: underline; }
 .notification-row__context { color: #b8c9d8; font-size: 13px; overflow-wrap: anywhere; }
 .notification-row.is-new .notification-row__body > a { font-weight: 700; }
 
-/* Bell: a ring turns while something is in progress. */
+/* Bell: a small spinner in the corner while something is in progress. */
 .portal-notifications-button.is-busy::after {
     content: "";
     position: absolute;
-    inset: -4px;
-    border: 2px solid transparent;
+    right: -6px;
+    bottom: -6px;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0, 204, 239, 0.25);
     border-top-color: #00ccef;
-    border-right-color: #00ccef;
-    border-radius: 8px;
-    animation: activity-spin-plain 1.1s linear infinite;
+    border-radius: 50%;
+    background: #06121e;
+    animation: activity-spin-plain 0.9s linear infinite;
     pointer-events: none;
 }
 @keyframes activity-spin-plain { to { transform: rotate(360deg); } }

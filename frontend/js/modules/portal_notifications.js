@@ -1,5 +1,5 @@
 import { authFetch, getCurrentUser, getToken } from "../admin/auth.js";
-import { activityItem, ativo, icon, iconFor, when } from "./activity_item.js";
+import { activityItem, ativo, icon as activityIcon, iconFor, when } from "./activity_item.js";
 import { uploadActivities } from "./upload_tasks.js";
 
 const ICONE_TIPO = {
@@ -122,7 +122,7 @@ export function startPortalNotifications(user) {
         row.className = `notification-row${item.vista_em ? "" : " is-new"}`;
         const thumb = document.createElement("span");
         thumb.className = "activity-thumb";
-        thumb.append(icon(ICONE_TIPO[item.tipo] || iconFor("", item.tipo) || "sino"));
+        thumb.append(activityIcon(ICONE_TIPO[item.tipo] || iconFor("", item.tipo) || "sino"));
         if (item.miniatura) {
             const img = document.createElement("img");
             img.alt = "";
@@ -199,7 +199,9 @@ export function startPortalNotifications(user) {
     }
 
     const onLocalActivity = () => renderActivity();
+    const onRefreshActivity = () => loadActivity();
     document.addEventListener("mirai:activities", onLocalActivity);
+    document.addEventListener("mirai:activities-refresh", onRefreshActivity);
 
     async function history(append = false) {
         if (loading) return;
@@ -267,6 +269,7 @@ export function startPortalNotifications(user) {
         clearInterval(timer);
         clearTimeout(activityTimer);
         document.removeEventListener("mirai:activities", onLocalActivity);
+        document.removeEventListener("mirai:activities-refresh", onRefreshActivity);
         document.removeEventListener("visibilitychange", refresh);
         dialog.close();
         dialog.remove();

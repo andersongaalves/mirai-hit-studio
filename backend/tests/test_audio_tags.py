@@ -362,6 +362,14 @@ class AudioTagTests(unittest.TestCase):
                 assert db.query(PreviaLoteModel).count() == 1
             # Only the brand-new upload told the client about a preview; regenerations did not.
             assert client_notices() == before + 1
+            # Notifications carry what they are about (production and file) for the panel.
+            from services import portal_notificacao_service
+            with Session(engine) as db:
+                client = db.query(UsuarioModel).filter_by(username='client-a').one()
+                page = portal_notificacao_service.listar(db, client)
+                previews = [item for item in page['itens'] if item['tipo'] == 'nova_previa']
+                assert previews and all(item['contexto'].startswith('#1 ') for item in previews), page
+                assert any(item['contexto'].endswith('new.wav') for item in previews), page
         ''')
 
     def test_admin_preview_generator_uses_selected_tag_and_controls(self):
