@@ -56,6 +56,8 @@ def excluir(db, actor, popup_id):
     model = _get(db, popup_id)
     audit_service.record(db, actor=actor, action="portal_popup.deleted", entity_type="portal_popup", entity_id=model.id,
                          metadata={"titulo": model.titulo})
+    # Explicit (not only the FK cascade): who closed it goes with it on every database.
+    db.query(PortalPopupVistoModel).filter(PortalPopupVistoModel.popup_id == model.id).delete(synchronize_session=False)
     db.delete(model)
     db.commit()
 
