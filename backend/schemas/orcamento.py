@@ -44,6 +44,29 @@ class OrcamentoSelecao(BaseModel):
         return self
 
 
+class OrigemMarketing(BaseModel):
+    """Where the visit that produced a lead came from (first touch, first-party)."""
+
+    model_config = ConfigDict(extra="ignore")
+    utm_source: str | None = Field(default=None, max_length=100)
+    utm_medium: str | None = Field(default=None, max_length=100)
+    utm_campaign: str | None = Field(default=None, max_length=100)
+    utm_term: str | None = Field(default=None, max_length=100)
+    utm_content: str | None = Field(default=None, max_length=100)
+    referrer: str | None = Field(default=None, max_length=120)  # host only
+    landing: str | None = Field(default=None, max_length=200)  # path only
+    primeiro_acesso: datetime | None = None
+
+    @field_validator("utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "referrer", "landing",
+                     mode="before")
+    @classmethod
+    def clean(cls, value):
+        if value is None:
+            return None
+        text = " ".join(str(value).split())[:200]
+        return text or None
+
+
 class OrcamentoCreate(OrcamentoBase):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     nome_cliente: str = Field(min_length=1, max_length=120)
@@ -54,6 +77,7 @@ class OrcamentoCreate(OrcamentoBase):
     link_guia: str | None = Field(default=None, max_length=500)
     detalhes: str | None = Field(default=None, max_length=20000)
     selecao: OrcamentoSelecao | None = None
+    origem_marketing: OrigemMarketing | None = None
     # AUD6-S03-002: honeypot filled only by bots; never stored.
     contato_site: str | None = Field(default=None, max_length=200, exclude=True)
     _url = field_validator("link_guia")(http_url)

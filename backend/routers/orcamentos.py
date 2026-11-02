@@ -56,7 +56,7 @@ def criar_orcamento(
     if not criado:
         # A public retry must not reveal notes/status added later by an operator.
         return OrcamentoResponse.model_validate(novo).model_copy(update={
-            **orcamento.model_dump(exclude={"selecao"}), "status": "novo", "produtor_id": None,
+            **orcamento.model_dump(exclude={"selecao", "origem_marketing"}), "status": "novo", "produtor_id": None,
             "observacoes": "", "proposta_codigo": None, "proposta_pdf": None,
             "proposta_enviada": False, "proposta_enviada_em": None,
             "updated_at": novo.data_solicitacao,
