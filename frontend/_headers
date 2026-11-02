@@ -19,3 +19,13 @@
 /checkout*
   ! Content-Security-Policy
   Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://sdk.mercadopago.com https://www.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https:; frame-src 'self' blob: https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadopago.com.ar; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+
+# Scripts and styles revalidate on every load, so a new release reaches every browser at once.
+/js/*
+  Cache-Control: no-cache
+
+/css/*
+  Cache-Control: no-cache
+
+/upload-worker.js
+  Cache-Control: no-cache
