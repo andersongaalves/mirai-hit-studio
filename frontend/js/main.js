@@ -4,6 +4,7 @@ import { initComponents } from "./modules/components.js";
 import { initAnalytics } from "./analytics.js";
 import { registrarOrigem } from "./modules/origem.js";
 import { initSiteChatLauncher } from "./chat/chat_launcher.js";
+import { inAdminPreview } from "./modules/preview_frame.js";
 
 import {$} from "./utils/dom.js";
 
@@ -28,8 +29,12 @@ async function loadModule(elementId, path, callback) {
 async function initApp() {
     try {
         await initComponents();
-        registrarOrigem();
-        initAnalytics();
+        // Pages shown in the Admin's preview are not visits: no origin, analytics or chat.
+        const preview = inAdminPreview();
+        if (!preview) {
+            registrarOrigem();
+            initAnalytics();
+        }
 
         await loadModule(
             "btn-newsletter",
@@ -88,4 +93,4 @@ async function initApp() {
 // ===========================
 
 initApp();
-initSiteChatLauncher();
+if (!inAdminPreview()) initSiteChatLauncher();

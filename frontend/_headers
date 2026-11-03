@@ -2,8 +2,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://sdk.mercadopago.com https://www.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https:; frame-src 'self' blob: https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadopago.com.ar; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://sdk.mercadopago.com https://www.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https:; frame-src 'self' blob: https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadopago.com.ar; object-src 'none'; base-uri 'self'; frame-ancestors 'self'
 
 /admin*
   X-Robots-Tag: noindex, nofollow, noarchive
@@ -18,7 +18,7 @@
 # card form loads assets that the synthetic suites cannot exercise.
 /checkout*
   ! Content-Security-Policy
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://sdk.mercadopago.com https://www.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https:; frame-src 'self' blob: https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadopago.com.ar; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://sdk.mercadopago.com https://www.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https:; frame-src 'self' blob: https://*.mercadopago.com https://*.mercadopago.com.br https://*.mercadopago.com.ar; object-src 'none'; base-uri 'self'; frame-ancestors 'self'
 
 # Scripts and styles revalidate on every load, so a new release reaches every browser at once.
 /js/*

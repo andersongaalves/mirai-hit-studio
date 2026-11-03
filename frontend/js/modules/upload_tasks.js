@@ -1,5 +1,6 @@
 import { UPLOAD_API } from "../config.js";
 import { getContextName, getCurrentUser, getToken } from "../admin/auth.js";
+import { PREVIEW_READ_ONLY, inAdminPreview } from "./preview_frame.js";
 import { activityItem, formatBytes, iconFor } from "./activity_item.js";
 
 const tasks = new Map();
@@ -126,6 +127,7 @@ function filesOf(formData) {
 }
 
 export async function enqueueUpload(endpoint, formData, { label = "Arquivo", meta = {}, method = "POST" } = {}) {
+    if (inAdminPreview()) throw new Error(PREVIEW_READ_ONLY);
     const token = getToken();
     const owner = ownerKey();
     if (!token || !owner) throw new Error("Sessão encerrada.");

@@ -213,6 +213,7 @@ jobs:
                     test_portal_popups.py \
                     test_arquivos_admin.py \
                     test_marketing.py \
+                    test_preview_admin.py \
                     test_portfolio_creditos.py \
                     test_portfolio_envios.py \
                     test_audio_tags.py \
@@ -272,6 +273,7 @@ jobs:
                   node frontend/tests/activity_center.cjs
                   node frontend/tests/marketing_admin.cjs
                   node frontend/tests/beats_public.cjs
+                  node frontend/tests/admin_preview.cjs
                   node frontend/tests/servico_etapas_admin.cjs
                   node frontend/tests/proposta_editor.cjs
                   node frontend/tests/proposta_catalogo.cjs
@@ -443,6 +445,9 @@ jobs:
                     backend/services/marketing_service.py \
                     backend/routers/marketing.py \
                     backend/tests/test_marketing.py \
+                    backend/services/preview_admin_service.py \
+                    backend/routers/preview_admin.py \
+                    backend/tests/test_preview_admin.py \
                     backend/services/previa_lote_service.py \
                     backend/services/atividade_service.py \
                     backend/services/arquivos_admin_service.py \
@@ -480,6 +485,9 @@ jobs:
                   node --check frontend/js/modules/beat_catalog.js
                   node --check frontend/js/modules/beats_public.js
                   node --check frontend/tests/beats_public.cjs
+                  node --check frontend/js/modules/preview_frame.js
+                  node --check frontend/js/admin/preview/preview.js
+                  node --check frontend/tests/admin_preview.cjs
                   node --check frontend/js/admin/propostas/proposta_mapper.js
                   node --check frontend/tests/proposta_catalogo.cjs
                   node --check frontend/js/pix.js
