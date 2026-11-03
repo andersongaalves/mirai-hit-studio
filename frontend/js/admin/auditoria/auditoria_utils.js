@@ -1,5 +1,6 @@
 const ACTION_LABELS = {
     "user.created": "Usuário criado",
+    "admin.preview_started": "Pré-visualização de portal aberta",
     "user.updated": "Usuário atualizado",
     "user.deactivated": "Usuário desativado",
     "user.reactivated": "Usuário reativado",

@@ -26,6 +26,7 @@ import { initBeats } from "./beats.js";
 import { initAvisos } from "./avisos/avisos.js";
 import { initArquivos } from "./arquivos/arquivos.js";
 import { initMarketing } from "./marketing/marketing.js";
+import { initPreview } from "./preview/preview.js";
 
 import { $, $$$, show, hide } from "../utils/dom.js";
 import { setActiveSection } from "./admin_shell.js";
@@ -53,6 +54,7 @@ const sectionLoaders = {
     "section-avisos": initAvisos,
     "section-arquivos": initArquivos,
     "section-marketing": initMarketing,
+    "section-preview": initPreview,
 };
 
 const loadedSections = new Set();

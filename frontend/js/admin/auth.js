@@ -1,6 +1,7 @@
 import { API_URL, apiPara } from "../config.js";
 import { accessPath } from "../auth_next.js";
 import { $ } from "../utils/dom.js";
+import { PREVIEW_PORTALS, PREVIEW_READ_ONLY, inAdminPreview, previewToken, showPreviewBanner, showPreviewEnded } from "../modules/preview_frame.js";
 
 const LEGACY_ACCESS_TOKEN_KEY = "access_token";
 const LEGACY_REFRESH_TOKEN_KEY = "refresh_token";
@@ -38,6 +39,8 @@ function contextForPath(pathname = window.location.pathname) {
 const EXPIRY_WARNING_MS = 5 * 60 * 1000;
 
 export function createAuthContext(config) {
+    // Inside the Admin's preview frame the portals run on its read-only session.
+    const preview = PREVIEW_PORTALS.includes(config.name) && inAdminPreview();
     let sessionVersion = 0;
     let verifiedToken = null;
     let expiryTimer = null;
@@ -45,7 +48,7 @@ export function createAuthContext(config) {
     let currentUser = null;
 
     function getToken() {
-        return localStorage.getItem(config.storageKey);
+        return preview ? previewToken(config.name) : localStorage.getItem(config.storageKey);
     }
 
     function isAuthenticated() {
@@ -75,6 +78,10 @@ export function createAuthContext(config) {
     // AUD6-S02-003: panels have no login form; without a session they send the
     // visitor to /acesso and come back to the same address after signing in.
     function mostrarLogin(reason = null) {
+        if (preview) {
+            showPreviewEnded();
+            return;
+        }
         $("admin-area")?.classList.add("hidden");
         $("login-panel")?.classList.remove("hidden");
         const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -102,7 +109,7 @@ export function createAuthContext(config) {
 
     function logout(reason = null) {
         const hadSession = Boolean(getToken() || verifiedToken || currentUser);
-        localStorage.removeItem(config.storageKey);
+        if (!preview) localStorage.removeItem(config.storageKey);
         clearRuntimeSession({ emit: hadSession, reason: typeof reason === "string" ? reason : null });
     }
 
@@ -158,7 +165,8 @@ export function createAuthContext(config) {
 
     function commitSession(token, user, { removeLegacy = false } = {}) {
         sessionVersion++;
-        localStorage.setItem(config.storageKey, token);
+        if (preview) showPreviewBanner(config.name);
+        else localStorage.setItem(config.storageKey, token);
         if (removeLegacy && localStorage.getItem(LEGACY_ACCESS_TOKEN_KEY) === token) {
             localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
             localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
@@ -178,6 +186,13 @@ export function createAuthContext(config) {
             }
         };
         if (!token) throw new Error("Sessão encerrada.");
+        // Read-only preview: nothing is sent; the API refuses it as well.
+        if (preview && !["GET", "HEAD"].includes(String(options.method || "GET").toUpperCase())) {
+            return new Response(JSON.stringify({ detail: PREVIEW_READ_ONLY }), {
+                status: 403,
+                headers: { "Content-Type": "application/json" },
+            });
+        }
 
         const headers = {
             ...(options.headers || {}),
@@ -215,7 +230,7 @@ export function createAuthContext(config) {
     async function restaurarSessao() {
         const version = sessionVersion;
         let token = getToken();
-        const legacy = !token;
+        const legacy = !token && !preview;
         if (legacy) token = localStorage.getItem(LEGACY_ACCESS_TOKEN_KEY);
         if (!token) return false;
 
@@ -260,7 +275,7 @@ export function createAuthContext(config) {
     }
 
     function handleStorage(event) {
-        if (event.key !== config.storageKey) return;
+        if (preview || event.key !== config.storageKey) return;
         if (event.newValue !== null) {
             sessionVersion++;
             location.reload();

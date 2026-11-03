@@ -81,6 +81,22 @@ def create_refresh_token(data: dict[str, Any]) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
+# Admin preview: the admin opens a client or producer portal inside the Admin, as that
+# account, read-only. The token has its own type (never accepted as a normal session),
+# names the admin who opened it and lasts 30 minutes, without refresh.
+PREVIEW_TOKEN_MINUTES = 30
+
+
+def create_preview_token(target, admin) -> tuple[str, datetime]:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=PREVIEW_TOKEN_MINUTES)
+    payload = {
+        "sub": target.username, "uid": target.id, "av": target.auth_version,
+        "adm": admin.id, "aav": admin.auth_version,
+        "exp": expire, "type": "preview",
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM), expire
+
+
 def decode_token(token: str, token_type="access") -> dict:
     """
     Decodifica um JWT válido.

@@ -24,6 +24,7 @@
         <link rel="stylesheet" href="css/components/confirm-dialog.css" />
         <link rel="stylesheet" href="css/components/activity.css" />
         <link rel="stylesheet" href="css/components/marketing.css" />
+        <link rel="stylesheet" href="css/components/admin-preview.css" />
         <link rel="stylesheet" href="css/components/file-manager.css" />
         <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
         <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png" />
@@ -88,6 +89,7 @@
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-auditoria">Auditoria</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-arquivos">Arquivos</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-uso">Infraestrutura</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-preview">Pré-visualização</button>
                             </details>
                         </nav>
                     </aside>
@@ -870,6 +872,17 @@
                         </header>
                         <div id="arquivos-content" class="files-manager"></div>
                         <aside id="arquivos-detalhes" class="files-details" aria-labelledby="arquivos-detalhes-titulo" hidden></aside>
+                    </div>
+
+                    <div id="section-preview" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <span class="admin-page-header__eyebrow">Sistema</span>
+                                <h1>Pré-visualização</h1>
+                                <p>Todas as telas do site e dos portais, como cada pessoa vê. Nos portais, escolha uma conta: a visualização é só leitura, dura 30 minutos e fica registrada na auditoria.</p>
+                            </div>
+                        </header>
+                        <div id="preview-content"></div>
                     </div>
 
                     <div id="section-uso" class="admin-section hidden admin-access-hidden" data-admin-only>
