@@ -51,7 +51,7 @@ async function staticResponse(route) {
                 api.push({ path: url.pathname, auth: request.headers().authorization || null });
                 if (url.pathname === "/beats/publico") return route.fulfill({ json: beats });
                 if (url.pathname === "/beats/licencas") return route.fulfill({ json: terms });
-                if (url.pathname === "/beats/publico/71/previa") return route.fulfill({ body: "ID3synthetic-preview", contentType: "audio/mpeg" });
+                if (/^\/beats\/publico\/7[14]\/previa$/.test(url.pathname)) return route.fulfill({ body: "ID3synthetic-preview", contentType: "audio/mpeg" });
                 return route.fulfill({ status: 404, json: { detail: "not found" } });
             }
             return route.fulfill({ status: 404, body: "" });
@@ -80,6 +80,13 @@ async function staticResponse(route) {
         assert.ok(api.some(item => item.path === "/beats/publico/71/previa"));
         assert.ok(api.every(item => item.auth === null), "the public catalog never sends credentials");
         assert.equal(new URL(page.url()).pathname, "/beats", "the player does not open the page");
+        // Playing another preview stops the first one.
+        await page.evaluate(() => { HTMLMediaElement.prototype.play = function () { this.dispatchEvent(new Event("play")); Object.defineProperty(this, "paused", { value: false, configurable: true }); return Promise.resolve(); }; HTMLMediaElement.prototype.pause = function () { Object.defineProperty(this, "paused", { value: true, configurable: true }); this.dispatchEvent(new Event("pause")); }; });
+        await page.locator("#beats-public-list .beat-card").nth(0).locator(".beat-preview__play").click();
+        await page.waitForFunction(() => document.querySelectorAll("#beats-public-list .beat-preview__play")[0].classList.contains("is-playing"));
+        await page.locator("#beats-public-list .beat-card").nth(1).locator(".beat-preview__play").click();
+        await page.waitForFunction(() => document.querySelectorAll("#beats-public-list .beat-preview__play")[1].classList.contains("is-playing"));
+        assert.deepEqual(await page.locator("#beats-public-list .beat-preview__play").evaluateAll(buttons => buttons.map(button => button.classList.contains("is-playing"))), [false, true]);
         // Filters work here as in the portal.
         await page.getByRole("search", { name: "Filtrar beats" }).getByLabel("Gênero").selectOption("Pop");
         assert.deepEqual(await page.locator("#beats-public-list .beat-card:not([hidden]) h3").allTextContents(), ["Céu de agosto"]);
