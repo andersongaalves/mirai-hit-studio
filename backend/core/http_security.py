@@ -26,6 +26,27 @@ PUBLIC_PREVIEW_PATH = re.compile(r"^/beats/publico/\d+/previa$")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 
 
+# Public previews (90 every 5 minutes per address) are counted in the process-local
+# limiter: a listening budget does not need a database write per play, and a limiter
+# failure never blocks listening.
+PUBLIC_PREVIEW_LIMIT = (90, 300)
+
+
+async def _public_preview_budget(request):
+    from core.rate_limit import allow_request
+
+    count, window = PUBLIC_PREVIEW_LIMIT
+    identity = f"beat_preview_public:{request.client.host if request.client else 'unknown'}"
+    try:
+        allowed, retry = await run_in_threadpool(allow_request, identity, count, window)
+    except (sqlite3.Error, OSError):
+        return None
+    if allowed:
+        return None
+    return JSONResponse({"detail": "Muitas prévias em pouco tempo. Aguarde alguns minutos."}, status_code=429,
+                        headers={"Retry-After": str(retry)})
+
+
 class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         supplied_request_id = request.headers.get("X-Request-ID", "")
@@ -57,8 +78,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             limit = ("checkout_payment", 8, 300)
         elif request.method == "GET" and CHECKOUT_RESUME_PATH.fullmatch(path):
             limit = ("checkout_resume", 12, 60)
-        elif request.method == "GET" and PUBLIC_PREVIEW_PATH.fullmatch(path):
-            limit = ("beat_preview_public", 90, 300)
+        if request.method == "GET" and PUBLIC_PREVIEW_PATH.fullmatch(path) and response is None:
+            response = await _public_preview_budget(request)
         if limit and response is None:
             try:
                 action, count, window = limit
