@@ -10,6 +10,7 @@ const indexablePages = new Map([
     ["creators.html", `${origin}/creators`],
     ["media-games.html", `${origin}/media-games`],
     ["portfolio.html", `${origin}/portfolio`],
+    ["beats.html", `${origin}/beats`],
     ["privacidade.html", `${origin}/privacidade`],
 ]);
 

@@ -49,6 +49,26 @@ FORMATOS = {
 }
 
 
+# The order buyers compare the licenses in, from the simplest to the exclusive one.
+ORDEM_PUBLICA = ("lease_mp3", "lease_wav", "multitrack", "exclusivo")
+
+
+def termos_publicos():
+    """The license terms shown on the beat page, from the same values the contract uses,
+    so the page never promises more (or less) than the PDF delivered with the files."""
+    return [
+        {
+            "tipo": tipo,
+            "rotulo": ROTULOS[tipo],
+            "formatos": FORMATOS[tipo],
+            "exclusivo": tipo == "exclusivo",
+            # The exclusive license has no usage limits.
+            "limites": dict(LIMITES_POR_LICENCA[tipo]) if tipo in LIMITES_POR_LICENCA else None,
+        }
+        for tipo in ORDEM_PUBLICA
+    ]
+
+
 class ContratoNaoEncontrado(Exception):
     pass
 

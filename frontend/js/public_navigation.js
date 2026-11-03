@@ -6,6 +6,7 @@ const LOCAL_ROUTE_FILES = {
     "/creators": "creators.html",
     "/media-games": "media-games.html",
     "/portfolio": "portfolio.html",
+    "/beats": "beats.html",
     "/orcamento": "calculadora.html",
     "/acesso": "acesso.html",
     "/cadastro": "cadastro.html",
@@ -38,6 +39,7 @@ function normalizedPath() {
         "/creators.html": "/creators",
         "/media-games.html": "/media-games",
         "/portfolio.html": "/portfolio",
+        "/beats.html": "/beats",
         "/calculadora.html": "/orcamento",
         "/acesso.html": "/acesso",
         "/cadastro.html": "/cadastro",
@@ -46,7 +48,8 @@ function normalizedPath() {
     const path = LOCAL_HOSTS.has(window.location.hostname) && pathname.toLowerCase().endsWith(".html")
         ? `/${pathname.split("/").pop()}`
         : pathname;
-    return aliases[path] || path;
+    // A beat page belongs to the beats catalog.
+    return aliases[path] || (/^\/beats\/\d+$/.test(path) ? "/beats" : path);
 }
 
 

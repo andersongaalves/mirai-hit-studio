@@ -56,6 +56,14 @@ async function initApp() {
         );
 
         await loadModule(
+            "beats-public",
+
+            "./modules/beats_public.js",
+
+            (module) => module.initBeatsPage(),
+        );
+
+        await loadModule(
             "render-parametros",
 
             "./modules/calculator.js",

@@ -9,6 +9,7 @@ const routes = {
     "/creators": "/creators.html",
     "/media-games": "/media-games.html",
     "/portfolio": "/portfolio.html",
+    "/beats": "/beats.html",
     "/acesso": "/acesso.html",
 };
 
@@ -51,7 +52,7 @@ async function staticResponse(route) {
         await page.goto("http://localhost:4173/artists");
         await page.waitForSelector(".site-nav[data-initialized='true']");
         assert.equal(await page.locator('[data-public-path="/artists"]').getAttribute("aria-current"), "page");
-        assert.deepEqual(await page.locator(".site-nav__links a").evaluateAll(links => links.map(link => link.getAttribute("href"))), ["/", "/artists", "/creators", "/media-games", "/portfolio", "/acesso", "/orcamento"]);
+        assert.deepEqual(await page.locator(".site-nav__links a").evaluateAll(links => links.map(link => link.getAttribute("href"))), ["/", "/artists", "/creators", "/media-games", "/portfolio", "/beats", "/acesso", "/orcamento"]);
         assert.equal(await page.locator('[data-public-path="/acesso"]').textContent(), "Entrar");
         assert.equal(await page.locator('.site-nav__cta').textContent(), "Começar projeto");
         assert.equal(await page.locator(".site-nav__links").isVisible(), false);

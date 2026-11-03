@@ -49,7 +49,7 @@ export function showView(name) {
     document.querySelectorAll("[data-route]").forEach(link => {
         const current = link.dataset.route === name
             || (name === "detail" && link.dataset.route === "producoes")
-            || (name === "catalog" && link.dataset.route === "beats");
+            || ((name === "catalog" || name === "catalog-beat") && link.dataset.route === "beats");
         if (current) link.setAttribute("aria-current", "page");
         else link.removeAttribute("aria-current");
     });

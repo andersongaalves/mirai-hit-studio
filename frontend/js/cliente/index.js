@@ -8,8 +8,9 @@ import { startPortalNotifications } from "../modules/portal_notifications.js";
 import { startPortalPopups } from "../modules/portal_popup.js";
 import { startAccountPassword } from "../modules/account_password.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
-import { beatPreview } from "../modules/beat_preview.js";
-import { mountBeatFilters, splitList } from "../modules/beat_filters.js";
+import { pausePreviews } from "../modules/beat_preview.js";
+import { mountBeatFilters } from "../modules/beat_filters.js";
+import { beatCard, beatPage } from "../modules/beat_catalog.js";
 import { selectStage, setStages } from "../modules/stage_files.js";
 import {
     applySettings,
@@ -55,6 +56,8 @@ function watchTaggedPreviews(production, files, failures = 0) {
 
 function route() {
     if (/^\/cliente\/(?:explorar|beats)\/?$/.test(location.pathname)) return { view: "beats" };
+    const beat = location.pathname.match(/^\/cliente\/(?:explorar|beats)\/(\d+)\/?$/);
+    if (beat) return { view: "beat", id: Number(beat[1]) };
     if (/^\/cliente\/creditos\/?$/.test(location.pathname)) return { view: "credits" };
     const proposal = location.pathname.match(/^\/cliente\/propostas\/(\d+)\/?$/);
     if (proposal) return { view: "proposal-detail", id: Number(proposal[1]) };
@@ -163,12 +166,13 @@ function rememberProduction(production) {
     if (index >= 0) productions = productions.map(item => item.id === production.id ? { ...item, ...production } : item);
 }
 
-function navigate(path) {
+function navigate(path, state = {}) {
     clearTimeout(tagPollTimer);
     releaseObjectUrls();
+    pausePreviews();
     setAlert();
     uploadFeedback = null;
-    history.pushState({}, "", path);
+    history.pushState(state, "", path);
     renderRoute();
 }
 
@@ -218,6 +222,10 @@ function renderRoute() {
         loadBeats();
         return;
     }
+    if (current.view === "beat") {
+        openBeat(current.id);
+        return;
+    }
     if (current.view === "credits") {
         loadWallet();
         return;
@@ -245,9 +253,20 @@ function renderRoute() {
     showView("dashboard");
 }
 
+// The catalog stays rendered while someone opens a beat and comes back, keeping the
+// previews, the filters and the scroll position; it is reloaded after a couple of minutes.
+const CATALOG_TTL = 120000;
+let catalog = null;
+
 async function loadBeats() {
     showView("beats");
-    const list = document.getElementById("client-beats-list"); list.textContent = "Carregando catálogo...";
+    const list = document.getElementById("client-beats-list");
+    if (catalog && Date.now() - catalog.at < CATALOG_TTL && catalog.entries.length && list.contains(catalog.entries[0].card)) {
+        mountBeatFilters(list, catalog.entries, { idPrefix: "client-beat-filter" });
+        if (catalog.scroll !== null) { window.scrollTo(0, catalog.scroll); catalog.scroll = null; }
+        return;
+    }
+    list.textContent = "Carregando catálogo...";
     const acquiredSection = document.getElementById("client-acquired-beats-section");
     const acquiredList = document.getElementById("client-acquired-beats");
     acquiredSection.classList.add("hidden");
@@ -290,57 +309,95 @@ async function loadBeats() {
             license.textContent = `Licença: ${{ lease: "Lease MP3", lease_mp3: "Lease MP3", lease_wav: "Lease WAV", multitrack: "Lease Multitrack", exclusivo: "Exclusiva" }[item.licenca] || item.licenca}`;
             card.append(title, license, actions); return card;
         }));
-        const cards = beats.map(beat => {
-            const card = document.createElement("article"); card.className = "producer-card beat-card client-beat-card";
-            const content = document.createElement("div"); content.className = "client-beat-card__content";
-            const title = document.createElement("h3"); title.textContent = beat.titulo;
-            let cover = null;
-            if (beat.capa_url) { cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; }
-            const author = document.createElement("p"); author.textContent = `${beat.produtor}${beat.bpm ? ` · ${beat.bpm} BPM` : ""}${beat.tonalidade ? ` · ${beat.tonalidade}` : ""}`;
-            // Genres and moods as tags; the catalog filters use the same values.
-            const tags = [...splitList(beat.generos), ...splitList(beat.moods)];
-            const tagList = document.createElement("ul"); tagList.className = "beat-card__tags"; tagList.setAttribute("aria-label", "Gêneros e moods");
-            tags.forEach(tag => { const item = document.createElement("li"); item.textContent = tag; tagList.append(item); });
-            const info = tags.length ? [author, tagList] : [author];
-            if (beat.vendido) {
-                // Sold with exclusivity: shown as sold, without preview or purchase.
-                card.classList.add("beat-card--sold");
-                const sold = document.createElement("span"); sold.className = "beat-card__sold"; sold.textContent = "Vendido";
-                content.append(title, ...info, sold);
-                if (cover) card.append(cover);
-                else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
-                card.append(content);
-                return card;
-            }
-            const audio = beatPreview(() => api.ouvirBeat(beat.id));
-            const actions = document.createElement("div"); actions.className = "producer-card__footer";
-            for (const [kind, label, price] of [[beat.formato_novo ? "lease_mp3" : "lease", "MP3 lease", beat.preco_lease], ["lease_wav", "WAV lease", beat.preco_wav], ["multitrack", "Multitrack", beat.preco_multitrack], ["exclusivo", "Exclusivo", beat.preco_exclusivo]]) {
-                if (!price) continue;
-                const button = document.createElement("button"); button.className = "btn-outline"; button.type = "button";
-                const idempotencyKey = crypto.randomUUID();
-                button.textContent = `${label} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price)}`;
-                if (kind === "multitrack") button.title = "Inclui o multitrack, o WAV e o MP3.";
-                button.onclick = async () => {
-                    button.disabled = true;
-                    try {
-                        const purchase = await api.solicitarBeat(beat.id, kind, idempotencyKey);
-                        if (!/^\/checkout\?proposta=\d+$/.test(purchase.checkout_path || "")) throw new Error("Checkout indisponível para esta compra.");
-                        window.location.assign(purchase.checkout_path);
-                    }
-                    catch (error) { setAlert(error.message, true); button.disabled = false; }
-                };
-                actions.append(button);
-            }
-            content.append(title, ...info, audio, actions);
-            if (cover) card.append(cover);
-            else { const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder); }
-            card.append(content);
-            return card;
-        });
+        const cards = beats.map(beat => beatCard(beat, {
+            href: `/cliente/beats/${beat.id}`,
+            onOpen: () => openFromCatalog(beat.id),
+            loadPreview: () => api.ouvirBeat(beat.id),
+        }));
         list.replaceChildren(...cards);
-        mountBeatFilters(list, beats.map((beat, index) => ({ beat, card: cards[index] })), { idPrefix: "client-beat-filter" });
+        const entries = beats.map((beat, index) => ({ beat, card: cards[index] }));
+        mountBeatFilters(list, entries, { idPrefix: "client-beat-filter" });
         if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";
-    } catch (error) { setAlert(error.message, true); list.textContent = ""; mountBeatFilters(list, []); }
+        catalog = { at: Date.now(), beats, entries, scroll: null };
+    } catch (error) { catalog = null; setAlert(error.message, true); list.textContent = ""; mountBeatFilters(list, []); }
+}
+
+function openFromCatalog(id) {
+    if (catalog) catalog.scroll = window.scrollY;
+    navigate(`/cliente/beats/${id}`, { fromCatalog: true });
+}
+
+function backToCatalog() {
+    // Back in history keeps the catalog's filters (they live in its address).
+    if (history.state?.fromCatalog) history.back();
+    else navigate("/cliente/explorar");
+}
+
+let licenseTerms = null;
+async function loadLicenseTerms() {
+    if (licenseTerms) return { items: licenseTerms, error: false };
+    try {
+        licenseTerms = await api.termosLicencas();
+        return { items: licenseTerms, error: false };
+    } catch {
+        return { items: [], error: true };
+    }
+}
+
+function purchase(beat) {
+    // One key per license while the page is open, so a repeated click never buys twice.
+    const keys = new Map();
+    return async (kind, button) => {
+        if (!keys.has(kind)) keys.set(kind, crypto.randomUUID());
+        button.disabled = true;
+        setAlert();
+        try {
+            const result = await api.solicitarBeat(beat.id, kind, keys.get(kind));
+            if (!/^\/checkout\?proposta=\d+$/.test(result.checkout_path || "")) throw new Error("Checkout indisponível para esta compra.");
+            window.location.assign(result.checkout_path);
+        } catch (error) { setAlert(error.message, true); button.disabled = false; }
+    };
+}
+
+let beatRequest = 0;
+async function openBeat(id) {
+    const request = ++beatRequest;
+    showView("beat");
+    const host = document.getElementById("client-beat-content");
+    host.textContent = "Carregando beat...";
+    window.scrollTo(0, 0);
+    const back = () => {
+        const button = document.createElement("button"); button.type = "button"; button.className = "btn-outline beat-page__back";
+        button.textContent = "Voltar ao catálogo"; button.addEventListener("click", backToCatalog);
+        return button;
+    };
+    try {
+        const fresh = catalog && Date.now() - catalog.at < CATALOG_TTL;
+        const [beats, terms] = await Promise.all([fresh ? catalog.beats : api.listarBeats(), loadLicenseTerms()]);
+        if (request !== beatRequest || route().view !== "beat") return;
+        const beat = beats.find(item => item.id === id);
+        if (!beat) {
+            const missing = document.createElement("p"); missing.className = "beat-page__lead";
+            missing.textContent = "Este beat não está mais disponível no catálogo.";
+            host.replaceChildren(back(), missing);
+            return;
+        }
+        // Coming from the public catalog, the chosen license arrives in the address.
+        const selected = new URLSearchParams(location.search).get("licenca");
+        host.replaceChildren(beatPage(beat, {
+            terms: terms.items,
+            termsError: terms.error,
+            loadPreview: () => api.ouvirBeat(beat.id),
+            onBuy: purchase(beat),
+            onBack: backToCatalog,
+            selected,
+        }));
+        host.querySelector(".beat-license.is-selected")?.scrollIntoView({ block: "center" });
+    } catch (error) {
+        if (request !== beatRequest) return;
+        setAlert(error.message, true);
+        host.replaceChildren(back());
+    }
 }
 
 let walletRequest = 0;
@@ -620,6 +677,7 @@ document.querySelectorAll("a[data-route]").forEach(link => link.addEventListener
 window.addEventListener("client:open", event => navigate(`/cliente/projetos/${event.detail}`));
 window.addEventListener("popstate", () => {
     releaseObjectUrls();
+    pausePreviews();
     uploadFeedback = null;
     renderRoute();
 });
@@ -632,6 +690,8 @@ document.addEventListener("admin:logout", () => {
     proposalsEnabled = false;
     finances = new Map();
     filtersInitialized = false;
+    catalog = null;
+    licenseTerms = null;
     applySettings(null);
     setAlert();
 });

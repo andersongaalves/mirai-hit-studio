@@ -12,7 +12,8 @@ import { startAccountPassword } from "../modules/account_password.js";
 import { loadPortfolioSubmissions } from "../modules/portfolio_submissions.js";
 import { loadAudioTag } from "../modules/audio_tags.js";
 import { enqueueUpload } from "../modules/upload_tasks.js";
-import { beatPreview } from "../modules/beat_preview.js";
+import { beatPreview, pausePreviews } from "../modules/beat_preview.js";
+import { beatCard, beatPage } from "../modules/beat_catalog.js";
 import { mountBeatFilters } from "../modules/beat_filters.js";
 import { watchFilePickers } from "../modules/file_picker.js";
 import { selectStage, setStages } from "../modules/stage_files.js";
@@ -87,13 +88,16 @@ function route() {
     if (/^\/produtor\/portfolio\/?$/.test(location.pathname)) return { view: "portfolio" };
     if (/^\/produtor\/perfil\/?$/.test(location.pathname)) return { view: "perfil" };
     if (/^\/produtor\/catalogo\/?$/.test(location.pathname)) return { view: "catalog" };
+    const beat = location.pathname.match(/^\/produtor\/catalogo\/(\d+)\/?$/);
+    if (beat) return { view: "catalog-beat", id: Number(beat[1]) };
     if (/^\/produtor\/beats\/?$/.test(location.pathname)) return { view: "beats" };
     return { view: "dashboard" };
 }
 
-function navigate(path) {
+function navigate(path, state = {}) {
     setAlert();
-    history.pushState({}, "", path);
+    pausePreviews();
+    history.pushState(state, "", path);
     renderRoute();
 }
 
@@ -201,6 +205,10 @@ function renderRoute() {
         loadBeatCatalog();
         return;
     }
+    if (current.view === "catalog-beat") {
+        openCatalogBeat(current.id);
+        return;
+    }
     if (current.view === "perfil") {
         showView("perfil");
         loadProfileCpf(document.getElementById("producer-cpf"));
@@ -305,38 +313,83 @@ async function loadBeats() {
     } catch (error) { setAlert(error.message, true); list.textContent = ""; }
 }
 
+// The catalog stays rendered while a beat page is open, keeping the previews, the
+// filters and the scroll position; it is reloaded after a couple of minutes.
+const CATALOG_TTL = 120000;
+let catalog = null;
+let licenseTerms = null;
+
 async function loadBeatCatalog() {
     showView("catalog");
     const list = document.getElementById("producer-catalog-list");
+    if (catalog && Date.now() - catalog.at < CATALOG_TTL && catalog.entries.length && list.contains(catalog.entries[0].card)) {
+        mountBeatFilters(list, catalog.entries, { idPrefix: "producer-beat-filter" });
+        if (catalog.scroll !== null) { window.scrollTo(0, catalog.scroll); catalog.scroll = null; }
+        return;
+    }
     list.textContent = "Carregando catálogo...";
     try {
         const beats = await api.listarCatalogoBeats();
-        const cards = beats.map(beat => {
-            const card = document.createElement("article");
-            card.className = "producer-card beat-card producer-beat-card";
-            const content = document.createElement("div");
-            content.className = "producer-beat-card__content";
-            const title = document.createElement("h3"); title.textContent = beat.titulo;
-            const producer = document.createElement("p"); producer.textContent = beat.produtor;
-            const meta = document.createElement("p"); meta.textContent = `${beat.bpm ? `${beat.bpm} BPM · ` : ""}${beat.tonalidade ? `${beat.tonalidade} · ` : ""}${beat.generos || "Sem gênero"}${beat.moods ? ` · ${beat.moods}` : ""}`;
-            const prices = document.createElement("p"); prices.className = "beat-card__prices"; prices.textContent = [["MP3", beat.preco_lease], ["WAV", beat.preco_wav], ["Multitrack", beat.preco_multitrack], ["Exclusivo", beat.preco_exclusivo]].filter(([, value]) => value).map(([label, value]) => `${label}: R$ ${Number(value).toFixed(2)}`).join(" · ");
-            if (beat.vendido) {
-                card.classList.add("beat-card--sold");
-                const sold = document.createElement("span"); sold.className = "beat-card__sold"; sold.textContent = "Vendido";
-                content.append(title, producer, meta, sold);
-            } else content.append(title, producer, meta, prices, beatPreview(() => api.ouvirBeat(beat.id)));
-            if (beat.capa_url) {
-                const cover = document.createElement("img"); cover.className = "beat-cover"; cover.src = beat.capa_url; cover.alt = `Capa de ${beat.titulo}`; card.append(cover);
-            } else {
-                const placeholder = document.createElement("div"); placeholder.className = "beat-cover beat-cover--placeholder"; placeholder.setAttribute("aria-hidden", "true"); card.append(placeholder);
-            }
-            card.append(content);
-            return card;
-        });
+        const cards = beats.map(beat => beatCard(beat, {
+            href: `/produtor/catalogo/${beat.id}`,
+            onOpen: () => {
+                if (catalog) catalog.scroll = window.scrollY;
+                navigate(`/produtor/catalogo/${beat.id}`, { fromCatalog: true });
+            },
+            loadPreview: () => api.ouvirBeat(beat.id),
+        }));
         list.replaceChildren(...cards);
-        mountBeatFilters(list, beats.map((beat, index) => ({ beat, card: cards[index] })), { idPrefix: "producer-beat-filter" });
+        const entries = beats.map((beat, index) => ({ beat, card: cards[index] }));
+        mountBeatFilters(list, entries, { idPrefix: "producer-beat-filter" });
         if (!beats.length) list.textContent = "Nenhum beat disponível no momento.";
-    } catch (error) { setAlert(error.message, true); list.textContent = ""; }
+        catalog = { at: Date.now(), beats, entries, scroll: null };
+    } catch (error) { catalog = null; setAlert(error.message, true); list.textContent = ""; }
+}
+
+function backToCatalog() {
+    if (history.state?.fromCatalog) history.back();
+    else navigate("/produtor/catalogo");
+}
+
+let beatRequest = 0;
+async function openCatalogBeat(id) {
+    const request = ++beatRequest;
+    showView("catalog-beat");
+    const host = document.getElementById("producer-catalog-beat-content");
+    host.textContent = "Carregando beat...";
+    window.scrollTo(0, 0);
+    const back = () => {
+        const button = document.createElement("button"); button.type = "button"; button.className = "btn-outline beat-page__back";
+        button.textContent = "Voltar ao catálogo"; button.addEventListener("click", backToCatalog);
+        return button;
+    };
+    try {
+        const fresh = catalog && Date.now() - catalog.at < CATALOG_TTL;
+        let termsError = false;
+        const [beats, terms] = await Promise.all([
+            fresh ? catalog.beats : api.listarCatalogoBeats(),
+            licenseTerms || api.termosLicencas().then(items => (licenseTerms = items)).catch(() => { termsError = true; return []; }),
+        ]);
+        if (request !== beatRequest || route().view !== "catalog-beat") return;
+        const beat = beats.find(item => item.id === id);
+        if (!beat) {
+            const missing = document.createElement("p"); missing.className = "beat-page__lead";
+            missing.textContent = "Este beat não está mais disponível no catálogo.";
+            host.replaceChildren(back(), missing);
+            return;
+        }
+        host.replaceChildren(beatPage(beat, {
+            terms,
+            termsError,
+            loadPreview: () => api.ouvirBeat(beat.id),
+            onBack: backToCatalog,
+            viewOnlyNote: "Compras são feitas por contas de cliente.",
+        }));
+    } catch (error) {
+        if (request !== beatRequest) return;
+        setAlert(error.message, true);
+        host.replaceChildren(back());
+    }
 }
 
 async function updateStatus(id, status, button) {
@@ -668,11 +721,13 @@ document.querySelectorAll("a[data-route], a[data-route-tab]").forEach(link => li
 }));
 
 window.addEventListener("producer:open", event => navigate(`/produtor/producoes/${event.detail}`));
-window.addEventListener("popstate", renderRoute);
+window.addEventListener("popstate", () => { pausePreviews(); renderRoute(); });
 document.addEventListener("admin:logout", () => {
     productions = [];
     payouts = [];
     filtersInitialized = false;
+    catalog = null;
+    licenseTerms = null;
     applySettings(null);
     setAlert();
 });

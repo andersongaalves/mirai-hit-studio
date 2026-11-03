@@ -252,7 +252,15 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/cliente/beats/72/arquivo/wav') {
             return route.fulfill({ json: { type: 'download', url: 'https://signed.example.test/r2/horizonte.wav?X-Amz-Signature=synthetic', filename: 'horizonte.wav' } });
         }
-        if (url.pathname === '/beats/71/preview') {
+        if (url.pathname === '/beats/licencas') {
+            return route.fulfill({ json: [
+                { tipo: 'lease_mp3', rotulo: 'Lease MP3', formatos: 'MP3', exclusivo: false, limites: { streams: '200.000', vendas: '5.000', videos: '1', visualizacoes: '200.000', radio: 'permitida em até 2 emissoras' } },
+                { tipo: 'lease_wav', rotulo: 'Lease WAV', formatos: 'WAV', exclusivo: false, limites: { streams: '500.000', vendas: '5.000', videos: '1', visualizacoes: '500.000', radio: 'permitida em até 2 emissoras' } },
+                { tipo: 'multitrack', rotulo: 'Lease Multitrack (stems)', formatos: 'MP3, WAV e multitrack (stems)', exclusivo: false, limites: { streams: '500.000', vendas: '5.000', videos: '1', visualizacoes: '500.000', radio: 'permitida em até 2 emissoras' } },
+                { tipo: 'exclusivo', rotulo: 'Exclusiva', formatos: 'MP3, WAV e multitrack (stems)', exclusivo: true, limites: null },
+            ] });
+        }
+        if (/^\/beats\/7[14]\/preview$/.test(url.pathname)) {
             return route.fulfill({ body: 'ID3synthetic-preview', contentType: 'audio/mpeg' });
         }
         if (url.pathname === '/portal/cliente/beats/71/solicitar' && request.method() === 'POST') {
@@ -352,16 +360,20 @@ async function staticResponse(route) {
         assert.equal(new URL(page.url()).pathname, '/cliente/explorar');
         assert.equal(await page.locator('#client-beats-list script, #client-beats-list img').count(), 0);
         await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);
-        const beatBox = await page.locator('#client-beats-list .beat-card').first().boundingBox();
-        assert.ok(Math.abs(beatBox.width - beatBox.height) < 2, 'client beat card must remain square');
-        assert.equal(await page.locator('#client-beats-list .client-beat-card__content').first().evaluate(element => (
-            element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth
-        )), true, 'client beat content must fit inside the square');
+        // The card is the cover (square, full width), the title, the producer and the preview; no prices.
+        const firstCard = page.locator('#client-beats-list .beat-card').first();
+        const beatBox = await firstCard.boundingBox();
+        const coverBox = await firstCard.locator('.beat-tile__cover').boundingBox();
+        assert.ok(Math.abs(coverBox.width - beatBox.width) < 3 && Math.abs(coverBox.width - coverBox.height) < 2, 'the cover fills the card as a square');
+        assert.ok(coverBox.width >= 280, `the cover is large (${coverBox.width}px)`);
+        assert.equal(await firstCard.locator('.beat-tile__producer').textContent(), 'prod. <Producer>');
+        assert.doesNotMatch(await page.locator('#client-beats-list').textContent(), /R\$|lease|Exclusivo/i);
+        assert.equal(await page.locator('#client-beats-list .producer-card__footer').count(), 0);
+        assert.equal(await firstCard.getByRole('link', { name: '<Horizonte>' }).getAttribute('href'), '/cliente/beats/71');
         // Catalog filters: genre, mood, producer, key, BPM and search, combined; state in the URL.
         const filters = page.getByRole('search', { name: 'Filtrar beats' });
         const visibleTitles = () => page.locator('#client-beats-list .beat-card:not([hidden]) h3').allTextContents();
         assert.equal(await filters.locator('.beat-filters__summary').textContent(), '3 beats');
-        assert.deepEqual(await page.locator('#client-beats-list .beat-card').first().locator('.beat-card__tags li').allTextContents(), ['Trap', 'Dark']);
         await filters.getByLabel('Gênero').selectOption('Pop');
         assert.deepEqual(await visibleTitles(), ['Céu de agosto']);
         assert.equal(await filters.locator('.beat-filters__summary').textContent(), '1 de 3 beats');
@@ -394,10 +406,46 @@ async function staticResponse(route) {
         await page.getByRole('search', { name: 'Filtrar beats' }).getByRole('button', { name: 'Limpar filtros' }).click();
         await page.waitForFunction(() => !document.querySelector('#client-beats-list .beat-preview__play').disabled);
 
-        await page.getByRole('button', { name: /MP3 lease/ }).click();
+        // Clicking anywhere on the card opens the beat page; the player does not.
+        await page.locator('#client-beats-list .beat-preview__play').first().click();
+        assert.equal(new URL(page.url()).pathname, '/cliente/explorar', 'the player keeps its own controls');
+        await page.locator('#client-beats-list .beat-preview__play').first().click();
+        await page.getByRole('search', { name: 'Filtrar beats' }).getByLabel('Gênero').selectOption('Trap');
+        const coverArea = await page.locator('#client-beats-list .beat-card:not([hidden]) .beat-tile__cover').first().boundingBox();
+        await page.mouse.click(coverArea.x + coverArea.width / 2, coverArea.y + coverArea.height / 2);
+        await page.waitForURL('**/cliente/beats/71');
+        const beatPage = page.locator('#client-beat');
+        await beatPage.getByRole('heading', { level: 1, name: '<Horizonte>' }).waitFor();
+        assert.equal(await page.locator('#client-beats').isVisible(), false);
+        assert.equal(await page.getByRole('link', { name: 'Explorar' }).getAttribute('aria-current'), 'page');
+        assert.match(await beatPage.textContent(), /prod\. <Producer>/);
+        assert.deepEqual(await beatPage.locator('.beat-card__tags li').allTextContents(), ['Trap', 'Dark']);
+        assert.match(await beatPage.locator('.beat-page__facts').textContent(), /BPM140.*TomAm/s);
+        assert.match(await beatPage.getByRole('note').textContent(), /A tag sai depois da compra.*sem a tag/s);
+        const licenseCards = beatPage.locator('.beat-license');
+        assert.deepEqual(await licenseCards.locator('.beat-license__name').allTextContents(), ['Lease MP3', 'Exclusiva']);
+        assert.match(await licenseCards.nth(0).textContent(), /Não exclusiva.*R\$\s*100,00.*Até 200\.000 reproduções.*Até 5\.000 unidades.*Continua disponível/s);
+        assert.match(await licenseCards.nth(1).textContent(), /R\$\s*500,00.*Sem limite.*Sai do catálogo/s);
+        await page.waitForFunction(() => !document.querySelector('#client-beat .beat-preview__play').disabled);
+        // Back to the catalog keeps its filters, its previews and its place.
+        await beatPage.getByRole('button', { name: 'Voltar ao catálogo' }).click();
+        await page.waitForURL(url => url.pathname === '/cliente/explorar' && /genero=Trap/.test(url.search));
+        assert.deepEqual(await visibleTitles(), ['<Horizonte>']);
+        assert.equal(await page.locator('#client-beats-list .beat-preview__play').first().isDisabled(), false, 'previews are kept');
+        // A beat sold with exclusivity has a page, without purchase; one with only the exclusive license offers only that.
+        await page.goto(`http://localhost:4173/cliente/beats/73`);
+        await page.locator('#client-beat .beat-page__sold-note').waitFor();
+        assert.equal(await page.locator('#client-beat .beat-license__buy').count(), 0);
+        await page.goto(`http://localhost:4173/cliente/beats/74`);
+        await page.locator('#client-beat .beat-license').first().waitFor();
+        assert.deepEqual(await page.locator('#client-beat .beat-license__buy').allTextContents(), ['Comprar Exclusiva']);
+        await page.goto(`http://localhost:4173/cliente/beats/999`);
+        await page.getByText('Este beat não está mais disponível no catálogo.').waitFor();
+        await page.goto(`http://localhost:4173/cliente/beats/71`);
+        await page.getByRole('button', { name: 'Comprar Lease MP3' }).click();
         await page.waitForURL('**/checkout?proposta=91');
         await page.goBack();
-        await page.waitForURL('**/cliente/explorar');
+        await page.waitForURL('**/cliente/beats/71');
         await page.getByRole('link', { name: 'Dashboard' }).click();
         assert.equal(await page.locator('#client-proposal-summary').isVisible(), true);
         await page.getByRole('link', { name: 'Propostas', exact: true }).click();

@@ -144,6 +144,11 @@ export async function enviarBeat(form) {
     return responseData(await authFetch("/portal/produtor/beats", { method: "POST", body: form }), "Não foi possível enviar o beat.");
 }
 
+// License types and limits shown on the beat page (the same values as the contract).
+export async function termosLicencas() {
+    return responseData(await authFetch("/beats/licencas"), "Não foi possível carregar as licenças.");
+}
+
 export function ouvirBeat(id) {
     return baixar(`/beats/${id}/preview`, "Não foi possível ouvir o beat.");
 }

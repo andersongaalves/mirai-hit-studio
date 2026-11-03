@@ -20,6 +20,8 @@ CHECKOUT_PAYMENT_PATH = re.compile(
 CHECKOUT_RESUME_PATH = re.compile(
     r"^/checkout/[0-9a-fA-F-]{36}/pending-payment$"
 )
+# Public catalog previews: no account is needed, so each address gets a listening budget.
+PUBLIC_PREVIEW_PATH = re.compile(r"^/beats/publico/\d+/previa$")
 
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 
@@ -55,6 +57,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             limit = ("checkout_payment", 8, 300)
         elif request.method == "GET" and CHECKOUT_RESUME_PATH.fullmatch(path):
             limit = ("checkout_resume", 12, 60)
+        elif request.method == "GET" and PUBLIC_PREVIEW_PATH.fullmatch(path):
+            limit = ("beat_preview_public", 90, 300)
         if limit and response is None:
             try:
                 action, count, window = limit

@@ -18,6 +18,7 @@ from fastapi import (
     Request,
     UploadFile,
 )
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 from pydantic import ValidationError
 from schemas.beat import (
@@ -306,6 +307,34 @@ async def producer_edit_beat(
                                       mp3=await _file(mp3, "mp3", limits), wav=await _file(wav, "wav", limits),
                                       archive=await _file(multitrack, "multitrack", limits),
                                       cover=await _file(capa, "capa", limits), multitrack_url=multitrack_url)
+
+
+# Public catalog: anyone can browse the published beats and listen to the tagged
+# previews; buying needs a client account (the purchase routes above).
+PUBLIC_LIST_CACHE = "public, max-age=60"
+PUBLIC_PREVIEW_CACHE = "public, max-age=600"
+
+
+@router.get("/beats/publico")
+def public_beats(db: Db):
+    return JSONResponse(jsonable_encoder(beat_service.client_list(db)), headers={"Cache-Control": PUBLIC_LIST_CACHE})
+
+
+@router.get("/beats/publico/{beat_id}/previa")
+def public_preview(beat_id: int, db: Db):
+    return Response(
+        beat_service.public_preview(db, beat_id),
+        media_type="audio/mpeg",
+        headers={"Cache-Control": PUBLIC_PREVIEW_CACHE},
+    )
+
+
+@router.get("/beats/licencas")
+def beat_license_terms():
+    """License types, delivered formats and usage limits, as written in the contract."""
+    from services import beat_contrato_service
+
+    return beat_contrato_service.termos_publicos()
 
 
 @router.get("/beats/{beat_id}/preview")

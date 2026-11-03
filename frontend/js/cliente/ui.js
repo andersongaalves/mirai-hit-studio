@@ -62,7 +62,9 @@ export function showView(name) {
     document.querySelectorAll(".producer-view").forEach(view => view.classList.add("hidden"));
     document.getElementById(`client-${name}`)?.classList.remove("hidden");
     document.querySelectorAll("[data-route]").forEach(link => {
-        const current = link.dataset.route === name || (name === "detail" && link.dataset.route === "projects");
+        const current = link.dataset.route === name
+            || (name === "detail" && link.dataset.route === "projects")
+            || (name === "beat" && link.dataset.route === "beats");
         if (current) link.setAttribute("aria-current", "page");
         else link.removeAttribute("aria-current");
     });
