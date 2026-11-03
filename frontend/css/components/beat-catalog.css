@@ -2,7 +2,7 @@
    (details, licenses with prices and differences, and the tag notice). */
 
 .client-beats-list,
-#producer-catalog-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-5); }
+#producer-catalog-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); align-items: stretch; gap: var(--space-5); }
 
 /* Card: square cover on top, title, producer and preview below. */
 .beat-card.beat-tile {
@@ -27,7 +27,7 @@
     transition: filter 0.2s ease;
 }
 .beat-tile:hover .beat-tile__cover { filter: brightness(1.08) saturate(1.08); }
-.beat-tile__body { display: grid; gap: 4px; padding: 14px 16px 16px; }
+.beat-tile__body { display: flex; flex: 1; flex-direction: column; gap: 4px; padding: 14px 16px 16px; }
 .beat-tile .beat-tile__title { position: static; margin: 0; font-size: 1.05rem; line-height: 1.25; }
 .beat-tile__link { color: var(--color-text-primary); text-decoration: none; overflow-wrap: anywhere; }
 /* The title link covers the whole card, so a click anywhere opens the beat. */
@@ -36,8 +36,27 @@
 .beat-tile:has(.beat-tile__link:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .beat-card p.beat-tile__producer { color: var(--color-text-secondary); font-size: var(--font-size-small); }
 /* The player stays usable above the card link. */
-.beat-tile .beat-preview { position: relative; z-index: 2; margin: 6px 0 0; }
-.beat-tile .beat-card__sold { justify-self: start; margin-top: 6px; }
+.beat-tile .beat-preview { position: relative; z-index: 2; margin: auto 0 0; padding-top: 8px; }
+/* BPM and key over the cover; the sold badge in its corner. */
+.beat-tile__media { position: relative; overflow: hidden; }
+.beat-tile__specs { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.beat-tile__spec {
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(5, 12, 24, 0.78);
+    backdrop-filter: blur(6px);
+    font: 700 0.8rem/1.2 var(--font-valores, inherit);
+    letter-spacing: 0.04em;
+}
+.beat-tile__spec--key { color: var(--color-accent); }
+.beat-tile .beat-tile__sold { position: absolute; top: 12px; right: 12px; background: rgba(5, 12, 24, 0.82); }
+/* Genres (accent) and moods (secondary, italic). */
+.beat-tile__tags { margin-top: 4px; }
+.beat-card__tags .beat-tile__tag--genre { border-color: rgba(0, 213, 237, 0.45); color: var(--color-accent); }
+.beat-card__tags .beat-tile__tag--mood { font-style: italic; }
+.beat-card__tags .beat-tile__tag--more { border-style: dashed; }
 
 /* Beat page. */
 .beat-page { display: grid; gap: var(--space-6); min-width: 0; }
@@ -122,5 +141,9 @@
 .beats-public__lead { margin: 0; color: var(--color-text-secondary); font-size: 1.15rem; line-height: 1.5; }
 .beats-public__account { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-2) 0 0; }
 .beats-public__account[hidden] { display: none; }
-.beats-public .client-beats-list { display: grid; }
+/* A little smaller than in the portals: more beats per row on the public page. */
+.beats-public .client-beats-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: var(--space-4); }
+.beats-public .beat-tile__body { padding: 12px 14px 14px; }
+.beats-public .beat-tile__title { font-size: 1rem; }
+.beats-public .beat-tile__specs { left: 10px; bottom: 10px; }
 @media (max-width: 760px) { .beats-public { padding-block: 104px 64px; } }

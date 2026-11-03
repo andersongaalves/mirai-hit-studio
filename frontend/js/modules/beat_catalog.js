@@ -37,6 +37,25 @@ const opensHere = event => event.button === 0 && !event.metaKey && !event.ctrlKe
 export function beatCard(beat, { href, onOpen, loadPreview, lazy = false }) {
     const card = el("article", "producer-card beat-card beat-tile");
     card.dataset.beatId = String(beat.id);
+    // Cover with the tempo and the key over it, like a record sleeve.
+    const media = el("div", "beat-tile__media");
+    media.append(cover(beat, "beat-tile__cover"));
+    const specs = [
+        beat.bpm ? ["beat-tile__spec", `${beat.bpm} BPM`, `${beat.bpm} batidas por minuto`] : null,
+        beat.tonalidade?.trim() ? ["beat-tile__spec beat-tile__spec--key", beat.tonalidade.trim(), `Tom ${beat.tonalidade.trim()}`] : null,
+    ].filter(Boolean);
+    if (specs.length) {
+        const list = el("ul", "beat-tile__specs");
+        list.setAttribute("aria-label", "BPM e tom");
+        specs.forEach(([className, text, label]) => {
+            const item = el("li", className, text);
+            item.setAttribute("aria-label", label);
+            list.append(item);
+        });
+        media.append(list);
+    }
+    if (beat.vendido) media.append(el("span", "beat-card__sold beat-tile__sold", "Vendido"));
+
     const body = el("div", "beat-tile__body");
     const title = el("h3", "beat-tile__title");
     const link = el("a", "beat-tile__link", beat.titulo);
@@ -48,14 +67,30 @@ export function beatCard(beat, { href, onOpen, loadPreview, lazy = false }) {
     });
     title.append(link);
     body.append(title, el("p", "beat-tile__producer", `prod. ${beat.produtor}`));
+    // Genres first, then moods (told apart by style); a long list ends in "+N".
+    const tags = [
+        ...splitList(beat.generos).map(text => ["genre", text]),
+        ...splitList(beat.moods).map(text => ["mood", text]),
+    ];
+    if (tags.length) {
+        const list = el("ul", "beat-card__tags beat-tile__tags");
+        list.setAttribute("aria-label", "Gêneros e moods");
+        const shown = tags.length > 4 ? tags.slice(0, 3) : tags;
+        shown.forEach(([kind, text]) => list.append(el("li", `beat-tile__tag beat-tile__tag--${kind}`, text)));
+        if (shown.length < tags.length) {
+            const more = el("li", "beat-tile__tag beat-tile__tag--more", `+${tags.length - shown.length}`);
+            more.title = tags.slice(shown.length).map(([, text]) => text).join(", ");
+            list.append(more);
+        }
+        body.append(list);
+    }
     if (beat.vendido) {
         // Sold with exclusivity: shown as sold, without preview.
         card.classList.add("beat-card--sold");
-        body.append(el("span", "beat-card__sold", "Vendido"));
     } else {
         body.append(beatPreview(loadPreview, { lazy }));
     }
-    card.append(cover(beat, "beat-tile__cover"), body);
+    card.append(media, body);
     return card;
 }
 
@@ -174,11 +209,14 @@ export function beatPage(beat, { terms, termsError = false, loadPreview, onBuy =
         facts.append(row);
     });
     if (facts.childElementCount) info.append(facts);
-    const tags = [...splitList(beat.generos), ...splitList(beat.moods)];
+    const tags = [
+        ...splitList(beat.generos).map(text => ["genre", text]),
+        ...splitList(beat.moods).map(text => ["mood", text]),
+    ];
     if (tags.length) {
         const list = el("ul", "beat-card__tags");
         list.setAttribute("aria-label", "Gêneros e moods");
-        tags.forEach(tag => list.append(el("li", "", tag)));
+        tags.forEach(([kind, text]) => list.append(el("li", `beat-tile__tag beat-tile__tag--${kind}`, text)));
         info.append(list);
     }
     if (beat.descricao?.trim()) info.append(el("p", "beat-page__description", beat.descricao.trim()));

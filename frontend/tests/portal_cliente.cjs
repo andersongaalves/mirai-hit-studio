@@ -347,7 +347,7 @@ async function staticResponse(route) {
         assert.match(await page.locator('#client-beats-list').textContent(), /<Horizonte>/);
         const soldCard = page.locator('#client-beats-list .beat-card--sold');
         assert.equal(await soldCard.count(), 1);
-        assert.match(await soldCard.textContent(), /<Vendido>.*Vendido/s);
+        assert.match(await soldCard.textContent(), /Vendido.*<Vendido>/s);
         assert.equal(await soldCard.locator('button, audio').count(), 0, 'sold beat offers no preview or purchase');
         assert.equal(await page.locator('#client-acquired-beats-section').isVisible(), true);
         const signedDownload = page.waitForEvent('download');
@@ -367,6 +367,11 @@ async function staticResponse(route) {
         assert.ok(Math.abs(coverBox.width - beatBox.width) < 3 && Math.abs(coverBox.width - coverBox.height) < 2, 'the cover fills the card as a square');
         assert.ok(coverBox.width >= 280, `the cover is large (${coverBox.width}px)`);
         assert.equal(await firstCard.locator('.beat-tile__producer').textContent(), 'prod. <Producer>');
+        // Same card in every catalog: BPM and key over the cover, genres then moods below.
+        assert.deepEqual(await firstCard.locator('.beat-tile__spec').allTextContents(), ['140 BPM', 'Am']);
+        assert.deepEqual(await firstCard.locator('.beat-tile__tag--genre').allTextContents(), ['Trap']);
+        assert.deepEqual(await firstCard.locator('.beat-tile__tag--mood').allTextContents(), ['Dark']);
+        assert.equal(await page.locator('#client-beats-list .beat-card--sold .beat-tile__sold').textContent(), 'Vendido');
         assert.doesNotMatch(await page.locator('#client-beats-list').textContent(), /R\$|lease|Exclusivo/i);
         assert.equal(await page.locator('#client-beats-list .producer-card__footer').count(), 0);
         assert.equal(await firstCard.getByRole('link', { name: '<Horizonte>' }).getAttribute('href'), '/cliente/beats/71');
