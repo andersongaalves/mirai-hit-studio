@@ -271,6 +271,7 @@ jobs:
                   node frontend/tests/api_hosts.cjs
                   node frontend/tests/activity_center.cjs
                   node frontend/tests/marketing_admin.cjs
+                  node frontend/tests/beats_public.cjs
                   node frontend/tests/servico_etapas_admin.cjs
                   node frontend/tests/proposta_editor.cjs
                   node frontend/tests/proposta_catalogo.cjs
@@ -476,6 +477,9 @@ jobs:
                   node --check frontend/tests/support/access.cjs
                   node --check frontend/tests/admin_beat_licenses.cjs
                   node --check frontend/js/modules/beat_upload_validation.js
+                  node --check frontend/js/modules/beat_catalog.js
+                  node --check frontend/js/modules/beats_public.js
+                  node --check frontend/tests/beats_public.cjs
                   node --check frontend/js/admin/propostas/proposta_mapper.js
                   node --check frontend/tests/proposta_catalogo.cjs
                   node --check frontend/js/pix.js

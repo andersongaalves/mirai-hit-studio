@@ -79,6 +79,9 @@ async def check():
             assert created.json()['moods'] == 'Dark, Melancólico'
             assert (await api.get('/portal/cliente/beats', headers=bearer('client-a'))).json() == []
             assert (await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))).status_code == 404
+            # The public catalog only shows what is published, without an account.
+            assert (await api.get('/beats/publico')).json() == []
+            assert (await api.get(f'/beats/publico/{beat_id}/previa')).status_code == 404
             changed = await api.put(f'/admin/beats/{beat_id}', headers=bearer('admin'), data={'titulo':'Horizonte revisado','descricao':'Nova descricao','bpm':'142','tonalidade':'Am','generos':'Trap','moods':'Dark, Energético','preco_lease':'110','preco_wav':'220','preco_multitrack':'330','preco_exclusivo':'550'})
             assert changed.status_code == 200, changed.text
             assert changed.json()['titulo'] == 'Horizonte revisado' and changed.json()['preco_lease_base'] == 110
@@ -102,6 +105,15 @@ async def check():
             assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330 and catalog[0]['capa_url']
             # Catalog filters: genre, mood, producer, key and BPM come with each beat.
             assert catalog[0]['moods'] == 'Dark, Energético' and catalog[0]['tonalidade'] == 'Am' and catalog[0]['bpm'] == 142
+            # Public catalog: the same offer, without moderation data, and the tagged preview.
+            public = await api.get('/beats/publico')
+            assert public.status_code == 200 and public.json() == catalog, public.text
+            assert not {'produtor_id', 'status', 'ativo', 'motivo_rejeicao'} & set(public.json()[0])
+            assert public.headers['cache-control'] == 'public, max-age=60'
+            public_preview = await api.get(f'/beats/publico/{beat_id}/previa')
+            assert public_preview.status_code == 200 and public_preview.headers['content-type'] == 'audio/mpeg'
+            assert public_preview.content == (await api.get(f'/beats/{beat_id}/preview', headers=bearer('client-a'))).content
+            assert (await api.get('/beats/publico/999999/previa')).status_code == 404
             # The producer edits their beat: catalog details apply at once; other changes go back to review.
             same = {'titulo':'Horizonte revisado','descricao':'Nova descricao','bpm':'142','tonalidade':'Am','generos':'Trap','moods':'Dark, Energético','preco_lease':'110','preco_wav':'220','preco_multitrack':'330','preco_exclusivo':'550'}
             mine = f'/portal/produtor/beats/{beat_id}'
@@ -298,6 +310,23 @@ async def check():
         assert (await api.post('/admin/beats/licencas/999/liberar', headers=bearer('admin'), json={'motivo':'x'})).status_code == 404
         assert (await api.post('/admin/beats/999/voltar-ao-catalogo', headers=bearer('producer-a'), json={'motivo':'x'})).status_code == 403
         assert (await api.post('/admin/beats/999/voltar-ao-catalogo', headers=bearer('admin'), json={'motivo':'x'})).status_code == 404
+asyncio.run(check())
+""")
+
+    def test_license_terms_follow_the_contract_values(self):
+        self.run_case(r"""
+from services import beat_contrato_service
+async def check():
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
+        # Public: the beat page shows them to visitors without an account.
+        response = await api.get('/beats/licencas')
+        assert response.status_code == 200, response.text
+        terms = {item['tipo']: item for item in response.json()}
+        assert list(terms) == ['lease_mp3', 'lease_wav', 'multitrack', 'exclusivo']
+        assert terms['lease_mp3']['limites']['streams'] == '200.000'
+        assert terms['lease_wav']['limites'] == beat_contrato_service.LIMITES_LEASE
+        assert terms['multitrack']['formatos'] == 'MP3, WAV e multitrack (stems)'
+        assert terms['exclusivo']['exclusivo'] is True and terms['exclusivo']['limites'] is None
 asyncio.run(check())
 """)
 

@@ -26,6 +26,11 @@ export async function listarBeats() {
     return responseData(await authFetch("/portal/cliente/beats"), "Não foi possível carregar o catálogo de beats.");
 }
 
+// License types and limits shown on the beat page (the same values as the contract).
+export async function termosLicencas() {
+    return responseData(await authFetch("/beats/licencas"), "Não foi possível carregar as licenças.");
+}
+
 export async function ouvirBeat(id) {
     const response = await authFetch(`/beats/${id}/preview`);
     if (!response.ok) throw new Error("Não foi possível ouvir o beat.");

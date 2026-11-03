@@ -10,7 +10,11 @@ function icon(className) {
     return element;
 }
 
-export function beatPreview(loader) {
+/**
+ * A compact player for a beat preview. `lazy` waits for the first play to download the
+ * audio (used where nobody is signed in and many previews share one page).
+ */
+export function beatPreview(loader, { lazy = false } = {}) {
     const wrap = document.createElement("div");
     wrap.className = "beat-preview";
     const audio = document.createElement("audio");
@@ -52,7 +56,13 @@ export function beatPreview(loader) {
         play.classList.toggle("is-playing", playing);
         play.setAttribute("aria-label", playing ? "Pausar prévia" : "Reproduzir prévia");
     };
+    let loading = null;
     play.addEventListener("click", async () => {
+        if (!audio.src) {
+            loading ||= load();
+            await loading;
+            if (!audio.src) return;
+        }
         if (audio.paused) await audio.play().catch(() => {});
         else audio.pause();
         updatePlay();
@@ -72,7 +82,7 @@ export function beatPreview(loader) {
     audio.addEventListener("ended", updatePlay);
     const load = async () => {
         status.textContent = "Carregando prévia...";
-        status.classList.remove("is-error");
+        status.classList.remove("is-error", "is-ready");
         try {
             const result = await loader();
             const blob = result?.blob instanceof Blob ? result.blob : result;
@@ -87,17 +97,29 @@ export function beatPreview(loader) {
             status.textContent = "Prévia pronta";
             status.classList.add("is-ready");
         } catch (error) {
+            loading = null;
             status.textContent = error.message || "Não foi possível carregar a prévia.";
             status.classList.add("is-error");
             const retry = document.createElement("button");
             retry.type = "button";
             retry.className = "beat-preview__retry";
             retry.textContent = "Tentar novamente";
-            retry.addEventListener("click", () => { retry.remove(); load(); }, { once: true });
+            retry.addEventListener("click", () => { retry.remove(); loading = load(); }, { once: true });
             wrap.append(retry);
         }
     };
     wrap.append(audio, play, timeline, time, volume, status);
-    queueMicrotask(load);
+    if (lazy) {
+        play.disabled = false;
+        status.textContent = "Toque para ouvir a prévia";
+        status.classList.add("is-ready");
+    } else {
+        queueMicrotask(() => { loading = load(); });
+    }
     return wrap;
+}
+
+/** Stops every preview on the page (used when the portal changes view). */
+export function pausePreviews() {
+    document.querySelectorAll(".beat-preview audio").forEach(audio => audio.pause());
 }

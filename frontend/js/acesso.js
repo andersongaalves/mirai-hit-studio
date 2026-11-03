@@ -22,6 +22,7 @@ const destinations = Object.freeze({
 });
 const REASONS = Object.freeze({
     sessao_expirada: "Sua sessão terminou. Entre novamente para continuar de onde parou.",
+    comprar_beat: "Para comprar o beat, entre na sua conta de cliente. Ainda não tem conta? Use \"Criar conta\": é grátis.",
 });
 
 function contextForUser(user) {

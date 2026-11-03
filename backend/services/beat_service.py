@@ -811,6 +811,19 @@ def preview(db, beat_id, actor):
     )
     if not allowed:
         raise HTTPException(404, "Beat nao encontrado.")
+    return _preview_bytes(model)
+
+
+def public_preview(db, beat_id):
+    """The tagged preview of a published beat, for visitors without an account (the
+    public catalog). Only what the catalog lists: approved and active beats."""
+    model = db.get(BeatModel, beat_id)
+    if model is None or model.status != "aprovado" or not model.ativo or not model.preview_ref:
+        raise HTTPException(404, "Beat nao encontrado.")
+    return _preview_bytes(model)
+
+
+def _preview_bytes(model):
     data = new_production_file_storage("previa").read(model.preview_ref)
     if hashlib.sha256(data).hexdigest() != model.preview_sha256:
         raise HTTPException(409, "Integridade do preview invalida.")

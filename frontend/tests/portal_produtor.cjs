@@ -205,6 +205,12 @@ async function staticResponse(route) {
             return route.fulfill({ json: [{ id: 81, produtor_id: 3, produtor: 'Outro Produtor', titulo: 'Beat publicado', descricao: '', bpm: 92, tonalidade: 'C', generos: 'R&B', preco_lease: '80.00', preco_exclusivo: '450.00', status: 'aprovado', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() },
                 { id: 82, produtor: 'Outro Produtor', titulo: 'Beat exclusivo', descricao: '', bpm: 88, tonalidade: null, generos: 'Trap', preco_lease: null, preco_wav: null, preco_multitrack: null, preco_exclusivo: null, created_at: new Date().toISOString(), vendido: true }] });
         }
+        if (url.pathname === '/beats/licencas') {
+            return route.fulfill({ json: [
+                { tipo: 'lease_mp3', rotulo: 'Lease MP3', formatos: 'MP3', exclusivo: false, limites: { streams: '200.000', vendas: '5.000', videos: '1', visualizacoes: '200.000', radio: 'permitida em até 2 emissoras' } },
+                { tipo: 'exclusivo', rotulo: 'Exclusiva', formatos: 'MP3, WAV e multitrack (stems)', exclusivo: true, limites: null },
+            ] });
+        }
         if (url.pathname === '/portal/produtor/beats/configuracao' && request.method() === 'GET') {
             return route.fulfill({ json: { limits: { capa_mb: 10, mp3_mb: 1, wav_mb: 50, multitrack_mb: 50, multitrack_mode: 'arquivo' }, ready: true, message: '' } });
         }
@@ -360,6 +366,18 @@ async function staticResponse(route) {
         const soldBeat = page.locator('#producer-catalog-list .beat-card--sold');
         assert.match(await soldBeat.textContent(), /Beat exclusivo.*Vendido/s);
         assert.equal(await soldBeat.locator('.beat-preview, .beat-card__prices').count(), 0);
+        assert.doesNotMatch(await page.locator('#producer-catalog-list').textContent(), /R\$/, 'prices live on the beat page');
+        // The card opens the beat page: licenses and limits for reference, no purchase.
+        await page.locator('#producer-catalog-list').getByRole('link', { name: 'Beat publicado' }).click();
+        await page.waitForURL('**/produtor/catalogo/81');
+        const catalogBeat = page.locator('#producer-catalog-beat');
+        await catalogBeat.locator('.beat-license').first().waitFor();
+        assert.deepEqual(await catalogBeat.locator('.beat-license__name').allTextContents(), ['Lease MP3', 'Exclusiva']);
+        assert.match(await catalogBeat.textContent(), /R\$\s*80,00.*R\$\s*450,00.*Compras são feitas por contas de cliente/s);
+        assert.equal(await catalogBeat.locator('.beat-license__buy').count(), 0);
+        assert.equal(await nav.getByRole('link', { name: 'Beats', exact: true }).getAttribute('aria-current'), 'page');
+        await catalogBeat.getByRole('button', { name: 'Voltar ao catálogo' }).click();
+        await page.waitForURL('**/produtor/catalogo');
         await page.locator('#producer-catalog').getByRole('link', { name: 'Meus beats' }).click();
         await page.waitForURL('**/produtor/beats');
         await page.getByLabel('Título').fill('Novo beat');
