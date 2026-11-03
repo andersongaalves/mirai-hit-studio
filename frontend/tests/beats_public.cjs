@@ -34,6 +34,11 @@ async function staticResponse(route) {
 }
 
 (async () => {
+    // Cloudflare Pages answers a rewrite to "*.html" with a redirect to the page without
+    // ".html", which drops the beat from the address: beat links must rewrite to /beats.
+    const redirects = await fs.readFile(path.join(root, "_redirects"), "utf8");
+    assert.match(redirects, /^\/beats\/\* \/beats 200$/m);
+    assert.doesNotMatch(redirects, /^\/beats\S* \S+\.html/m);
     const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || "msedge" });
     try {
         const context = await browser.newContext();
