@@ -310,22 +310,12 @@ def client_list(db):
         .order_by(BeatModel.created_at.desc())
     )
     rows = db.scalars(query).all()
-    # AUD6-S06-006: one query for every open reservation instead of one per beat.
-    reserved = {}
-    if rows:
-        for beat_id, kind in db.execute(
-            select(BeatLicencaModel.beat_id, BeatLicencaModel.tipo).where(
-                BeatLicencaModel.beat_id.in_([row.id for row in rows]),
-                BeatLicencaModel.status == "reservada",
-            )
-        ).all():
-            reserved.setdefault(beat_id, []).append(kind)
+    # An unpaid reservation (even an exclusive one) never hides the beat or any of
+    # its licenses: the beat only leaves the catalog when the exclusive is paid,
+    # and the first payment decides (confirm_paid).
     result = []
     for row in rows:
-        active = reserved.get(row.id, [])
-        if "exclusivo" in active:
-            continue
-        item = _public_response(_response(db, row, exclusive_available=not active))
+        item = _public_response(_response(db, row))
         item["vendido"] = False
         result.append(item)
     # A beat sold with an exclusive license stays in the catalog as "Vendido":
@@ -855,17 +845,6 @@ def request_license(db, beat_id, kind, actor, idempotency_key, request_id=None):
     current_price = price(db, beat, kind)
     if current_price is None:
         raise HTTPException(409, "Licenca indisponivel para este beat.")
-    active_query = select(BeatLicencaModel.id).where(
-        BeatLicencaModel.beat_id == beat.id,
-        BeatLicencaModel.status == "reservada",
-    )
-    if kind != "exclusivo":
-        active_query = active_query.where(BeatLicencaModel.tipo == "exclusivo")
-    active = db.scalar(active_query)
-    if active:
-        raise HTTPException(
-            409, "Este beat possui uma licenca incompatível em andamento."
-        )
     client = actor.cliente
     if client is None or not client.ativo or not client.email:
         raise HTTPException(
@@ -940,17 +919,6 @@ def reserve_for_proposal(db, proposta, cliente_id):
         if existing:
             continue
         expire_reservations(db, beat_id=beat.id)
-        active = select(BeatLicencaModel.id).where(
-            BeatLicencaModel.beat_id == beat_id,
-            BeatLicencaModel.status == "reservada",
-        )
-        if kind != "exclusivo":
-            active = active.where(BeatLicencaModel.tipo == "exclusivo")
-        conflict = db.scalar(active.with_for_update())
-        if conflict:
-            raise HTTPException(
-                409, "Este beat possui uma licenca incompatível em andamento."
-            )
         current_price = price(db, beat, kind)
         if current_price is None or Decimal(str(item["valor_unitario"])) != Decimal(
             str(current_price)
@@ -1072,6 +1040,8 @@ def checkout_blocked_reason(db, proposta_id):
             "A reserva deste beat expirou ou foi liberada. "
             "Solicite a licença novamente no catálogo."
         )
+    if any(license.status == "reservada" and _exclusive_sold_to_other(db, license) for license in licenses):
+        return "Este beat foi vendido com exclusividade e não está mais disponível."
     return None
 
 
@@ -1081,14 +1051,18 @@ def _license_conflict(db, license):
     )
     if beat is None or beat.status != "aprovado" or not beat.ativo:
         return beat, True
-    others = select(BeatLicencaModel.id).where(
+    return beat, _exclusive_sold_to_other(db, license)
+
+
+def _exclusive_sold_to_other(db, license):
+    """Reservations do not hold the beat: only an exclusive already paid does. Leases
+    paid before the exclusive remain valid alongside it (contract, clause 3)."""
+    return db.scalar(select(BeatLicencaModel.id).where(
         BeatLicencaModel.beat_id == license.beat_id,
         BeatLicencaModel.id != license.id,
-        BeatLicencaModel.status.in_(("reservada", "adquirida")),
-    )
-    if license.tipo != "exclusivo":
-        others = others.where(BeatLicencaModel.tipo == "exclusivo")
-    return beat, db.scalar(others) is not None
+        BeatLicencaModel.status == "adquirida",
+        BeatLicencaModel.tipo == "exclusivo",
+    )) is not None
 
 
 def _flag_payment_conflict(db, cobranca, reason):
@@ -1226,6 +1200,20 @@ def confirm_paid(db, cobranca):
             beat = db.scalar(
                 select(BeatModel).where(BeatModel.id == license.beat_id).with_for_update()
             )
+            # Several people may hold reservations at once: the first payment wins.
+            # One that arrives after the exclusive was paid by someone else needs a
+            # human decision (usually a refund); the reservation stays as it is.
+            if _exclusive_sold_to_other(db, license):
+                _flag_payment_conflict(db, cobranca, "beat_sold_exclusive")
+                audit_service.record(
+                    db,
+                    actor=None,
+                    action="beat.licenca.pagamento_apos_venda",
+                    entity_type="beat_licenca",
+                    entity_id=license.id,
+                    metadata={"beat_id": license.beat_id, "proposal_id": license.proposta_id},
+                )
+                continue
         license.status = "adquirida"
         license.adquirida_em = now
         if license.tipo == "exclusivo":
