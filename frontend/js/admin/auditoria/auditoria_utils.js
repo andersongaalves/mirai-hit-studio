@@ -15,6 +15,7 @@ const ACTION_LABELS = {
     "payment.reconciled": "Pagamento conciliado",
     "payment.reconciliation_required": "Conciliação necessária",
     "payment.reconciliation_conflict": "Conflito de conciliação",
+    "beat.licenca.pagamento_apos_venda": "Pagamento de beat após a venda exclusiva",
 };
 
 const ENTITY_LABELS = {

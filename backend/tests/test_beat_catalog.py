@@ -381,7 +381,7 @@ class BeatCommercialTests(unittest.TestCase):
     def run_case(self, source):
         isolated.BootstrapTests().run_case(COMMERCIAL_SETUP + textwrap.dedent(source))
 
-    def test_exclusive_reservation_blocks_lease_and_full_payment_removes_catalog(self):
+    def test_exclusive_reservation_keeps_selling_until_paid_and_payment_removes_catalog(self):
         self.run_case(r"""
 from decimal import Decimal
 from models import BeatLicencaModel, BeatModel, ClienteModel, OrcamentoModel
@@ -405,18 +405,33 @@ with Session(engine) as db:
     commercial.aprovar(db, first.id)
     license = db.scalar(select(BeatLicencaModel).where(BeatLicencaModel.proposta_id == first.id))
     assert license.status == 'reservada' and license.tipo == 'exclusivo'
+    # An unpaid exclusive reservation keeps the beat in the catalog, exclusive included.
+    listed = beat_service.client_list(db)
+    assert [item['id'] for item in listed] == [beat.id] and listed[0]['preco_exclusivo'] == 500
+    # Someone else can still license it while the exclusive is unpaid.
     second = service.criar_por_orcamento(db, 2)
     second = service.atualizar(db, second.id, PropostaUpdate(itens=[{'descricao':'Lease','quantidade':1,'valor_unitario':'100','beat_id':beat.id,'licenca_beat':'lease'}]))
     with patch.object(resend.Emails, 'send', return_value={'id':'m2'}): commercial.enviar(db, second.id)
-    try: commercial.aprovar(db, second.id)
-    except service.PropostaConflito as error: assert 'incompat' in str(error)
-    else: raise AssertionError('lease accepted over exclusive reservation')
+    commercial.aprovar(db, second.id)
+    lease = db.scalar(select(BeatLicencaModel).where(BeatLicencaModel.proposta_id == second.id))
+    assert lease.status == 'reservada'
     charge = financial_service.buscar_por_proposta(db, first.id)
     financial_service.registrar_pagamento(db, charge.id, tipo=PagamentoTipo.INTEGRAL, valor=Decimal('500'), status=PagamentoStatus.APROVADO)
     producao_liberacao_service.avaliar_liberacao_producao(db, charge.id)
     db.commit(); db.refresh(beat); db.refresh(license)
     assert beat.status == 'vendido' and beat.ativo is False
     assert license.status == 'adquirida' and license.adquirida_em is not None
+    # The exclusive was paid first: the open lease can no longer be paid, and a payment
+    # that still arrives is flagged for a human decision instead of granting files.
+    assert 'vendido com exclusividade' in beat_service.checkout_blocked_reason(db, second.id)
+    from models import AuditLogModel
+    late_charge = financial_service.buscar_por_proposta(db, second.id)
+    late = financial_service.registrar_pagamento(db, late_charge.id, tipo=PagamentoTipo.INTEGRAL, valor=Decimal('100'), status=PagamentoStatus.APROVADO)
+    producao_liberacao_service.avaliar_liberacao_producao(db, late_charge.id)
+    db.commit(); db.refresh(lease); db.refresh(late)
+    assert lease.status == 'reservada' and late.reconciliation_status == 'conflict'
+    assert late.reconciliation_reason == 'beat_sold_exclusive'
+    assert db.query(AuditLogModel).filter_by(action='beat.licenca.pagamento_apos_venda', entity_id=str(lease.id)).count() == 1
     assert beat_service._available_files(beat, license.tipo) == ['mp3', 'wav', 'multitrack']
     assert beat_service._available_files(beat, 'multitrack') == ['mp3', 'wav', 'multitrack']
     assert beat_service._available_files(beat, 'lease_wav') == ['wav']
@@ -532,7 +547,7 @@ with Session(engine) as db:
     first = accepted(db, 1, beat, 'exclusivo', '500', 'm1')
     license = license_of(db, first.id)
     assert license.status == 'reservada' and license.expira_em is not None
-    assert beat_service.client_list(db) == []
+    assert [item['id'] for item in beat_service.client_list(db)] == [beat.id]
     assert beat_service.checkout_blocked_reason(db, first.id) is None
     # A recent pending Pix keeps the reservation past its deadline.
     charge = financial_service.buscar_por_proposta(db, first.id)
@@ -575,10 +590,16 @@ with Session(engine) as db:
     db.get(OrcamentoModel, 3).cliente_id = 91; db.commit()
     other = accepted(db, 3, beat, 'exclusivo', '500', 'm3')
     assert license_of(db, other.id).status == 'reservada'
+    # An unpaid reservation by someone else does not hold the beat: the late payment of
+    # the lapsed exclusive is honoured, and the other one becomes the conflict.
     charge, payment = pay(db, second.id, '500')
     db.refresh(exclusive); db.refresh(payment); db.refresh(beat)
-    assert exclusive.status == 'cancelada' and beat.status == 'aprovado'
-    assert payment.reconciliation_status == 'conflict' and payment.reconciliation_reason == 'beat_reservation_released'
+    assert exclusive.status == 'adquirida' and beat.status == 'vendido'
+    assert payment.reconciliation_status is None
+    charge, payment = pay(db, other.id, '500')
+    db.refresh(payment)
+    assert license_of(db, other.id).status == 'reservada'
+    assert payment.reconciliation_status == 'conflict' and payment.reconciliation_reason == 'beat_sold_exclusive'
 """)
 
     def test_refund_revokes_access_and_admin_decides_on_relisting(self):

@@ -61,7 +61,9 @@ class BeatCatalogPostgreSQLTests(unittest.TestCase):
                 text("DELETE FROM usuarios WHERE id=:id"), {"id": BASE_ID}
             )
 
-    def test_exclusive_and_lease_cannot_be_reserved_concurrently(self):
+    def test_exclusive_and_lease_reservations_coexist_until_payment(self):
+        # An unpaid reservation does not hold the beat: both concurrent proposals
+        # keep their reservation and the first payment decides (confirm_paid).
         from models import (
             BeatLicencaModel,
             BeatModel,
@@ -181,14 +183,17 @@ class BeatCatalogPostgreSQLTests(unittest.TestCase):
                 key=str,
             )
 
-        self.assertEqual(outcomes.count("reserved"), 1)
-        self.assertEqual(outcomes.count(409), 1)
+        self.assertEqual(outcomes, ["reserved", "reserved"])
         with Session(self.engine) as db:
             licenses = db.scalars(
                 select(BeatLicencaModel).where(BeatLicencaModel.beat_id == BASE_ID)
             ).all()
-            self.assertEqual(len(licenses), 1)
-            self.assertEqual(licenses[0].status, "reservada")
+            self.assertEqual(sorted(item.tipo for item in licenses), ["exclusivo", "lease"])
+            self.assertTrue(all(item.status == "reservada" for item in licenses))
+            # The beat stays in the catalog, exclusive option included.
+            listed = [item for item in beat_service.client_list(db) if item["id"] == BASE_ID]
+            self.assertEqual(len(listed), 1)
+            self.assertEqual(listed[0]["preco_exclusivo"], Decimal("500.00"))
 
 
 if __name__ == "__main__":

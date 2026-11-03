@@ -57,6 +57,7 @@ export function reconciliationReason(value) {
         overpayment: "Valor pago acima do contratado",
         invalid_status_transition: "Transição de status inválida",
         beat_reservation_released: "Pagamento após a reserva do beat ser liberada",
+        beat_sold_exclusive: "Pagamento após o beat ser vendido com exclusividade a outra pessoa",
         ambiguous_external_reference: "Referência associada a mais de uma cobrança",
         payment_not_found: "Pagamento não encontrado no provedor",
         status_mismatch: "Status do provedor diferente do registrado",
