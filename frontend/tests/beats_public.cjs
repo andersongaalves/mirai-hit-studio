@@ -8,7 +8,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const types = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".ttf": "font/ttf" };
 const beats = [
-    { id: 71, produtor: "<Producer>", titulo: "<Horizonte>", descricao: "Trap escuro.", bpm: 140, tonalidade: "Am", generos: "Trap", moods: "Dark", preco_lease: "100.00", preco_wav: "180.00", preco_multitrack: null, preco_exclusivo: "500.00", formato_novo: true, capa_url: null, vendido: false },
+    { id: 71, produtor: "<Producer>", titulo: "<Horizonte>", descricao: "Trap escuro.", bpm: 140, tonalidade: "Am", generos: "Trap, Drill", moods: "Dark, Agressivo, Noturno", preco_lease: "100.00", preco_wav: "180.00", preco_multitrack: null, preco_exclusivo: "500.00", formato_novo: true, capa_url: null, vendido: false },
     { id: 74, produtor: "Lia", titulo: "Céu de agosto", descricao: "", bpm: 95, tonalidade: "C#m", generos: "R&B, Pop", moods: "Romântico", preco_lease: null, preco_wav: null, preco_multitrack: null, preco_exclusivo: "900.00", formato_novo: true, capa_url: null, vendido: false },
     { id: 73, produtor: "<Producer>", titulo: "<Vendido>", descricao: "", bpm: 90, tonalidade: null, generos: "Boom bap", moods: "", preco_lease: null, preco_wav: null, preco_multitrack: null, preco_exclusivo: null, formato_novo: true, capa_url: null, vendido: true },
 ];
@@ -51,7 +51,7 @@ async function staticResponse(route) {
                 api.push({ path: url.pathname, auth: request.headers().authorization || null });
                 if (url.pathname === "/beats/publico") return route.fulfill({ json: beats });
                 if (url.pathname === "/beats/licencas") return route.fulfill({ json: terms });
-                if (url.pathname === "/beats/publico/71/previa") return route.fulfill({ body: "ID3synthetic-preview", contentType: "audio/mpeg" });
+                if (/^\/beats\/publico\/7[14]\/previa$/.test(url.pathname)) return route.fulfill({ body: "ID3synthetic-preview", contentType: "audio/mpeg" });
                 return route.fulfill({ status: 404, json: { detail: "not found" } });
             }
             return route.fulfill({ status: 404, body: "" });
@@ -66,6 +66,13 @@ async function staticResponse(route) {
         assert.doesNotMatch(await page.locator("#beats-public-list").textContent(), /R\$/, "prices live on the beat page");
         assert.equal(await page.locator("#beats-public-list script, #beats-public-list img").count(), 0, "titles are text, never markup");
         assert.match(await page.locator("#beats-public-list").textContent(), /<Horizonte>.*prod\. <Producer>/s);
+        const firstCard = page.locator("#beats-public-list .beat-card").first();
+        assert.deepEqual(await firstCard.locator(".beat-tile__spec").allTextContents(), ["140 BPM", "Am"]);
+        // Up to four tags; the rest folds into "+N" with the names in its tooltip.
+        assert.deepEqual(await firstCard.locator(".beat-tile__tag").allTextContents(), ["Trap", "Drill", "Dark", "+2"]);
+        assert.equal(await firstCard.locator(".beat-tile__tag--more").getAttribute("title"), "Agressivo, Noturno");
+        const heights = await page.locator("#beats-public-list .beat-card").evaluateAll(cards => cards.map(card => Math.round(card.getBoundingClientRect().height)));
+        assert.equal(new Set(heights).size, 1, `cards in a row share one height: ${heights}`);
         // Previews download only when played, without any account.
         assert.equal(api.filter(item => item.path.includes("/previa")).length, 0);
         await page.locator("#beats-public-list .beat-card").first().locator(".beat-preview__play").click();
@@ -73,6 +80,13 @@ async function staticResponse(route) {
         assert.ok(api.some(item => item.path === "/beats/publico/71/previa"));
         assert.ok(api.every(item => item.auth === null), "the public catalog never sends credentials");
         assert.equal(new URL(page.url()).pathname, "/beats", "the player does not open the page");
+        // Playing another preview stops the first one.
+        await page.evaluate(() => { HTMLMediaElement.prototype.play = function () { this.dispatchEvent(new Event("play")); Object.defineProperty(this, "paused", { value: false, configurable: true }); return Promise.resolve(); }; HTMLMediaElement.prototype.pause = function () { Object.defineProperty(this, "paused", { value: true, configurable: true }); this.dispatchEvent(new Event("pause")); }; });
+        await page.locator("#beats-public-list .beat-card").nth(0).locator(".beat-preview__play").click();
+        await page.waitForFunction(() => document.querySelectorAll("#beats-public-list .beat-preview__play")[0].classList.contains("is-playing"));
+        await page.locator("#beats-public-list .beat-card").nth(1).locator(".beat-preview__play").click();
+        await page.waitForFunction(() => document.querySelectorAll("#beats-public-list .beat-preview__play")[1].classList.contains("is-playing"));
+        assert.deepEqual(await page.locator("#beats-public-list .beat-preview__play").evaluateAll(buttons => buttons.map(button => button.classList.contains("is-playing"))), [false, true]);
         // Filters work here as in the portal.
         await page.getByRole("search", { name: "Filtrar beats" }).getByLabel("Gênero").selectOption("Pop");
         assert.deepEqual(await page.locator("#beats-public-list .beat-card:not([hidden]) h3").allTextContents(), ["Céu de agosto"]);

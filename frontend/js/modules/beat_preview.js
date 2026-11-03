@@ -77,7 +77,11 @@ export function beatPreview(loader, { lazy = false } = {}) {
     });
     audio.addEventListener("loadedmetadata", updateTime);
     audio.addEventListener("timeupdate", updateTime);
-    audio.addEventListener("play", updatePlay);
+    audio.addEventListener("play", () => {
+        // One preview at a time: starting this one stops any other on the page.
+        document.querySelectorAll(".beat-preview audio").forEach(other => { if (other !== audio) other.pause(); });
+        updatePlay();
+    });
     audio.addEventListener("pause", updatePlay);
     audio.addEventListener("ended", updatePlay);
     const load = async () => {

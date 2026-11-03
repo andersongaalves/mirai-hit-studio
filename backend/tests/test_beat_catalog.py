@@ -330,6 +330,37 @@ async def check():
 asyncio.run(check())
 """)
 
+    def test_public_preview_budget_uses_the_local_limiter(self):
+        self.run_case(r"""
+import re
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from core import http_security
+from core.http_security import SecurityMiddleware
+from services import rate_limit_service
+# Every action the middleware sends to the shared limiter must be one it accepts
+# (an unknown action raised in production and broke the public player).
+source = open(http_security.__file__, encoding='utf-8').read()
+used = set(re.findall(r'\("([a-z_]+)", \d+, \d+\)', source))
+assert used and used <= set(rate_limit_service.ACTIONS), used - set(rate_limit_service.ACTIONS)
+preview_app = FastAPI()
+preview_app.add_middleware(SecurityMiddleware)
+@preview_app.get('/beats/publico/{beat_id}/previa')
+def previa(beat_id: int): return {'ok': beat_id}
+client = TestClient(preview_app)
+with patch('core.http_security.allow_shared', side_effect=AssertionError('database limiter')), \
+        patch('core.rate_limit.allow_request', return_value=(True, 0)) as limiter:
+    assert client.get('/beats/publico/7/previa').status_code == 200
+    assert limiter.call_args.args[1:] == (90, 300) and limiter.call_args.args[0].startswith('beat_preview_public:')
+with patch('core.rate_limit.allow_request', return_value=(False, 12)):
+    blocked = client.get('/beats/publico/7/previa')
+    assert blocked.status_code == 429 and blocked.headers['Retry-After'] == '12'
+# A limiter failure never blocks listening.
+import sqlite3
+with patch('core.rate_limit.allow_request', side_effect=sqlite3.OperationalError('busy')):
+    assert client.get('/beats/publico/7/previa').status_code == 200
+""")
+
     def test_proposal_item_contract_rejects_incomplete_or_mixed_origin(self):
         self.run_case(r"""
 from pydantic import ValidationError

@@ -364,9 +364,12 @@ async function staticResponse(route) {
         );
         assert.doesNotMatch(await page.locator('#producer-catalog-list').textContent(), /Comprar|Solicitar/);
         const soldBeat = page.locator('#producer-catalog-list .beat-card--sold');
-        assert.match(await soldBeat.textContent(), /Beat exclusivo.*Vendido/s);
+        assert.match(await soldBeat.textContent(), /Vendido.*Beat exclusivo/s);
         assert.equal(await soldBeat.locator('.beat-preview, .beat-card__prices').count(), 0);
         assert.doesNotMatch(await page.locator('#producer-catalog-list').textContent(), /R\$/, 'prices live on the beat page');
+        const publishedCard = page.locator('#producer-catalog-list .beat-card').first();
+        assert.deepEqual(await publishedCard.locator('.beat-tile__spec').allTextContents(), ['92 BPM', 'C']);
+        assert.deepEqual(await publishedCard.locator('.beat-tile__tag--genre').allTextContents(), ['R&B']);
         // The card opens the beat page: licenses and limits for reference, no purchase.
         await page.locator('#producer-catalog-list').getByRole('link', { name: 'Beat publicado' }).click();
         await page.waitForURL('**/produtor/catalogo/81');
