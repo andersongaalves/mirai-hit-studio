@@ -24,7 +24,7 @@ concurrency:
 jobs:
   protected-environment-guard:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Check out only the trusted main SHA
@@ -59,7 +59,7 @@ jobs:
   verify-storage-evidence:
     needs: protected-environment-guard
     if: needs.protected-environment-guard.result == 'success' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: storage-rollout
     steps:

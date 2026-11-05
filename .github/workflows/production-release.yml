@@ -48,7 +48,7 @@ env:
 jobs:
   trusted-release-gate:
     if: inputs.release_mode != 'plan-only' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - name: Check out only the trusted main SHA
@@ -122,7 +122,7 @@ jobs:
 
   plan-only:
     if: inputs.release_mode == 'plan-only' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - name: Check out only the trusted main SHA
@@ -197,7 +197,7 @@ jobs:
 
   verify-storage-evidence:
     needs: trusted-release-gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: storage-rollout
     steps:
@@ -277,7 +277,7 @@ jobs:
   dry-run:
     needs: [trusted-release-gate, verify-storage-evidence]
     if: inputs.release_mode == 'dry-run'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
       - name: Record a non-publication simulation
@@ -289,7 +289,7 @@ jobs:
   render-readiness:
     needs: [trusted-release-gate, verify-storage-evidence]
     if: inputs.release_mode == 'publish'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     environment: render-production
     steps:
@@ -337,7 +337,7 @@ jobs:
   cloudflare-readiness:
     needs: [trusted-release-gate, verify-storage-evidence]
     if: inputs.release_mode == 'publish'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     environment: cloudflare-pages-production
     steps:
@@ -371,7 +371,7 @@ jobs:
 
   deploy-render:
     needs: [render-readiness, cloudflare-readiness]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: render-production
     outputs:
@@ -420,7 +420,7 @@ jobs:
 
   deploy-cloudflare-pages:
     needs: [deploy-render, render-readiness, cloudflare-readiness]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: cloudflare-pages-production
     outputs:
@@ -473,7 +473,7 @@ jobs:
 
   smoke-and-evidence:
     needs: [deploy-render, deploy-cloudflare-pages]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - name: Run read-only production smoke
