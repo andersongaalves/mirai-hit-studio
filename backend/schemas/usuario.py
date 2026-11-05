@@ -317,3 +317,17 @@ class PerfilProdutorCpfUpdate(BaseModel):
         if digits is None:
             raise ValueError("cpf_invalido")
         return digits
+
+
+class PerfilPaginaUpdate(BaseModel):
+    """What a producer customises on their public page (every field optional)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    slug: str | None = Field(default=None, max_length=60)
+    headline: str | None = Field(default=None, max_length=200)
+    bio: str | None = Field(default=None, max_length=3000)
+    cidade: str | None = Field(default=None, max_length=160)
+    cor: str | None = Field(default=None, max_length=7)
+    aba_inicial: str | None = Field(default=None, max_length=12)
+    links: dict[str, str | None] | None = None

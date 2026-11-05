@@ -147,3 +147,9 @@
 .beats-public .beat-tile__title { font-size: 1rem; }
 .beats-public .beat-tile__specs { left: 10px; bottom: 10px; }
 @media (max-width: 760px) { .beats-public { padding-block: 104px 64px; } }
+
+/* The producer's name opens their public page (above the card's own link). */
+.beat-producer-link { position: relative; z-index: 2; color: inherit; text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.35); text-underline-offset: 3px; }
+.beat-producer-link:hover,
+.beat-producer-link:focus-visible { color: var(--color-accent); text-decoration-color: currentColor; }
+.beat-page__producer .beat-producer-link { color: var(--color-accent); }

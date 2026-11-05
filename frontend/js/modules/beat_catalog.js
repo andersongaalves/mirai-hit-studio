@@ -27,6 +27,21 @@ function cover(beat, className) {
     return placeholder;
 }
 
+/** "prod. Name", linking to the producer's public page when it has one. */
+function producerLine(beat, className) {
+    const line = el("p", className);
+    const slug = typeof beat.produtor_perfil === "string" && /^[a-z0-9-]{1,60}$/.test(beat.produtor_perfil) ? beat.produtor_perfil : "";
+    if (!slug) {
+        line.textContent = `prod. ${beat.produtor}`;
+        return line;
+    }
+    const link = el("a", "beat-producer-link", beat.produtor);
+    link.href = `/produtores/${slug}`;
+    link.title = `Ver o perfil de ${beat.produtor}`;
+    line.append("prod. ", link);
+    return line;
+}
+
 const opensHere = event => event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
 
 /**
@@ -66,7 +81,7 @@ export function beatCard(beat, { href, onOpen, loadPreview, lazy = false }) {
         onOpen();
     });
     title.append(link);
-    body.append(title, el("p", "beat-tile__producer", `prod. ${beat.produtor}`));
+    body.append(title, producerLine(beat, "beat-tile__producer"));
     // Genres first, then moods (told apart by style); a long list ends in "+N".
     const tags = [
         ...splitList(beat.generos).map(text => ["genre", text]),
@@ -201,7 +216,7 @@ export function beatPage(beat, { terms, termsError = false, loadPreview, onBuy =
     const info = el("div", "beat-page__info");
     const heading = el("h1", "beat-page__title", beat.titulo);
     heading.id = "beat-page-title";
-    info.append(el("p", "beat-page__eyebrow", "Beat"), heading, el("p", "beat-page__producer", `prod. ${beat.produtor}`));
+    info.append(el("p", "beat-page__eyebrow", "Beat"), heading, producerLine(beat, "beat-page__producer"));
     const facts = el("dl", "beat-page__facts");
     [["BPM", beat.bpm], ["Tom", beat.tonalidade]].filter(([, value]) => value).forEach(([term, value]) => {
         const row = el("div");

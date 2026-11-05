@@ -31,3 +31,4 @@ from .credito_alocacao import CreditoAlocacaoModel, CreditoMovimentoModel
 from .credito_etapa import CreditoEtapaModel
 from .repasse_etapa import RepasseEtapaModel, RepasseEtapaPagamentoModel
 from .beat import BeatLicencaModel, BeatModel
+from .produtor_perfil import ProdutorPerfilModel

@@ -61,6 +61,14 @@ async function initApp() {
         );
 
         await loadModule(
+            "produtor-publico",
+
+            "./modules/produtor_publico.js",
+
+            (module) => module.initProducerPage(),
+        );
+
+        await loadModule(
             "beats-public",
 
             "./modules/beats_public.js",

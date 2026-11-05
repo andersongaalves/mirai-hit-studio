@@ -50,7 +50,7 @@ function isDirectAudio(url) {
     }
 }
 
-function createProjectCard(project, segmentLabels = {}) {
+export function createProjectCard(project, segmentLabels = {}) {
     const card = element("article", "portfolio-card");
     const coverFrame = element("div", "portfolio-card__cover-frame");
     const cover = element("img", "portfolio-card__cover");
