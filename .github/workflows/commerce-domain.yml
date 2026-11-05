@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
     commerce-domain:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         timeout-minutes: 25
         services:
             postgres:

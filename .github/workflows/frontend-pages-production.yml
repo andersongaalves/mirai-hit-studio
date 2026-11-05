@@ -28,7 +28,7 @@ env:
 jobs:
   request-guard:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       actions: read
@@ -79,7 +79,7 @@ jobs:
   publish-frontend:
     needs: request-guard
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: cloudflare-pages-production
     outputs:
