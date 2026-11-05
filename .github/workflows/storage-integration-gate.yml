@@ -497,6 +497,7 @@ jobs:
                   node --check frontend/tests/admin_preview.cjs
                   node --check frontend/js/modules/produtor_publico.js
                   node --check frontend/js/produtor/pagina_perfil.js
+                  node --check frontend/js/modules/image_cropper.js
                   node --check frontend/tests/produtor_publico.cjs
                   node --check frontend/js/admin/propostas/proposta_mapper.js
                   node --check frontend/tests/proposta_catalogo.cjs
