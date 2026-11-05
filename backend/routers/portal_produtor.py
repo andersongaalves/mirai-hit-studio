@@ -23,6 +23,7 @@ from schemas.producao_entrega import (
 )
 from schemas.repasse_produtor import RepasseProdutorResponse
 from schemas.usuario import (
+    PerfilPaginaUpdate,
     PerfilProdutorCpfUpdate,
     PerfilProdutorResponse,
     mascarar_cpf,
@@ -498,3 +499,42 @@ def salvar_cpf(payload: PerfilProdutorCpfUpdate, request: Request, db: Db, user:
         db.commit()
         db.refresh(current)
     return _perfil(current)
+
+
+# Public page (/produtores/<endereço>): the producer customises it here.
+IMAGE_LIMIT = 8 * 1024 * 1024
+
+
+@router.get("/perfil/pagina")
+def minha_pagina(db: Db, user: CurrentProducer):
+    from services import produtor_perfil_service
+
+    return produtor_perfil_service.meu(db, user)
+
+
+@router.put("/perfil/pagina")
+def salvar_pagina(payload: PerfilPaginaUpdate, request: Request, db: Db, user: CurrentProducer):
+    from services import produtor_perfil_service
+
+    return produtor_perfil_service.atualizar(db, user, payload, getattr(request.state, "request_id", None))
+
+
+@router.post("/perfil/pagina/imagem/{tipo}")
+async def enviar_imagem_pagina(
+    tipo: Literal["foto", "capa"], request: Request, db: Db, user: CurrentProducer,
+    arquivo: Annotated[UploadFile, File()],
+):
+    from services import produtor_perfil_service
+
+    data = await arquivo.read(IMAGE_LIMIT + 1)
+    content_type = arquivo.content_type or "application/octet-stream"
+    await arquivo.close()
+    return produtor_perfil_service.salvar_imagem(db, user, tipo, data, content_type,
+                                                 getattr(request.state, "request_id", None))
+
+
+@router.delete("/perfil/pagina/imagem/{tipo}")
+def remover_imagem_pagina(tipo: Literal["foto", "capa"], request: Request, db: Db, user: CurrentProducer):
+    from services import produtor_perfil_service
+
+    return produtor_perfil_service.remover_imagem(db, user, tipo, getattr(request.state, "request_id", None))

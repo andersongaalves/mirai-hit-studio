@@ -301,7 +301,10 @@ def _license_response(license):
     }
 
 
-def client_list(db):
+def client_list(db, produtor_id=None):
+    """The catalog (optionally one producer's beats, for their public page)."""
+    from services import produtor_perfil_service
+
     if expire_reservations(db):
         db.commit()
     query = (
@@ -309,6 +312,8 @@ def client_list(db):
         .where(BeatModel.status == "aprovado", BeatModel.ativo.is_(True))
         .order_by(BeatModel.created_at.desc())
     )
+    if produtor_id is not None:
+        query = query.where(BeatModel.produtor_id == produtor_id)
     rows = db.scalars(query).all()
     # An unpaid reservation (even an exclusive one) never hides the beat or any of
     # its licenses: the beat only leaves the catalog when the exclusive is paid,
@@ -317,10 +322,11 @@ def client_list(db):
     for row in rows:
         item = _public_response(_response(db, row))
         item["vendido"] = False
+        item["produtor_id_interno"] = row.produtor_id
         result.append(item)
     # A beat sold with an exclusive license stays in the catalog as "Vendido":
     # no prices, no preview and no purchase (those routes require "aprovado").
-    sold = db.scalars(
+    sold_query = (
         select(BeatModel)
         .where(
             BeatModel.status == "vendido",
@@ -332,11 +338,19 @@ def client_list(db):
             ),
         )
         .order_by(BeatModel.created_at.desc())
-    ).all()
+    )
+    if produtor_id is not None:
+        sold_query = sold_query.where(BeatModel.produtor_id == produtor_id)
+    sold = db.scalars(sold_query).all()
     for row in sold:
         item = _public_response(_response(db, row, exclusive_available=False))
         item.update(preco_lease=None, preco_wav=None, preco_multitrack=None, preco_exclusivo=None, vendido=True)
+        item["produtor_id_interno"] = row.produtor_id
         result.append(item)
+    # Each beat links to its producer's public page.
+    slugs = produtor_perfil_service.slugs(db, {item["produtor_id_interno"] for item in result})
+    for item in result:
+        item["produtor_perfil"] = slugs.get(item.pop("produtor_id_interno"))
     return result
 
 

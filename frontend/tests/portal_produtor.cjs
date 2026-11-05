@@ -16,6 +16,9 @@ const threadPosts = [];
 let threadFails = true;
 let beatUploads = 0;
 const cpfSaves = [];
+let pagePerfil = { slug: 'producer-a-2', slug_padrao: 'producer-a-2', nome: 'Producer <A>', headline: null, bio: null, cidade: null, foto_url: null, capa_url: null, cor: '#00d5ed', links: {}, aba_inicial: 'portfolio', especialidades: ['beatmaker'], cores: ['#00d5ed', '#cb32e6', '#ff5c8a'], redes: ['instagram', 'youtube', 'site'], metricas: { portfolio: 2, mirai: 3 }, beats: 1 };
+const pageSaves = [];
+const imageUploads = [];
 let profile = { especialidades: ['beatmaker'], beatmaker: true, cpf_cadastrado: false, cpf_mascarado: null };
 const beatEdits = [];
 const fileEdits = [];
@@ -192,6 +195,19 @@ async function staticResponse(route) {
         if (url.pathname === '/portal/produtor/beats' && request.method() === 'GET') {
             return route.fulfill({ json: [{ id: 71, produtor_id: 2, produtor: 'Producer A', titulo: '<Beat seguro>', descricao: '', bpm: 140, tonalidade: 'Am', generos: 'Trap', preco_lease: '100.00', preco_exclusivo: '500.00', preco_lease_base: '100.00', preco_exclusivo_base: '500.00', status: 'revisao', ativo: true, motivo_rejeicao: null, created_at: new Date().toISOString() }] });
         }
+        if (url.pathname === '/portal/produtor/perfil/pagina' && request.method() === 'GET') return route.fulfill({ json: pagePerfil });
+        if (url.pathname === '/portal/produtor/perfil/pagina' && request.method() === 'PUT') {
+            const body = request.postDataJSON();
+            pageSaves.push(body);
+            if (body.slug === 'admin') return route.fulfill({ status: 422, json: { detail: 'Este endereço não está disponível. Escolha outro (sem número no final).' } });
+            pagePerfil = { ...pagePerfil, ...body, links: Object.fromEntries(Object.entries(body.links).filter(([, value]) => value)) };
+            return route.fulfill({ json: pagePerfil });
+        }
+        if (url.pathname === '/portal/produtor/perfil/pagina/imagem/foto' && request.method() === 'POST') {
+            imageUploads.push({ type: request.headers()['content-type'] || '', size: (request.postDataBuffer() || Buffer.alloc(0)).length });
+            pagePerfil = { ...pagePerfil, foto_url: 'http://localhost:4173/img/logo-principal.webp' };
+            return route.fulfill({ json: pagePerfil });
+        }
         if (url.pathname === '/portal/produtor/perfil' && request.method() === 'GET') return route.fulfill({ json: profile });
         if (url.pathname === '/portal/produtor/perfil/cpf' && request.method() === 'PUT') {
             cpfSaves.push(request.postDataJSON());
@@ -337,6 +353,44 @@ async function staticResponse(route) {
         assert.deepEqual(cpfSaves, [{ cpf: '52998224725' }]);
         assert.match(await page.locator('#producer-cpf').textContent(), /CPF salvo\./);
         assert.doesNotMatch(await page.locator('#producer-cpf').textContent(), /52998224725|529\.982\.247-25/);
+        // Public page editor: read-only account data, address, text, colour, first tab, links and photo.
+        const editor = page.locator('#producer-page-editor');
+        await editor.getByRole('heading', { name: 'Página pública' }).waitFor();
+        assert.equal(await editor.getByRole('link', { name: 'Ver minha página' }).getAttribute('href'), '/produtores/producer-a-2');
+        assert.match(await editor.locator('.profile-editor__facts').textContent(), /NomeProducer <A>.*Portfólio2.*Na Mirai3.*Beats1/s);
+        const slug = editor.getByLabel('Endereço da página');
+        await slug.fill('Ana Beats!');
+        assert.equal(await slug.inputValue(), 'anabeats');
+        assert.equal(await editor.locator('.profile-editor__url').textContent(), 'http://localhost:4173/produtores/anabeats');
+        await editor.getByLabel('Frase de apresentação').fill('Trap e mix');
+        await editor.getByLabel('Bio').fill('Produtora de SP.');
+        assert.equal(await editor.locator('.profile-editor__counter').textContent(), '16/1500');
+        await editor.locator('.profile-editor__color').nth(1).click();
+        await editor.getByLabel('Beats', { exact: true }).check();
+        await editor.getByLabel('Instagram').fill('https://www.instagram.com/ana');
+        await slug.fill('admin');
+        await editor.getByRole('button', { name: 'Salvar página' }).click();
+        await editor.getByText('Este endereço não está disponível. Escolha outro (sem número no final).').waitFor();
+        await slug.fill('anabeats');
+        await editor.getByRole('button', { name: 'Salvar página' }).click();
+        await editor.getByText('Página salva.').waitFor();
+        const saved = pageSaves.at(-1);
+        assert.deepEqual({ ...saved, links: undefined }, { slug: 'anabeats', headline: 'Trap e mix', cidade: '', bio: 'Produtora de SP.', cor: '#cb32e6', aba_inicial: 'beats', links: undefined });
+        assert.equal(saved.links.instagram, 'https://www.instagram.com/ana');
+        assert.equal(saved.links.youtube, '');
+        assert.equal(await editor.getByRole('link', { name: 'Ver minha página' }).getAttribute('href'), '/produtores/anabeats');
+        await editor.locator('#profile-foto-file').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') });
+        await editor.getByText('Foto atualizada.').waitFor();
+        assert.equal(imageUploads.length, 1);
+        assert.match(imageUploads[0].type, /^multipart\/form-data/);
+        assert.equal(await editor.locator('.profile-editor__image--foto img').getAttribute('alt'), 'Sua foto atual');
+        for (const width of [390, 1024]) {
+            await page.setViewportSize({ width, height: 900 });
+            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+            assert.ok(overflow <= 1, `profile editor overflow at ${width}px: ${overflow}px`);
+            if (process.env.SHOTS) await editor.screenshot({ path: require('node:path').join(process.env.SHOTS, `editor-${width}.png`) });
+        }
+        await page.setViewportSize({ width: 1280, height: 900 });
         const nav = page.locator('#producer-navigation');
         await nav.getByRole('link', { name: 'Beats', exact: true }).click();
         await page.waitForURL('**/produtor/beats');

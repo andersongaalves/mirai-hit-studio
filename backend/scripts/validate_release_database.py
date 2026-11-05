@@ -42,6 +42,7 @@ RLS_TABLES = {
     "portal_popups",
     "portal_popup_vistos",
     "previa_lotes",
+    "produtor_perfis",
     "projeto_creditos",
     "ai_conversations",
     "ai_messages",

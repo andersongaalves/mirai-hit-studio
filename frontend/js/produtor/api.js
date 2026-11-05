@@ -257,3 +257,27 @@ export async function salvarCpf(cpf) {
     if (response.status === 422) throw new Error("CPF inválido. Confira os 11 números.");
     return responseData(response, "Não foi possível salvar o CPF.");
 }
+
+// Public page (/produtores/<endereço>) the producer customises in "Meu perfil".
+export async function obterPaginaPerfil() {
+    return responseData(await authFetch("/portal/produtor/perfil/pagina"), "Não foi possível carregar sua página.");
+}
+
+export async function salvarPaginaPerfil(dados) {
+    return responseData(await authFetch("/portal/produtor/perfil/pagina", {
+        method: "PUT",
+        body: JSON.stringify(dados),
+    }), "Não foi possível salvar sua página.");
+}
+
+export async function enviarImagemPerfil(tipo, arquivo) {
+    const body = new FormData();
+    body.append("arquivo", arquivo);
+    return responseData(await authFetch(`/portal/produtor/perfil/pagina/imagem/${tipo}`, { method: "POST", body }),
+        "Não foi possível enviar a imagem.");
+}
+
+export async function removerImagemPerfil(tipo) {
+    return responseData(await authFetch(`/portal/produtor/perfil/pagina/imagem/${tipo}`, { method: "DELETE" }),
+        "Não foi possível remover a imagem.");
+}

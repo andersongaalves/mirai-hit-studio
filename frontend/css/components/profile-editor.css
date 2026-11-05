@@ -1,0 +1,53 @@
+/* "Meu perfil" > Página pública (the producer's public page editor). */
+.profile-editor { display: grid; gap: var(--space-4); min-width: 0; }
+.profile-editor__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.profile-editor__head h2 { margin: 0; }
+.profile-editor__facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.profile-editor__facts li { display: grid; gap: 2px; min-width: 0; padding: 12px 14px; border: var(--border-subtle); border-radius: var(--radius-md); }
+.profile-editor__facts span { color: var(--color-text-secondary); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.profile-editor__facts strong { overflow-wrap: anywhere; font-size: 1.2rem; }
+.profile-editor__images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--space-4); }
+.profile-editor__image { display: flex; gap: var(--space-3); align-items: center; min-width: 0; padding: 12px; border: var(--border-subtle); border-radius: var(--radius-md); }
+.profile-editor__image-preview { display: grid; flex: none; place-items: center; overflow: hidden; border: 1px dashed var(--color-border); color: var(--color-text-secondary); background: rgba(255, 255, 255, 0.03); font-size: 12px; }
+.profile-editor__image--foto .profile-editor__image-preview { width: 88px; height: 88px; border-radius: 50%; }
+.profile-editor__image--capa .profile-editor__image-preview { width: min(240px, 45%); aspect-ratio: 16 / 5; border-radius: 6px; }
+.profile-editor__image-preview img { width: 100%; height: 100%; object-fit: cover; }
+.profile-editor__image-text { display: grid; gap: 4px; min-width: 0; }
+.profile-editor__image-text small { color: var(--color-text-secondary); }
+.profile-editor__image-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.profile-editor__image-actions label { cursor: pointer; }
+.producer-body .profile-editor__image-actions input[type="file"] {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    border: 0 !important;
+    opacity: 0;
+}
+.profile-editor__image-actions label.is-busy { opacity: 0.6; pointer-events: none; }
+.profile-editor__image-actions input:focus-visible + label { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.profile-editor__form { display: grid; gap: var(--space-4); }
+.profile-editor__url { color: var(--color-accent) !important; overflow-wrap: anywhere; }
+.profile-editor__counter { justify-self: end; }
+.profile-editor fieldset { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.profile-editor legend { margin-bottom: 6px; padding: 0; font-weight: 700; }
+.profile-editor fieldset > small { color: var(--color-text-secondary); }
+.profile-editor__colors { display: flex !important; flex-wrap: wrap; gap: 10px !important; }
+.profile-editor__colors legend { width: 100%; }
+.profile-editor__color { position: relative; cursor: pointer; }
+.profile-editor__color input { position: absolute; opacity: 0; }
+.profile-editor__swatch { display: block; width: 34px; height: 34px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 50%; }
+.profile-editor__color input:checked + .profile-editor__swatch { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25); }
+.profile-editor__color input:focus-visible + .profile-editor__swatch { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.profile-editor__tabs { display: flex !important; flex-wrap: wrap; align-items: center; gap: 8px 16px !important; }
+.profile-editor__tabs legend,
+.profile-editor__tabs small { width: 100%; }
+.profile-editor__choice { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.profile-editor__status { flex: 1; margin: 0; color: var(--color-text-secondary); }
+@media (max-width: 720px) {
+    .profile-editor__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .profile-editor__image { flex-wrap: wrap; }
+    .profile-editor__image--capa .profile-editor__image-preview { width: 100%; }
+}

@@ -7,6 +7,7 @@ const LOCAL_ROUTE_FILES = {
     "/media-games": "media-games.html",
     "/portfolio": "portfolio.html",
     "/beats": "beats.html",
+    "/produtores": "produtores.html",
     "/orcamento": "calculadora.html",
     "/acesso": "acesso.html",
     "/cadastro": "cadastro.html",

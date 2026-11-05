@@ -105,6 +105,9 @@ async def check():
             assert catalog[0]['preco_wav'] == 220 and catalog[0]['preco_multitrack'] == 330 and catalog[0]['capa_url']
             # Catalog filters: genre, mood, producer, key and BPM come with each beat.
             assert catalog[0]['moods'] == 'Dark, Energético' and catalog[0]['tonalidade'] == 'Am' and catalog[0]['bpm'] == 142
+            # Each beat links to its producer's public page (name + id until they choose one).
+            import re as _re
+            assert _re.fullmatch(r'[a-z0-9-]+-\d+', catalog[0]['produtor_perfil'] or ''), catalog[0]['produtor_perfil']
             # Public catalog: the same offer, without moderation data, and the tagged preview.
             public = await api.get('/beats/publico')
             assert public.status_code == 200 and public.json() == catalog, public.text
