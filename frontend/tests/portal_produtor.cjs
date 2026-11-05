@@ -204,7 +204,8 @@ async function staticResponse(route) {
             return route.fulfill({ json: pagePerfil });
         }
         if (url.pathname === '/portal/produtor/perfil/pagina/imagem/foto' && request.method() === 'POST') {
-            imageUploads.push({ type: request.headers()['content-type'] || '', size: (request.postDataBuffer() || Buffer.alloc(0)).length });
+            const raw = request.postDataBuffer() || Buffer.alloc(0);
+            imageUploads.push({ type: request.headers()['content-type'] || '', size: raw.length, body: raw.subarray(0, 400).toString('latin1') });
             pagePerfil = { ...pagePerfil, foto_url: 'http://localhost:4173/img/logo-principal.webp' };
             return route.fulfill({ json: pagePerfil });
         }
@@ -379,10 +380,34 @@ async function staticResponse(route) {
         assert.equal(saved.links.instagram, 'https://www.instagram.com/ana');
         assert.equal(saved.links.youtube, '');
         assert.equal(await editor.getByRole('link', { name: 'Ver minha página' }).getAttribute('href'), '/produtores/anabeats');
-        await editor.locator('#profile-foto-file').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') });
+        // The photo is cropped before it is sent: cancelling sends nothing.
+        const photo = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'assets', 'apple-touch-icon.png'));
+        await editor.locator('#profile-foto-file').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: photo });
+        const cropper = page.getByRole('dialog', { name: 'Ajustar foto' });
+        await cropper.waitFor();
+        assert.equal(await cropper.locator('.image-cropper__stage--round').count(), 1);
+        await cropper.getByRole('button', { name: 'Cancelar' }).click();
+        await cropper.waitFor({ state: 'detached' });
+        assert.equal(imageUploads.length, 0);
+        await editor.locator('#profile-foto-file').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: photo });
+        await cropper.waitFor();
+        const stageBox = await cropper.locator('.image-cropper__stage').boundingBox();
+        assert.ok(Math.abs(stageBox.width - stageBox.height) < 2, 'the photo frame is square');
+        await cropper.getByRole('slider', { name: 'Zoom' }).fill('2');
+        await page.mouse.move(stageBox.x + stageBox.width / 2, stageBox.y + stageBox.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(stageBox.x + stageBox.width / 2 + 40, stageBox.y + stageBox.height / 2 + 20, { steps: 4 });
+        await page.mouse.up();
+        if (process.env.SHOTS) await page.screenshot({ path: require('node:path').join(process.env.SHOTS, 'cropper.png') });
+        await cropper.getByRole('button', { name: 'Usar imagem' }).click();
         await editor.getByText('Foto atualizada.').waitFor();
         assert.equal(imageUploads.length, 1);
         assert.match(imageUploads[0].type, /^multipart\/form-data/);
+        assert.match(imageUploads[0].body, /filename="foto\.jpg"/);
+        assert.match(imageUploads[0].body, /Content-Type: image\/jpeg/);
+        // A non-image never opens the cropper.
+        await editor.locator('#profile-capa-file').setInputFiles({ name: 'nota.txt', mimeType: 'text/plain', buffer: Buffer.from('x') });
+        await editor.getByText('Envie uma imagem JPG, PNG ou WebP.').waitFor();
         assert.equal(await editor.locator('.profile-editor__image--foto img').getAttribute('alt'), 'Sua foto atual');
         for (const width of [390, 1024]) {
             await page.setViewportSize({ width, height: 900 });

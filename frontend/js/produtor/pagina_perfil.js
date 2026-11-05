@@ -2,6 +2,7 @@
 // Photo and cover upload right away; the rest is saved with "Salvar página". Name and
 // specialties come from the account (set by the studio) and are shown read-only.
 import * as api from "./api.js";
+import { cropImage } from "../modules/image_cropper.js";
 
 const REDES = {
     instagram: ["Instagram", "https://www.instagram.com/seu-perfil"],
@@ -91,25 +92,38 @@ function imageControl(root, perfil, tipo, status) {
     }
     file.addEventListener("change", async () => {
         const chosen = file.files?.[0];
+        file.value = "";
         if (!chosen) return;
-        const limit = tipo === "foto" ? 5 : 8;
-        if (chosen.size > limit * 1024 * 1024) {
-            status.textContent = `A ${tipo === "foto" ? "foto" : "capa"} pode ter até ${limit} MB.`;
-            file.value = "";
+        if (!/^image\/(jpeg|png|webp)$/.test(chosen.type)) {
+            status.textContent = "Envie uma imagem JPG, PNG ou WebP.";
             return;
         }
+        // The original only needs to open here; what is sent is the cropped version.
+        if (chosen.size > 25 * 1024 * 1024) {
+            status.textContent = "A imagem é grande demais (até 25 MB).";
+            return;
+        }
+        let cropped;
+        try {
+            cropped = await cropImage(chosen, tipo === "foto"
+                ? { aspect: 1, width: 800, height: 800, round: true, title: "Ajustar foto", name: "foto" }
+                : { aspect: 16 / 5, width: 1600, height: 500, title: "Ajustar capa", name: "capa" });
+        } catch (error) {
+            status.textContent = error.message;
+            return;
+        }
+        if (!cropped) return;
         status.textContent = "Enviando imagem...";
         choose.classList.add("is-busy");
         try {
-            render(root, await api.enviarImagemPerfil(tipo, chosen), tipo === "foto" ? "Foto atualizada." : "Capa atualizada.");
+            render(root, await api.enviarImagemPerfil(tipo, cropped), tipo === "foto" ? "Foto atualizada." : "Capa atualizada.");
         } catch (error) {
             status.textContent = error.message;
             choose.classList.remove("is-busy");
-            file.value = "";
         }
     });
     const label = tipo === "foto" ? "Foto" : "Capa";
-    const help = tipo === "foto" ? "Quadrada, JPG, PNG ou WebP, até 5 MB." : "Horizontal (ideal 1600 × 500), até 8 MB.";
+    const help = tipo === "foto" ? "JPG, PNG ou WebP. Você enquadra antes de enviar." : "Formato de banner (16:5). Você enquadra antes de enviar.";
     const text = el("div", "profile-editor__image-text");
     text.append(el("strong", "", label), el("small", "", help), actions);
     box.append(preview, text);
