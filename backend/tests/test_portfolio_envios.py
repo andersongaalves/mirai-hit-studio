@@ -188,7 +188,7 @@ asyncio.run(check())
                     assert approved.status_code == 200, approved.text
                     public = (await client.get('/projetos')).json()
                     assert len(public) == 1 and public[0]['titulo'] == data['titulo']
-                    assert public[0]['creditos'] == [{'funcao':'mixagem','funcao_outra':None,'nome':'beatmaker'}]
+                    assert public[0]['creditos'] == [{'funcao':'mixagem','funcao_outra':None,'nome':'beatmaker','perfil':'beatmaker-2'}]
                     assert 'produtor_id' not in public[0] and 'autorizado_em' not in public[0]
                     repeated = await client.post(review, json=decision, headers=headers)
                     assert repeated.json()['projeto_id'] == approved.json()['projeto_id']

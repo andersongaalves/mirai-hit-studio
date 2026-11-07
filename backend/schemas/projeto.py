@@ -58,13 +58,15 @@ class CreditoProjetoResponse(BaseModel):
 
 
 class CreditoProjetoPublico(BaseModel):
-    """Public view: name and role only, never the account link."""
+    """Public view: name, role and, for producers with a public page, its address;
+    never the account itself."""
     model_config = ConfigDict(from_attributes=True)
 
     funcao: FuncaoCredito
     funcao_outra: str | None = None
     # Linked accounts expose their current display name (5.19 + nome de exibicao).
     nome: str = Field(validation_alias=AliasChoices("nome_publico", "nome"))
+    perfil: str | None = None
 
 
 class ProjetoBase(BaseModel):

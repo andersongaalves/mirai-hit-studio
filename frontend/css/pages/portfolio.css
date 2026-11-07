@@ -192,3 +192,6 @@
 .portfolio-card__credits-role { color: var(--color-text-secondary); }
 .portfolio-card__credits-role::after { content: ":"; }
 .portfolio-card__credits-name { color: var(--color-text-primary); overflow-wrap: anywhere; }
+.portfolio-card__credits-link { text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.35); text-underline-offset: 3px; }
+.portfolio-card__credits-link:hover,
+.portfolio-card__credits-link:focus-visible { color: var(--color-accent); text-decoration-color: currentColor; }
