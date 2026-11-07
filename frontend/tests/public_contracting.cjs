@@ -30,6 +30,8 @@ async function staticResponse(route) {
         let staleLead = false;
         let pendingLead = false;
         let dropLead = false;
+        let pausedIntake = false;
+        let pausedPost = false;
         page.on('pageerror', error => errors.push(error.message));
         page.on('console', message => {
             if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(message.text());
@@ -41,6 +43,7 @@ async function staticResponse(route) {
             if (url.origin === 'http://localhost:4173') return staticResponse(route);
             if (url.origin === 'http://localhost:8000') {
                 if (url.pathname === '/config') return route.fulfill({ json: { desconto: 10 } });
+                if (url.pathname === '/orcamentos/disponibilidade') return route.fulfill({ json: { pausado: pausedIntake, mensagem: 'Agenda cheia de teste.' } });
                 if (url.pathname === '/servicos') return route.fulfill({ json: [{
                     id: 12,
                     nome: 'Trilha custom',
@@ -54,6 +57,7 @@ async function staticResponse(route) {
                     payloads.push(request.postDataJSON());
                     requestKeys.push(request.headers()['idempotency-key']);
                     if (dropLead) return route.abort('failed');
+                    if (pausedPost) return route.fulfill({ status: 503, json: { detail: 'Pausado durante o envio.' } });
                     if (pendingLead) await new Promise(resolve => setTimeout(resolve, 120));
                     if (failLead) return route.fulfill({ status: 500, json: { detail: 'erro sintetico' } });
                     if (staleLead) return route.fulfill({ status: 422, json: { detail: 'O serviço escolhido mudou ou não está mais disponível. Recarregue a página e tente novamente.' } });
@@ -85,10 +89,19 @@ async function staticResponse(route) {
 
         await page.locator('#nome_cliente').fill('Cliente Teste');
         await page.locator('#email').fill('cliente@example.com');
+        // The contact is required: empty or too short blocks the request.
+        await page.locator('#btn-solicitar').click();
+        assert.equal(payloads.length, 0);
+        assert.equal(await page.locator('#whatsapp').evaluate(el => el.matches(':invalid')), true);
+        await page.locator('#whatsapp').fill('1234-5');
+        await page.locator('#btn-solicitar').click();
+        assert.equal(payloads.length, 0);
+        assert.equal(await page.locator('#whatsapp').evaluate(el => el.matches(':invalid')), true);
+        await page.locator('#whatsapp').fill('(11) 99999-0000');
         await page.locator('#btn-solicitar').click();
         await page.waitForFunction(() => document.getElementById('quote-submit-status').dataset.state === 'success');
         assert.equal(payloads.length, 1);
-        assert.equal(payloads[0].whatsapp, null);
+        assert.equal(payloads[0].whatsapp, '(11) 99999-0000');
         assert.equal(payloads[0].link_guia, 'https://example.com/referencia');
         assert.match(payloads[0].detalhes, /Trilha para abertura de canal/);
         assert.match(payloads[0].detalhes, /Duração: 210s/);
@@ -141,8 +154,54 @@ async function staticResponse(route) {
         await page.waitForFunction(() => document.getElementById('quote-submit-status').dataset.state === 'error');
         assert.match(await page.locator('#quote-submit-status').textContent(), /Recarregue a página/);
         staleLead = false;
+
+        // A project that fits no listed service: no price, no selection, description required.
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await page.reload();
+        await page.waitForSelector('#srv_personalizado');
+        assert.match(await page.locator('label[for="srv_personalizado"]').textContent(), /Personalizado[\s\S]*sob consulta/i);
+        await page.locator('label[for="srv_personalizado"]').click();
+        await page.locator('#btn-next-1').click();
+        assert.equal(await page.locator('#descricao').evaluate(el => el.required && el.minLength === 20), true);
+        assert.equal(await page.locator('#duracao').count(), 0);
+        await page.locator('#descricao').fill('Jingle de 30 segundos para uma loja de bairro, com locução.');
+        await page.getByRole('button', { name: 'Revisar estimativa' }).click();
+        assert.match(await page.locator('#valorTotal').textContent(), /Sob consulta/);
+        await page.locator('#nome_cliente').fill('Cliente Sob Medida');
+        await page.locator('#email').fill('sob-medida@example.com');
+        await page.locator('#whatsapp').fill('11 98888-7777');
+        const beforeCustom = payloads.length;
+        await page.locator('#btn-solicitar').click();
+        await page.waitForFunction(() => document.getElementById('quote-submit-status').dataset.state === 'success');
+        const custom = payloads[beforeCustom];
+        assert.equal(custom.servico, 'Personalizado');
+        assert.equal(custom.valor_total, null);
+        assert.equal('selecao' in custom, false);
+        assert.match(custom.detalhes, /Jingle de 30 segundos/);
+
+        // Paused while the form was open: the request is refused and the notice replaces the form.
+        pausedPost = true;
+        await page.locator('#nome_cliente').fill('Cliente Pausa');
+        await page.locator('#btn-solicitar').click();
+        await page.waitForSelector('#orcamentos-pausados:not([hidden])');
+        assert.match(await page.locator('#quote-paused-message').textContent(), /Pausado durante o envio/);
+        assert.equal(await page.locator('.quote-layout').isHidden(), true);
+        pausedPost = false;
+
+        // Paused before the visit: the notice shows and the catalog is never requested.
+        pausedIntake = true;
+        await page.reload();
+        await page.waitForSelector('#orcamentos-pausados:not([hidden])');
+        assert.match(await page.locator('#quote-paused-message').textContent(), /Agenda cheia de teste/);
+        assert.equal(await page.locator('#srv_12').count(), 0);
+        assert.equal(await page.locator('.quote-layout').isHidden(), true);
+        for (const width of [320, 390, 1280]) {
+            await page.setViewportSize({ width, height: 900 });
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, `paused overflow at ${width}`);
+        }
+        pausedIntake = false;
         assert.deepEqual(errors, []);
-        console.log('PASS: public contracting validation, payload, errors, double-submit and responsive structure.');
+        console.log('PASS: public contracting validation, required contact, custom service, paused intake, payload, errors, double-submit and responsive structure.');
     } finally {
         await browser.close();
     }

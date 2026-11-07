@@ -2,7 +2,7 @@ import { escapeHtml, safeURL } from "./utils/security.js";
 import { getProjetos } from "./api.js"; // <- Movido para o topo!
 import { money } from "./utils/format.js";
 import { $, $$ } from "./utils/dom.js";
-import { renderizarCardServico } from "./modules/service_renderer.js";
+import { renderizarCardPersonalizado, renderizarCardServico } from "./modules/service_renderer.js";
 import { state } from "./state.js";
 
 export const PARAM_TEMPLATES = {
@@ -56,7 +56,8 @@ export const PARAM_TEMPLATES = {
 export function renderizarBotoes(servicos) {
     // Catalog rework: combos come from the combos catalog; legacy "combo" services stay off the site.
     servicos = Array.isArray(servicos)
-        ? servicos.filter(s => s && (s.tipo === "combo" ? s.combo : Number.isInteger(s.id) && s.categoria !== "combo"))
+        ? servicos.filter(s => s && (s.tipo === "combo" ? s.combo
+            : s.tipo === "personalizado" || (Number.isInteger(s.id) && s.categoria !== "combo")))
         : [];
     const boxAvulso = $("render-avulsos");
     const boxCombo = $("render-combos");
@@ -69,7 +70,7 @@ export function renderizarBotoes(servicos) {
     $("categoria-combo").hidden = true;
 
     servicos.forEach((srv) => {
-        const html = renderizarCardServico(srv, state.configGlobal);
+        const html = srv.tipo === "personalizado" ? renderizarCardPersonalizado(srv) : renderizarCardServico(srv, state.configGlobal);
 
         if (srv.tipo === "combo") {
             boxCombo.innerHTML += html;

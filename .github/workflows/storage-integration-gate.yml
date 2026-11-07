@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["b8d0f2a4c6e7"], heads
+                  assert heads == ["c9e1a3b5d7f8"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -215,6 +215,7 @@ jobs:
                     test_marketing.py \
                     test_preview_admin.py \
                     test_produtor_perfil.py \
+                    test_orcamentos_pausa.py \
                     test_portfolio_creditos.py \
                     test_portfolio_envios.py \
                     test_audio_tags.py \
@@ -311,6 +312,7 @@ jobs:
                   node frontend/tests/session_expiry.cjs
                   node frontend/tests/admin_search.cjs
                   node frontend/tests/admin_entity_pages.cjs
+                  node frontend/tests/orcamentos_pausa_admin.cjs
                   # APL-S12-01: real proposal HTML/PDF from the backend feed the document suite.
                   (cd backend && PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout python -m unittest discover -s tests -p 'test_proposta_documento.py')
                   PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout node frontend/tests/proposta_documento.cjs
@@ -445,6 +447,7 @@ jobs:
                     backend/migrations/versions/f4b6d8a0c2e3_previas_em_lote.py \
                     backend/migrations/versions/a6c8e0b2d4f5_orcamento_origem_marketing.py \
                     backend/migrations/versions/b8d0f2a4c6e7_produtor_perfis.py \
+                    backend/migrations/versions/c9e1a3b5d7f8_orcamentos_pausa.py \
                     backend/services/marketing_service.py \
                     backend/routers/marketing.py \
                     backend/tests/test_marketing.py \
@@ -455,6 +458,8 @@ jobs:
                     backend/routers/produtores_publico.py \
                     backend/models/produtor_perfil.py \
                     backend/tests/test_produtor_perfil.py \
+                    backend/services/orcamento_pausa_service.py \
+                    backend/tests/test_orcamentos_pausa.py \
                     backend/services/previa_lote_service.py \
                     backend/services/atividade_service.py \
                     backend/services/arquivos_admin_service.py \
@@ -498,6 +503,7 @@ jobs:
                   node --check frontend/js/modules/produtor_publico.js
                   node --check frontend/js/produtor/pagina_perfil.js
                   node --check frontend/js/modules/image_cropper.js
+                  node --check frontend/js/admin/orcamentos/recebimento.js
                   node --check frontend/tests/produtor_publico.cjs
                   node --check frontend/js/admin/propostas/proposta_mapper.js
                   node --check frontend/tests/proposta_catalogo.cjs
@@ -548,7 +554,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic b8d0f2a4c6e7: passed"
+                    echo "- PostgreSQL 17 and Alembic c9e1a3b5d7f8: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"

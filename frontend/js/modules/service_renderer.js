@@ -85,6 +85,29 @@ export function renderizarCardServico(servico, config = {}) {
     </div>`;
 }
 
+/** "Personalizado": for projects that fit no listed service (priced in the proposal). */
+export function renderizarCardPersonalizado(servico) {
+    return `<div class="radio-card catalog-card catalog-card--custom">
+        <input type="radio" name="servico" id="srv_personalizado" value="personalizado">
+        <label for="srv_personalizado">
+            <span class="catalog-card__kind">Sob medida</span>
+            <span class="service-heading"><span class="service-title">${escapeHtml(servico.nome)}</span></span>
+            <span class="service-subtitle">${escapeHtml(servico.subtitulo)}</span>
+            <div class="service-price">Valor <strong>sob consulta</strong></div>
+            <p class="catalog-card__deadline">Prazo a combinar na proposta</p>
+            <div class="service-details" id="srv_details_personalizado"><strong class="catalog-card__includes">Como funciona</strong>
+                <div class="service-description"><p class="service-intro">Você descreve o projeto no próximo passo; a equipe analisa e envia uma proposta com escopo, prazo e valor.</p></div>
+            </div>
+            <span class="service-selected" aria-hidden="true">Selecionado</span>
+        </label>
+        <button type="button" class="service-toggle" aria-expanded="false"
+            aria-controls="srv_details_personalizado" aria-label="Ver detalhes de ${escapeHtml(servico.nome)}"
+            data-service-name="${escapeHtml(servico.nome)}" title="Ver detalhes">
+            <span class="service-expand" aria-hidden="true"></span>
+        </button>
+    </div>`;
+}
+
 function updateCardDisclosure(card, expanded) {
     card.classList.toggle("is-collapsed", !expanded);
     const button = card.querySelector(".service-toggle");

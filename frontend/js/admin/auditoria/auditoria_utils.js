@@ -16,6 +16,8 @@ const ACTION_LABELS = {
     "payment.reconciliation_required": "Conciliação necessária",
     "payment.reconciliation_conflict": "Conflito de conciliação",
     "beat.licenca.pagamento_apos_venda": "Pagamento de beat após a venda exclusiva",
+    "budget.intake_paused": "Novos pedidos de orçamento pausados",
+    "budget.intake_resumed": "Pedidos de orçamento retomados",
 };
 
 const ENTITY_LABELS = {
@@ -25,6 +27,7 @@ const ENTITY_LABELS = {
     newsletter_campaign: "Campanha",
     newsletter_subscriber: "Inscrito",
     payment: "Pagamento",
+    config: "Configuração",
 };
 
 const METADATA_LABELS = {

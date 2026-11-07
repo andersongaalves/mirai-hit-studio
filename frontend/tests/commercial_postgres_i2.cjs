@@ -67,6 +67,7 @@ function result(value) { console.log(`I2_RESULT ${JSON.stringify(value)}`); }
             await page.getByRole("button", { name: "Revisar estimativa" }).click();
             await page.locator("#nome_cliente").fill(process.env.I2_NAME);
             await page.locator("#email").fill(process.env.I2_EMAIL);
+            await page.locator("#whatsapp").fill("(11) 90000-0000");
             const responsePromise = page.waitForResponse(r => new URL(r.url()).pathname === "/orcamentos" && r.request().method() === "POST");
             await page.evaluate(() => { const button = document.getElementById("btn-solicitar"); button.click(); button.click(); });
             const response = await responsePromise;

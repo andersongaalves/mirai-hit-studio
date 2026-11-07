@@ -1,7 +1,9 @@
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -25,6 +27,37 @@ router = APIRouter(
     tags=["Orçamentos"],
 )
 
+class PausaOrcamentos(BaseModel):
+    pausado: bool
+    mensagem: str | None = Field(default=None, max_length=500)
+
+
+@router.get("/disponibilidade")
+def disponibilidade(db: Session = Depends(get_db)):
+    """Whether the site accepts new quote requests now (the Admin may pause them)."""
+    from services import orcamento_pausa_service
+
+    data = orcamento_pausa_service.estado(db)
+    return JSONResponse({"pausado": data["pausado"], "mensagem": data["mensagem"]},
+                        headers={"Cache-Control": "no-store"})
+
+
+@router.get("/recebimento")
+def recebimento(db: Session = Depends(get_db), user=Depends(require_admin)):
+    from services import orcamento_pausa_service
+
+    return orcamento_pausa_service.estado(db)
+
+
+@router.put("/recebimento")
+def definir_recebimento(dados: PausaOrcamentos, request: Request, db: Session = Depends(get_db),
+                        user=Depends(require_admin)):
+    from services import orcamento_pausa_service
+
+    return orcamento_pausa_service.definir(db, user, dados.pausado, dados.mensagem,
+                                           getattr(request.state, "request_id", None))
+
+
 @router.post(
     "",
     response_model=OrcamentoResponse,
@@ -35,8 +68,12 @@ def criar_orcamento(
     idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
 
-    from services import orcamento_preco_service
+    from services import orcamento_pausa_service, orcamento_preco_service
 
+    pausa = orcamento_pausa_service.estado(db)
+    if pausa["pausado"]:
+        # Busy schedule: new requests wait; the site shows the same notice.
+        raise HTTPException(status_code=503, detail=pausa["mensagem"], headers={"X-Mirai-Orcamentos": "pausados"})
     if orcamento.contato_site and orcamento.contato_site.strip():
         raise HTTPException(status_code=400, detail="Não foi possível enviar a solicitação.")
     try:

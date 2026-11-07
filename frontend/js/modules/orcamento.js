@@ -5,6 +5,9 @@ import { $ } from "../utils/dom.js";
 import { PARAM_TEMPLATES } from "../ui.js";
 import { track } from "../analytics.js";
 import { origemMarketing } from "./origem.js";
+import { isPersonalizado, mostrarPausa } from "./calculator.js";
+
+const WHATSAPP_DIGITS = /^\d{10,15}$/;
 
 function obterDetalhes() {
     const partes = [];
@@ -47,6 +50,7 @@ export function initOrcamento() {
     btnSolicitar.dataset.initialized = "true";
     let enviando = false;
     let submission = null;
+    $("whatsapp")?.addEventListener("input", event => event.target.setCustomValidity(""));
 
     const setStatus = (message, stateName = "") => {
         if (!status) return;
@@ -67,6 +71,17 @@ export function initOrcamento() {
 
                 return;
             }
+            const personalizado = isPersonalizado(state.servicoSelecionadoOBJ);
+            // The description lives in step 2: bring the person back to it when missing.
+            if (personalizado && ($("descricao")?.value.trim().length || 0) < 20) {
+                window.avancarPasso(2);
+                $("descricao")?.focus();
+                setStatus("Descreva o projeto (pelo menos 20 caracteres) para montarmos a proposta.", "error");
+                return;
+            }
+            const whatsappInput = $("whatsapp");
+            const digits = (whatsappInput?.value || "").replace(/\D/g, "");
+            whatsappInput?.setCustomValidity(WHATSAPP_DIGITS.test(digits) ? "" : "Informe um WhatsApp com DDD (10 a 15 números).");
             if (!form.reportValidity()) {
                 setStatus("Revise os campos obrigatórios para continuar.", "error");
                 return;
@@ -77,18 +92,18 @@ export function initOrcamento() {
 
                 email: $("email").value.trim(),
 
-                whatsapp: $("whatsapp").value.trim() || null,
+                whatsapp: $("whatsapp").value.trim(),
 
                 servico: state.servicoSelecionadoOBJ.nome,
 
-                valor_total: state.valorTotalCalculado,
+                valor_total: personalizado ? null : state.valorTotalCalculado,
 
                 link_guia: $("guia")?.value.trim() || null,
 
                 detalhes: obterDetalhes(),
-
-                selecao: obterSelecao(),
             };
+            // A listed service is priced again by the server; a custom one has no catalog price.
+            if (!personalizado) payload.selecao = obterSelecao();
             const origem = origemMarketing();
             if (origem) payload.origem_marketing = origem;
             const trap = $("contato_site")?.value.trim();
@@ -111,6 +126,11 @@ export function initOrcamento() {
                 setStatus("Solicitação recebida. A equipe analisará o briefing antes de preparar a proposta.", "success");
                 Notify.success("Solicitação de orçamento enviada.");
             } catch (error) {
+                if (error?.status === 503) {
+                    // The studio paused new requests while the form was open.
+                    mostrarPausa(error.message);
+                    return;
+                }
                 if (error?.status === 422 && error?.message) {
                     setStatus(error.message, "error");
                     Notify.error(error.message);
