@@ -59,12 +59,12 @@ class PortfolioCreditosTests(unittest.TestCase):
                             {'funcao': 'outra', 'funcao_outra': 'Direcao vocal', 'nome': 'Ciclano', 'usuario_id': None},
                         ]
 
-                        # Public list: name and role only, never the account link.
+                        # Public list: name, role and the producer's public page address; never the account.
                         public = (await client.get('/projetos')).json()
                         assert public[0]['creditos'] == [
-                            {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'beatmaker'},
-                            {'funcao': 'composicao', 'funcao_outra': None, 'nome': 'Fulana Externa'},
-                            {'funcao': 'outra', 'funcao_outra': 'Direcao vocal', 'nome': 'Ciclano'},
+                            {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'beatmaker', 'perfil': 'beatmaker-2'},
+                            {'funcao': 'composicao', 'funcao_outra': None, 'nome': 'Fulana Externa', 'perfil': None},
+                            {'funcao': 'outra', 'funcao_outra': 'Direcao vocal', 'nome': 'Ciclano', 'perfil': None},
                         ]
                         assert all('usuario_id' not in item for item in public[0]['creditos'])
 
@@ -144,6 +144,8 @@ class PortfolioCreditosTests(unittest.TestCase):
                         assert renamed.json()['nome_exibicao'] == 'DJ Beat' and renamed.json()['username'] == 'beatmaker'
                         public = (await client.get('/projetos')).json()[0]['creditos']
                         assert [item['nome'] for item in public] == ['DJ Beat', 'Externo']
+                        # The page address follows the display name; the original keeps working too.
+                        assert [item['perfil'] for item in public] == ['dj-beat-2', None]
                         admin = (await client.get('/projetos/admin', headers=headers)).json()[0]['creditos']
                         assert admin[0] == {'funcao': 'mixagem', 'funcao_outra': None, 'nome': 'DJ Beat', 'usuario_id': 2}
                         with Session(engine) as db:

@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 const assetVersion = "20261017-portfolio-creditos";
 const types = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".webp": "image/webp", ".ttf": "font/ttf" };
 let projects = [
-    { id: 1, titulo: "Faixa <script>alert(1)</script>", artista: "Artista teste", categoria: "Mixagem", link_audio: "https://example.com/audio.mp3", link_capa: "javascript:alert(1)", descricao: "Descrição <img src=x onerror=alert(1)>", destaque: true, vertical: "artists", segmentos_json: ["rap"], case_type: "client_case", creditos: [{ funcao: "mixagem", funcao_outra: null, nome: "Beat <b>Maker</b>" }, { funcao: "outra", funcao_outra: "Direção vocal", nome: "Fulana" }, { funcao: "beat", funcao_outra: null, nome: "   " }] },
+    { id: 1, titulo: "Faixa <script>alert(1)</script>", artista: "Artista teste", categoria: "Mixagem", link_audio: "https://example.com/audio.mp3", link_capa: "javascript:alert(1)", descricao: "Descrição <img src=x onerror=alert(1)>", destaque: true, vertical: "artists", segmentos_json: ["rap"], case_type: "client_case", creditos: [{ funcao: "mixagem", funcao_outra: null, nome: "Beat <b>Maker</b>", perfil: "beat-maker-2" }, { funcao: "outra", funcao_outra: "Direção vocal", nome: "Fulana", perfil: "javascript:alert(1)" }, { funcao: "beat", funcao_outra: null, nome: "   " }] },
     { id: 2, titulo: "Estudo de interface", artista: "Mirai Hit Studio", categoria: "Sound design", link_audio: "https://www.youtube.com/watch?v=abcdefghijk", link_capa: "https://example.com/cover.webp", descricao: "Material conceitual", destaque: false, vertical: "media_games", segmentos_json: ["games"], case_type: "study" },
     { id: 3, titulo: "Nao classificado", artista: "Interno", categoria: "Outro", link_audio: "https://example.com/private.mp3", link_capa: "https://example.com/private.webp", descricao: "Nao publicar", destaque: false, vertical: null, segmentos_json: [], case_type: null },
 ];
@@ -69,6 +69,10 @@ async function staticResponse(route) {
         const credits = page.locator(".portfolio-card").first().locator(".portfolio-card__credits li");
         assert.deepEqual(await credits.allTextContents(), ["MixagemBeat <b>Maker</b>", "Direção vocalFulana"]);
         assert.equal(await page.locator(".portfolio-card__credits b").count(), 0);
+        // A credited producer with a public page links to it; anything else stays text.
+        const producerLink = credits.nth(0).getByRole("link", { name: "Beat <b>Maker</b>" });
+        assert.equal(await producerLink.getAttribute("href"), "/produtores/beat-maker-2");
+        assert.equal(await credits.nth(1).locator("a").count(), 0);
         assert.equal(await page.locator(".portfolio-card").nth(1).locator(".portfolio-card__credits").count(), 0);
         assert.equal(await page.locator("audio").getAttribute("autoplay"), null);
         assert.equal(await page.locator("audio").getAttribute("preload"), "none");

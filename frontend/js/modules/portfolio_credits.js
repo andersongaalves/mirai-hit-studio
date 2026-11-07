@@ -18,7 +18,9 @@ export function creditRoleLabel(credit) {
     return ROLE_LABELS[credit?.funcao] || "Colaboração";
 }
 
-/** Public list: one <li> per credit, text only. */
+const PROFILE = /^[a-z0-9-]{1,60}$/;
+
+/** Public list: one <li> per credit; producers with a public page link to it. */
 export function creditsList(credits, className = "portfolio-card__credits") {
     const items = (Array.isArray(credits) ? credits : []).filter(credit => String(credit?.nome || "").trim());
     if (!items.length) return null;
@@ -30,9 +32,14 @@ export function creditsList(credits, className = "portfolio-card__credits") {
         const role = document.createElement("span");
         role.className = `${className}-role`;
         role.textContent = creditRoleLabel(credit);
-        const name = document.createElement("span");
-        name.className = `${className}-name`;
+        const profile = typeof credit.perfil === "string" && PROFILE.test(credit.perfil) ? credit.perfil : "";
+        const name = document.createElement(profile ? "a" : "span");
+        name.className = profile ? `${className}-name ${className}-link` : `${className}-name`;
         name.textContent = String(credit.nome).trim();
+        if (profile) {
+            name.href = `/produtores/${profile}`;
+            name.title = `Ver o perfil de ${name.textContent}`;
+        }
         item.append(role, name);
         list.append(item);
     });

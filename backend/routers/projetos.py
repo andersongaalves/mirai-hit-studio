@@ -59,7 +59,9 @@ def _project_or_404(db, project_id):
 
 @router.get("", response_model=list[ProjetoPublicResponse])
 def listar_projetos(db: Session = Depends(get_db)):
-    return (
+    from services import produtor_perfil_service
+
+    projects = (
         db.query(models.ProjetoModel)
         .filter(
             models.ProjetoModel.vertical.in_(PUBLIC_VERTICALS),
@@ -67,6 +69,12 @@ def listar_projetos(db: Session = Depends(get_db)):
         )
         .all()
     )
+    # A credit linked to a producer with a public page links to it (by address only).
+    credits = [credit for project in projects for credit in project.creditos]
+    slugs = produtor_perfil_service.slugs(db, {credit.usuario_id for credit in credits})
+    for credit in credits:
+        credit.perfil = slugs.get(credit.usuario_id)
+    return projects
 
 
 @router.get("/public/mix-comparisons", response_model=list[ProjetoMixComparisonPublic])
