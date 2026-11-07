@@ -186,6 +186,11 @@ class AIBriefingService:
                     raise ToolError("missing_required_fields")
                 if briefing.orcamento_id:
                     return self._tool_result(briefing, self._email(db, conversation))
+                # New requests wait while the Admin has paused them (busy schedule).
+                from services import orcamento_pausa_service
+
+                if orcamento_pausa_service.estado(db)["pausado"]:
+                    raise ToolError("tool_temporarily_unavailable")
                 message = self._message(db, conversation, context)
                 confirmation = _fold(message.content)
                 if re.search(r"\b(nao|nunca|cancele|cancelar|not|don't)\b", confirmation):

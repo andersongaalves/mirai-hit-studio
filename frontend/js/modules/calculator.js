@@ -32,8 +32,50 @@ function comboComoServico(combo) {
     };
 }
 
+// For projects that fit no listed service: described in the briefing, priced in the proposal.
+export const PERSONALIZADO = Object.freeze({
+    id: "personalizado",
+    tipo: "personalizado",
+    nome: "Personalizado",
+    subtitulo: "Não encontrou o que precisa? Descreva o projeto e montamos uma proposta sob medida.",
+    valor_base: 0,
+    aplica_desconto: false,
+    parametros: "descricao,guia",
+    prazo_estimado_dias: null,
+});
+
+export const isPersonalizado = servico => servico?.tipo === "personalizado";
+
+/** While the studio pauses new requests, the page shows a notice instead of the form. */
+export function mostrarPausa(mensagem) {
+    const aviso = $("orcamentos-pausados");
+    if (!aviso) return;
+    $("quote-paused-message").textContent = mensagem || "Pausamos novos pedidos por alguns dias. Volte em breve!";
+    aviso.hidden = false;
+    document.querySelectorAll(".quote-stepper-band, .quote-layout").forEach(node => { node.hidden = true; });
+    document.querySelector(".quote-header > p:not(.public-eyebrow)")?.setAttribute("hidden", "");
+    aviso.querySelector("h2")?.focus?.();
+}
+
+export async function verificarDisponibilidade() {
+    try {
+        const estado = await API.getAPI("orcamentos/disponibilidade");
+        if (estado?.pausado) {
+            mostrarPausa(estado.mensagem);
+            return false;
+        }
+    } catch {
+        // If the check fails, the form stays available; the API still decides on submit.
+    }
+    return true;
+}
+
 export async function initCalculadora() {
     setCalculatorStatus("Carregando serviços...");
+    if (!(await verificarDisponibilidade())) {
+        setCalculatorStatus("");
+        return;
+    }
     try {
         const [config, servicos, combos] = await Promise.all([
             API.getAPI("config"),
@@ -48,6 +90,7 @@ export async function initCalculadora() {
         state.servicosDB = [
             ...(Array.isArray(servicos) ? servicos : []),
             ...(Array.isArray(combos) ? combos : []).map(comboComoServico),
+            PERSONALIZADO,
         ];
         UI.renderizarBotoes(state.servicosDB);
         setCalculatorStatus(
@@ -65,6 +108,15 @@ export async function initCalculadora() {
 
 export function calcular() {
     if (!state.servicoSelecionadoOBJ) return;
+    if (isPersonalizado(state.servicoSelecionadoOBJ)) {
+        // No catalog price: the value comes in the proposal.
+        state.valorTotalCalculado = null;
+        const badge = $("badge-desconto");
+        if (badge) badge.hidden = true;
+        if ($("valorTotal")) $("valorTotal").innerText = "Sob consulta";
+        if ($("quote-context-estimate")) $("quote-context-estimate").textContent = "Sob consulta";
+        return;
+    }
 
     let total = state.servicoSelecionadoOBJ.valor_base;
 
@@ -152,6 +204,15 @@ export async function initEventosCalculadora() {
                 UI.renderizarFormularioParametros(
                     state.servicoSelecionadoOBJ.parametros,
                 );
+                // A custom project needs a description to become a proposal.
+                const descricao = $("descricao");
+                if (descricao && isPersonalizado(state.servicoSelecionadoOBJ)) {
+                    descricao.required = true;
+                    descricao.minLength = 20;
+                    descricao.placeholder = "O que você precisa, referências, prazo desejado e o resultado esperado";
+                    const label = document.querySelector('label[for="descricao"]');
+                    if (label) label.textContent = "Descreva o projeto";
+                }
             }
 
             if (state.servicoSelecionadoOBJ) {

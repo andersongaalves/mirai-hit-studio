@@ -1,5 +1,5 @@
 from database import Base
-from sqlalchemy import JSON, Column, Float, Integer, text
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, false, text
 from sqlalchemy.dialects.postgresql import JSONB
 
 
@@ -39,3 +39,7 @@ class ConfigModel(Base):
             "'{\"capa_mb\": 10, \"mp3_mb\": 50, \"wav_mb\": 50, \"multitrack_mb\": 50, \"multitrack_mode\": \"arquivo\"}'"
         ),
     )
+    # The Admin can pause new quote requests (busy schedule); the site shows a notice.
+    orcamentos_pausados = Column(Boolean, nullable=False, default=False, server_default=false())
+    orcamentos_pausa_mensagem = Column(String(500), nullable=True)
+    orcamentos_pausados_em = Column(DateTime(timezone=True), nullable=True)

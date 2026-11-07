@@ -10,6 +10,7 @@ import { orcamentosState } from "./orcamentos_state.js";
 import { filtrarOrcamentos } from "./orcamentos_filters.js";
 import { adicionarFiltroAmbiente } from "../classificacao.js";
 import { confirmarAcao } from "../../modules/confirm_dialog.js";
+import { initRecebimento } from "./recebimento.js";
 
 const STATUS_MESSAGES = {
     em_analise: "Orçamento colocado em análise.",
@@ -136,6 +137,7 @@ export async function deletarOrcamento(id) {
 
 export function initOrcamentos() {
     registrarEventos();
+    initRecebimento();
 
     OrcamentosModal.registrarEventosModal({
         onSalvarObservacoes: salvarObservacoes,

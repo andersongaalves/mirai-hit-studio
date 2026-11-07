@@ -83,7 +83,7 @@ async function staticResponse(route) {
             state.valorTotalCalculado = 100;
             document.getElementById('nome_cliente').value = 'Pessoa privada';
             document.getElementById('email').value = 'private@example.com';
-            document.getElementById('whatsapp').value = '000000000';
+            document.getElementById('whatsapp').value = '11999999999';
         });
         await page.evaluate(() => document.getElementById('btn-solicitar').click());
         await page.waitForFunction(() => window.dataLayer?.filter(item => item[0] === 'event' && item[1] === 'generate_lead').length === 1, null, { timeout: 5000 });

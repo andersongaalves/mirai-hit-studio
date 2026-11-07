@@ -174,3 +174,22 @@
     .integrado-admin .admin-search { margin: 0 8px; }
     .integrado-admin .admin-search__results { position: fixed; top: var(--integrado-header-height); left: 8px; right: 8px; }
 }
+
+/* Orçamentos: switch that pauses new quote requests from the site. */
+.admin-intake { display: grid; gap: var(--space-4); margin: 0 0 var(--space-5); padding: var(--space-5); border: 1px solid rgba(126, 224, 129, 0.35); border-radius: var(--radius-md); background: var(--color-surface); }
+.admin-intake.is-paused { border-color: rgba(255, 181, 71, 0.55); background: linear-gradient(180deg, rgba(255, 181, 71, 0.08), var(--color-surface) 60%); }
+.admin-intake__loading, .admin-intake__error { margin: 0; color: var(--color-text-secondary); }
+.admin-intake__error { color: var(--color-warning); }
+.admin-intake__status { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--space-3); }
+.admin-intake__dot { width: 12px; height: 12px; margin-top: 7px; border-radius: 50%; background: var(--color-success); box-shadow: 0 0 0 4px rgba(126, 224, 129, 0.18); }
+.admin-intake.is-paused .admin-intake__dot { background: var(--color-warning); box-shadow: 0 0 0 4px rgba(255, 181, 71, 0.2); }
+.admin-intake__text { display: grid; gap: 4px; min-width: 0; }
+.admin-intake__text h2 { margin: 0; font-size: 1.15rem; }
+.admin-intake__text p { margin: 0; color: var(--color-text-secondary); line-height: 1.5; }
+.admin-intake__field { display: grid; gap: 6px; }
+.admin-intake__field > span { font-weight: 700; font-size: var(--font-size-small); }
+.admin-intake__field textarea { width: 100%; min-height: 76px; resize: vertical; }
+.admin-intake__field small { color: var(--color-text-secondary); font-size: var(--font-size-caption); }
+.admin-intake__counter { justify-self: end; }
+.admin-intake__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.admin-intake__pause { border-color: rgba(255, 181, 71, 0.6); color: var(--color-warning); }

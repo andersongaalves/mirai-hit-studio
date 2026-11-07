@@ -43,6 +43,17 @@
                     <div class="step-indicator" id="ind-3"><span>3</span> Contato</div>
                 </div>
             </div>
+            <!-- Shown instead of the form while the studio has paused new requests. -->
+            <section id="orcamentos-pausados" class="public-container quote-paused" hidden aria-labelledby="quote-paused-title">
+                <p class="public-eyebrow">Agenda cheia</p>
+                <h2 id="quote-paused-title">Novos pedidos estão pausados</h2>
+                <p id="quote-paused-message" class="quote-paused__message"></p>
+                <p class="quote-paused__hint">Enquanto isso, você pode conhecer nossos trabalhos e os beats disponíveis para compra.</p>
+                <div class="quote-paused__actions">
+                    <a class="btn-cta" href="/beats">Ver beats</a>
+                    <a class="btn-outline" href="/portfolio">Ver portfólio</a>
+                </div>
+            </section>
             <div class="public-container quote-layout">
                 <form id="orcamento-form" class="quote-form">
                     <div id="calculator-status" class="quote-status" role="status" aria-live="polite">Carregando serviços...</div>
@@ -97,8 +108,9 @@
                                     <input type="email" id="email" name="email" maxlength="150" autocomplete="email" required />
                                 </div>
                                 <div class="form-group">
-                                    <label for="whatsapp">WhatsApp <span>(opcional)</span></label>
-                                    <input type="tel" id="whatsapp" name="whatsapp" maxlength="30" autocomplete="tel" inputmode="tel" />
+                                    <label for="whatsapp">WhatsApp</label>
+                                    <input type="tel" id="whatsapp" name="whatsapp" maxlength="30" autocomplete="tel" inputmode="tel" required placeholder="(11) 99999-9999" aria-describedby="whatsapp-help" />
+                                    <small id="whatsapp-help" class="quote-field-help">Com DDD. Usamos para combinar os detalhes do projeto.</small>
                                 </div>
                                 <!-- AUD6-S03-002: campo isca; pessoas não veem nem alcançam pelo teclado. -->
                                 <div class="quote-trap" aria-hidden="true">

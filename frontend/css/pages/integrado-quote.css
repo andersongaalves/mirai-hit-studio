@@ -62,3 +62,30 @@
     .quote-page .quote-layout { grid-template-columns: 1fr; gap: 32px; padding-top: 24px; }
     .quote-page .quote-context { position: static; }
 }
+
+/* Paused requests (busy schedule): a notice instead of the form. */
+.quote-paused[hidden] { display: none; }
+.quote-paused {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    max-width: 760px;
+    margin-top: 8px;
+    margin-bottom: 96px;
+    padding: clamp(24px, 4vw, 40px);
+    border: 1px solid rgba(255, 200, 97, 0.45);
+    border-left-width: 4px;
+    border-radius: 12px;
+    background: rgba(255, 200, 97, 0.06);
+}
+.quote-paused .public-eyebrow { margin: 0; color: #ffc861; }
+.quote-paused h2 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.2rem); }
+.quote-paused__message { margin: 0; font-size: 1.1rem; line-height: 1.55; white-space: pre-line; }
+.quote-paused__hint { margin: 0; color: var(--color-text-secondary); }
+.quote-paused__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.quote-layout[hidden],
+.quote-stepper-band[hidden] { display: none; }
+.quote-field-help { display: block; margin-top: 4px; color: var(--color-text-secondary); font-size: 0.85rem; }
+/* "Personalizado": set apart from the catalog services. */
+.catalog-card--custom label { border-style: dashed; }
+.catalog-card--custom .catalog-card__kind { color: var(--integrado-secondary, #cb32e6); }
