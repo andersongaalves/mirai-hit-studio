@@ -54,7 +54,9 @@ class OptionalProviderTests(unittest.TestCase):
             portfolio = send(site.create_session().session_token, 'Quero conhecer o portfolio')
             assert faq.action == services.action == portfolio.action == 'reply'
             assert 'proposta comercial' in faq.text
-            assert 'Mixagem' in services.text and 'referências de base' in services.text
+            assert 'Mixagem' in services.text and 'valor final sai na proposta' in services.text
+            # Short and direct: names only, no long subtitles.
+            assert 'Equilibrio e acabamento' not in services.text and len(services.text) < 200
             assert 'Aurora' in portfolio.text and 'demo' in portfolio.text
             assert provider.calls == 0
             with SessionLocal() as db:

@@ -56,12 +56,12 @@ def deterministic_reply(message, registry, context, *, telemetry=None):
     if intent == "greeting":
         return DeterministicReply(
             intent,
-            "Olá! Posso apresentar os serviços e o portfólio da Mirai, explicar o fluxo de contratação ou encaminhar você para a equipe.",
+            "Olá! Como posso ajudar? Posso falar de serviços, portfólio ou orçamento.",
         )
     tool_name, arguments = {
         "faq": ("get_public_faq", {"topic": topic}),
-        "services": ("list_services", {"limit": 6}),
-        "portfolio": ("get_public_portfolio", {"limit": 6}),
+        "services": ("list_services", {"limit": 5}),
+        "portfolio": ("get_public_portfolio", {"limit": 4}),
     }[intent]
     result = registry.run(
         ToolCall(id=f"deterministic_{intent}", name=tool_name, arguments=arguments),
@@ -76,18 +76,17 @@ def deterministic_reply(message, registry, context, *, telemetry=None):
     if intent == "services":
         services = result.data.get("services") or []
         if not services:
-            return DeterministicReply(intent, "Não há serviços publicados no momento. Posso encaminhar você para a equipe.")
-        lines = [f"{item['name']}: {item['subtitle']}" if item.get("subtitle") else item["name"] for item in services]
+            return DeterministicReply(intent, "Não há serviços publicados agora. Posso chamar a equipe.")
+        lines = [item["name"] for item in services]
         return DeterministicReply(
             intent,
-            "Serviços publicados pela Mirai:\n- " + "\n- ".join(lines)
-            + "\nOs valores cadastrados são referências de base; escopo e valor final são confirmados na proposta.",
+            "Serviços da Mirai:\n- " + "\n- ".join(lines) + "\nO valor final sai na proposta.",
         )
     projects = result.data.get("projects") or []
     if not projects:
-        return DeterministicReply(intent, "O portfólio público ainda não possui trabalhos disponíveis para esta consulta.")
+        return DeterministicReply(intent, "Ainda não há trabalhos no portfólio público.")
     lines = [
         f"{item['title']} — {item['credited_artist']} ({CASE_LABELS[item['case_type']]})"
         for item in projects
     ]
-    return DeterministicReply(intent, "Alguns trabalhos do portfólio público:\n- " + "\n- ".join(lines))
+    return DeterministicReply(intent, "Alguns trabalhos:\n- " + "\n- ".join(lines) + "\nVeja todos em miraihitstudio.com.br/portfolio.")
