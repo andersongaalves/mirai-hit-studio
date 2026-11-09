@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 import models
@@ -75,6 +76,28 @@ def listar_projetos(db: Session = Depends(get_db)):
     for credit in credits:
         credit.perfil = slugs.get(credit.usuario_id)
     return projects
+
+
+@router.get("/public/verticais")
+def listar_verticais_publicadas(db: Session = Depends(get_db)):
+    """Public areas (Artistas, Criadores, Media & Games) with at least one published work.
+
+    The site hides the areas left out of this list from its menus and the home page.
+    """
+    rows = (
+        db.query(models.ProjetoModel.vertical)
+        .filter(
+            models.ProjetoModel.vertical.in_(PUBLIC_VERTICALS),
+            models.ProjetoModel.case_type.in_(PUBLIC_CASE_TYPES),
+        )
+        .distinct()
+        .all()
+    )
+    present = {row[0] for row in rows}
+    return JSONResponse(
+        {"verticais": [vertical for vertical in PUBLIC_VERTICALS if vertical in present]},
+        headers={"Cache-Control": "public, max-age=60"},
+    )
 
 
 @router.get("/public/mix-comparisons", response_model=list[ProjetoMixComparisonPublic])
