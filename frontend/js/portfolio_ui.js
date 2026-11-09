@@ -184,7 +184,12 @@ export function renderizarFiltros(projects, filters, onChange, segmentLabels = {
     const segments = [...new Set(published.flatMap(project => Array.isArray(project.segmentos_json) ? project.segmentos_json : []))].sort();
     clear(container);
 
-    container.append(createFilterGroup("Vertical", "vertical", Object.entries(VERTICAL_LABELS).map(([value, label]) => ({ value, label })), filters.vertical, onChange));
+    // Only areas with published work (plus the one selected, so the choice stays visible).
+    const verticals = new Set(published.map(project => project.vertical));
+    const verticalOptions = Object.entries(VERTICAL_LABELS)
+        .filter(([value]) => verticals.has(value) || filters.vertical === value)
+        .map(([value, label]) => ({ value, label }));
+    container.append(createFilterGroup("Vertical", "vertical", verticalOptions, filters.vertical, onChange));
     container.append(createSelectFilter("Segmento", "segment", [
         { value: "", label: "Todos os segmentos" },
         ...segments.map(value => ({ value, label: segmentLabels[value] || value.replaceAll("_", " ") })),

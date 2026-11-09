@@ -36,6 +36,11 @@ class PortfolioTaxonomyTests(unittest.TestCase):
                 with patch('socket.socket.connect', side_effect=AssertionError('external network')):
                     async with httpx.AsyncClient(transport=transport, base_url='http://test') as client:
                         assert (await client.get('/projetos')).json() == []
+                        # Areas with no published work are hidden by the site.
+                        empty_areas = await client.get('/projetos/public/verticais')
+                        assert empty_areas.status_code == 200
+                        assert empty_areas.json() == {'verticais': []}
+                        assert 'max-age' in empty_areas.headers['cache-control']
                         assert (await client.get('/projetos/admin')).status_code == 401
                         admin_list = await client.get('/projetos/admin', headers=headers)
                         assert admin_list.status_code == 200
@@ -83,6 +88,7 @@ class PortfolioTaxonomyTests(unittest.TestCase):
                         assert classification.status_code == 200, classification.text
                         assert classification.json()['categoria'] == 'Masterizacao'
                         assert classification.json()['segmentos_json'] == ['rock', 'pop']
+                        assert (await client.get('/projetos/public/verticais')).json() == {'verticais': ['artists']}
 
                         invalid = await client.put(
                             f'/projetos/{legacy_id}', json={'titulo': 'x'}, headers=headers)
@@ -114,6 +120,9 @@ class PortfolioTaxonomyTests(unittest.TestCase):
                         created = await client.post('/projetos', json=payload, headers=headers)
                         assert created.status_code == 200, created.text
                         assert created.json()['case_type'] == 'demo'
+                        # Fixed order (Artistas, Criadores, Media & Games); Criadores stays hidden.
+                        assert (await client.get('/projetos/public/verticais')).json() == {
+                            'verticais': ['artists', 'media_games']}
                         public = await client.get('/projetos')
                         assert public.status_code == 200
                         assert {item['titulo'] for item in public.json()} == {

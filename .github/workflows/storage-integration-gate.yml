@@ -302,6 +302,7 @@ jobs:
                   node frontend/tests/newsletter_admin.cjs
                   node frontend/tests/newsletter_public.cjs
                   node frontend/tests/public_navigation.cjs
+                  node frontend/tests/public_verticals.cjs
                   node frontend/tests/security.cjs
                   node frontend/tests/seo_content_h2.cjs
                   node frontend/tests/seo_technical.cjs
@@ -503,6 +504,7 @@ jobs:
                   node --check frontend/js/modules/produtor_publico.js
                   node --check frontend/js/produtor/pagina_perfil.js
                   node --check frontend/js/modules/image_cropper.js
+                  node --check frontend/js/modules/public_verticals.js
                   node --check frontend/js/admin/orcamentos/recebimento.js
                   node --check frontend/tests/produtor_publico.cjs
                   node --check frontend/js/admin/propostas/proposta_mapper.js
