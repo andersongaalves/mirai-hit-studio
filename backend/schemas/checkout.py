@@ -37,6 +37,8 @@ class CheckoutSummary(CheckoutContract):
     status: Literal["pendente", "parcialmente_paga", "paga", "cancelada"]
     opcoes: list[CheckoutOption]
     tentativa: CheckoutAttempt | None = None
+    # Mirai Hit Labs: after paying, a plugin order goes to "Meus plugins".
+    finalidade: Literal["producao", "creditos", "plugins"] = "producao"
 
 
 class CheckoutStatus(CheckoutContract):

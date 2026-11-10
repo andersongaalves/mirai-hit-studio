@@ -117,8 +117,12 @@ def avaliar_cobranca_bloqueada(
             "Cobranca sem proposta requer conciliacao."
         )
     proposta = cobranca.proposta
-    from services import beat_service
+    from services import beat_service, plugin_service
     beat_service.confirm_paid(db, cobranca)
+    plugin_service.confirm_paid(db, cobranca)
+    if plugin_service.finalidade_plugins(proposta):
+        # A plugin order ends at the license: no production to release.
+        return None
     from services import carteira_creditos_service
 
     if carteira_creditos_service.finalidade_creditos(proposta):

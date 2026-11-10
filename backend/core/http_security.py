@@ -108,6 +108,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         return response
 
 
+MAIN_SITE_ORIGIN = "https://miraihitstudio.com.br"
+LABS_ORIGIN = "https://labs.miraihitstudio.com.br"
+
+
 def cors_origins(value):
     from urllib.parse import urlsplit
     origins = []
@@ -118,4 +122,7 @@ def cors_origins(value):
             raise ValueError("Configure origens CORS explicitas HTTP/HTTPS.")
         if origin not in origins:
             origins.append(origin)
+    # The Mirai Hit Labs storefront reads the public plugin catalog from its own subdomain.
+    if MAIN_SITE_ORIGIN in origins and LABS_ORIGIN not in origins:
+        origins.append(LABS_ORIGIN)
     return origins

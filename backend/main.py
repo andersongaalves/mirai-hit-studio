@@ -24,6 +24,7 @@ from routers.arquivos_admin import router as arquivos_admin_router
 from routers.marketing import router as marketing_router
 from routers.preview_admin import router as preview_admin_router
 from routers.produtores_publico import router as produtores_publico_router
+from routers.labs import router as labs_router
 from routers.config import router as config_router
 from routers.cotas_arquivo import router as cotas_arquivo_router
 from routers.credito_alocacao import router as credito_alocacao_router
@@ -133,6 +134,7 @@ app.include_router(arquivos_admin_router)
 app.include_router(marketing_router)
 app.include_router(preview_admin_router)
 app.include_router(produtores_publico_router)
+app.include_router(labs_router)
 
 
 @app.get("/")

@@ -75,6 +75,7 @@
                                 <button type="button" class="admin-nav__item" data-admin-target="section-servicos">Serviços</button>
                                 <button type="button" class="admin-nav__item" data-admin-target="section-portfolio">Portfólio</button>
                                 <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-beats">Beats</button>
+                                <button type="button" class="admin-nav__item admin-access-hidden" data-admin-only data-admin-target="section-labs">Mirai Hit Labs</button>
                             </details>
                             <details class="admin-nav-group">
                                 <summary>Atendimento</summary>
@@ -681,6 +682,20 @@
                             <h2 id="admin-beats-review-title">Fila de revisão</h2>
                             <div id="admin-beats-list" class="admin-list-container" aria-live="polite"></div>
                         </section>
+                    </div>
+                    <div id="section-labs" class="admin-section hidden admin-access-hidden" data-admin-only>
+                        <header class="admin-page-header">
+                            <div class="admin-page-header__content">
+                                <p class="admin-page-header__eyebrow">Catálogo · labs.miraihitstudio.com.br</p>
+                                <h1>Mirai Hit Labs</h1>
+                                <p>Plugins da loja: página, preço, capa, instaladores e licenças.</p>
+                            </div>
+                            <div class="admin-page-header__actions">
+                                <button id="labs-admin-new" type="button" class="btn-cta">Novo plugin</button>
+                            </div>
+                        </header>
+                        <div id="labs-admin-panel" hidden></div>
+                        <div id="labs-admin-list" class="labs-admin__list" aria-live="polite"></div>
                     </div>
                     <div id="section-usuarios" class="admin-section hidden admin-access-hidden" data-admin-only>
                         <header class="admin-page-header">

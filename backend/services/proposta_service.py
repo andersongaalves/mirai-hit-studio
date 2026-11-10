@@ -100,12 +100,13 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
         })
         beat_id = getattr(orcamento, "beat_id", None)
         beat_license = getattr(orcamento, "licenca_beat", None)
+        plugin_id = getattr(orcamento, "plugin_id", None)
         item = PropostaItem(
             descricao=orcamento.servico, quantidade=1,
             valor_unitario=snapshot.orcamento.valor_total or Decimal(0),
-            beat_id=beat_id, licenca_beat=beat_license,
+            beat_id=beat_id, licenca_beat=beat_license, plugin_id=plugin_id,
         )
-        if beat_id is not None:
+        if beat_id is not None or plugin_id is not None:
             from services import proposta_snapshot_service
             proposta_snapshot_service.validar_servicos(db, [item])
         pagamentos = [PropostaPagamento(tipo=tipo, titulo=titulo).model_dump(mode="json")
@@ -121,9 +122,11 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
             "itens_json": [item.model_dump(mode="json", exclude_none=True)], "pagamentos_json": pagamentos,
             "politica_pagamento": (
                 PoliticaPagamento.INTEGRAL.value
-                if beat_id is not None
+                if beat_id is not None or plugin_id is not None
                 else PoliticaPagamento.ENTRADA_50_50.value
             ),
+            # Mirai Hit Labs: a plugin order releases a license, never a production.
+            **({"finalidade": "plugins"} if plugin_id is not None else {}),
             "condicoes": CONDICOES_PADRAO, "totais_json": calcular_totais([item]).model_dump(mode="json"),
         })
         resposta = _resposta(proposta)

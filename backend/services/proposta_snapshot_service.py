@@ -89,6 +89,28 @@ def validar_servicos(db: Session, itens: list[PropostaItem]) -> None:
             raise service.PropostaInvalida("Beat indisponivel para esta licenca.")
         if item.valor_unitario != Decimal(str(price)) or item.quantidade != 1:
             raise service.PropostaInvalida("Preco do beat divergente do catalogo.")
+    _validar_plugins(db, itens)
+
+
+def _carregar_plugins(db: Session, itens) -> dict:
+    from models import PluginModel
+
+    ids = {item.plugin_id for item in itens if item.plugin_id is not None}
+    return {plugin.id: plugin for plugin in db.scalars(select(PluginModel).where(PluginModel.id.in_(ids)))} if ids else {}
+
+
+def _validar_plugins(db: Session, itens) -> None:
+    from services import plugin_service
+
+    plugins = _carregar_plugins(db, itens)
+    for item in itens:
+        if item.plugin_id is None:
+            continue
+        plugin = plugins.get(item.plugin_id)
+        if plugin is None or plugin.status != "publicado":
+            raise service.PropostaInvalida("Plugin indisponivel para compra.")
+        if item.valor_unitario != plugin_service.preco_vigente(plugin) or item.quantidade != 1:
+            raise service.PropostaInvalida("Preco do plugin divergente do catalogo.")
 
 
 def _linha(item: PropostaItem):
@@ -247,9 +269,27 @@ def construir(db: Session, model, *, origem: str, estrito: bool) -> dict:
     from models import BeatModel
     beat_ids = {item.beat_id for item in itens if item.beat_id is not None}
     beats = {beat.id: beat for beat in db.scalars(select(BeatModel).where(BeatModel.id.in_(beat_ids)))} if beat_ids else {}
+    plugins = _carregar_plugins(db, itens)
     linhas = []
     for indice, item in enumerate(itens, start=1):
         bruto, desconto, valor = _linha(item)
+        if item.plugin_id is not None:
+            from services import plugin_service
+
+            plugin = plugins.get(item.plugin_id)
+            price = plugin_service.preco_vigente(plugin) if plugin else None
+            available = plugin is not None and plugin.status == "publicado"
+            if estrito and (not available or price != item.valor_unitario):
+                raise service.PropostaConflito(f"O plugin do item {indice} nao esta mais disponivel; refaca a compra.")
+            linhas.append({
+                "indice": indice, "descricao": item.descricao, "servico_id": None,
+                "servico_nome": None, "preco_catalogo": str(price) if price is not None else None,
+                "catalogo_disponivel": available, "quantidade": str(item.quantidade),
+                "valor_unitario": str(item.valor_unitario), "bruto": str(bruto),
+                "desconto": str(desconto), "valor_contratado": str(valor), "etapas": [],
+                "plugin_id": item.plugin_id, "plugin_nome": plugin.nome if plugin else None,
+            })
+            continue
         if item.beat_id is not None:
             beat = beats.get(item.beat_id)
             from services import beat_service

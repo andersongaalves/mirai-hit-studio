@@ -167,6 +167,10 @@ def _validar_sem_valor(model):
         raise service.PropostaInvalida("Proposta de créditos precisa de valor maior que zero.")
     if any((item or {}).get("beat_id") for item in model.itens_json or []):
         raise service.PropostaInvalida("Proposta com beat precisa de valor maior que zero.")
+    if getattr(model, "finalidade", "producao") == "plugins" or any(
+        (item or {}).get("plugin_id") for item in model.itens_json or []
+    ):
+        raise service.PropostaInvalida("Compra de plugin precisa de valor maior que zero.")
 
 
 def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
@@ -241,9 +245,10 @@ def _aprovar_carregada(db, model, budget, actor, request_id, *, audit_action):
             raise service.PropostaInvalida(str(error)) from None
         except financial_service.FinanceiroConflito as error:
             raise service.PropostaConflito(str(error)) from None
-    from services import beat_service
+    from services import beat_service, plugin_service
     try:
         beat_service.reserve_for_proposal(db, model, budget.cliente_id)
+        plugin_service.reserve_for_proposal(db, model, budget.cliente_id)
     except HTTPException as error:
         raise service.PropostaConflito(str(error.detail)) from None
     model.status = Status.ACEITA.value
@@ -401,13 +406,14 @@ def aceitar_compra_catalogo(db, proposta_id, *, cliente_id, actor, request_id=No
         if budget.cliente_id != cliente_id:
             raise service.PropostaNaoEncontrada("Compra de beat nao encontrada.")
         items = model.itens_json or []
-        if (
-            len(items) != 1
-            or not items[0].get("beat_id")
-            or not items[0].get("licenca_beat")
-            or model.politica_pagamento != "integral"
-        ):
-            raise service.PropostaConflito("Compra de beat invalida para checkout direto.")
+        beat_order = len(items) == 1 and items[0].get("beat_id") and items[0].get("licenca_beat")
+        # Mirai Hit Labs: a single plugin license, bought the same way.
+        plugin_order = (
+            len(items) == 1 and items[0].get("plugin_id")
+            and getattr(model, "finalidade", "producao") == "plugins"
+        )
+        if not (beat_order or plugin_order) or model.politica_pagamento != "integral":
+            raise service.PropostaConflito("Compra de catalogo invalida para checkout direto.")
         if model.status in (Status.RASCUNHO.value, Status.PRONTA.value):
             if budget.status not in (OrcamentoStatus.NOVO.value, OrcamentoStatus.EM_ANALISE.value):
                 raise service.PropostaConflito("Status da compra incompativel com o checkout.")
@@ -422,7 +428,7 @@ def aceitar_compra_catalogo(db, proposta_id, *, cliente_id, actor, request_id=No
             budget,
             actor,
             request_id,
-            audit_action="beat.checkout_created",
+            audit_action="plugin.checkout_created" if plugin_order else "beat.checkout_created",
         )
         db.commit()
         return response

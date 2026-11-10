@@ -1,0 +1,186 @@
+name: Mirai Hit Labs Cloudflare Pages Production Publish
+
+# Publishes the static Mirai Hit Labs store (labs/) to its own Cloudflare Pages project and
+# keeps labs.miraihitstudio.com.br attached to it. Runs only from main, for the exact
+# commit that already passed the Storage Integration Gate.
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact current main commit to publish
+        required: true
+        type: string
+      authorization_ref:
+        description: Authorization reference for this publication
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: labs-pages-production-publish
+  cancel-in-progress: false
+
+env:
+  TARGET_SHA: ${{ inputs.target_sha }}
+  AUTHORIZATION_REF: ${{ inputs.authorization_ref }}
+  PAGES_PROJECT: mirai-hit-labs
+  LABS_DOMAIN: labs.miraihitstudio.com.br
+  ZONE_NAME: miraihitstudio.com.br
+
+jobs:
+  request-guard:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate trusted main workflow and exact target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/labs-pages-production.yml@refs/heads/main"
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$TARGET_SHA" = "$GITHUB_SHA"
+          [[ "$AUTHORIZATION_REF" =~ ^CTRL-[A-Za-z0-9._-]{3,100}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TARGET_SHA&per_page=100" > /tmp/runs.json
+          python - <<'PY'
+          import json, os
+          with open('/tmp/runs.json', encoding='utf-8') as source:
+              runs = json.load(source).get('workflow_runs', [])
+          ok = any(run.get('name') == 'Storage Integration Gate' and run.get('head_sha') == os.environ['TARGET_SHA']
+                   and run.get('head_branch') == 'main' and run.get('status') == 'completed'
+                   and run.get('conclusion') == 'success' for run in runs)
+          if not ok:
+              raise SystemExit('storage_integration_gate_not_successful_for_target_sha')
+          PY
+
+  publish-labs:
+    needs: request-guard
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: cloudflare-pages-production
+    steps:
+      - name: Check out only the authorized SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.target_sha }}
+          persist-credentials: false
+
+      - name: Verify exact clean checkout and store files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -z "$(git status --porcelain)"
+          for file in index.html plugin.html 404.html _headers _redirects css/labs.css js/config.js img/logo-horizontal.svg; do
+            test -s "labs/$file"
+          done
+
+      - name: Create the Pages project when it does not exist yet
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
+          status="$(curl --silent --show-error --output /tmp/project.json --write-out '%{http_code}' \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$PAGES_PROJECT")"
+          if [ "$status" = "404" ]; then
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" --header "Content-Type: application/json" \
+              --data "{\"name\":\"$PAGES_PROJECT\",\"production_branch\":\"main\"}" "$api" > /tmp/project.json
+            echo "- Pages project $PAGES_PROJECT created" >> "$GITHUB_STEP_SUMMARY"
+          else
+            test "$status" = "200"
+          fi
+          python - <<'PY'
+          import json
+          with open('/tmp/project.json', encoding='utf-8') as source:
+              response = json.load(source)
+          project = response.get('result') or {}
+          if not response.get('success') or project.get('name') != 'mirai-hit-labs':
+              raise SystemExit('labs_pages_project_unavailable')
+          if project.get('production_branch') != 'main':
+              raise SystemExit('labs_pages_production_branch_mismatch')
+          PY
+
+      - name: Publish the store
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          npm_config_cache: /tmp/mirai-labs-npm-cache
+        shell: bash
+        run: >-
+          npx --yes wrangler@4.149.0 pages deploy labs
+          --project-name mirai-hit-labs
+          --branch main
+          --commit-hash "$TARGET_SHA"
+
+      - name: Attach labs.miraihitstudio.com.br
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          auth=(--header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" --header "Content-Type: application/json")
+          domains="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT/domains"
+          if curl --fail --silent "${auth[@]}" "$domains" | python -c "import json,sys,os; d=json.load(sys.stdin); sys.exit(0 if any(x.get('name')==os.environ['LABS_DOMAIN'] for x in d.get('result') or []) else 1)"; then
+            echo "- Domain $LABS_DOMAIN already attached" >> "$GITHUB_STEP_SUMMARY"
+          elif curl --fail-with-body --silent --show-error --request POST "${auth[@]}" --data "{\"name\":\"$LABS_DOMAIN\"}" "$domains" > /tmp/domain.json; then
+            echo "- Domain $LABS_DOMAIN attached to the Pages project" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Could not attach $LABS_DOMAIN with this token; add it in Cloudflare Pages > $PAGES_PROJECT > Custom domains."
+            echo "- Domain $LABS_DOMAIN NOT attached (token permission); manual step needed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # DNS: a proxied CNAME to the project, created only when the zone has no record yet.
+          zone="$(curl --fail --silent "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME" | python -c "import json,sys; r=json.load(sys.stdin).get('result') or []; print(r[0]['id'] if r else '')" 2>/dev/null || true)"
+          if [ -z "$zone" ]; then
+            echo "- DNS zone not readable with this token; Cloudflare creates the record when the domain is added in the dashboard" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          records="https://api.cloudflare.com/client/v4/zones/$zone/dns_records"
+          existing="$(curl --fail --silent "${auth[@]}" "$records?name=$LABS_DOMAIN" | python -c "import json,sys; print(len(json.load(sys.stdin).get('result') or []))" 2>/dev/null || echo error)"
+          if [ "$existing" = "0" ]; then
+            if curl --fail-with-body --silent --show-error --request POST "${auth[@]}" \
+              --data "{\"type\":\"CNAME\",\"name\":\"$LABS_DOMAIN\",\"content\":\"$PAGES_PROJECT.pages.dev\",\"proxied\":true,\"comment\":\"Mirai Hit Labs store (Cloudflare Pages)\"}" \
+              "$records" > /tmp/dns.json; then
+              echo "- DNS CNAME $LABS_DOMAIN -> $PAGES_PROJECT.pages.dev created" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::warning::Could not create the DNS record for $LABS_DOMAIN with this token."
+              echo "- DNS record NOT created (token permission)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "- DNS record for $LABS_DOMAIN: $existing found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Verify the published store
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/" > /tmp/home.html \
+              && grep -q "Mirai Hit Labs" /tmp/home.html \
+              && curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/plugins/exemplo" | grep -q 'id="product"'; then
+              echo "- Store published at https://$PAGES_PROJECT.pages.dev for $TARGET_SHA ($AUTHORIZATION_REF)" >> "$GITHUB_STEP_SUMMARY"
+              if curl --fail --silent --max-time 20 "https://$LABS_DOMAIN/" | grep -q "Mirai Hit Labs"; then
+                echo "- https://$LABS_DOMAIN answers with the store" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "- https://$LABS_DOMAIN not answering yet (domain activation can take a few minutes)" >> "$GITHUB_STEP_SUMMARY"
+              fi
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "labs_store_not_reachable"
+          exit 1

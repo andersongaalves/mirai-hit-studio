@@ -190,8 +190,11 @@ function renderTerminal(status, balance) {
     if (["paga", "parcialmente_paga"].includes(status)) {
         const link = document.createElement("a");
         link.className = "btn-cta";
-        link.href = state.proposalId ? "/cliente" : "/acesso";
-        link.textContent = state.proposalId ? "Ir para meu painel" : "Acessar portal do cliente";
+        const plugins = state.summary?.finalidade === "plugins";
+        link.href = state.proposalId ? (plugins ? "/cliente/plugins" : "/cliente") : "/acesso";
+        link.textContent = state.proposalId
+            ? (plugins ? "Baixar meus plugins" : "Ir para meu painel")
+            : "Acessar portal do cliente";
         terminal.appendChild(link);
     }
 }
