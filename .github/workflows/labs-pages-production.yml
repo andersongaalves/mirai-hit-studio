@@ -99,7 +99,7 @@ jobs:
             curl --fail-with-body --silent --show-error --request POST \
               --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" --header "Content-Type: application/json" \
               --data "{\"name\":\"$PAGES_PROJECT\",\"production_branch\":\"main\"}" "$api" > /tmp/project.json
-            echo "- Pages project $PAGES_PROJECT created" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Pages project $PAGES_PROJECT created" | tee -a "$GITHUB_STEP_SUMMARY"
           else
             test "$status" = "200"
           fi
@@ -114,14 +114,16 @@ jobs:
               raise SystemExit('labs_pages_production_branch_mismatch')
           PY
 
+      # Run from labs/ so the studio's Pages Functions (functions/ at the repo root) stay out.
       - name: Publish the store
+        working-directory: labs
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           npm_config_cache: /tmp/mirai-labs-npm-cache
         shell: bash
         run: >-
-          npx --yes wrangler@4.149.0 pages deploy labs
+          npx --yes wrangler@4.149.0 pages deploy .
           --project-name mirai-hit-labs
           --branch main
           --commit-hash "$TARGET_SHA"
@@ -136,17 +138,17 @@ jobs:
           auth=(--header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" --header "Content-Type: application/json")
           domains="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT/domains"
           if curl --fail --silent "${auth[@]}" "$domains" | python -c "import json,sys,os; d=json.load(sys.stdin); sys.exit(0 if any(x.get('name')==os.environ['LABS_DOMAIN'] for x in d.get('result') or []) else 1)"; then
-            echo "- Domain $LABS_DOMAIN already attached" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Domain $LABS_DOMAIN already attached" | tee -a "$GITHUB_STEP_SUMMARY"
           elif curl --fail-with-body --silent --show-error --request POST "${auth[@]}" --data "{\"name\":\"$LABS_DOMAIN\"}" "$domains" > /tmp/domain.json; then
-            echo "- Domain $LABS_DOMAIN attached to the Pages project" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Domain $LABS_DOMAIN attached to the Pages project" | tee -a "$GITHUB_STEP_SUMMARY"
           else
             echo "::warning::Could not attach $LABS_DOMAIN with this token; add it in Cloudflare Pages > $PAGES_PROJECT > Custom domains."
-            echo "- Domain $LABS_DOMAIN NOT attached (token permission); manual step needed" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Domain $LABS_DOMAIN NOT attached (token permission); manual step needed" | tee -a "$GITHUB_STEP_SUMMARY"
           fi
           # DNS: a proxied CNAME to the project, created only when the zone has no record yet.
           zone="$(curl --fail --silent "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME" | python -c "import json,sys; r=json.load(sys.stdin).get('result') or []; print(r[0]['id'] if r else '')" 2>/dev/null || true)"
           if [ -z "$zone" ]; then
-            echo "- DNS zone not readable with this token; Cloudflare creates the record when the domain is added in the dashboard" >> "$GITHUB_STEP_SUMMARY"
+            echo "- DNS zone not readable with this token; Cloudflare creates the record when the domain is added in the dashboard" | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           records="https://api.cloudflare.com/client/v4/zones/$zone/dns_records"
@@ -155,13 +157,13 @@ jobs:
             if curl --fail-with-body --silent --show-error --request POST "${auth[@]}" \
               --data "{\"type\":\"CNAME\",\"name\":\"$LABS_DOMAIN\",\"content\":\"$PAGES_PROJECT.pages.dev\",\"proxied\":true,\"comment\":\"Mirai Hit Labs store (Cloudflare Pages)\"}" \
               "$records" > /tmp/dns.json; then
-              echo "- DNS CNAME $LABS_DOMAIN -> $PAGES_PROJECT.pages.dev created" >> "$GITHUB_STEP_SUMMARY"
+              echo "- DNS CNAME $LABS_DOMAIN -> $PAGES_PROJECT.pages.dev created" | tee -a "$GITHUB_STEP_SUMMARY"
             else
               echo "::warning::Could not create the DNS record for $LABS_DOMAIN with this token."
-              echo "- DNS record NOT created (token permission)" >> "$GITHUB_STEP_SUMMARY"
+              echo "- DNS record NOT created (token permission)" | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           else
-            echo "- DNS record for $LABS_DOMAIN: $existing found" >> "$GITHUB_STEP_SUMMARY"
+            echo "- DNS record for $LABS_DOMAIN: $existing found" | tee -a "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Verify the published store
@@ -172,11 +174,11 @@ jobs:
             if curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/" > /tmp/home.html \
               && grep -q "Mirai Hit Labs" /tmp/home.html \
               && curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/plugins/exemplo" | grep -q 'id="product"'; then
-              echo "- Store published at https://$PAGES_PROJECT.pages.dev for $TARGET_SHA ($AUTHORIZATION_REF)" >> "$GITHUB_STEP_SUMMARY"
+              echo "- Store published at https://$PAGES_PROJECT.pages.dev for $TARGET_SHA ($AUTHORIZATION_REF)" | tee -a "$GITHUB_STEP_SUMMARY"
               if curl --fail --silent --max-time 20 "https://$LABS_DOMAIN/" | grep -q "Mirai Hit Labs"; then
-                echo "- https://$LABS_DOMAIN answers with the store" >> "$GITHUB_STEP_SUMMARY"
+                echo "- https://$LABS_DOMAIN answers with the store" | tee -a "$GITHUB_STEP_SUMMARY"
               else
-                echo "- https://$LABS_DOMAIN not answering yet (domain activation can take a few minutes)" >> "$GITHUB_STEP_SUMMARY"
+                echo "- https://$LABS_DOMAIN not answering yet (domain activation can take a few minutes)" | tee -a "$GITHUB_STEP_SUMMARY"
               fi
               exit 0
             fi
