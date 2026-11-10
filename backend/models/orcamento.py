@@ -25,6 +25,7 @@ class OrcamentoModel(Base):
             "(beat_id IS NOT NULL AND licenca_beat IN ('lease','lease_mp3','lease_wav','multitrack','exclusivo'))",
             name="ck_orcamentos_beat_licenca",
         ),
+        CheckConstraint("beat_id IS NULL OR plugin_id IS NULL", name="ck_orcamentos_beat_ou_plugin"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -79,6 +80,11 @@ class OrcamentoModel(Base):
     is_test = Column(Boolean, default=False, server_default=false(), nullable=False, index=True)
     beat_id = Column(Integer, ForeignKey("beats.id", ondelete="RESTRICT"), nullable=True, index=True)
     licenca_beat = Column(String(12), nullable=True)
+    # Mirai Hit Labs: a plugin order (one plugin, paid in full, no production).
+    plugin_id = Column(
+        Integer, ForeignKey("plugins.id", ondelete="RESTRICT", name="fk_orcamentos_plugin_id_plugins"),
+        nullable=True, index=True,
+    )
 
     proposta = relationship(
         "PropostaModel",

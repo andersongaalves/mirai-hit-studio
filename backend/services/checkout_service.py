@@ -127,6 +127,7 @@ def _summary(cobranca: CobrancaModel, *, v2: bool = False) -> CheckoutSummary:
             PoliticaPagamento(cobranca.proposta.politica_pagamento) if v2 else None
         ),
         status=cobranca.status,
+        finalidade=getattr(cobranca.proposta, "finalidade", None) or "producao",
         opcoes=_options(cobranca, v2=v2),
         tentativa=CheckoutAttempt(
             metodo="cartao" if pending.metodo != "pix" else "pix",

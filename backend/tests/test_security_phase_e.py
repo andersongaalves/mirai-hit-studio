@@ -104,6 +104,8 @@ for origin in ['*', 'https://*.example.com', 'https://example.com/path', 'javasc
     try: cors_origins(origin)
     except ValueError: pass
     else: raise AssertionError(origin)
+assert cors_origins('https://miraihitstudio.com.br') == ['https://miraihitstudio.com.br', 'https://labs.miraihitstudio.com.br']
+assert cors_origins('http://localhost') == ['http://localhost']
 async def check():
     with patch('socket.socket.connect', side_effect=AssertionError('external network')):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url='http://test') as client:

@@ -35,6 +35,7 @@ class PropostaItem(Contract):
     combo_id: PositiveId | None = None  # Roadmap 3.0, 5.08: or a catalog combo (never both).
     beat_id: PositiveId | None = None
     licenca_beat: Literal["lease", "lease_mp3", "lease_wav", "multitrack", "exclusivo"] | None = None
+    plugin_id: PositiveId | None = None  # Mirai Hit Labs: one personal plugin license.
 
     @field_validator("combo_id")
     @classmethod
@@ -45,13 +46,15 @@ class PropostaItem(Contract):
 
     @model_validator(mode="after")
     def origem_unica(self):
-        origins = sum(value is not None for value in (self.servico_id, self.combo_id, self.beat_id))
+        origins = sum(value is not None for value in (self.servico_id, self.combo_id, self.beat_id, self.plugin_id))
         if origins > 1:
             raise ValueError("catalog_origin_must_be_unique")
         if (self.beat_id is None) != (self.licenca_beat is None):
             raise ValueError("beat_license_required")
         if self.beat_id is not None and self.quantidade != 1:
             raise ValueError("beat_quantity_must_be_one")
+        if self.plugin_id is not None and self.quantidade != 1:
+            raise ValueError("plugin_quantity_must_be_one")
         return self
 
 
@@ -153,6 +156,8 @@ class SnapshotItem(Contract):
     beat_id: int | None = None
     beat_titulo: str | None = None
     licenca_beat: Literal["lease", "lease_mp3", "lease_wav", "multitrack", "exclusivo"] | None = None
+    plugin_id: int | None = None
+    plugin_nome: str | None = None
 
 
 class SnapshotEconomico(Contract):
@@ -239,7 +244,7 @@ class PropostaUpdate(Contract):
 
 
 class PropostaResponse(Contract):
-    finalidade: Literal["producao", "creditos"] = "producao"
+    finalidade: Literal["producao", "creditos", "plugins"] = "producao"
     contrato_creditos: ContratoCreditos | None = None
     id: PositiveId
     orcamento_id: PositiveId
