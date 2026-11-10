@@ -191,7 +191,7 @@ function renderTerminal(status, balance) {
         const link = document.createElement("a");
         link.className = "btn-cta";
         const plugins = state.summary?.finalidade === "plugins";
-        link.href = state.proposalId ? (plugins ? "/cliente#plugins" : "/cliente") : "/acesso";
+        link.href = state.proposalId ? (plugins ? "/cliente/plugins" : "/cliente") : "/acesso";
         link.textContent = state.proposalId
             ? (plugins ? "Baixar meus plugins" : "Ir para meu painel")
             : "Acessar portal do cliente";

@@ -315,6 +315,9 @@ jobs:
                   node frontend/tests/admin_search.cjs
                   node frontend/tests/admin_entity_pages.cjs
                   node frontend/tests/orcamentos_pausa_admin.cjs
+                  node frontend/tests/labs_admin.cjs
+                  node frontend/tests/cliente_plugins.cjs
+                  node frontend/tests/labs_store.cjs
                   # APL-S12-01: real proposal HTML/PDF from the backend feed the document suite.
                   (cd backend && PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout python -m unittest discover -s tests -p 'test_proposta_documento.py')
                   PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout node frontend/tests/proposta_documento.cjs
@@ -512,6 +515,12 @@ jobs:
                   node --check frontend/js/produtor/pagina_perfil.js
                   node --check frontend/js/modules/image_cropper.js
                   node --check frontend/js/modules/public_verticals.js
+                  node --check frontend/js/admin/labs/labs.js
+                  node --check frontend/js/cliente/plugins.js
+                  node --check labs/js/config.js
+                  node --check labs/js/labs.js
+                  node --check labs/js/home.js
+                  node --check labs/js/plugin.js
                   node --check frontend/js/admin/orcamentos/recebimento.js
                   node --check frontend/tests/produtor_publico.cjs
                   node --check frontend/js/admin/propostas/proposta_mapper.js

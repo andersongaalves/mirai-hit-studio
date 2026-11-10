@@ -85,7 +85,9 @@ export function createAuthContext(config) {
         $("admin-area")?.classList.add("hidden");
         $("login-panel")?.classList.remove("hidden");
         const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        window.location.assign(accessPath(here, reason));
+        // A purchase started in the Mirai Hit Labs store explains why the sign-in is needed.
+        const why = reason ?? (/^\/cliente\/plugins\/comprar\//.test(window.location.pathname) ? "comprar_plugin" : null);
+        window.location.assign(accessPath(here, why));
     }
 
     function emitLogout() {

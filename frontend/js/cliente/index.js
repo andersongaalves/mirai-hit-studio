@@ -27,6 +27,7 @@ import {
     updateProcessedPreviews,
 } from "./ui.js";
 import { confirmarAcao } from "../modules/confirm_dialog.js";
+import { listarPlugins, renderPlugins, startPurchase } from "./plugins.js";
 
 let productions = [];
 let proposals = [];
@@ -55,6 +56,9 @@ function watchTaggedPreviews(production, files, failures = 0) {
 }
 
 function route() {
+    if (/^\/cliente\/plugins\/?$/.test(location.pathname)) return { view: "plugins" };
+    const pluginPurchase = location.pathname.match(/^\/cliente\/plugins\/comprar\/([a-z0-9-]{1,60})\/?$/);
+    if (pluginPurchase) return { view: "plugin-purchase", slug: pluginPurchase[1] };
     if (/^\/cliente\/(?:explorar|beats)\/?$/.test(location.pathname)) return { view: "beats" };
     const beat = location.pathname.match(/^\/cliente\/(?:explorar|beats)\/(\d+)\/?$/);
     if (beat) return { view: "beat", id: Number(beat[1]) };
@@ -218,6 +222,20 @@ async function openDetail(id) {
 
 function renderRoute() {
     const current = route();
+    if (current.view === "plugins") {
+        loadPlugins();
+        return;
+    }
+    if (current.view === "plugin-purchase") {
+        showView("plugins");
+        startPurchase(document.getElementById("client-plugins-content"), current.slug, {
+            onFree: () => {
+                history.replaceState({}, "", "/cliente/plugins");
+                loadPlugins("Pronto! O plugin já está na sua conta.");
+            },
+        });
+        return;
+    }
     if (current.view === "beats") {
         loadBeats();
         return;
@@ -401,6 +419,24 @@ async function openBeat(id) {
 }
 
 let walletRequest = 0;
+let pluginsRequest = 0;
+async function loadPlugins(message = "") {
+    const request = ++pluginsRequest;
+    setAlert(message);
+    showView("plugins");
+    const root = document.getElementById("client-plugins-content");
+    root.textContent = "Carregando seus plugins...";
+    try {
+        const items = await listarPlugins();
+        if (request !== pluginsRequest || route().view !== "plugins") return;
+        renderPlugins(root, items);
+    } catch (error) {
+        if (request !== pluginsRequest) return;
+        root.textContent = "";
+        setAlert(error.message, true);
+    }
+}
+
 async function loadWallet() {
     const request = ++walletRequest;
     const owner = getCurrentUser()?.id;

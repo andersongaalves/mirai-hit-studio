@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://labs.miraihitstudio.com.br/sitemap.xml

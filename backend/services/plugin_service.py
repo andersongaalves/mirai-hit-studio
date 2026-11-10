@@ -465,7 +465,7 @@ def comprar(db: Session, slug: str, actor, idempotency_key: str, request_id=None
                              entity_id=license.id, metadata={"plugin_id": plugin.id, "origem": "gratuito"},
                              request_id=request_id)
         db.commit()
-        return {"gratuito": True, "licenca_id": license.id, "destino": "/portal-cliente#plugins"}
+        return {"gratuito": True, "licenca_id": license.id, "destino": "/cliente/plugins"}
 
     # A purchase already waiting for payment goes back to the same checkout.
     pending = db.scalar(select(PluginLicencaModel).where(
