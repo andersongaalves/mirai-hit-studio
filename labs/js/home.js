@@ -1,5 +1,6 @@
 // Home: the plugin catalog (featured first), with loading, empty and error states.
-import { el, getJSON, pluginCard, setYear } from "./labs.js";
+import { t } from "./i18n.js";
+import { READY, el, getJSON, pluginCard } from "./labs.js";
 
 const root = document.getElementById("catalog");
 
@@ -10,7 +11,7 @@ function state(title, text, retry = false) {
     icon.alt = "";
     box.append(icon, el("h3", "", title), el("p", "", text));
     if (retry) {
-        const button = el("button", "btn btn--ghost", "Tentar de novo");
+        const button = el("button", "btn btn--ghost", t("retry"));
         button.type = "button";
         button.addEventListener("click", load);
         box.append(button);
@@ -26,15 +27,14 @@ async function load() {
         const plugins = await getJSON("/labs/plugins");
         root.replaceChildren(...(plugins.length
             ? plugins.map(pluginCard)
-            : [state("Os primeiros plugins estão a caminho", "Estamos finalizando as primeiras ferramentas da Mirai Hit Labs. Siga @miraihitstudio para saber do lançamento.")]));
+            : [state(t("emptyTitle"), t("emptyText"))]));
         const count = document.getElementById("catalog-count");
-        if (count) count.textContent = plugins.length ? `${plugins.length} plugin${plugins.length === 1 ? "" : "s"}` : "";
+        if (count) count.textContent = plugins.length ? t(plugins.length === 1 ? "count" : "countMany", { n: plugins.length }) : "";
     } catch (error) {
-        root.replaceChildren(state("Catálogo indisponível", error.message, true));
+        root.replaceChildren(state(t("catalogDown"), error.message, true));
     } finally {
         root.removeAttribute("aria-busy");
     }
 }
 
-setYear();
-load();
+if (READY) load();

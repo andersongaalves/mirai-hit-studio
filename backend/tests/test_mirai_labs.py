@@ -104,7 +104,9 @@ async def check():
             replaced = await api.post(f"/admin/labs/plugins/{plugin['id']}/instaladores/windows", headers=admin,
                                       files={'arquivo': ('setup.zip', ZIP + b'v2', 'application/zip')})
             assert replaced.status_code == 200 and storage.deleted == [first_ref] and len(storage.objects) == 1
-            published = await api.put(f"/admin/labs/plugins/{plugin['id']}", headers=admin, json=plugin_payload(status='publicado'))
+            english = {'tagline_en': '  Analog saturation ', 'descricao_en': 'Tape and tube warmth.', 'categoria_en': 'Saturation',
+                       'recursos_en': ['Three modes', 'Three  modes', '4x oversampling'], 'requisitos_en': 'Windows 10+ or macOS 12+'}
+            published = await api.put(f"/admin/labs/plugins/{plugin['id']}", headers=admin, json=plugin_payload(status='publicado', **english))
             assert published.status_code == 200, published.text
             assert published.json()['publicado_em']
 
@@ -115,6 +117,10 @@ async def check():
             item = public.json()[0]
             assert item['preco_vigente'] == '149.90' and item['gratuito'] is False
             assert [row['sistema'] for row in item['sistemas']] == ['windows', 'macos']
+            # English texts for the store (default language), cleaned like the Portuguese ones.
+            assert item['tagline'] == 'Saturação analógica'
+            assert item['en'] == {'tagline': 'Analog saturation', 'descricao': 'Tape and tube warmth.', 'categoria': 'Saturation',
+                                  'recursos': ['Three modes', '4x oversampling'], 'requisitos': 'Windows 10+ or macOS 12+'}
             assert not {'id', 'status', 'licencas', 'instaladores', 'capa_ref'} & set(item)
             assert 'drive.example.test' not in public.text and 'r2://' not in public.text
             assert (await api.get('/labs/plugins/mirai-saturator')).json() == item

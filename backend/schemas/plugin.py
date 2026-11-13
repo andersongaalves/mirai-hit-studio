@@ -29,6 +29,12 @@ class PluginPayload(BaseModel):
     formatos: list[Literal["VST3", "AU", "AAX", "CLAP", "Standalone"]] = Field(default_factory=list, max_length=5)
     recursos: list[str] = Field(default_factory=list, max_length=12)
     requisitos: str | None = Field(default=None, max_length=2000)
+    # English texts (the store is in English by default; empty falls back to Portuguese)
+    tagline_en: str | None = Field(default=None, max_length=160)
+    descricao_en: str | None = Field(default=None, max_length=8000)
+    categoria_en: str | None = Field(default=None, max_length=40)
+    recursos_en: list[str] = Field(default_factory=list, max_length=12)
+    requisitos_en: str | None = Field(default=None, max_length=2000)
     preco: Decimal = Field(default=Decimal(0), ge=0, le=Decimal("99999.99"), decimal_places=2)
     preco_promocional: Decimal | None = Field(default=None, ge=0, le=Decimal("99999.99"), decimal_places=2)
     video_url: str | None = Field(default=None, max_length=300)
@@ -44,12 +50,13 @@ class PluginPayload(BaseModel):
             raise ValueError("slug_invalido")
         return value
 
-    @field_validator("tagline", "categoria", "versao", "video_url", "descricao", "requisitos")
+    @field_validator("tagline", "categoria", "versao", "video_url", "descricao", "requisitos",
+                     "tagline_en", "categoria_en", "descricao_en", "requisitos_en")
     @classmethod
     def limpar(cls, value):
         return _clean(value)
 
-    @field_validator("recursos")
+    @field_validator("recursos", "recursos_en")
     @classmethod
     def recursos_validos(cls, value):
         items = [" ".join(item.split())[:120] for item in value if item and item.strip()]

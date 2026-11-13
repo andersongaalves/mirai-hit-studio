@@ -13,6 +13,8 @@ function view(plugin) {
     return {
         slug: plugin.slug, nome: plugin.nome, tagline: plugin.tagline, descricao: plugin.descricao, categoria: plugin.categoria,
         versao: plugin.versao, formatos: plugin.formatos, recursos: plugin.recursos, requisitos: plugin.requisitos,
+        en: { tagline: plugin.tagline_en || null, descricao: plugin.descricao_en || null, categoria: plugin.categoria_en || null,
+              recursos: plugin.recursos_en || [], requisitos: plugin.requisitos_en || null },
         preco: plugin.preco, preco_vigente: plugin.preco_promocional || plugin.preco, em_promocao: Boolean(plugin.preco_promocional),
         gratuito: Number(plugin.preco) === 0, capa_url: plugin.capa_url || null, video_url: plugin.video_url, destaque: plugin.destaque,
         sistemas: [], publicado_em: null, id: plugin.id, status: plugin.status, ordem: plugin.ordem,
@@ -91,12 +93,20 @@ function view(plugin) {
         await panel.locator('label.labs-admin__check', { hasText: 'VST3' }).click();
         await panel.locator('label.labs-admin__check', { hasText: 'AU' }).first().click();
         await panel.locator('textarea[name="recursos"]').fill('Três modos\n\nOversampling 4x');
+        // English texts: the store opens in English.
+        await panel.getByRole('group', { name: 'Inglês (idioma padrão da loja)' }).waitFor();
+        await panel.locator('input[name="tagline_en"]').fill('Analog saturation');
+        await panel.locator('textarea[name="recursos_en"]').fill('Three modes\n\n4x oversampling');
         await panel.getByRole('button', { name: 'Criar plugin' }).click();
         await panel.getByRole('heading', { name: 'Editar Mirai Saturator Pró' }).waitFor();
         const created = writes.find(item => item[0] === 'create')[1];
         assert.equal(created.slug, 'mirai-saturator-pro');
         assert.deepEqual(created.formatos, ['VST3', 'AU']);
         assert.deepEqual(created.recursos, ['Três modos', 'Oversampling 4x']);
+        assert.equal(created.tagline_en, 'Analog saturation');
+        assert.deepEqual(created.recursos_en, ['Three modes', '4x oversampling']);
+        assert.equal(created.descricao_en, null);
+        assert.equal(await panel.locator('input[name="tagline_en"]').inputValue(), 'Analog saturation');
         assert.equal(created.preco, '149.90');
         assert.equal(created.status, 'rascunho');
         assert.equal(await page.locator('.labs-admin__card').count(), 1);
