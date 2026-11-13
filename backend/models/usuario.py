@@ -55,6 +55,9 @@ class UsuarioModel(Base):
     ativo = Column(Boolean, default=True, server_default=true(), nullable=False)
     is_test = Column(Boolean, default=False, server_default=false(), nullable=False)
     painel_beats = Column(Boolean, default=False, server_default=false(), nullable=False)
+    # Created on the Mirai Hit Labs store: buys and downloads plugins there, without
+    # access to the studio client portal (see core.dependencies.require_client).
+    somente_labs = Column(Boolean, default=False, server_default=false(), nullable=False)
 
     # Producer specialties, comma separated (beatmaker, mixagem, masterizacao).
     especialidades = Column(String(100), nullable=True)

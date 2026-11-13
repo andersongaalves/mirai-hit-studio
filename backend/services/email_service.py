@@ -55,6 +55,10 @@ def _site_url() -> str:
     return (getattr(settings, "PUBLIC_FRONTEND_URL", "") or "https://miraihitstudio.com.br").rstrip("/")
 
 
+def _labs_url() -> str:
+    return (getattr(settings, "LABS_PUBLIC_URL", "") or "https://labs.miraihitstudio.com.br").rstrip("/")
+
+
 class EmailService:
 
     @classmethod
@@ -101,17 +105,23 @@ class EmailService:
         activation_url: str,
         *,
         idempotency_key: str,
+        canal: str = "studio",
+        idioma: str = "pt",
     ):
-        html = cls.render(
-            "email_confirmacao_cadastro.html",
-            nome=cliente.nome,
-            activation_url=activation_url,
-            validade_horas=_horas(_ttl("INVITE_TTL")),
-        )
+        validade = _horas(_ttl("INVITE_TTL"))
+        if canal == "labs":
+            html = cls.render("email_labs_confirmacao_cadastro.html", nome=cliente.nome, activation_url=activation_url,
+                              validade_horas=validade, idioma=idioma, labs_url=_labs_url())
+            subject = ("Confirme sua conta da Mirai Hit Labs" if idioma == "pt"
+                       else "Confirm your Mirai Hit Labs account")
+        else:
+            html = cls.render("email_confirmacao_cadastro.html", nome=cliente.nome, activation_url=activation_url,
+                              validade_horas=validade)
+            subject = "Confirme sua conta Mirai Hit Studio"
         return resend.Emails.send({
             "from": settings.EMAIL_FROM,
             "to": cliente.email,
-            "subject": "Confirme sua conta Mirai Hit Studio",
+            "subject": subject,
             "html": html,
         }, {"idempotency_key": idempotency_key})
 
@@ -122,17 +132,23 @@ class EmailService:
         recovery_url: str,
         *,
         idempotency_key: str,
+        canal: str = "studio",
+        idioma: str = "pt",
     ):
-        html = cls.render(
-            "email_recuperacao_senha.html",
-            nome=cliente.nome,
-            recovery_url=recovery_url,
-            validity_minutes=int(_ttl("RECOVERY_TTL").total_seconds() // 60),
-        )
+        minutes = int(_ttl("RECOVERY_TTL").total_seconds() // 60)
+        if canal == "labs":
+            html = cls.render("email_labs_recuperacao_senha.html", nome=cliente.nome, recovery_url=recovery_url,
+                              validity_minutes=minutes, idioma=idioma, labs_url=_labs_url())
+            subject = ("Crie uma nova senha da Mirai Hit Labs" if idioma == "pt"
+                       else "Create a new Mirai Hit Labs password")
+        else:
+            html = cls.render("email_recuperacao_senha.html", nome=cliente.nome, recovery_url=recovery_url,
+                              validity_minutes=minutes)
+            subject = "Redefina sua senha da Mirai Hit Studio"
         return resend.Emails.send({
             "from": settings.EMAIL_FROM,
             "to": cliente.email,
-            "subject": "Redefina sua senha da Mirai Hit Studio",
+            "subject": subject,
             "html": html,
         }, {"idempotency_key": idempotency_key})
 

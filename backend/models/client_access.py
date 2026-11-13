@@ -1,5 +1,6 @@
 from database import Base
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -8,6 +9,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    false,
     text,
 )
 from sqlalchemy.sql import func
@@ -58,6 +60,9 @@ class ClienteAcessoModel(Base):
             "origem <> 'public_signup' OR privacy_accepted_at IS NOT NULL",
             name="ck_cliente_acessos_privacidade_cadastro",
         ),
+        CheckConstraint("canal IN ('studio', 'labs')", name="ck_cliente_acessos_canal_valido"),
+        CheckConstraint("idioma IN ('pt', 'en')", name="ck_cliente_acessos_idioma_valido"),
+        CheckConstraint("NOT somente_labs OR canal = 'labs'", name="ck_cliente_acessos_somente_labs_canal"),
         UniqueConstraint("cliente_id", name="uq_cliente_acessos_cliente_id"),
         UniqueConstraint("usuario_id", name="uq_cliente_acessos_usuario_id"),
         UniqueConstraint(
@@ -86,6 +91,11 @@ class ClienteAcessoModel(Base):
     )
     email_normalizado = Column(String(254), nullable=False)
     origem = Column(String(24), nullable=False)
+    # Where the sign-up came from and its language: e-mails link back to that site.
+    canal = Column(String(8), nullable=False, default="studio", server_default="studio")
+    idioma = Column(String(5), nullable=False, default="pt", server_default="pt")
+    # The account being created is Labs-only (new customer from the Labs store).
+    somente_labs = Column(Boolean, nullable=False, default=False, server_default=false())
     token_finalidade = Column(String(24), nullable=True)
     token_hash = Column(String(64), nullable=True)
     token_expires_at = Column(DateTime(timezone=True), nullable=True)

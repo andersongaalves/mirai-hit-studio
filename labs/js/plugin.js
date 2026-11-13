@@ -1,5 +1,6 @@
-// Plugin page (/plugins/<address>, /pt/plugins/<address>): details, price and the purchase on the studio site.
-import { purchaseUrl } from "./config.js";
+// Plugin page (/plugins/<address>, /pt/plugins/<address>): details, price and the purchase
+// with the customer's Labs (or Mirai Hit Studio) account.
+import { api, isSignedIn } from "./auth.js";
 import { LANG, SITE_URL, href, localized, t } from "./i18n.js";
 import { READY, coverNode, el, getJSON, money, systemsText } from "./labs.js";
 
@@ -58,16 +59,61 @@ function buyBox(plugin) {
         price.append(el("span", "", t("oneTime")));
     }
     const available = (plugin.sistemas || []).length > 0;
-    const action = el("a", "btn", plugin.gratuito ? t("getFree") : t("buy"));
-    action.href = purchaseUrl(plugin.slug);
+    const status = el("p", "form-status");
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    let action;
     if (!available) {
+        action = el("a", "btn", t("soon"));
         action.setAttribute("aria-disabled", "true");
-        action.textContent = t("soon");
-        action.removeAttribute("href");
+    } else if (!isSignedIn()) {
+        // sign in (or create the account) and come back to this plugin
+        action = el("a", "btn", t("signInToBuy"));
+        action.href = `${href("/account")}?next=${encodeURIComponent(window.location.pathname)}`;
+    } else {
+        action = el("button", "btn", plugin.gratuito ? t("getFree") : t("buy"));
+        action.type = "button";
+        action.addEventListener("click", () => purchase(plugin, action, status));
     }
-    const note = el("p", "buy__note", plugin.gratuito ? t("buyNoteFree") : t("buyNotePaid"));
-    box.append(price, action, note);
+    const note = el("p", "buy__note", plugin.gratuito ? t("buyNoteFreeLabs") : t("buyNotePaidLabs"));
+    box.append(price, action, status, note);
     return box;
+}
+
+// One key per click; repeating the click after an error is a new attempt.
+async function purchase(plugin, button, status) {
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = t("buying");
+    status.textContent = "";
+    try {
+        const key = crypto.randomUUID();
+        const order = await api(`/labs/plugins/${encodeURIComponent(plugin.slug)}/comprar`, {
+            method: "POST", auth: true, headers: { "Idempotency-Key": key },
+        });
+        if (order?.gratuito) {
+            status.textContent = t("gotFree");
+            window.location.assign(href("/my-plugins"));
+        } else if (order?.checkout_url) {
+            window.location.assign(order.checkout_url);
+        } else {
+            window.location.assign(href("/my-plugins"));
+        }
+    } catch (error) {
+        status.textContent = error.message;
+        if (error.status === 409 && /My plugins|Meus plugins/.test(error.message)) {
+            const go = el("a", "", t("goMyPlugins"));
+            go.href = href("/my-plugins");
+            status.append(" ", go);
+        }
+        if (error.status === 401) {
+            const again = el("a", "", t("signInTitle"));
+            again.href = `${href("/account")}?next=${encodeURIComponent(window.location.pathname)}`;
+            status.append(" ", again);
+        }
+        button.disabled = false;
+        button.textContent = label;
+    }
 }
 
 function render(plugin) {

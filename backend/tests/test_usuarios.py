@@ -112,7 +112,7 @@ async def check():
         expected = {
             'admin': {'id', 'username', 'role', 'is_admin', 'ativo'},
             'produtor': {'id', 'username', 'nome_exibicao', 'role', 'is_admin', 'ativo', 'painel_beats'},
-            'cliente': {'id', 'username', 'role', 'is_admin', 'ativo', 'cliente_id'},
+            'cliente': {'id', 'username', 'role', 'is_admin', 'ativo', 'cliente_id', 'somente_labs'},
         }
         for username, password in (('admin', 'admin-pass'), ('produtor', 'producer-pass'), ('cliente', 'client-pass')):
             login = await client.post('/auth/login', json={'username': username, 'password': password})

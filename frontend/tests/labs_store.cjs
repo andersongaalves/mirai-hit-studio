@@ -88,7 +88,7 @@ async function noOverflow(page, label, widths) {
         // no English text yet: the Portuguese one shows
         assert.match(await page.locator('.plugin-card').nth(1).textContent(), /Free[\s\S]*Afinador preciso/);
         assert.equal(await page.locator('#catalog-count').textContent(), '2 plugins');
-        assert.equal(await page.locator('.site-nav a', { hasText: 'My plugins' }).getAttribute('href'), 'https://miraihitstudio.com.br/cliente/plugins');
+        assert.equal(await page.locator('.site-nav a', { hasText: 'My plugins' }).getAttribute('href'), '/my-plugins');
         assert.equal(await page.locator('.site-nav .lang__link').getAttribute('href'), '/pt/');
         await noOverflow(page, 'home', [320, 390, 768, 1280]);
         await page.setViewportSize({ width: 320, height: 900 });
@@ -110,7 +110,9 @@ async function noOverflow(page, label, widths) {
         assert.equal(await page.locator('link[rel="alternate"][hreflang="pt-BR"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/pt/plugins/mirai-saturator');
         const buy = page.locator('.buy');
         assert.match(await buy.textContent(), /R\$\s?149\.90[\s\S]*R\$\s?119\.90[\s\S]*one-time payment/);
-        assert.equal(await buy.getByRole('link', { name: 'Buy' }).getAttribute('href'), 'http://localhost:4173/cliente/plugins/comprar/mirai-saturator');
+        // signed out: sign in (or create the account) and come back to this plugin
+        assert.equal(await buy.getByRole('link', { name: 'Sign in to buy' }).getAttribute('href'), '/account?next=%2Fplugins%2Fmirai-saturator');
+        assert.match(await buy.textContent(), /Mirai Hit Labs account[\s\S]*Mirai Hit Studio customers use the same login/);
         assert.match(await page.locator('.facts').textContent(), /VST3 · AU[\s\S]*Windows and macOS[\s\S]*1\.0\.0[\s\S]*Personal/);
         assert.deepEqual(await page.locator('.features li').allTextContents(), ['Three saturation modes', '4x oversampling']);
         assert.equal(await page.locator('.product__tagline').textContent(), 'Analog saturation in one knob');
@@ -171,7 +173,8 @@ async function noOverflow(page, label, widths) {
         await page.locator('.product__title').waitFor();
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/pt/plugins/mirai-saturator');
         assert.match(await page.locator('.buy').textContent(), /R\$\s?149,90[\s\S]*R\$\s?119,90[\s\S]*pagamento único/);
-        assert.equal(await page.locator('.buy').getByRole('link', { name: 'Comprar' }).getAttribute('href'), 'http://localhost:4173/cliente/plugins/comprar/mirai-saturator');
+        assert.equal(await page.locator('.buy').getByRole('link', { name: 'Entrar para comprar' }).getAttribute('href'), '/pt/account?next=%2Fpt%2Fplugins%2Fmirai-saturator');
+        assert.equal(await page.locator('.site-nav a', { hasText: 'Meus plugins' }).getAttribute('href'), '/pt/my-plugins');
         assert.match(await page.locator('.facts').textContent(), /Windows e macOS[\s\S]*Pessoal/);
         assert.deepEqual(await page.locator('.features li').allTextContents(), ['Três modos de saturação', 'Oversampling 4x']);
         assert.equal(await page.locator('.crumbs a').getAttribute('href'), '/pt/#plugins');

@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str
     PUBLIC_API_URL: str = "http://localhost:8000"
     PUBLIC_FRONTEND_URL: str = "http://localhost:4173"
+    # Mirai Hit Labs store: Labs accounts' confirmation and password e-mails link here.
+    LABS_PUBLIC_URL: str = "https://labs.miraihitstudio.com.br"
     AI_ENABLED: bool = False
     AI_PROVIDER: str = ""
     AI_BASE_URL: str = ""

@@ -86,13 +86,23 @@ def require_producer(user=Depends(get_current_user)):
     return user
 
 
+def _is_client(user):
+    return (getattr(user, "ativo", False)
+            and getattr(user, "role", None) == "cliente"
+            and not getattr(user, "is_admin", False)
+            and getattr(user, "cliente_id", None) is not None)
+
+
 def require_client(user=Depends(get_current_user)):
-    if (
-        not getattr(user, "ativo", False)
-        or getattr(user, "role", None) != "cliente"
-        or getattr(user, "is_admin", False)
-        or getattr(user, "cliente_id", None) is None
-    ):
+    """The studio client portal. Accounts created on the Labs store are not studio clients."""
+    if not _is_client(user) or getattr(user, "somente_labs", False):
+        raise HTTPException(status_code=403, detail="Permissao de cliente necessaria.")
+    return user
+
+
+def require_labs_customer(user=Depends(get_current_user)):
+    """Mirai Hit Labs purchases and downloads: studio clients and Labs-only accounts."""
+    if not _is_client(user):
         raise HTTPException(status_code=403, detail="Permissao de cliente necessaria.")
     return user
 

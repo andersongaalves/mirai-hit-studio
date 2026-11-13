@@ -210,6 +210,78 @@ with Session(engine) as db:
     assert db.get(ClienteModel, client_id) is None
 ''')
 
+    def test_labs_signup_creates_labs_only_account_and_links_back_to_the_store(self):
+        self.run_case(r'''
+from core.dependencies import require_client, require_labs_customer
+from fastapi import HTTPException
+from schemas.client_access import PasswordRecoveryRequest
+
+config.settings.LABS_PUBLIC_URL = 'http://localhost:4174'
+with Session(engine) as db:
+    # A new customer on the Labs store (English): confirmation link to the store, Labs-only account.
+    data = ClientSignupRequest(nome='Labs Buyer', email='buyer@example.com', privacy_accepted=True, canal='labs', idioma='en')
+    with patch.object(EmailService, 'enviar_confirmacao_cadastro', return_value={'id': 'labs-signup'}) as email:
+        access.request_signup(db, data, 'labs-source', 'labs-signup')
+    assert email.call_args.args[1].startswith('http://localhost:4174/activate?token=')
+    assert email.call_args.kwargs['canal'] == 'labs' and email.call_args.kwargs['idioma'] == 'en'
+    pending = db.query(ClienteAcessoModel).filter_by(email_normalizado='buyer@example.com').one()
+    assert pending.canal == 'labs' and pending.idioma == 'en' and pending.somente_labs is True
+
+    # Resending keeps the store and the language.
+    with patch.object(EmailService, 'enviar_confirmacao_cadastro', return_value={'id': 'labs-resend'}) as resent:
+        access.resend_signup(db, 'buyer@example.com', 'labs-source', 'labs-resend')
+    assert resent.call_args.args[1].startswith('http://localhost:4174/activate?token=')
+
+    user = access.activate(db, ClientInviteActivation(
+        token=raw_token(resent), username='labs_buyer', password='secure-password'), 'labs-activation', 'labs-activate')
+    assert user.role == 'cliente' and user.somente_labs is True and user.cliente_id == pending.cliente_id
+    # Buys and downloads on the store, but has no studio client portal.
+    assert require_labs_customer(user) is user
+    try:
+        require_client(user)
+        raise AssertionError('Labs-only account reached the studio portal')
+    except HTTPException as error:
+        assert error.status_code == 403
+
+    # A studio client (created by a budget) who signs up on the store joins its record: not Labs-only.
+    studio = ClienteModel(nome='Cliente do Estudio', email='studio@example.com', telefone=None, ativo=True)
+    db.add(studio)
+    db.commit()
+    with patch.object(EmailService, 'enviar_confirmacao_cadastro', return_value={'id': 'labs-linked'}) as linked:
+        access.request_signup(db, ClientSignupRequest(nome='Cliente', email='studio@example.com', privacy_accepted=True,
+                                                      canal='labs', idioma='pt'), 'labs-source-2', 'labs-linked')
+    assert linked.call_args.args[1].startswith('http://localhost:4174/pt/activate?token=')
+    joined = db.query(ClienteAcessoModel).filter_by(email_normalizado='studio@example.com').one()
+    assert joined.cliente_id == studio.id and joined.canal == 'labs' and joined.somente_labs is False
+    studio_user = access.activate(db, ClientInviteActivation(
+        token=raw_token(linked), username='cliente_estudio', password='secure-password'), 'labs-activation', 'labs-activate-2')
+    assert studio_user.somente_labs is False and require_client(studio_user) is studio_user
+    assert require_labs_customer(studio_user) is studio_user
+
+    # Studio sign-ups keep linking to the studio site.
+    with patch.object(EmailService, 'enviar_confirmacao_cadastro', return_value={'id': 'studio-signup'}) as studio_email:
+        access.request_signup(db, signup_data(email='site@example.com', telefone=None), 'site-source', 'site-signup')
+    assert studio_email.call_args.args[1].startswith('http://localhost:4173/ativar?token=')
+    assert studio_email.call_args.kwargs['canal'] == 'studio'
+
+    # Password recovery asked on the store: link back to the store, in its language.
+    response, delivery = access.prepare_password_recovery(
+        db, PasswordRecoveryRequest(email='buyer@example.com', canal='labs', idioma='pt'), 'labs-recovery', 'labs-recovery')
+    assert delivery['canal'] == 'labs' and delivery['idioma'] == 'pt'
+    with patch.object(EmailService, 'enviar_recuperacao_senha', return_value={'id': 'labs-recovery'}) as recovery:
+        access._deliver_password_recovery(db, delivery)
+    assert recovery.call_args.args[1].startswith('http://localhost:4174/pt/reset-password?token=')
+    assert recovery.call_args.kwargs['canal'] == 'labs' and recovery.call_args.kwargs['idioma'] == 'pt'
+
+# The store e-mails, in both languages.
+english = EmailService.render('email_labs_confirmacao_cadastro.html', nome='Ana', activation_url='https://labs.example/activate?token=x',
+                              validade_horas=48, idioma='en', labs_url='https://labs.example')
+assert 'Confirm your Mirai Hit Labs account' in english and 'https://labs.example/activate?token=x' in english and 'lang="en"' in english
+portuguese = EmailService.render('email_labs_recuperacao_senha.html', nome='Ana', recovery_url='https://labs.example/pt/reset-password?token=y',
+                                 validity_minutes=60, idioma='pt', labs_url='https://labs.example')
+assert 'Crie uma nova senha' in portuguese and '60 minutos' in portuguese and 'lang="pt-BR"' in portuguese
+''')
+
 
 if __name__ == "__main__":
     unittest.main()
