@@ -1,15 +1,20 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Mirai Hit Labs | Plugins de áudio da Mirai Hit Studio</title>
-        <meta name="description" content="Plugins de áudio, DSP e sound design criados pela Mirai Hit Studio. Compre com sua conta Mirai e baixe para Windows e macOS." />
+        <title>Mirai Hit Labs | Audio plugins by Mirai Hit Studio</title>
+        <meta name="description" content="Audio plugins, DSP and sound design tools made by Mirai Hit Studio. Buy with your Mirai account and download for Windows and macOS." />
         <link rel="canonical" href="https://labs.miraihitstudio.com.br/" />
+        <link rel="alternate" hreflang="en" href="https://labs.miraihitstudio.com.br/" />
+        <link rel="alternate" hreflang="pt-BR" href="https://labs.miraihitstudio.com.br/pt/" />
+        <link rel="alternate" hreflang="x-default" href="https://labs.miraihitstudio.com.br/" />
         <meta property="og:site_name" content="Mirai Hit Labs" />
-        <meta property="og:title" content="Mirai Hit Labs | Plugins de áudio da Mirai Hit Studio" />
-        <meta property="og:description" content="Plugins de áudio, DSP e sound design criados pela Mirai Hit Studio. Compre com sua conta Mirai e baixe para Windows e macOS." />
+        <meta property="og:title" content="Mirai Hit Labs | Audio plugins by Mirai Hit Studio" />
+        <meta property="og:description" content="Audio plugins, DSP and sound design tools made by Mirai Hit Studio. Buy with your Mirai account and download for Windows and macOS." />
         <meta property="og:type" content="website" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:locale:alternate" content="pt_BR" />
         <meta name="theme-color" content="#ffffff" />
         <link rel="icon" href="/img/logo-icon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,16 +24,17 @@
         <script type="module" src="/js/home.js"></script>
     </head>
     <body>
-        <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+        <a class="skip" href="#conteudo">Skip to content</a>
         <header class="site-header">
             <div class="wrap site-header__bar">
-                <a class="site-header__logo" href="/" aria-label="Mirai Hit Labs, início">
+                <a class="site-header__logo" href="/" aria-label="Mirai Hit Labs, home">
                     <img src="/img/logo-horizontal.svg" alt="Mirai Hit Labs" width="560" height="138" />
                 </a>
-                <nav class="site-nav" aria-label="Principal">
+                <nav class="site-nav" aria-label="Main">
                     <a href="/#plugins">Plugins</a>
-                    <a href="/#como-funciona">Como funciona</a>
-                    <a class="btn btn--ghost" href="https://miraihitstudio.com.br/cliente/plugins">Meus plugins</a>
+                    <a href="/#como-funciona">How it works</a>
+                    <span class="lang" aria-label="Language"><span class="lang__current" aria-current="true">EN</span><span class="lang__sep" aria-hidden="true">|</span><a class="lang__link" data-lang-switch="pt" href="/pt/" hreflang="pt-BR" lang="pt-BR" aria-label="Português">PT</a></span>
+                    <a class="btn btn--ghost" href="https://miraihitstudio.com.br/cliente/plugins">My plugins</a>
                 </nav>
             </div>
         </header>
@@ -36,15 +42,15 @@
             <section class="hero" aria-labelledby="hero-title">
                 <div class="wrap hero__grid">
                     <div class="hero__copy">
-                        <ul class="hero__pillars" aria-label="Pilares">
-                            <li>Plugins</li><li>Som</li><li>Criatividade</li><li>Tecnologia</li>
+                        <ul class="hero__pillars" aria-label="Pillars">
+                            <li>Plugins</li><li>Sound</li><li>Creativity</li><li>Technology</li>
                         </ul>
                         <span class="rule" aria-hidden="true"></span>
-                        <h1 id="hero-title" class="brand-title">Ferramentas para o seu som</h1>
-                        <p class="lead">Plugins de áudio criados por quem mixa, masteriza e produz todos os dias na Mirai Hit Studio. Pensados para soar bem rápido, sem atrapalhar a criação.</p>
+                        <h1 id="hero-title" class="brand-title">Tools for your sound</h1>
+                        <p class="lead">Audio plugins made by people who mix, master and produce every day at Mirai Hit Studio. Built to sound good fast, without getting in the way of the music.</p>
                         <div class="hero__actions">
-                            <a class="btn" href="#plugins">Ver plugins</a>
-                            <a class="btn btn--ghost" href="#como-funciona">Como funciona</a>
+                            <a class="btn" href="#plugins">See plugins</a>
+                            <a class="btn btn--ghost" href="#como-funciona">How it works</a>
                         </div>
                     </div>
                     <div class="hero__mark">
@@ -54,27 +60,27 @@
                 <span class="hero__wave" aria-hidden="true"></span>
             </section>
 
-            <section class="concepts" aria-label="O que guia a Mirai Hit Labs">
+            <section class="concepts" aria-label="What guides Mirai Hit Labs">
                 <div class="wrap concepts__grid">
                     <article class="concept">
                         <img src="/img/icon-sinal.svg" alt="" width="120" height="70" />
-                        <h3>Sinal de áudio</h3>
-                        <p>Cada ferramenta nasce de uma necessidade real das nossas sessões de produção e mixagem.</p>
+                        <h3>Audio signal</h3>
+                        <p>Every tool starts from a real need in our production and mixing sessions.</p>
                     </article>
                     <article class="concept">
                         <img src="/img/icon-geometria.svg" alt="" width="76" height="58" />
-                        <h3>Interface limpa</h3>
-                        <p>Poucos controles, bem nomeados. Você ajusta pelo ouvido, não pelo manual.</p>
+                        <h3>Clean interface</h3>
+                        <p>Few controls, clearly named. You tweak by ear, not by the manual.</p>
                     </article>
                     <article class="concept">
                         <img src="/img/icon-efeitos.svg" alt="" width="50" height="50" />
-                        <h3>Leve na sessão</h3>
-                        <p>Processamento eficiente para usar em várias faixas ao mesmo tempo.</p>
+                        <h3>Light on your session</h3>
+                        <p>Efficient processing, so you can use it on many tracks at once.</p>
                     </article>
                     <article class="concept">
                         <img src="/img/icon-monograma.svg" alt="" width="83" height="58" />
-                        <h3>DNA Mirai Hit</h3>
-                        <p>O mesmo cuidado com o som que levamos aos projetos dos nossos artistas.</p>
+                        <h3>Mirai Hit DNA</h3>
+                        <p>The same care for sound that goes into our artists' projects.</p>
                     </article>
                 </div>
             </section>
@@ -83,7 +89,7 @@
                 <div class="wrap">
                     <div class="section__head">
                         <div>
-                            <p class="eyebrow">Catálogo</p>
+                            <p class="eyebrow">Catalog</p>
                             <h2 id="plugins-title" class="section-title">Plugins</h2>
                         </div>
                         <p id="catalog-count" class="eyebrow" aria-live="polite"></p>
@@ -96,26 +102,26 @@
                 <div class="wrap">
                     <div class="section__head">
                         <div>
-                            <p class="eyebrow">Compra e download</p>
-                            <h2 id="how-title" class="section-title">Como funciona</h2>
+                            <p class="eyebrow">Purchase and download</p>
+                            <h2 id="how-title" class="section-title">How it works</h2>
                         </div>
                         <img class="band__wave" src="/img/icon-sinal-inverse.svg" alt="" width="120" height="70" />
                     </div>
                     <ol class="steps">
                         <li class="step">
                             <span class="step__number">01</span>
-                            <h3>Escolha o plugin</h3>
-                            <p>Veja recursos, formatos e requisitos na página de cada plugin.</p>
+                            <h3>Pick a plugin</h3>
+                            <p>See the features, formats and requirements on each plugin's page.</p>
                         </li>
                         <li class="step">
                             <span class="step__number">02</span>
-                            <h3>Compre com sua conta Mirai</h3>
-                            <p>Entre na sua conta da Mirai Hit Studio (ou crie uma, é grátis) e pague por Pix ou cartão.</p>
+                            <h3>Buy with your Mirai account</h3>
+                            <p>Sign in to your Mirai Hit Studio account (or create one, it's free) and pay by Pix or card.</p>
                         </li>
                         <li class="step">
                             <span class="step__number">03</span>
-                            <h3>Baixe e ative</h3>
-                            <p>Em Meus plugins ficam os instaladores para Windows e macOS e a sua chave de licença.</p>
+                            <h3>Download and activate</h3>
+                            <p>My plugins has the Windows and macOS installers and your license key.</p>
                         </li>
                     </ol>
                 </div>
@@ -125,30 +131,30 @@
                 <div class="wrap">
                     <div class="section__head">
                         <div>
-                            <p class="eyebrow">Dúvidas</p>
-                            <h2 id="faq-title" class="section-title">Perguntas frequentes</h2>
+                            <p class="eyebrow">Questions</p>
+                            <h2 id="faq-title" class="section-title">FAQ</h2>
                         </div>
                     </div>
                     <div class="faq">
                         <details>
-                            <summary>Preciso de uma conta para comprar?</summary>
-                            <p>Sim. A compra usa a conta de cliente da Mirai Hit Studio, a mesma dos projetos e beats. Se ainda não tem, você cria na hora, é grátis. Plugins gratuitos também ficam guardados nela.</p>
+                            <summary>Do I need an account to buy?</summary>
+                            <p>Yes. Purchases use a Mirai Hit Studio customer account. If you don't have one yet, you can create it on the spot, for free. Free plugins are kept there too.</p>
                         </details>
                         <details>
-                            <summary>Onde baixo o plugin depois de pagar?</summary>
-                            <p>No portal do cliente, em Meus plugins. Assim que o pagamento é confirmado aparecem os instaladores de cada sistema e a sua chave de licença.</p>
+                            <summary>Where do I download the plugin after paying?</summary>
+                            <p>In My plugins. As soon as the payment is confirmed, the installers for each system and your license key show up there.</p>
                         </details>
                         <details>
-                            <summary>Como funciona a licença?</summary>
-                            <p>A licença é pessoal: você pode usar o plugin nos seus projetos, inclusive comerciais. Revender ou compartilhar o instalador ou a chave não é permitido.</p>
+                            <summary>How does the license work?</summary>
+                            <p>The license is personal: you can use the plugin in your projects, including commercial ones. Reselling or sharing the installer or the key is not allowed.</p>
                         </details>
                         <details>
-                            <summary>Quais formas de pagamento são aceitas?</summary>
-                            <p>Pix e cartão de crédito, pelo mesmo checkout seguro da Mirai Hit Studio.</p>
+                            <summary>Which payment methods are accepted?</summary>
+                            <p>Pix and credit card, through Mirai Hit Studio's secure checkout.</p>
                         </details>
                         <details>
-                            <summary>Meu sistema é compatível?</summary>
-                            <p>Cada plugin informa os formatos (VST3, AU, AAX…), os sistemas e os requisitos na própria página. Confira antes de comprar.</p>
+                            <summary>Is my system compatible?</summary>
+                            <p>Each plugin lists its formats (VST3, AU, AAX…), systems and requirements on its own page. Check them before buying.</p>
                         </details>
                     </div>
                 </div>
@@ -158,29 +164,30 @@
             <div class="wrap site-footer__grid">
                 <div class="site-footer__brand">
                     <img src="/img/logo-horizontal.svg" alt="Mirai Hit Labs" width="560" height="138" loading="lazy" />
-                    <p>Plugins de áudio, DSP e sound design. Uma divisão da Mirai Hit Studio.</p>
+                    <p>Audio plugins, DSP and sound design. A division of Mirai Hit Studio.</p>
                 </div>
                 <div>
-                    <h2>Loja</h2>
+                    <h2>Store</h2>
                     <ul>
                         <li><a href="/#plugins">Plugins</a></li>
-                        <li><a href="/#como-funciona">Como funciona</a></li>
-                        <li><a href="/#duvidas">Dúvidas</a></li>
-                        <li><a href="https://miraihitstudio.com.br/cliente/plugins">Meus plugins</a></li>
+                        <li><a href="/#como-funciona">How it works</a></li>
+                        <li><a href="/#duvidas">FAQ</a></li>
+                        <li><a href="https://miraihitstudio.com.br/cliente/plugins">My plugins</a></li>
+                        <li><a data-lang-switch="pt" href="/pt/" hreflang="pt-BR" lang="pt-BR">Português</a></li>
                     </ul>
                 </div>
                 <div>
                     <h2>Mirai Hit Studio</h2>
                     <ul>
-                        <li><a href="https://miraihitstudio.com.br/">Estúdio</a></li>
+                        <li><a href="https://miraihitstudio.com.br/">Studio</a></li>
                         <li><a href="https://miraihitstudio.com.br/beats">Beats</a></li>
                         <li><a href="https://www.instagram.com/miraihitstudio/" rel="noopener" target="_blank">Instagram</a></li>
                     </ul>
                 </div>
             </div>
             <div class="wrap site-footer__legal">
-                <small>© <span data-year>2026</span> Mirai Hit Studio. Todos os direitos reservados.</small>
-                <small>Plugins / Som / Criatividade / Tecnologia</small>
+                <small>© <span data-year>2026</span> Mirai Hit Studio. All rights reserved.</small>
+                <small>Plugins / Sound / Creativity / Technology</small>
             </div>
         </footer>
     </body>

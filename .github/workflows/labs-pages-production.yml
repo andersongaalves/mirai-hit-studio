@@ -79,7 +79,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test -z "$(git status --porcelain)"
-          for file in index.html plugin.html 404.html _headers _redirects css/labs.css js/config.js img/logo-horizontal.svg; do
+          for file in index.html plugin.html 404.html pt/index.html pt/plugin.html pt/404.html _headers _redirects css/labs.css js/config.js js/i18n.js img/logo-horizontal.svg; do
             test -s "labs/$file"
           done
 
@@ -173,7 +173,9 @@ jobs:
           for attempt in $(seq 1 20); do
             if curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/" > /tmp/home.html \
               && grep -q "Mirai Hit Labs" /tmp/home.html \
-              && curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/plugins/exemplo" | grep -q 'id="product"'; then
+              && curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/plugins/exemplo" | grep -q 'id="product"' \
+              && curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/pt/" | grep -q 'lang="pt-BR"' \
+              && curl --fail --silent --show-error "https://$PAGES_PROJECT.pages.dev/pt/plugins/exemplo" | grep -q 'id="product"'; then
               echo "- Store published at https://$PAGES_PROJECT.pages.dev for $TARGET_SHA ($AUTHORIZATION_REF)" | tee -a "$GITHUB_STEP_SUMMARY"
               if curl --fail --silent --max-time 20 "https://$LABS_DOMAIN/" | grep -q "Mirai Hit Labs"; then
                 echo "- https://$LABS_DOMAIN answers with the store" | tee -a "$GITHUB_STEP_SUMMARY"

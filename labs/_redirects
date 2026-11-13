@@ -1,2 +1,4 @@
+/pt/plugins/* /pt/plugin 200
+/pt/plugins /pt/#plugins 302
 /plugins/* /plugin 200
 /plugins /#plugins 302
