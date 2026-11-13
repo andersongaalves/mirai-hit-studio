@@ -3,7 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from core import rate_limit
-from core.dependencies import require_admin, require_client
+from core.dependencies import require_admin, require_client, require_labs_customer
 from database import get_db
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Path, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -21,6 +21,8 @@ from sqlalchemy.orm import Session
 router = APIRouter(tags=["Mirai Hit Labs"])
 Db = Annotated[Session, Depends(get_db)]
 Client = Annotated[object, Depends(require_client)]
+# Buying and downloading on the Labs store: studio clients and Labs-only accounts.
+Customer = Annotated[object, Depends(require_labs_customer)]
 Admin = Annotated[object, Depends(require_admin)]
 Slug = Annotated[str, Path(max_length=60)]
 PUBLIC_CACHE = {"Cache-Control": "public, max-age=60"}
@@ -62,7 +64,7 @@ def comprar_plugin(
     slug: Slug,
     request: Request,
     db: Db,
-    user: Client,
+    user: Customer,
     idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
     if idempotency_key is None:
@@ -70,14 +72,12 @@ def comprar_plugin(
     return plugin_service.comprar(db, slug, user, str(idempotency_key), getattr(request.state, "request_id", None))
 
 
-@router.get("/portal/cliente/plugins")
-def meus_plugins(db: Db, user: Client):
+def _meus_plugins(db, user):
     return JSONResponse(jsonable_encoder(plugin_service.minhas_licencas(db, user)),
                         headers={"Cache-Control": "private, no-store"})
 
 
-@router.get("/portal/cliente/plugins/{licenca_id}/download/{sistema}")
-def baixar_plugin(licenca_id: int, sistema: str, db: Db, user: Client):
+def _baixar(licenca_id, sistema, db, user):
     delivery = plugin_service.download(db, licenca_id, sistema, user)
     if delivery["type"] in ("link", "download"):
         return JSONResponse({key: delivery[key] for key in ("type", "url", "filename") if key in delivery},
@@ -86,6 +86,28 @@ def baixar_plugin(licenca_id: int, sistema: str, db: Db, user: Client):
         "Cache-Control": "private, no-store",
         "Content-Disposition": f'attachment; filename="{delivery["filename"]}"',
     })
+
+
+# Studio client portal (Meus plugins)
+@router.get("/portal/cliente/plugins")
+def meus_plugins(db: Db, user: Client):
+    return _meus_plugins(db, user)
+
+
+@router.get("/portal/cliente/plugins/{licenca_id}/download/{sistema}")
+def baixar_plugin(licenca_id: int, sistema: str, db: Db, user: Client):
+    return _baixar(licenca_id, sistema, db, user)
+
+
+# Labs store account (My plugins): also for accounts created on the store
+@router.get("/labs/conta/plugins")
+def labs_meus_plugins(db: Db, user: Customer):
+    return _meus_plugins(db, user)
+
+
+@router.get("/labs/conta/plugins/{licenca_id}/download/{sistema}")
+def labs_baixar_plugin(licenca_id: int, sistema: str, db: Db, user: Customer):
+    return _baixar(licenca_id, sistema, db, user)
 
 
 # ---------------------------------------------------------------- admin

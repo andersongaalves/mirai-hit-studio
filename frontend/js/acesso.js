@@ -15,6 +15,7 @@ const submitButton = form?.querySelector("button[type='submit']");
 const params = new URLSearchParams(window.location.search);
 const requestedNext = params.get("next");
 
+const LABS_ACCOUNT = "https://labs.miraihitstudio.com.br/pt/account?next=%2Fpt%2Fmy-plugins";
 const destinations = Object.freeze({
     admin: "/admin",
     produtor: "/produtor",
@@ -99,6 +100,14 @@ form?.addEventListener("submit", async (event) => {
                     ? data.detail
                     : "Usuário ou senha incorretos.",
             );
+        }
+
+        // Accounts created on Mirai Hit Labs buy and download there; they have no studio
+        // portal. The session belongs to each site, so they sign in on the store.
+        if (data?.user?.somente_labs) {
+            form.elements.password.value = "";
+            window.location.assign(LABS_ACCOUNT);
+            return;
         }
 
         const context = contextForUser(data?.user);

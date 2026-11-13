@@ -133,7 +133,11 @@ async def check():
             bought = await api.post('/labs/plugins/mirai-saturator/comprar', headers={**bearer('client-a'), **order_key})
             assert bought.status_code == 201, bought.text
             proposal_id = bought.json()['proposta_id']
-            assert bought.json() == {'gratuito': False, 'proposta_id': proposal_id, 'checkout_path': f'/checkout?proposta={proposal_id}'}
+            assert set(bought.json()) == {'gratuito', 'proposta_id', 'checkout_path', 'checkout_url'}
+            assert bought.json()['gratuito'] is False and bought.json()['checkout_path'] == f'/checkout?proposta={proposal_id}'
+            # the opaque public checkout: Labs-only accounts have no studio portal to open the proposal path
+            checkout_url = bought.json()['checkout_url']
+            assert checkout_url.startswith('http://localhost:4173/checkout/')
             replay = await api.post('/labs/plugins/mirai-saturator/comprar', headers={**bearer('client-a'), **order_key})
             assert replay.status_code == 201 and replay.json()['proposta_id'] == proposal_id
             # Coming back before paying reopens the same checkout instead of a new order.
@@ -147,11 +151,24 @@ async def check():
                 assert license.status == 'reservada' and license.valor == Decimal('149.90') and license.chave.startswith('MHL-')
                 charge = financial_service.buscar_por_proposta(db, proposal_id)
                 assert charge.valor_total == Decimal('149.90') and charge.status == 'pendente'
+                assert checkout_url == f'http://localhost:4173/checkout/{charge.referencia_externa}'
             waiting = (await api.get('/portal/cliente/plugins', headers=bearer('client-a'))).json()
             assert waiting == [{'id': license.id, 'status': 'aguardando_pagamento', 'plugin': 'Mirai Saturator',
                                 'slug': 'mirai-saturator', 'capa_url': item['capa_url'], 'sistemas': [],
-                                'checkout_path': f'/checkout?proposta={proposal_id}'}]
+                                'checkout_path': f'/checkout?proposta={proposal_id}', 'checkout_url': checkout_url}]
             assert 'MHL-' not in str(waiting)
+            # The Labs store shows the same list (My plugins) to studio clients.
+            assert (await api.get('/labs/conta/plugins', headers=bearer('client-a'))).json() == waiting
+            assert (await api.get('/labs/conta/plugins')).status_code == 401
+            # A Labs-only account buys on the store but never opens the studio portal list.
+            with Session(engine) as db:
+                db.get(UsuarioModel, 5).somente_labs = True
+                db.commit()
+            assert (await api.get('/labs/conta/plugins', headers=bearer('client-b'))).json() == []
+            assert (await api.get('/portal/cliente/plugins', headers=bearer('client-b'))).status_code == 403
+            with Session(engine) as db:
+                db.get(UsuarioModel, 5).somente_labs = False
+                db.commit()
             assert (await api.get(f'/portal/cliente/plugins/{license.id}/download/windows', headers=bearer('client-a'))).status_code == 404
 
             # Payment: the license becomes active; no production is created for a plugin order.

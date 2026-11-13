@@ -1,0 +1,22 @@
+{% extends "email_labs_base.html" %}
+{% block content %}
+{% if idioma == 'pt' %}
+<h1>Confirme sua conta da Mirai Hit Labs</h1>
+<p>Olá, {{ nome }}.</p>
+<p>Recebemos um pedido para criar sua conta na Mirai Hit Labs. Confirme o e-mail e escolha seu usuário e senha.</p>
+<div style="text-align: center; margin: 28px 0">
+    <a class="button" href="{{ activation_url }}">Confirmar minha conta</a>
+</div>
+<p class="muted">Este link é pessoal, expira em {{ validade_horas }} horas e deixa de funcionar depois de usado.</p>
+<p class="muted">Se você não pediu esta conta, ignore esta mensagem.</p>
+{% else %}
+<h1>Confirm your Mirai Hit Labs account</h1>
+<p>Hi {{ nome }},</p>
+<p>We received a request to create your Mirai Hit Labs account. Confirm your e-mail and choose your username and password.</p>
+<div style="text-align: center; margin: 28px 0">
+    <a class="button" href="{{ activation_url }}">Confirm my account</a>
+</div>
+<p class="muted">This link is personal, expires in {{ validade_horas }} hours and stops working once used.</p>
+<p class="muted">If you didn't ask for this account, just ignore this message.</p>
+{% endif %}
+{% endblock %}
