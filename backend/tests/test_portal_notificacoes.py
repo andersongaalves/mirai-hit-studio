@@ -244,7 +244,7 @@ with Session(engine) as db:
     def test_additive_migration_roundtrip_does_not_backfill(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
-assert bootstrap(engine) == 'a4d6f8b0c2e3'
+assert bootstrap(engine) == 'b5e7a9c1d3f4'
 assert 'portal_notificacoes' in inspect(engine).get_table_names()
 with engine.connect() as connection:
     assert connection.exec_driver_sql('SELECT count(*) FROM portal_notificacoes').scalar_one() == 0

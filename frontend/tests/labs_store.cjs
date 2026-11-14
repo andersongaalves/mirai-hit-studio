@@ -83,7 +83,8 @@ async function noOverflow(page, label, widths) {
         assert.equal(await page.locator('link[rel="alternate"][hreflang="pt-BR"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/pt/');
         assert.deepEqual(await page.locator('.plugin-card__title').allTextContents(), ['Mirai Saturator', 'Mirai Tuner']);
         const first = page.locator('.plugin-card').first();
-        assert.match(await first.textContent(), /Sale[\s\S]*Saturation[\s\S]*Analog saturation in one knob[\s\S]*R\$\s?149\.90[\s\S]*R\$\s?119\.90[\s\S]*VST3[\s\S]*AU/);
+        assert.match(await first.textContent(), /Sale[\s\S]*Saturation[\s\S]*Analog saturation in one knob[\s\S]*\$149\.90[\s\S]*\$119\.90[\s\S]*VST3[\s\S]*AU/);
+        assert.doesNotMatch(await first.textContent(), /R\$/, 'the English store shows dollars');
         assert.equal(await first.locator('.plugin-card__link').getAttribute('href'), '/plugins/mirai-saturator');
         // no English text yet: the Portuguese one shows
         assert.match(await page.locator('.plugin-card').nth(1).textContent(), /Free[\s\S]*Afinador preciso/);
@@ -109,7 +110,7 @@ async function noOverflow(page, label, widths) {
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/plugins/mirai-saturator');
         assert.equal(await page.locator('link[rel="alternate"][hreflang="pt-BR"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/pt/plugins/mirai-saturator');
         const buy = page.locator('.buy');
-        assert.match(await buy.textContent(), /R\$\s?149\.90[\s\S]*R\$\s?119\.90[\s\S]*one-time payment/);
+        assert.match(await buy.textContent(), /\$149\.90[\s\S]*\$119\.90[\s\S]*one-time payment[\s\S]*card with Stripe, in US dollars/);
         // signed out: sign in (or create the account) and come back to this plugin
         assert.equal(await buy.getByRole('link', { name: 'Sign in to buy' }).getAttribute('href'), '/account?next=%2Fplugins%2Fmirai-saturator');
         assert.match(await buy.textContent(), /Mirai Hit Labs account[\s\S]*Mirai Hit Studio customers use the same login/);

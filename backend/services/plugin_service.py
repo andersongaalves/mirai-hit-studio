@@ -396,12 +396,12 @@ def _conceder(db, plugin, cliente_id, origem, *, proposta_id=None, valor=Decimal
                 db.flush()
             return license
         except IntegrityError:
-            if origem != "compra":
+            if origem in ("gratuito", "cortesia"):
                 # A previous free/courtesy license (revoked or ended) is reactivated.
                 existing = db.scalar(select(PluginLicencaModel).where(
                     PluginLicencaModel.plugin_id == plugin.id,
                     PluginLicencaModel.cliente_id == cliente_id,
-                    PluginLicencaModel.origem != "compra",
+                    PluginLicencaModel.origem.in_(("gratuito", "cortesia")),
                 ).with_for_update())
                 if existing is not None:
                     existing.status, existing.origem = "ativa", origem
@@ -586,6 +586,16 @@ def minhas_licencas(db: Session, actor):
     for plugin_id, (license, plugin) in pending.items():
         if plugin_id not in active and plugin_id not in suspended:
             # A purchase still waiting for payment: the way back to its checkout.
+            if license.origem == "stripe":
+                from services import stripe_service
+
+                url = stripe_service.checkout_aberto(stripe_service.pedido_da_licenca(db, license.id))
+                if url is None:
+                    continue  # the Stripe page expired: nothing to resume
+                result.append({"id": license.id, "status": "aguardando_pagamento", "plugin": plugin.nome,
+                               "slug": plugin.slug, "capa_url": plugin.capa_url, "sistemas": [],
+                               "checkout_path": None, "checkout_url": url, "moeda": "usd"})
+                continue
             result.append({"id": license.id, "status": "aguardando_pagamento", "plugin": plugin.nome,
                            "slug": plugin.slug, "capa_url": plugin.capa_url, "sistemas": [],
                            "checkout_path": f"/checkout?proposta={license.proposta_id}",

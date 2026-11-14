@@ -15,7 +15,8 @@ from schemas.plugin import (
     PluginRevogacao,
     PluginValidacao,
 )
-from services import plugin_service
+from services import plugin_service, stripe_service
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Mirai Hit Labs"])
@@ -70,6 +71,39 @@ def comprar_plugin(
     if idempotency_key is None:
         raise HTTPException(422, "Idempotency-Key obrigatoria.")
     return plugin_service.comprar(db, slug, user, str(idempotency_key), getattr(request.state, "request_id", None))
+
+
+# International purchase on the English store (Stripe Checkout, USD; same number as the price).
+@router.post("/labs/plugins/{slug}/comprar-internacional", status_code=201)
+def comprar_plugin_internacional(
+    slug: Slug,
+    request: Request,
+    db: Db,
+    user: Customer,
+    idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
+):
+    if idempotency_key is None:
+        raise HTTPException(422, "Idempotency-Key obrigatoria.")
+    return stripe_service.criar_checkout(db, slug, user, str(idempotency_key), getattr(request.state, "request_id", None))
+
+
+MAX_STRIPE_BODY = 256 * 1024
+
+
+@router.post("/labs/stripe/webhook")
+async def stripe_webhook(request: Request, db: Db):
+    """Stripe events (payment confirmed, session expired, refund, dispute); signature checked."""
+    body = await request.body()
+    if len(body) > MAX_STRIPE_BODY:
+        raise HTTPException(413, "Evento grande demais.")
+    return await run_in_threadpool(stripe_service.webhook, db, body, request.headers.get("stripe-signature"),
+                                   getattr(request.state, "request_id", None))
+
+
+@router.post("/labs/stripe/sessoes/{session_id}/confirmar")
+def stripe_confirmar(session_id: Annotated[str, Path(min_length=8, max_length=255, pattern=r"^cs_[A-Za-z0-9_]+$")],
+                     request: Request, db: Db, user: Customer):
+    return stripe_service.confirmar(db, session_id, user, getattr(request.state, "request_id", None))
 
 
 def _meus_plugins(db, user):
