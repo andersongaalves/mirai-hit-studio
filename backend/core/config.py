@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     AI_EMAIL_MAX_BODY_CHARS: int = Field(default=8000, ge=1000, le=20000)
     RESEND_WEBHOOK_SECRET: SecretStr = SecretStr("")
 
+    # Mirai Hit Labs international purchases (English store, USD). Empty = turned off.
+    STRIPE_SECRET_KEY: SecretStr = SecretStr("")
+    STRIPE_WEBHOOK_SECRET: SecretStr = SecretStr("")
+
     MERCADO_PAGO_ACCESS_TOKEN: str | None = None
     MERCADO_PAGO_PUBLIC_KEY: str | None = None
     MERCADO_PAGO_WEBHOOK_SECRET: str | None = None

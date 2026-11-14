@@ -121,20 +121,21 @@ class PluginLicencaModel(Base):
         ),
         CheckConstraint("valor >= 0", name="ck_plugin_licencas_valor"),
         CheckConstraint(
-            "origem IN ('compra','gratuito','cortesia')", name="ck_plugin_licencas_origem"
+            "origem IN ('compra','gratuito','cortesia','stripe')", name="ck_plugin_licencas_origem"
         ),
         CheckConstraint(
             "(origem = 'compra' AND proposta_id IS NOT NULL) OR (origem <> 'compra' AND proposta_id IS NULL)",
             name="ck_plugin_licencas_proposta",
         ),
-        # One free or courtesy license per client and plugin; purchases are tracked per proposal.
+        # One free or courtesy license per client and plugin; purchases are tracked per proposal
+        # (studio checkout) or per Stripe order (English store).
         Index(
             "uq_plugin_licencas_cliente_sem_compra",
             "plugin_id",
             "cliente_id",
             unique=True,
-            postgresql_where=text("origem <> 'compra'"),
-            sqlite_where=text("origem <> 'compra'"),
+            postgresql_where=text("origem NOT IN ('compra','stripe')"),
+            sqlite_where=text("origem NOT IN ('compra','stripe')"),
         ),
     )
 
@@ -154,7 +155,51 @@ class PluginLicencaModel(Base):
     plugin = relationship("PluginModel")
 
 
-for table in (PluginModel.__table__, PluginArquivoModel.__table__, PluginLicencaModel.__table__):
+PEDIDO_STRIPE_STATUS = ("aberto", "pago", "expirado", "reembolsado", "contestado")
+
+
+class PluginPedidoStripeModel(Base):
+    """An international purchase on the English store: one Stripe Checkout session (USD).
+
+    The license is reserved when the order opens and becomes active when Stripe confirms
+    the payment; a refund or a dispute suspends it, like the studio checkout does."""
+
+    __tablename__ = "plugin_pedidos_stripe"
+    __table_args__ = (
+        UniqueConstraint("licenca_id", name="uq_plugin_pedidos_stripe_licenca"),
+        UniqueConstraint("idempotency_key", name="uq_plugin_pedidos_stripe_idempotency"),
+        UniqueConstraint("stripe_session_id", name="uq_plugin_pedidos_stripe_session"),
+        CheckConstraint("valor > 0", name="ck_plugin_pedidos_stripe_valor"),
+        CheckConstraint("moeda = 'usd'", name="ck_plugin_pedidos_stripe_moeda"),
+        CheckConstraint(
+            "status IN ('aberto','pago','expirado','reembolsado','contestado')", name="ck_plugin_pedidos_stripe_status"
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    plugin_id = Column(Integer, ForeignKey("plugins.id", ondelete="RESTRICT"), nullable=False, index=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id", ondelete="RESTRICT"), nullable=False, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False, index=True)
+    licenca_id = Column(Integer, ForeignKey("plugin_licencas.id", ondelete="RESTRICT"), nullable=False)
+    valor = Column(Numeric(12, 2), nullable=False)
+    moeda = Column(String(3), nullable=False, default="usd", server_default="usd")
+    status = Column(String(12), nullable=False, default="aberto", server_default="aberto")
+    idempotency_key = Column(String(64), nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    stripe_session_id = Column(String(255), nullable=True)
+    stripe_payment_intent = Column(String(255), nullable=True, index=True)
+    checkout_url = Column(String(1000), nullable=True)
+    expira_em = Column(DateTime(timezone=True), nullable=True)
+    pago_em = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    plugin = relationship("PluginModel")
+    licenca = relationship("PluginLicencaModel")
+
+
+for table in (PluginModel.__table__, PluginArquivoModel.__table__, PluginLicencaModel.__table__,
+              PluginPedidoStripeModel.__table__):
     event.listen(
         table,
         "after_create",

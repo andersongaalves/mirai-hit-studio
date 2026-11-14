@@ -217,6 +217,7 @@ jobs:
                     test_produtor_perfil.py \
                     test_orcamentos_pausa.py \
                     test_mirai_labs.py \
+                    test_labs_stripe.py \
                     test_portfolio_creditos.py \
                     test_portfolio_envios.py \
                     test_audio_tags.py \
@@ -459,7 +460,9 @@ jobs:
                     backend/schemas/plugin.py \
                     backend/services/plugin_service.py \
                     backend/routers/labs.py \
+                    backend/services/stripe_service.py \
                     backend/tests/test_mirai_labs.py \
+                    backend/tests/test_labs_stripe.py \
                     backend/services/marketing_service.py \
                     backend/routers/marketing.py \
                     backend/tests/test_marketing.py \

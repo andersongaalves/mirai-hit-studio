@@ -61,6 +61,7 @@ async function noOverflow(page, label) {
                 catch { return route.fulfill({ status: 404, body: await fs.readFile(path.join(root, '404.html')), contentType: 'text/html' }); }
             }
             if (url.origin === 'http://localhost:4173') return route.fulfill({ status: 200, body: '<html><body>studio checkout</body></html>', contentType: 'text/html' });
+            if (url.origin === 'https://checkout.stripe.com') return route.fulfill({ status: 200, body: '<html><body>stripe checkout</body></html>', contentType: 'text/html' });
             if (url.origin !== 'http://localhost:8000') return route.fulfill({ status: 204, body: '' });
             const p = url.pathname;
             const method = request.method();
@@ -85,6 +86,10 @@ async function noOverflow(page, label) {
             if (p === '/auth/password-recovery/reset') return route.fulfill({ json: { reset: true, login_url: '/acesso' } });
             if (p === '/labs/plugins/mirai-saturator') return route.fulfill({ json: plugin });
             if (p === '/labs/plugins/mirai-tuner') return route.fulfill({ json: freePlugin });
+            if (p === '/labs/plugins/mirai-saturator/comprar-internacional') {
+                return route.fulfill({ status: 201, json: { pedido_id: 5, checkout_url: 'https://checkout.stripe.com/c/pay/cs_test_5' } });
+            }
+            if (p === '/labs/stripe/sessoes/cs_test_5/confirmar') return route.fulfill({ json: { status: 'pago', pago: true } });
             if (p === '/labs/plugins/mirai-saturator/comprar') {
                 return route.fulfill({ status: 201, json: { gratuito: false, proposta_id: 12, checkout_path: '/checkout?proposta=12',
                     checkout_url: 'http://localhost:4173/checkout/11111111-2222-3333-4444-555555555555' } });
@@ -132,15 +137,34 @@ async function noOverflow(page, label) {
         await signIn.locator('input[name="password"]').fill('secure-pass');
         await signIn.getByRole('button', { name: 'Sign in' }).click();
 
-        // Back on the plugin: buying opens the payment (opaque checkout link) with a fresh key.
+        // Back on the plugin (English store): buying opens Stripe Checkout, in dollars, with a fresh key.
         await page.waitForURL('**/plugins/mirai-saturator');
         const buy = page.locator('.buy').getByRole('button', { name: 'Buy' });
         await buy.waitFor();
+        assert.match(await page.locator('.buy__price').textContent(), /\$149\.90/);
         await buy.click();
-        await page.waitForURL('http://localhost:4173/checkout/11111111-2222-3333-4444-555555555555');
-        const order = last('/labs/plugins/mirai-saturator/comprar');
+        await page.waitForURL('https://checkout.stripe.com/c/pay/cs_test_5');
+        const order = last('/labs/plugins/mirai-saturator/comprar-internacional');
         assert.equal(order.auth, 'Bearer buyer-token');
         assert.match(order.idem, /^[0-9a-f-]{36}$/);
+        assert.equal(last('/labs/plugins/mirai-saturator/comprar'), undefined, 'the English store never uses the reais checkout');
+
+        // Back from Stripe without paying: a short note, and the address is clean again.
+        await page.goto('http://localhost:4174/plugins/mirai-saturator?checkout=cancelled');
+        await page.getByText('Payment cancelled. You can try again whenever you want.').waitFor();
+        assert.equal(new URL(page.url()).search, '');
+
+        // The Portuguese store keeps the Mirai checkout (reais, Pix or card).
+        await page.goto('http://localhost:4174/pt/plugins/mirai-saturator');
+        await page.locator('.buy').getByRole('button', { name: 'Comprar' }).click();
+        await page.waitForURL('http://localhost:4173/checkout/11111111-2222-3333-4444-555555555555');
+        assert.equal(last('/labs/plugins/mirai-saturator/comprar').auth, 'Bearer buyer-token');
+
+        // Back from Stripe after paying: My plugins asks the API to confirm right away.
+        await page.goto('http://localhost:4174/my-plugins?checkout=success&session_id=cs_test_5');
+        await page.getByText('Payment received! Your plugin is ready below.').waitFor();
+        assert.equal(new URL(page.url()).search, '', 'the session id leaves the address bar');
+        assert.equal(last('/labs/stripe/sessoes/cs_test_5/confirmar').auth, 'Bearer buyer-token');
 
         // A free plugin goes straight to My plugins.
         await page.goto('http://localhost:4174/plugins/mirai-tuner');

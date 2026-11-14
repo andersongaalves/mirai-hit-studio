@@ -389,15 +389,15 @@ async function openLicenses(plugin) {
     ["Cliente", "Origem", "Situação", "Chave", "Valor", ""].forEach(text => tr.append(el("th", "", text)));
     head.append(tr);
     const tbody = el("tbody");
-    const ORIGEM = { compra: "Compra", gratuito: "Grátis", cortesia: "Cortesia" };
+    const ORIGEM = { compra: "Compra", stripe: "Compra internacional (Stripe, USD)", gratuito: "Grátis", cortesia: "Cortesia" };
     const SITUACAO = { ativa: "Ativa", reservada: "Aguardando pagamento", revogada: "Revogada", cancelada: "Cancelada" };
     rows.forEach(row => {
         const line = el("tr");
         const client = el("td");
         client.append(el("strong", "", row.cliente), el("small", "", row.email || ""));
         line.append(client, el("td", "", ORIGEM[row.origem] || row.origem),
-            el("td", "", row.motivo === "pagamento_revertido" ? "Suspensa (pagamento revertido)" : SITUACAO[row.status] || row.status),
-            el("td", "labs-admin__key", row.status === "ativa" ? row.chave : "—"), el("td", "", money(row.valor)));
+            el("td", "", row.motivo === "pagamento_revertido" ? "Suspensa (pagamento revertido)" : row.motivo === "checkout_expirado" ? "Checkout expirado" : SITUACAO[row.status] || row.status),
+            el("td", "labs-admin__key", row.status === "ativa" ? row.chave : "—"), el("td", "", row.origem === "stripe" ? `US$ ${Number(row.valor).toFixed(2)}` : money(row.valor)));
         const actions = el("td");
         if (["ativa", "reservada"].includes(row.status)) {
             const revoke = el("button", "btn-small labs-admin__remove", "Revogar");

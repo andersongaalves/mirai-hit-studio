@@ -76,6 +76,11 @@ function buyBox(plugin) {
         action.addEventListener("click", () => purchase(plugin, action, status));
     }
     const note = el("p", "buy__note", plugin.gratuito ? t("buyNoteFreeLabs") : t("buyNotePaidLabs"));
+    // back from Stripe without paying
+    if (new URLSearchParams(window.location.search).get("checkout") === "cancelled") {
+        status.textContent = t("checkoutCancelled");
+        window.history.replaceState(null, "", window.location.pathname);
+    }
     box.append(price, action, status, note);
     return box;
 }
@@ -88,7 +93,9 @@ async function purchase(plugin, button, status) {
     status.textContent = "";
     try {
         const key = crypto.randomUUID();
-        const order = await api(`/labs/plugins/${encodeURIComponent(plugin.slug)}/comprar`, {
+        // English store pays in dollars with Stripe; the Portuguese store, in reais with the Mirai checkout.
+        const route = !plugin.gratuito && LANG === "en" ? "comprar-internacional" : "comprar";
+        const order = await api(`/labs/plugins/${encodeURIComponent(plugin.slug)}/${route}`, {
             method: "POST", auth: true, headers: { "Idempotency-Key": key },
         });
         if (order?.gratuito) {
