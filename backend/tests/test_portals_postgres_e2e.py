@@ -1050,7 +1050,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         with TemporaryDirectory(prefix="mirai-signup-e2e-") as directory:
             activation_file = Path(directory) / "activation-url.txt"
 
-            def capture_email(_client, activation_url, *, idempotency_key):
+            def capture_email(_client, activation_url, *, idempotency_key, **_options):
                 self.assertTrue(idempotency_key.startswith("client-signup/"))
                 activation_file.write_text(activation_url, encoding="utf-8")
                 return {"id": "browser-signup-message"}
@@ -1221,7 +1221,7 @@ class PortalsPostgreSQLE2ETests(unittest.TestCase):
         with TemporaryDirectory(prefix="mirai-recovery-e2e-") as directory:
             recovery_file = Path(directory) / "recovery-url.txt"
 
-            def capture_email(_client, recovery_url, *, idempotency_key):
+            def capture_email(_client, recovery_url, *, idempotency_key, **_options):
                 self.assertTrue(idempotency_key.startswith("client-recovery/"))
                 recovery_file.write_text(recovery_url, encoding="utf-8")
                 return {"id": "browser-recovery-message"}
