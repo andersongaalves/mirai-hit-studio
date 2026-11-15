@@ -1,6 +1,6 @@
 // Shared helpers for the Mirai Hit Labs store: catalog requests and the plugin card.
 import { API_URL } from "./config.js";
-import { LOCALE, href, initLanguage, localized, t } from "./i18n.js";
+import { LANG, LOCALE, href, initLanguage, localized, t } from "./i18n.js";
 
 // false when the page is moving to the visitor's saved language (nothing else should start)
 export const READY = initLanguage();
@@ -29,8 +29,11 @@ export async function getJSON(path) {
     return response.json();
 }
 
-const BRL = new Intl.NumberFormat(LOCALE, { style: "currency", currency: "BRL" });
-export const money = value => BRL.format(Number(value || 0));
+// English store: US dollars (Stripe); Portuguese store: reais (Mirai checkout). Same number:
+// a plugin of R$ 149,90 costs US$ 149.90.
+export const CURRENCY = LANG === "pt" ? "BRL" : "USD";
+const FORMAT = new Intl.NumberFormat(LOCALE, { style: "currency", currency: CURRENCY });
+export const money = value => FORMAT.format(Number(value || 0));
 
 export function priceNode(plugin, className = "price") {
     const node = el("span", className);

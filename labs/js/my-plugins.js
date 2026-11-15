@@ -115,6 +115,20 @@ function header() {
     return head;
 }
 
+// Back from Stripe: ask the API to check the payment now (the webhook may still be on its way).
+async function confirmReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const session = params.get("session_id");
+    if (params.get("checkout") !== "success" || !/^cs_[A-Za-z0-9_]{4,250}$/.test(session || "")) return null;
+    window.history.replaceState(null, "", window.location.pathname);
+    try {
+        const result = await api(`/labs/stripe/sessoes/${encodeURIComponent(session)}/confirmar`, { method: "POST", auth: true });
+        return result?.pago ? t("paymentReceived") : t("paymentConfirming");
+    } catch {
+        return t("paymentConfirming");
+    }
+}
+
 async function load() {
     if (!isSignedIn()) {
         signInPrompt();
@@ -124,6 +138,7 @@ async function load() {
     root.replaceChildren(el("p", "eyebrow", t("loadingPlugins")));
     try {
         await refreshUser();
+        const notice = await confirmReturn();
         const licenses = await api("/labs/conta/plugins", { auth: true });
         const list = el("div", "library__list");
         if (licenses.length) licenses.forEach(item => list.append(licenseCard(item)));
@@ -134,7 +149,13 @@ async function load() {
             empty.append(el("p", "", t("noPlugins")), browse);
             list.append(empty);
         }
-        root.replaceChildren(header(), list);
+        const parts = [header()];
+        if (notice) {
+            const box = el("p", "notice library__notice", notice);
+            box.setAttribute("role", "status");
+            parts.push(box);
+        }
+        root.replaceChildren(...parts, list);
     } catch (error) {
         if (error.status === 401 || error.status === 403) signInPrompt();
         else root.replaceChildren(el("p", "lead", error.message));

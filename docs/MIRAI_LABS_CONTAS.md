@@ -27,10 +27,32 @@ Para comprar na Labs não é preciso ter conta na Mirai Hit Studio.
 
 ## Compra e pagamento
 
-- A compra continua passando pelo fluxo do estúdio (orçamento → proposta → cobrança). A resposta traz `checkout_url`, o link público e opaco do checkout daquela cobrança, para quem não tem portal do estúdio. Pedidos aguardando pagamento em Meus plugins também trazem esse link.
-- Pagamento por Pix ou cartão no checkout da Mirai Hit Studio, em BRL. O pagamento internacional (Stripe, em USD) é a próxima etapa.
+O preço é um só por plugin e aparece na moeda da loja **com o mesmo número**, sem conversão: R$ 149,90 na loja em português e US$ 149.90 na loja em inglês.
+
+**Loja em português (`/pt`): checkout da Mirai, em BRL**
+- A compra passa pelo fluxo do estúdio (orçamento → proposta → cobrança).
+- A resposta traz `checkout_url`, o link público e opaco do checkout daquela cobrança, para quem não tem portal do estúdio. Pedidos aguardando pagamento em Meus plugins também trazem esse link.
+- Pix ou cartão pelo Mercado Pago.
+
+**Loja em inglês (`/`): Stripe, em USD**
+- `POST /labs/plugins/{slug}/comprar-internacional` (com `Idempotency-Key`):
+  - abre um pedido em `plugin_pedidos_stripe`;
+  - reserva a licença (`origem = 'stripe'`, sem proposta);
+  - cria uma Checkout Session no Stripe, com valor em centavos de dólar e `Idempotency-Key` próprio por pedido;
+  - devolve a URL da página do Stripe.
+- Clicar de novo, ou voltar antes de pagar, reabre a mesma página.
+- **Confirmação:**
+  - o webhook `POST /labs/stripe/webhook` confere a assinatura (`Stripe-Signature`, HMAC-SHA256, tolerância de 5 minutos) e ativa a licença em `checkout.session.completed` quando valor e moeda conferem;
+  - ao voltar para `/my-plugins?checkout=success&session_id=...`, a loja chama `POST /labs/stripe/sessoes/{id}/confirmar`, que consulta o Stripe. Assim o plugin aparece mesmo se o webhook atrasar.
+- **Sessão expirada** (`checkout.session.expired`): a reserva é liberada; a licença fica `cancelada` com motivo `checkout_expirado`.
+- **Reembolso total** (`charge.refunded`) **ou contestação** (`charge.dispute.created`): a licença é suspensa (`pagamento_revertido`), como no checkout do estúdio.
+- Os pedidos do Stripe **não** entram no financeiro do estúdio (cobranças em BRL). Ficam em `plugin_pedidos_stripe`, nas licenças do plugin no Admin ("Compra internacional (Stripe, USD)") e no painel do Stripe.
 
 ## Configuração
 
 - `LABS_PUBLIC_URL` (padrão `https://labs.miraihitstudio.com.br`): endereço da loja, usado nos e-mails da Labs.
+- `STRIPE_SECRET_KEY`: chave secreta, `sk_test_...` em teste e `sk_live_...` em produção. Sem ela, a compra internacional responde 503 e a loja em inglês mostra "International payment is unavailable".
+- `STRIPE_WEBHOOK_SECRET` (`whsec_...`): segredo do endpoint de webhook criado no painel do Stripe.
+  - URL: `https://api.miraihitstudio.com.br/labs/stripe/webhook`.
+  - Eventos: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded` e `charge.dispute.created`.
 - CORS: `cors_origins` já inclui a origem da Labs quando o domínio principal está em `ALLOWED_ORIGINS`. `Authorization` e `Idempotency-Key` já são cabeçalhos permitidos.
