@@ -50,7 +50,9 @@ class Settings(BaseSettings):
     AI_EMAIL_MAX_BODY_CHARS: int = Field(default=8000, ge=1000, le=20000)
     RESEND_WEBHOOK_SECRET: SecretStr = SecretStr("")
 
-    # Mirai Hit Labs international purchases (English store, USD). Empty = turned off.
+    # Mirai Hit Labs international purchases (English store, USD). Turned off unless
+    # LABS_STRIPE_ENABLED is true AND the keys are set; while off, both stores use Mercado Pago (BRL).
+    LABS_STRIPE_ENABLED: bool = False
     STRIPE_SECRET_KEY: SecretStr = SecretStr("")
     STRIPE_WEBHOOK_SECRET: SecretStr = SecretStr("")
 

@@ -110,7 +110,9 @@ async function noOverflow(page, label, widths) {
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/plugins/mirai-saturator');
         assert.equal(await page.locator('link[rel="alternate"][hreflang="pt-BR"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/pt/plugins/mirai-saturator');
         const buy = page.locator('.buy');
-        assert.match(await buy.textContent(), /\$149\.90[\s\S]*\$119\.90[\s\S]*one-time payment[\s\S]*card with Stripe, in US dollars/);
+        // international payment (Stripe) off: the English store sells in reais, through Mercado Pago
+        assert.match(await buy.textContent(), /R\$\s?149\.90[\s\S]*R\$\s?119\.90[\s\S]*one-time payment[\s\S]*Mercado Pago \(Pix or card\), in Brazilian reais/);
+        assert.doesNotMatch(await buy.textContent(), /US\$|Stripe/);
         // signed out: sign in (or create the account) and come back to this plugin
         assert.equal(await buy.getByRole('link', { name: 'Sign in to buy' }).getAttribute('href'), '/account?next=%2Fplugins%2Fmirai-saturator');
         assert.match(await buy.textContent(), /Mirai Hit Labs account[\s\S]*Mirai Hit Studio customers use the same login/);

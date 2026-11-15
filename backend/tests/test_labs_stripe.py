@@ -65,11 +65,16 @@ async def check():
     plugin_id = published_plugin()
     fake = FakeStripe()
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as api:
-        # Turned off until the keys are set.
+        # Turned off until it is enabled on purpose AND the keys are set.
+        config.settings.LABS_STRIPE_ENABLED = True
         config.settings.STRIPE_SECRET_KEY = ''
         off = await api.post('/labs/plugins/mirai-saturator/comprar-internacional', headers={**bearer('client-a'), **key()})
         assert off.status_code == 503, off.text
+        config.settings.LABS_STRIPE_ENABLED = False
         config.settings.STRIPE_SECRET_KEY = 'sk_test_123'
+        disabled = await api.post('/labs/plugins/mirai-saturator/comprar-internacional', headers={**bearer('client-a'), **key()})
+        assert disabled.status_code == 503, disabled.text
+        config.settings.LABS_STRIPE_ENABLED = True
         config.settings.STRIPE_WEBHOOK_SECRET = 'whsec_test'
         config.settings.LABS_PUBLIC_URL = 'http://localhost:4174'
         assert (await api.post('/labs/plugins/mirai-saturator/comprar-internacional', headers=key())).status_code == 401

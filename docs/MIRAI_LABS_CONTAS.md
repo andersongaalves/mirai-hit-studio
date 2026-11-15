@@ -27,14 +27,22 @@ Para comprar na Labs não é preciso ter conta na Mirai Hit Studio.
 
 ## Compra e pagamento
 
-O preço é um só por plugin e aparece na moeda da loja **com o mesmo número**, sem conversão: R$ 149,90 na loja em português e US$ 149.90 na loja em inglês.
+> **Por enquanto o Stripe está desligado.** As duas lojas vendem em reais pelo checkout da Mirai (Mercado Pago, Pix ou cartão); a loja em inglês mostra os preços em BRL e avisa que o pagamento é em reais.
+>
+> Para ligar o pagamento internacional:
+> 1. na loja, `INTERNATIONAL_PAYMENT = true` em `labs/js/config.js`;
+> 2. na API, `LABS_STRIPE_ENABLED=true`, com `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET`.
+>
+> Sem os dois, a rota do Stripe responde 503 mesmo que a chave esteja configurada.
+
+Com o pagamento internacional ligado, o preço é um só por plugin e aparece na moeda da loja **com o mesmo número**, sem conversão: R$ 149,90 na loja em português e US$ 149.90 na loja em inglês.
 
 **Loja em português (`/pt`): checkout da Mirai, em BRL**
 - A compra passa pelo fluxo do estúdio (orçamento → proposta → cobrança).
 - A resposta traz `checkout_url`, o link público e opaco do checkout daquela cobrança, para quem não tem portal do estúdio. Pedidos aguardando pagamento em Meus plugins também trazem esse link.
 - Pix ou cartão pelo Mercado Pago.
 
-**Loja em inglês (`/`): Stripe, em USD**
+**Loja em inglês (`/`): Stripe, em USD (quando ligado; desligada, usa o checkout da Mirai como a loja em português)**
 - `POST /labs/plugins/{slug}/comprar-internacional` (com `Idempotency-Key`):
   - abre um pedido em `plugin_pedidos_stripe`;
   - reserva a licença (`origem = 'stripe'`, sem proposta);
@@ -51,7 +59,8 @@ O preço é um só por plugin e aparece na moeda da loja **com o mesmo número**
 ## Configuração
 
 - `LABS_PUBLIC_URL` (padrão `https://labs.miraihitstudio.com.br`): endereço da loja, usado nos e-mails da Labs.
-- `STRIPE_SECRET_KEY`: chave secreta, `sk_test_...` em teste e `sk_live_...` em produção. Sem ela, a compra internacional responde 503 e a loja em inglês mostra "International payment is unavailable".
+- `LABS_STRIPE_ENABLED` (padrão `false`): liga o Stripe. Desligado, a compra internacional responde 503, mesmo com a chave configurada.
+- `STRIPE_SECRET_KEY`: chave secreta, `sk_test_...` em teste e `sk_live_...` em produção. Sem ela, a compra internacional também responde 503.
 - `STRIPE_WEBHOOK_SECRET` (`whsec_...`): segredo do endpoint de webhook criado no painel do Stripe.
   - URL: `https://api.miraihitstudio.com.br/labs/stripe/webhook`.
   - Eventos: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded` e `charge.dispute.created`.
