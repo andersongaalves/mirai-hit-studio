@@ -83,8 +83,9 @@ async function noOverflow(page, label, widths) {
         assert.equal(await page.locator('link[rel="alternate"][hreflang="pt-BR"]').getAttribute('href'), 'https://labs.miraihitstudio.com.br/pt/');
         assert.deepEqual(await page.locator('.plugin-card__title').allTextContents(), ['Mirai Saturator', 'Mirai Tuner']);
         const first = page.locator('.plugin-card').first();
-        assert.match(await first.textContent(), /Sale[\s\S]*Saturation[\s\S]*Analog saturation in one knob[\s\S]*\$149\.90[\s\S]*\$119\.90[\s\S]*VST3[\s\S]*AU/);
-        assert.doesNotMatch(await first.textContent(), /R\$/, 'the English store shows dollars');
+        assert.match(await first.textContent(), /Sale[\s\S]*Saturation[\s\S]*Analog saturation in one knob[\s\S]*R\$\s?149\.90[\s\S]*R\$\s?119\.90[\s\S]*VST3[\s\S]*AU/);
+        // international payment (Stripe) off: the English store shows reais too
+        assert.doesNotMatch(await first.textContent(), /US\$/, 'the English store shows reais while Stripe is off');
         assert.equal(await first.locator('.plugin-card__link').getAttribute('href'), '/plugins/mirai-saturator');
         // no English text yet: the Portuguese one shows
         assert.match(await page.locator('.plugin-card').nth(1).textContent(), /Free[\s\S]*Afinador preciso/);
