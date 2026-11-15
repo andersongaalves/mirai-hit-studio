@@ -5,6 +5,11 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from schemas.usuario import validar_senha, validar_username
 
+# Where a public request comes from (studio site or Mirai Hit Labs) and its language:
+# e-mails link back to that site, in that language.
+Canal = Literal["studio", "labs"]
+Idioma = Literal["pt", "en"]
+
 ClientAccessState = Literal[
     "sem_acesso",
     "convite_pendente",
@@ -69,6 +74,8 @@ class ClientSignupRequest(BaseModel):
     email: EmailStr = Field(max_length=150)
     telefone: str | None = Field(default=None, max_length=30)
     privacy_accepted: bool
+    canal: Canal = "studio"
+    idioma: Idioma = "pt"
 
     @field_validator("nome")
     @classmethod
@@ -108,6 +115,8 @@ class PasswordRecoveryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr = Field(max_length=150)
+    canal: Canal = "studio"
+    idioma: Idioma = "pt"
 
 
 class PasswordRecoveryAccepted(BaseModel):

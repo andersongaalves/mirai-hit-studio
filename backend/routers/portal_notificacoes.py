@@ -16,7 +16,8 @@ router = APIRouter(prefix="/portal/notificacoes", tags=["Notificacoes dos portai
 
 
 def require_portal_user(user=Depends(get_current_user)):
-    if user.is_admin or user.role not in {"cliente", "produtor"} or (user.role == "cliente" and not user.cliente_id):
+    if (user.is_admin or user.role not in {"cliente", "produtor"} or (user.role == "cliente" and not user.cliente_id)
+            or getattr(user, "somente_labs", False)):
         raise HTTPException(status_code=403, detail="Acesso restrito ao seu portal.")
     return user
 

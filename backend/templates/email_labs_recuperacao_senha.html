@@ -1,0 +1,22 @@
+{% extends "email_labs_base.html" %}
+{% block content %}
+{% if idioma == 'pt' %}
+<h1>Crie uma nova senha</h1>
+<p>Olá, {{ nome }}.</p>
+<p>Recebemos um pedido para redefinir a senha da sua conta. Ela é a mesma na Mirai Hit Labs e, se você for cliente do estúdio, na Mirai Hit Studio.</p>
+<div style="text-align: center; margin: 28px 0">
+    <a class="button" href="{{ recovery_url }}">Criar nova senha</a>
+</div>
+<p class="muted">Este link vale por {{ validity_minutes }} minutos e só pode ser usado uma vez.</p>
+<p class="muted">Se você não pediu esta alteração, ignore este e-mail. Sua senha continua a mesma.</p>
+{% else %}
+<h1>Create a new password</h1>
+<p>Hi {{ nome }},</p>
+<p>We received a request to reset your account password. It's the same password on Mirai Hit Labs and, if you're a studio customer, on Mirai Hit Studio.</p>
+<div style="text-align: center; margin: 28px 0">
+    <a class="button" href="{{ recovery_url }}">Create new password</a>
+</div>
+<p class="muted">This link is valid for {{ validity_minutes }} minutes and can be used only once.</p>
+<p class="muted">If you didn't ask for this change, ignore this e-mail. Your password stays the same.</p>
+{% endif %}
+{% endblock %}

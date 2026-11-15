@@ -173,6 +173,14 @@ def _linkable_existing_client(db: Session, existing, email: str):
     return client
 
 
+def _public_link(canal: str, idioma: str, studio_page: str, labs_page: str, raw_token: str) -> str:
+    """The page that finishes a sign-up or a password reset, on the site the request came from."""
+    if canal == "labs":
+        base = settings.LABS_PUBLIC_URL.rstrip("/") + ("/pt" if idioma == "pt" else "")
+        return f"{base}/{labs_page}?token={raw_token}"
+    return f"{settings.PUBLIC_FRONTEND_URL.rstrip('/')}/{studio_page}?token={raw_token}"
+
+
 def _generic_signup_response():
     return {"accepted": True, "message": SIGNUP_RESPONSE}
 
@@ -181,14 +189,15 @@ def _generic_recovery_response():
     return {"accepted": True, "message": RECOVERY_RESPONSE}
 
 
-def _deliver_signup(db, client, access_id, raw_token, token_hash, request_id):
-    base_url = settings.PUBLIC_FRONTEND_URL.rstrip("/")
-    activation_url = f"{base_url}/ativar?token={raw_token}"
+def _deliver_signup(db, client, access_id, raw_token, token_hash, request_id, canal="studio", idioma="pt"):
+    activation_url = _public_link(canal, idioma, "ativar", "activate", raw_token)
     try:
         provider = EmailService.enviar_confirmacao_cadastro(
             client,
             activation_url,
             idempotency_key=f"client-signup/{access_id}/{token_hash[:16]}",
+            canal=canal,
+            idioma=idioma,
         )
         if (
             not isinstance(provider, dict)
@@ -271,6 +280,8 @@ def request_signup(
                 cliente_id=linked.id,
                 email_normalizado=email,
                 origem="public_signup",
+                canal=data.canal,
+                idioma=data.idioma,
                 token_finalidade="verificacao",
                 token_hash=token_hash,
                 token_expires_at=now + INVITE_TTL,
@@ -289,7 +300,8 @@ def request_signup(
                 request_id=request_id,
             )
             db.commit()
-            return _deliver_signup(db, linked, access.id, raw_token, token_hash, request_id)
+            return _deliver_signup(db, linked, access.id, raw_token, token_hash, request_id,
+                                   access.canal, access.idioma)
         if existing:
             audit_service.record(
                 db,
@@ -316,6 +328,9 @@ def request_signup(
             cliente_id=client.id,
             email_normalizado=email,
             origem="public_signup",
+            canal=data.canal,
+            idioma=data.idioma,
+            somente_labs=data.canal == "labs",
             token_finalidade="verificacao",
             token_hash=token_hash,
             token_expires_at=now + INVITE_TTL,
@@ -340,7 +355,8 @@ def request_signup(
     except Exception:
         db.rollback()
         raise
-    return _deliver_signup(db, client, access.id, raw_token, token_hash, request_id)
+    return _deliver_signup(db, client, access.id, raw_token, token_hash, request_id,
+                           access.canal, access.idioma)
 
 
 def resend_signup(db: Session, email_value: str, source_key: str, request_id: str | None):
@@ -410,7 +426,8 @@ def resend_signup(db: Session, email_value: str, source_key: str, request_id: st
     except Exception:
         db.rollback()
         raise
-    return _deliver_signup(db, client, access.id, raw_token, token_hash, request_id)
+    return _deliver_signup(db, client, access.id, raw_token, token_hash, request_id,
+                           access.canal, access.idioma)
 
 
 def _eligible_recovery_account(db: Session, email: str):
@@ -514,6 +531,8 @@ def prepare_password_recovery(
         "raw_token": raw_token,
         "token_hash": token_hash,
         "request_id": request_id,
+        "canal": data.canal,
+        "idioma": data.idioma,
     }
 
 
@@ -532,13 +551,15 @@ def _deliver_password_recovery(db: Session, delivery: dict):
         logger.warning("client_recovery_delivery_cancelled request_id=%s", request_id)
         return
 
-    base_url = settings.PUBLIC_FRONTEND_URL.rstrip("/")
-    recovery_url = f"{base_url}/redefinir-senha?token={delivery['raw_token']}"
+    canal, idioma = delivery.get("canal", "studio"), delivery.get("idioma", "pt")
+    recovery_url = _public_link(canal, idioma, "redefinir-senha", "reset-password", delivery["raw_token"])
     try:
         provider = EmailService.enviar_recuperacao_senha(
             client,
             recovery_url,
             idempotency_key=f"client-recovery/{access.id}/{token_hash[:16]}",
+            canal=canal,
+            idioma=idioma,
         )
         if (
             not isinstance(provider, dict)
@@ -1149,6 +1170,7 @@ def activate(db: Session, data: ClientInviteActivation, source_key: str, request
             is_admin=False,
             ativo=True,
             cliente_id=client.id,
+            somente_labs=bool(access.somente_labs),
         )
         db.add(user)
         db.flush()

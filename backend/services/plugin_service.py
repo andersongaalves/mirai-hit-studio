@@ -492,7 +492,8 @@ def comprar(db: Session, slug: str, actor, idempotency_key: str, request_id=None
         if charge is not None and charge.status in (CobrancaStatus.PENDENTE.value,):
             db.commit()
             return {"gratuito": False, "proposta_id": pending.proposta_id,
-                    "checkout_path": f"/checkout?proposta={pending.proposta_id}"}
+                    "checkout_path": f"/checkout?proposta={pending.proposta_id}",
+                    "checkout_url": _checkout_url(db, pending.proposta_id)}
 
     def accept(proposal_id):
         try:
@@ -532,7 +533,22 @@ def comprar(db: Session, slug: str, actor, idempotency_key: str, request_id=None
     except (proposta_service.PropostaConflito, proposta_service.PropostaInvalida) as error:
         raise HTTPException(409, str(error)) from None
     accepted = accept(proposal.id)
-    return {"gratuito": False, "proposta_id": accepted.id, "checkout_path": f"/checkout?proposta={accepted.id}"}
+    return {"gratuito": False, "proposta_id": accepted.id, "checkout_path": f"/checkout?proposta={accepted.id}",
+            "checkout_url": _checkout_url(db, accepted.id)}
+
+
+def _checkout_url(db, proposal_id):
+    """The public checkout of a plugin order (opaque per-charge link, shared only with its buyer).
+
+    Labs-only accounts have no studio portal, so the store sends them straight to it."""
+    from core import config
+    from services import checkout_service
+
+    base_url = getattr(config.settings, "PUBLIC_FRONTEND_URL", "http://localhost:4173")
+    try:
+        return checkout_service.link_por_proposta(db, proposal_id, base_url)
+    except (checkout_service.CheckoutNaoEncontrado, checkout_service.CheckoutIndisponivel):
+        return None  # without a charge yet, the portal path still works
 
 
 def minhas_licencas(db: Session, actor):
@@ -572,7 +588,8 @@ def minhas_licencas(db: Session, actor):
             # A purchase still waiting for payment: the way back to its checkout.
             result.append({"id": license.id, "status": "aguardando_pagamento", "plugin": plugin.nome,
                            "slug": plugin.slug, "capa_url": plugin.capa_url, "sistemas": [],
-                           "checkout_path": f"/checkout?proposta={license.proposta_id}"})
+                           "checkout_path": f"/checkout?proposta={license.proposta_id}",
+                           "checkout_url": _checkout_url(db, license.proposta_id)})
     return result
 
 

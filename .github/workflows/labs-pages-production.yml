@@ -79,7 +79,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test -z "$(git status --porcelain)"
-          for file in index.html plugin.html 404.html pt/index.html pt/plugin.html pt/404.html _headers _redirects css/labs.css js/config.js js/i18n.js img/logo-horizontal.svg; do
+          for file in index.html plugin.html 404.html account.html activate.html reset-password.html my-plugins.html pt/index.html pt/plugin.html pt/404.html pt/account.html pt/activate.html pt/reset-password.html pt/my-plugins.html _headers _redirects css/labs.css js/config.js js/i18n.js js/auth.js img/logo-horizontal.svg; do
             test -s "labs/$file"
           done
 

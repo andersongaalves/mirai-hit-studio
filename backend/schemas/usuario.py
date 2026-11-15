@@ -266,6 +266,8 @@ class SessaoUsuarioResponse(BaseModel):
     # Only for clients (portal ownership) and producers (beats panel).
     cliente_id: int | None = None
     painel_beats: bool | None = None
+    # Only for clients: the account was created on Mirai Hit Labs (no studio portal).
+    somente_labs: bool | None = None
 
     @classmethod
     def from_user(cls, usuario):
@@ -279,6 +281,7 @@ class SessaoUsuarioResponse(BaseModel):
             ativo=bool(getattr(usuario, "ativo", True)),
             cliente_id=getattr(usuario, "cliente_id", None) if role == "cliente" else None,
             painel_beats=bool(getattr(usuario, "painel_beats", False)) if role == "produtor" else None,
+            somente_labs=bool(getattr(usuario, "somente_labs", False)) if role == "cliente" else None,
         )
 
 
