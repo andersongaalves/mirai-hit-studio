@@ -1,5 +1,5 @@
 // Shared helpers for the Mirai Hit Labs store: catalog requests and the plugin card.
-import { API_URL } from "./config.js";
+import { API_URL, INTERNATIONAL_PAYMENT } from "./config.js";
 import { LANG, LOCALE, href, initLanguage, localized, t } from "./i18n.js";
 
 // false when the page is moving to the visitor's saved language (nothing else should start)
@@ -29,9 +29,9 @@ export async function getJSON(path) {
     return response.json();
 }
 
-// English store: US dollars (Stripe); Portuguese store: reais (Mirai checkout). Same number:
-// a plugin of R$ 149,90 costs US$ 149.90.
-export const CURRENCY = LANG === "pt" ? "BRL" : "USD";
+// Portuguese store: reais (Mirai checkout). English store: US dollars with Stripe when the international
+// payment is on (same number: R$ 149,90 -> US$ 149.90); while it is off, reais too (Mercado Pago).
+export const CURRENCY = LANG === "en" && INTERNATIONAL_PAYMENT ? "USD" : "BRL";
 const FORMAT = new Intl.NumberFormat(LOCALE, { style: "currency", currency: CURRENCY });
 export const money = value => FORMAT.format(Number(value || 0));
 

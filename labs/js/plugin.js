@@ -1,6 +1,7 @@
 // Plugin page (/plugins/<address>, /pt/plugins/<address>): details, price and the purchase
 // with the customer's Labs (or Mirai Hit Studio) account.
 import { api, isSignedIn } from "./auth.js";
+import { INTERNATIONAL_PAYMENT } from "./config.js";
 import { LANG, SITE_URL, href, localized, t } from "./i18n.js";
 import { READY, coverNode, el, getJSON, money, systemsText } from "./labs.js";
 
@@ -75,7 +76,8 @@ function buyBox(plugin) {
         action.type = "button";
         action.addEventListener("click", () => purchase(plugin, action, status));
     }
-    const note = el("p", "buy__note", plugin.gratuito ? t("buyNoteFreeLabs") : t("buyNotePaidLabs"));
+    const stripe = LANG === "en" && INTERNATIONAL_PAYMENT;
+    const note = el("p", "buy__note", plugin.gratuito ? t("buyNoteFreeLabs") : t(stripe ? "buyNotePaidLabsStripe" : "buyNotePaidLabs"));
     // back from Stripe without paying
     if (new URLSearchParams(window.location.search).get("checkout") === "cancelled") {
         status.textContent = t("checkoutCancelled");
@@ -93,8 +95,9 @@ async function purchase(plugin, button, status) {
     status.textContent = "";
     try {
         const key = crypto.randomUUID();
-        // English store pays in dollars with Stripe; the Portuguese store, in reais with the Mirai checkout.
-        const route = !plugin.gratuito && LANG === "en" ? "comprar-internacional" : "comprar";
+        // Reais with the Mirai checkout (Mercado Pago); dollars with Stripe only when the international
+        // payment is on, on the English store.
+        const route = !plugin.gratuito && LANG === "en" && INTERNATIONAL_PAYMENT ? "comprar-internacional" : "comprar";
         const order = await api(`/labs/plugins/${encodeURIComponent(plugin.slug)}/${route}`, {
             method: "POST", auth: true, headers: { "Idempotency-Key": key },
         });

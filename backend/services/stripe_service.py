@@ -41,7 +41,8 @@ def _secret(name):
 
 
 def configurado() -> bool:
-    return bool(_secret("STRIPE_SECRET_KEY"))
+    # desligado até ser ligado de propósito (LABS_STRIPE_ENABLED) e ter a chave
+    return bool(getattr(config.settings, "LABS_STRIPE_ENABLED", False)) and bool(_secret("STRIPE_SECRET_KEY"))
 
 
 def _labs_url():

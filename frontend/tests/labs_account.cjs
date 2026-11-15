@@ -137,17 +137,18 @@ async function noOverflow(page, label) {
         await signIn.locator('input[name="password"]').fill('secure-pass');
         await signIn.getByRole('button', { name: 'Sign in' }).click();
 
-        // Back on the plugin (English store): buying opens Stripe Checkout, in dollars, with a fresh key.
+        // Back on the plugin (English store): with the international payment (Stripe) off, buying
+        // opens the Mirai checkout (Mercado Pago, reais), with a fresh key.
         await page.waitForURL('**/plugins/mirai-saturator');
         const buy = page.locator('.buy').getByRole('button', { name: 'Buy' });
         await buy.waitFor();
-        assert.match(await page.locator('.buy__price').textContent(), /\$149\.90/);
+        assert.match(await page.locator('.buy__price').textContent(), /R\$\s?149\.90/);
         await buy.click();
-        await page.waitForURL('https://checkout.stripe.com/c/pay/cs_test_5');
-        const order = last('/labs/plugins/mirai-saturator/comprar-internacional');
+        await page.waitForURL('http://localhost:4173/checkout/11111111-2222-3333-4444-555555555555');
+        const order = last('/labs/plugins/mirai-saturator/comprar');
         assert.equal(order.auth, 'Bearer buyer-token');
         assert.match(order.idem, /^[0-9a-f-]{36}$/);
-        assert.equal(last('/labs/plugins/mirai-saturator/comprar'), undefined, 'the English store never uses the reais checkout');
+        assert.equal(last('/labs/plugins/mirai-saturator/comprar-internacional'), undefined, 'Stripe stays off');
 
         // Back from Stripe without paying: a short note, and the address is clean again.
         await page.goto('http://localhost:4174/plugins/mirai-saturator?checkout=cancelled');
