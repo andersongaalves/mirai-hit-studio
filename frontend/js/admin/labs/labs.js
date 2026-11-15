@@ -162,6 +162,11 @@ function payloadFrom(form) {
         formatos: data.getAll("formatos").map(String),
         recursos: text("recursos").split("\n").map(item => item.trim()).filter(Boolean),
         requisitos: text("requisitos") || null,
+        tagline_en: text("tagline_en") || null,
+        descricao_en: text("descricao_en") || null,
+        categoria_en: text("categoria_en") || null,
+        recursos_en: text("recursos_en").split("\n").map(item => item.trim()).filter(Boolean),
+        requisitos_en: text("requisitos_en") || null,
         preco: text("preco") || "0",
         preco_promocional: text("preco_promocional") || null,
         video_url: text("video_url") || null,
@@ -196,6 +201,18 @@ function openEditor(plugin = null) {
     destaque.checked = Boolean(plugin?.destaque);
     const destaqueField = el("label", "labs-admin__check labs-admin__check--inline");
     destaqueField.append(destaque, el("span", "", "Destaque na loja (aparece primeiro)"));
+    // Textos em inglês: a loja abre em inglês; campo vazio mostra o texto em português.
+    const en = plugin?.en || {};
+    const english = el("fieldset", "labs-admin__english labs-admin__field--full");
+    english.append(
+        el("legend", "", "Inglês (idioma padrão da loja)"),
+        el("p", "labs-admin__hint", "A loja abre em inglês. Campo vazio mostra o texto em português."),
+        field("Frase curta (EN)", input("tagline_en", en.tagline, { maxLength: 160, placeholder: "Ex.: Analog saturation in one knob" }), "", true),
+        field("Categoria (EN)", input("categoria_en", en.categoria, { maxLength: 40, placeholder: "Ex.: Saturation" })),
+        field("Descrição (EN)", input("descricao_en", en.descricao, { multiline: true, rows: 6, maxLength: 8000 }), "", true),
+        field("Recursos (EN, um por linha)", input("recursos_en", (en.recursos || []).join("\n"), { multiline: true, rows: 4 }), "Até 12 itens curtos.", true),
+        field("Requisitos (EN)", input("requisitos_en", en.requisitos, { multiline: true, rows: 3, maxLength: 2000, placeholder: "Windows 10+ (64-bit) or macOS 12+; DAW with VST3/AU" }), "", true),
+    );
     grid.append(
         field("Nome", nome), slugField,
         field("Frase curta", input("tagline", plugin?.tagline, { maxLength: 160, placeholder: "Ex.: Saturação analógica em um botão" }), "", true),
@@ -207,6 +224,7 @@ function openEditor(plugin = null) {
         field("Descrição", input("descricao", plugin?.descricao, { multiline: true, rows: 6, maxLength: 8000 }), "", true),
         field("Recursos (um por linha)", input("recursos", (plugin?.recursos || []).join("\n"), { multiline: true, rows: 4 }), "Até 12 itens curtos.", true),
         field("Requisitos", input("requisitos", plugin?.requisitos, { multiline: true, rows: 3, maxLength: 2000, placeholder: "Windows 10+ (64 bits) ou macOS 12+; DAW com VST3/AU" }), "", true),
+        english,
         field("Vídeo (link https)", input("video_url", plugin?.video_url, { type: "url", maxLength: 300, placeholder: "https://www.youtube.com/watch?v=..." })),
         field("Ordem", input("ordem", plugin?.ordem ?? 0, { type: "number", min: "0", max: "9999", step: "1" })),
         field("Situação", input("status", plugin?.status || "rascunho", { select: STATUS }), "Publicar exige capa e pelo menos um instalador."),

@@ -570,7 +570,7 @@ class AudioTagTests(unittest.TestCase):
     def test_additive_migration_roundtrip(self):
         isolated.BootstrapTests().run_case('''
 from alembic import command
-assert bootstrap(engine) == 'e7b9d1f3a5c6'
+assert bootstrap(engine) == 'f2c4e6a8b0d1'
 assert 'audio_tags' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'd7f9a1c3e568')
 assert 'audio_tags' not in inspect(engine).get_table_names()

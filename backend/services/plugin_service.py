@@ -77,6 +77,13 @@ def _publico(plugin):
         "formatos": list(plugin.formatos_json or []),
         "recursos": list(plugin.recursos_json or []),
         "requisitos": plugin.requisitos,
+        "en": {
+            "tagline": plugin.tagline_en,
+            "descricao": plugin.descricao_en,
+            "categoria": plugin.categoria_en,
+            "recursos": list(plugin.recursos_en_json or []),
+            "requisitos": plugin.requisitos_en,
+        },
         "preco": _money(preco),
         "preco_vigente": _money(vigente),
         "em_promocao": plugin.preco_promocional is not None,
@@ -170,6 +177,11 @@ def _aplicar(plugin, payload):
     plugin.formatos_json = data["formatos"]
     plugin.recursos_json = data["recursos"]
     plugin.requisitos = data["requisitos"]
+    plugin.tagline_en = data["tagline_en"]
+    plugin.descricao_en = data["descricao_en"]
+    plugin.categoria_en = data["categoria_en"]
+    plugin.recursos_en_json = data["recursos_en"]
+    plugin.requisitos_en = data["requisitos_en"]
     plugin.preco = data["preco"]
     plugin.preco_promocional = data["preco_promocional"]
     plugin.video_url = data["video_url"]

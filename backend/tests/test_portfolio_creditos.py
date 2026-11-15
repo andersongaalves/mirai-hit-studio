@@ -180,7 +180,7 @@ class PortfolioCreditosTests(unittest.TestCase):
         isolated.BootstrapTests().run_case('''
 from alembic import command
 from sqlalchemy import inspect
-assert bootstrap(engine) == 'e7b9d1f3a5c6'
+assert bootstrap(engine) == 'f2c4e6a8b0d1'
 assert 'projeto_creditos' in inspect(engine).get_table_names()
 command.downgrade(migration_config(), 'f3b5d7a9c124')
 assert 'projeto_creditos' not in inspect(engine).get_table_names()

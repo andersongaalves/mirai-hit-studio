@@ -55,6 +55,12 @@ button { font: inherit; }
 .site-nav a { font: 600 12px/1 var(--font-text); letter-spacing: 0.22em; text-transform: uppercase; text-decoration: none; }
 .site-nav a:not(.btn):hover, .site-nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1.5px; }
 .site-nav .btn { min-height: 40px; padding: 0 18px; font-size: 11px; }
+/* EN | PT switch */
+.lang { display: inline-flex; align-items: center; gap: 6px; font: 700 11px/1 var(--font-text); letter-spacing: 0.18em; }
+.lang__current { padding: 6px 0; border-bottom: 1.5px solid var(--ink); }
+.lang__sep { opacity: 0.35; }
+.site-nav .lang__link { padding: 6px 0; opacity: 0.6; font-weight: 700; font-size: 11px; letter-spacing: 0.18em; }
+.site-nav .lang__link:hover { opacity: 1; }
 
 /* Hero. */
 .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
@@ -193,7 +199,8 @@ button { font: inherit; }
 }
 @media (max-width: 560px) {
     .site-header__logo img { width: 132px; }
-    .site-nav a:not(.btn) { display: none; }
+    .site-nav a:not(.btn):not(.lang__link) { display: none; }
+    .site-nav { gap: 12px; }
     .concepts__grid { grid-template-columns: minmax(0, 1fr); }
     .concept + .concept { border-left: 0; border-top: 1px solid var(--line); }
     .facts { grid-template-columns: minmax(0, 1fr); }

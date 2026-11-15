@@ -1,12 +1,13 @@
-// Plugin page (/plugins/<endereço>): details, price and the purchase on the studio site.
+// Plugin page (/plugins/<address>, /pt/plugins/<address>): details, price and the purchase on the studio site.
 import { purchaseUrl } from "./config.js";
-import { coverNode, el, getJSON, money, setYear, systemsText } from "./labs.js";
+import { LANG, SITE_URL, href, localized, t } from "./i18n.js";
+import { READY, coverNode, el, getJSON, money, systemsText } from "./labs.js";
 
 const root = document.getElementById("product");
 const DEFAULT_TITLE = document.title;
 
 function slugFromPath() {
-    const match = window.location.pathname.match(/^\/plugins\/([a-z0-9-]{1,60})\/?$/);
+    const match = window.location.pathname.match(/^(?:\/pt)?\/plugins\/([a-z0-9-]{1,60})\/?$/);
     if (match) return match[1];
     return new URLSearchParams(window.location.search).get("plugin");
 }
@@ -26,10 +27,17 @@ function youtubeId(url) {
 
 function setMeta(plugin) {
     document.title = `${plugin.nome} | Mirai Hit Labs`;
+    const tagline = localized(plugin, "tagline");
     const description = document.querySelector('meta[name="description"]');
-    if (description && plugin.tagline) description.setAttribute("content", `${plugin.nome}: ${plugin.tagline}`);
+    if (description && tagline) description.setAttribute("content", `${plugin.nome}: ${tagline}`);
+    const path = `/plugins/${plugin.slug}`;
     const canonical = document.querySelector('link[rel="canonical"]');
-    if (canonical) canonical.href = `https://labs.miraihitstudio.com.br/plugins/${plugin.slug}`;
+    if (canonical) canonical.href = `${SITE_URL}${LANG === "pt" ? "/pt" : ""}${path}`;
+    const alternates = { en: `${SITE_URL}${path}`, "pt-BR": `${SITE_URL}/pt${path}`, "x-default": `${SITE_URL}${path}` };
+    document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(link => {
+        const url = alternates[link.getAttribute("hreflang")];
+        if (url) link.href = url;
+    });
 }
 
 function fact(label, value) {
@@ -40,26 +48,24 @@ function fact(label, value) {
 
 function buyBox(plugin) {
     const box = el("section", "buy");
-    box.setAttribute("aria-label", "Comprar");
+    box.setAttribute("aria-label", t("buyLabel"));
     const price = el("div", "buy__price");
     if (plugin.gratuito) {
-        price.append(el("strong", "", "Grátis"));
+        price.append(el("strong", "", t("free")));
     } else {
         if (plugin.em_promocao) price.append(el("s", "", money(plugin.preco)));
         price.append(el("strong", "", money(plugin.preco_vigente)));
-        price.append(el("span", "", "pagamento único"));
+        price.append(el("span", "", t("oneTime")));
     }
     const available = (plugin.sistemas || []).length > 0;
-    const action = el("a", "btn", plugin.gratuito ? "Baixar grátis" : "Comprar");
+    const action = el("a", "btn", plugin.gratuito ? t("getFree") : t("buy"));
     action.href = purchaseUrl(plugin.slug);
     if (!available) {
         action.setAttribute("aria-disabled", "true");
-        action.textContent = "Em breve";
+        action.textContent = t("soon");
         action.removeAttribute("href");
     }
-    const note = el("p", "buy__note", plugin.gratuito
-        ? "Entre na sua conta da Mirai Hit Studio (ou crie uma, é grátis) e o plugin vai para Meus plugins, com a chave e os instaladores."
-        : "Você entra na sua conta da Mirai Hit Studio (ou cria uma, é grátis) e paga por Pix ou cartão. A chave e os instaladores ficam em Meus plugins.");
+    const note = el("p", "buy__note", plugin.gratuito ? t("buyNoteFree") : t("buyNotePaid"));
     box.append(price, action, note);
     return box;
 }
@@ -67,10 +73,10 @@ function buyBox(plugin) {
 function render(plugin) {
     setMeta(plugin);
     const crumbs = el("ol", "crumbs");
-    crumbs.setAttribute("aria-label", "Você está em");
+    crumbs.setAttribute("aria-label", t("youAreHere"));
     const home = el("li");
-    const homeLink = el("a", "", "Plugins");
-    homeLink.href = "/#plugins";
+    const homeLink = el("a", "", t("plugins"));
+    homeLink.href = href("/#plugins");
     home.append(homeLink);
     const current = el("li", "", plugin.nome);
     current.setAttribute("aria-current", "page");
@@ -81,31 +87,35 @@ function render(plugin) {
     if (plugin.capa_url) cover.querySelector("img").loading = "eager";
     const info = el("div", "product__info");
     const head = el("div", "product__head");
-    if (plugin.categoria) head.append(el("p", "eyebrow", plugin.categoria));
+    const category = localized(plugin, "categoria");
+    if (category) head.append(el("p", "eyebrow", category));
     head.append(el("h1", "product__title", plugin.nome));
-    if (plugin.tagline) head.append(el("p", "product__tagline", plugin.tagline));
+    const tagline = localized(plugin, "tagline");
+    if (tagline) head.append(el("p", "product__tagline", tagline));
     info.append(head, buyBox(plugin));
 
     const facts = el("dl", "facts");
     facts.append(
-        fact("Formatos", (plugin.formatos || []).join(" · ") || "—"),
-        fact("Sistemas", systemsText(plugin)),
-        fact("Versão", plugin.versao || "—"),
-        fact("Licença", "Pessoal, com chave de ativação"),
+        fact(t("formats"), (plugin.formatos || []).join(" · ") || "—"),
+        fact(t("systems"), systemsText(plugin)),
+        fact(t("version"), plugin.versao || "—"),
+        fact(t("license"), t("licenseValue")),
     );
     info.append(facts);
 
-    if (plugin.descricao) {
+    const description = localized(plugin, "descricao");
+    if (description) {
         const about = el("section", "prose");
-        about.append(el("h2", "", "Sobre"), el("p", "", plugin.descricao));
+        about.append(el("h2", "", t("about")), el("p", "", description));
         info.append(about);
     }
-    if (plugin.recursos?.length) {
-        const features = el("section", "prose");
+    const features = localized(plugin, "recursos") || [];
+    if (features.length) {
+        const section = el("section", "prose");
         const list = el("ul", "features");
-        plugin.recursos.forEach(item => list.append(el("li", "", item)));
-        features.append(el("h2", "", "Recursos"), list);
-        info.append(features);
+        features.forEach(item => list.append(el("li", "", item)));
+        section.append(el("h2", "", t("features")), list);
+        info.append(section);
     }
     const videoId = plugin.video_url ? youtubeId(plugin.video_url) : null;
     if (videoId) {
@@ -113,46 +123,47 @@ function render(plugin) {
         const frame = el("div", "video");
         const iframe = el("iframe");
         iframe.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}`;
-        iframe.title = `Vídeo do ${plugin.nome}`;
+        iframe.title = t("videoTitle", { name: plugin.nome });
         iframe.loading = "lazy";
         iframe.allow = "accelerometer; encrypted-media; gyroscope; picture-in-picture";
         iframe.referrerPolicy = "strict-origin-when-cross-origin";
         iframe.allowFullscreen = true;
         frame.append(iframe);
-        video.append(el("h2", "", "Em ação"), frame);
+        video.append(el("h2", "", t("inAction")), frame);
         info.append(video);
     } else if (plugin.video_url) {
-        const link = el("a", "btn btn--ghost", "Ver vídeo");
+        const link = el("a", "btn btn--ghost", t("watchVideo"));
         link.href = plugin.video_url;
         link.target = "_blank";
         link.rel = "noopener";
         info.append(link);
     }
-    if (plugin.requisitos) {
-        const requirements = el("section", "prose");
-        requirements.append(el("h2", "", "Requisitos"), el("p", "", plugin.requisitos));
-        info.append(requirements);
+    const requirements = localized(plugin, "requisitos");
+    if (requirements) {
+        const section = el("section", "prose");
+        section.append(el("h2", "", t("requirements")), el("p", "", requirements));
+        info.append(section);
     }
     product.append(cover, info);
     root.replaceChildren(crumbs, product);
 }
 
 function missing(message) {
-    document.title = `Plugin não encontrado | Mirai Hit Labs`;
+    document.title = t("missingPage");
     const box = el("div", "missing");
     const icon = el("img");
     icon.src = "/img/icon-sinal.svg";
     icon.alt = "";
-    const back = el("a", "btn", "Ver todos os plugins");
-    back.href = "/#plugins";
-    box.append(icon, el("h1", "section-title", "Plugin não encontrado"), el("p", "lead", message), back);
+    const back = el("a", "btn", t("allPlugins"));
+    back.href = href("/#plugins");
+    box.append(icon, el("h1", "section-title", t("missingTitle")), el("p", "lead", message), back);
     root.replaceChildren(box);
 }
 
 async function load() {
     const slug = slugFromPath();
     if (!slug) {
-        missing("Este endereço não corresponde a nenhum plugin.");
+        missing(t("missingAddress"));
         return;
     }
     root.setAttribute("aria-busy", "true");
@@ -160,11 +171,10 @@ async function load() {
         render(await getJSON(`/labs/plugins/${encodeURIComponent(slug)}`));
     } catch (error) {
         document.title = DEFAULT_TITLE;
-        missing(error.status === 404 ? "Ele pode ter saído do catálogo ou o endereço mudou." : error.message);
+        missing(error.status === 404 ? t("missingGone") : error.message);
     } finally {
         root.removeAttribute("aria-busy");
     }
 }
 
-setYear();
-load();
+if (READY) load();
