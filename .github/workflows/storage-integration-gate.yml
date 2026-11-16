@@ -137,7 +137,7 @@ jobs:
                   from sqlalchemy import create_engine, text
 
                   heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
-                  assert heads == ["b5e7a9c1d3f4"], heads
+                  assert heads == ["c6f8a0b2d4e5"], heads
                   with create_engine(os.environ["DATABASE_URL"]).connect() as connection:
                       assert int(connection.execute(text("SHOW server_version_num")).scalar_one()) // 10000 == 17
                       assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == heads[0]
@@ -218,6 +218,7 @@ jobs:
                     test_orcamentos_pausa.py \
                     test_mirai_labs.py \
                     test_labs_stripe.py \
+                    test_labs_admin.py \
                     test_portfolio_creditos.py \
                     test_portfolio_envios.py \
                     test_audio_tags.py \
@@ -320,6 +321,7 @@ jobs:
                   node frontend/tests/cliente_plugins.cjs
                   node frontend/tests/labs_store.cjs
                   node frontend/tests/labs_account.cjs
+                  node frontend/tests/labs_admin_panel.cjs
                   # APL-S12-01: real proposal HTML/PDF from the backend feed the document suite.
                   (cd backend && PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout python -m unittest discover -s tests -p 'test_proposta_documento.py')
                   PROPOSTA_TEST_OUTPUT=/tmp/mirai-proposta-layout node frontend/tests/proposta_documento.cjs
@@ -459,6 +461,7 @@ jobs:
                     backend/migrations/versions/f2c4e6a8b0d1_plugin_english_texts.py \
                     backend/migrations/versions/a4d6f8b0c2e3_labs_accounts.py \
                     backend/migrations/versions/b5e7a9c1d3f4_labs_stripe_orders.py \
+                    backend/migrations/versions/c6f8a0b2d4e5_labs_admin.py \
                     backend/models/plugin.py \
                     backend/schemas/plugin.py \
                     backend/services/plugin_service.py \
@@ -466,6 +469,11 @@ jobs:
                     backend/services/stripe_service.py \
                     backend/tests/test_mirai_labs.py \
                     backend/tests/test_labs_stripe.py \
+                    backend/models/labs_admin.py \
+                    backend/schemas/labs_admin.py \
+                    backend/services/labs_admin_service.py \
+                    backend/routers/labs_admin.py \
+                    backend/tests/test_labs_admin.py \
                     backend/services/marketing_service.py \
                     backend/routers/marketing.py \
                     backend/tests/test_marketing.py \
@@ -579,7 +587,7 @@ jobs:
                   {
                     echo "### Storage integration gate"
                     echo "- Exact integration SHA: $GITHUB_SHA"
-                    echo "- PostgreSQL 17 and Alembic b5e7a9c1d3f4: passed"
+                    echo "- PostgreSQL 17 and Alembic c6f8a0b2d4e5: passed"
                     echo "- FastAPI and Playwright E2E: passed"
                     echo "- R2, Cloudinary and Supabase: provider-boundary fakes passed"
                     echo "- Storage rollout preflight: sanitized config report; no live connectivity claim"
