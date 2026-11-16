@@ -3,10 +3,14 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src https://api.miraihitstudio.com.br http://localhost:8000; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src https://api.miraihitstudio.com.br https://mirai-hit-studio.onrender.com http://localhost:8000; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 
 /js/*
   Cache-Control: no-cache
 
 /css/*
+  Cache-Control: no-cache
+
+/admin/*
+  X-Robots-Tag: noindex, nofollow
   Cache-Control: no-cache

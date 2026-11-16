@@ -427,8 +427,17 @@ def reserve_for_proposal(db: Session, proposta, cliente_id):
             continue
         if Decimal(str(item["valor_unitario"])) != preco_vigente(plugin):
             raise HTTPException(409, "O preço do plugin mudou; refaça a compra.")
-        _conceder(db, plugin, cliente_id, "compra", proposta_id=proposta.id,
-                  valor=preco_vigente(plugin), status="reservada")
+        # A store coupon arrives as the line's discount; the license keeps the amount paid.
+        discount = min(preco_vigente(plugin), max(Decimal(0), Decimal(str(item.get("desconto") or 0))))
+        license = _conceder(db, plugin, cliente_id, "compra", proposta_id=proposta.id,
+                            valor=preco_vigente(plugin) - discount, status="reservada")
+        budget_id = getattr(proposta, "orcamento_id", None)
+        if budget_id is not None:
+            from services import labs_admin_service
+
+            use = labs_admin_service.uso_do_orcamento(db, budget_id)
+            if use is not None and use.licenca_id is None:
+                use.licenca_id = license.id
 
 
 def confirm_paid(db: Session, cobranca):
@@ -461,8 +470,22 @@ def finalidade_plugins(proposta):
     return getattr(proposta, "finalidade", "producao") == "plugins"
 
 
-def comprar(db: Session, slug: str, actor, idempotency_key: str, request_id=None):
-    from services import proposta_comercial_service, proposta_service
+def comprar_com_cupom_gratis(db, plugin, client, actor, coupon, discount, moeda, request_id=None):
+    """A coupon that covers the whole price: the license is granted like a courtesy."""
+    from services import labs_admin_service
+
+    license = _conceder(db, plugin, client.id, "cortesia")
+    labs_admin_service.registrar_uso(db, coupon, cliente_id=client.id, plugin_id=plugin.id, desconto=discount,
+                                     moeda=moeda, licenca_id=license.id)
+    audit_service.record(db, actor=actor, action="plugin.license_granted", entity_type="plugin_licenca",
+                         entity_id=license.id, metadata={"plugin_id": plugin.id, "origem": "cupom",
+                                                         "cupom": coupon.codigo}, request_id=request_id)
+    db.commit()
+    return {"gratuito": True, "licenca_id": license.id, "destino": "/cliente/plugins"}
+
+
+def comprar(db: Session, slug: str, actor, idempotency_key: str, request_id=None, cupom=None):
+    from services import labs_admin_service, proposta_comercial_service, proposta_service
 
     plugin = _publicado(db, slug)
     client = actor.cliente
@@ -479,11 +502,24 @@ def comprar(db: Session, slug: str, actor, idempotency_key: str, request_id=None
         db.commit()
         return {"gratuito": True, "licenca_id": license.id, "destino": "/cliente/plugins"}
 
+    coupon, discount = None, Decimal(0)
+    existing_budget = db.scalar(select(OrcamentoModel).where(OrcamentoModel.idempotency_key == idempotency_key))
+    if cupom and existing_budget is None:
+        coupon, discount = labs_admin_service.aplicar_cupom(db, cupom, plugin, client.id, price)
+    elif cupom and existing_budget is not None:
+        # A retry of the same purchase keeps the coupon it already reserved.
+        use = labs_admin_service.uso_do_orcamento(db, existing_budget.id)
+        if use is not None:
+            coupon, discount = use.cupom, Decimal(str(use.desconto))
+    final = price - discount
+    if coupon is not None and final == 0:
+        return comprar_com_cupom_gratis(db, plugin, client, actor, coupon, discount, "brl", request_id)
+
     # A purchase already waiting for payment goes back to the same checkout.
     pending = db.scalar(select(PluginLicencaModel).where(
         PluginLicencaModel.plugin_id == plugin.id, PluginLicencaModel.cliente_id == client.id,
         PluginLicencaModel.status == "reservada", PluginLicencaModel.origem == "compra",
-        PluginLicencaModel.valor == price, PluginLicencaModel.motivo.is_(None),
+        PluginLicencaModel.valor == final, PluginLicencaModel.motivo.is_(None),
     ).order_by(PluginLicencaModel.id.desc()).limit(1))
     if pending is not None:
         from services import financial_service
@@ -504,19 +540,29 @@ def comprar(db: Session, slug: str, actor, idempotency_key: str, request_id=None
         except (proposta_service.PropostaConflito, proposta_service.PropostaInvalida) as error:
             raise HTTPException(409, str(error)) from None
 
-    fingerprint = hashlib.sha256(json.dumps(
-        {"user": actor.id, "plugin": plugin.id, "price": str(price)}, sort_keys=True).encode()).hexdigest()
-    existing = db.scalar(select(OrcamentoModel).where(OrcamentoModel.idempotency_key == idempotency_key))
+    fingerprint_data = {"user": actor.id, "plugin": plugin.id, "price": str(price)}
+    if coupon is not None:
+        fingerprint_data["cupom"] = coupon.codigo
+    fingerprint = hashlib.sha256(json.dumps(fingerprint_data, sort_keys=True).encode()).hexdigest()
+    existing = existing_budget
     if existing is None:
+        details = f"Compra do plugin {plugin.nome} na Mirai Hit Labs (licença pessoal)."
+        if coupon is not None:
+            details += f" Cupom {coupon.codigo}: desconto de R$ {discount}."
         budget = OrcamentoModel(
             idempotency_key=idempotency_key, request_hash=fingerprint,
             nome_cliente=client.nome, email=client.email or "", whatsapp=client.telefone,
             servico=f"Plugin {plugin.nome}"[:100], valor_total=float(price),
-            detalhes=f"Compra do plugin {plugin.nome} na Mirai Hit Labs (licença pessoal).",
+            detalhes=details,
             cliente_id=client.id, is_test=bool(client.is_test), plugin_id=plugin.id,
         )
         db.add(budget)
         try:
+            if coupon is not None:
+                # Reserved in the same transaction as the budget (the coupon row is locked).
+                db.flush()
+                labs_admin_service.registrar_uso(db, coupon, cliente_id=client.id, plugin_id=plugin.id,
+                                                 desconto=discount, moeda="brl", orcamento_id=budget.id)
             db.commit()
             db.refresh(budget)
         except IntegrityError:

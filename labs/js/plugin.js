@@ -1,6 +1,6 @@
 // Plugin page (/plugins/<address>, /pt/plugins/<address>): details, price and the purchase
 // with the customer's Labs (or Mirai Hit Studio) account.
-import { api, isSignedIn } from "./auth.js";
+import { api, couponMessage, isSignedIn } from "./auth.js";
 import { INTERNATIONAL_PAYMENT } from "./config.js";
 import { LANG, SITE_URL, href, localized, t } from "./i18n.js";
 import { READY, coverNode, el, getJSON, money, systemsText } from "./labs.js";
@@ -74,7 +74,63 @@ function buyBox(plugin) {
     } else {
         action = el("button", "btn", plugin.gratuito ? t("getFree") : t("buy"));
         action.type = "button";
-        action.addEventListener("click", () => purchase(plugin, action, status));
+        action.addEventListener("click", () => purchase(plugin, action, status, coupon?.codigo));
+    }
+    // Coupon: checked before buying so the price shown is the price charged.
+    let coupon = null;
+    const couponBox = el("div", "coupon");
+    if (available && isSignedIn() && !plugin.gratuito) {
+        const toggle = el("button", "link-button", t("couponToggle"));
+        toggle.type = "button";
+        const form = el("form", "coupon__form");
+        form.hidden = true;
+        const label = el("label", "sr-only", t("couponLabel"));
+        const code = el("input", "field__input coupon__input");
+        code.id = "coupon-code";
+        label.htmlFor = code.id;
+        code.maxLength = 32;
+        code.autocomplete = "off";
+        code.spellcheck = false;
+        code.placeholder = t("couponLabel");
+        const apply = el("button", "btn btn--ghost btn--small", t("couponApply"));
+        apply.type = "submit";
+        const message = el("p", "coupon__message");
+        message.setAttribute("aria-live", "polite");
+        form.append(label, code, apply);
+        const reset = () => {
+            coupon = null;
+            price.replaceChildren();
+            if (plugin.em_promocao) price.append(el("s", "", money(plugin.preco)));
+            price.append(el("strong", "", money(plugin.preco_vigente)), el("span", "", t("oneTime")));
+            action.textContent = t("buy");
+            message.replaceChildren();
+        };
+        toggle.addEventListener("click", () => { toggle.hidden = true; form.hidden = false; code.focus(); });
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+            const value = code.value.trim().toUpperCase();
+            if (value.length < 3) { message.textContent = t("couponInvalid"); return; }
+            apply.disabled = true;
+            try {
+                const result = await api("/labs/cupons/validar", { method: "POST", body: { codigo: value, plugin: plugin.slug } });
+                if (!result?.valido) { reset(); message.textContent = couponMessage(result?.motivo); return; }
+                coupon = result;
+                price.replaceChildren(el("s", "", money(result.preco)), el("strong", "", money(result.preco_final)),
+                    el("span", "", t("oneTime")));
+                const free = Number(result.preco_final) === 0;
+                action.textContent = free ? t("getWithCoupon") : t("buy");
+                const remove = el("button", "link-button", t("couponRemove"));
+                remove.type = "button";
+                remove.addEventListener("click", () => { reset(); code.value = ""; code.focus(); });
+                message.replaceChildren(t("couponApplied", { code: result.codigo, amount: money(result.desconto) }),
+                    free ? ` ${t("couponFree")}` : "", " ", remove);
+            } catch (error) {
+                message.textContent = error.message;
+            } finally {
+                apply.disabled = false;
+            }
+        });
+        couponBox.append(toggle, form, message);
     }
     const stripe = LANG === "en" && INTERNATIONAL_PAYMENT;
     const note = el("p", "buy__note", plugin.gratuito ? t("buyNoteFreeLabs") : t(stripe ? "buyNotePaidLabsStripe" : "buyNotePaidLabs"));
@@ -83,12 +139,12 @@ function buyBox(plugin) {
         status.textContent = t("checkoutCancelled");
         window.history.replaceState(null, "", window.location.pathname);
     }
-    box.append(price, action, status, note);
+    box.append(price, couponBox, action, status, note);
     return box;
 }
 
 // One key per click; repeating the click after an error is a new attempt.
-async function purchase(plugin, button, status) {
+async function purchase(plugin, button, status, couponCode = null) {
     const label = button.textContent;
     button.disabled = true;
     button.textContent = t("buying");
@@ -100,6 +156,7 @@ async function purchase(plugin, button, status) {
         const route = !plugin.gratuito && LANG === "en" && INTERNATIONAL_PAYMENT ? "comprar-internacional" : "comprar";
         const order = await api(`/labs/plugins/${encodeURIComponent(plugin.slug)}/${route}`, {
             method: "POST", auth: true, headers: { "Idempotency-Key": key },
+            body: couponCode ? { cupom: couponCode } : undefined,
         });
         if (order?.gratuito) {
             status.textContent = t("gotFree");

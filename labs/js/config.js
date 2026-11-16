@@ -13,3 +13,9 @@ export const STUDIO_URL = local ? "http://localhost:4173" : "https://miraihitstu
 // reais through the Mirai checkout (Mercado Pago, Pix or card). To turn it on, set this to true and,
 // on the API, LABS_STRIPE_ENABLED=true with the Stripe keys (docs/MIRAI_LABS_CONTAS.md).
 export const INTERNATIONAL_PAYMENT = false;
+
+// Admin uploads (installers up to 150 MB): Cloudflare refuses bodies above 100 MB, so
+// multipart uploads go straight to Render, which accepts only uploads from our origins.
+export const UPLOAD_URL = local ? "http://localhost:8000"
+    : PRODUCTION_HOSTS.has(host) ? "https://mirai-hit-studio.onrender.com"
+        : "https://api.mirai-labs-preview.invalid";
