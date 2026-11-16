@@ -132,6 +132,7 @@ jobs:
                   python -m unittest discover -s tests -p 'test_orcamentos_pausa.py' -v
                   python -m unittest discover -s tests -p 'test_mirai_labs.py' -v
                   python -m unittest discover -s tests -p 'test_labs_stripe.py' -v
+                  python -m unittest discover -s tests -p 'test_labs_admin.py' -v
                   python -m unittest discover -s tests -p 'test_catalogo.py' -v
                   python -m unittest discover -s tests -p 'test_emails.py' -v
                   python -m unittest discover -s tests -p 'test_portal_produtor.py' -v

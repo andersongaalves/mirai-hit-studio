@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Admin | Mirai Hit Labs</title>
+        <meta name="theme-color" content="#111111" />
+        <link rel="icon" href="/img/logo-icon.svg" type="image/svg+xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Michroma&display=swap" />
+        <link rel="stylesheet" href="/css/admin.css" />
+        <script type="module" src="/admin/js/app.js"></script>
+    </head>
+    <body>
+        <a class="skip" href="#view">Pular para o conteúdo</a>
+
+        <section class="login" id="login" hidden aria-labelledby="login-title">
+            <form class="login__card" id="login-form" novalidate>
+                <img class="login__logo" src="/img/logo-horizontal.svg" alt="Mirai Hit Labs" width="560" height="138" />
+                <h1 class="login__title" id="login-title">Painel da Labs</h1>
+                <p class="login__lead">Entre com uma conta de administrador da Mirai Hit Studio.</p>
+                <label class="field">
+                    <span class="field__label">Usuário</span>
+                    <input class="field__input" name="username" autocomplete="username" required maxlength="50" />
+                </label>
+                <label class="field">
+                    <span class="field__label">Senha</span>
+                    <input class="field__input" name="password" type="password" autocomplete="current-password" required maxlength="128" />
+                </label>
+                <p class="form-status" id="login-status" role="status"></p>
+                <button class="btn" type="submit">Entrar</button>
+            </form>
+        </section>
+
+        <div class="shell" id="shell" hidden>
+            <aside class="side" aria-label="Navegação do painel">
+                <a class="side__brand" href="#/visao-geral" aria-label="Visão geral">
+                    <img src="/img/logo-horizontal.svg" alt="Mirai Hit Labs" width="560" height="138" />
+                    <span>Admin</span>
+                </a>
+                <nav class="side__nav" id="nav">
+                    <a href="#/visao-geral" data-route="visao-geral">Visão geral</a>
+                    <a href="#/plugins" data-route="plugins">Plugins</a>
+                    <a href="#/pedidos" data-route="pedidos">Pedidos</a>
+                    <a href="#/clientes" data-route="clientes">Clientes</a>
+                    <a href="#/licencas" data-route="licencas">Licenças</a>
+                    <a href="#/cupons" data-route="cupons">Cupons</a>
+                    <a href="#/loja" data-route="loja">Loja</a>
+                </nav>
+                <div class="side__foot">
+                    <a class="side__link" href="/" target="_blank" rel="noopener">Abrir a loja ↗</a>
+                    <span class="side__user" id="user-name"></span>
+                    <button class="link-button" type="button" id="logout">Sair</button>
+                </div>
+            </aside>
+            <main class="main" id="view" tabindex="-1" aria-live="polite"></main>
+        </div>
+
+        <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+    </body>
+</html>

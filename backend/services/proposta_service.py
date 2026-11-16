@@ -101,10 +101,16 @@ def criar_por_orcamento(db: Session, orcamento_id: int):
         beat_id = getattr(orcamento, "beat_id", None)
         beat_license = getattr(orcamento, "licenca_beat", None)
         plugin_id = getattr(orcamento, "plugin_id", None)
+        # Mirai Hit Labs: a store coupon becomes the line's discount (the unit price stays
+        # the catalog price, so the catalog check still holds).
+        desconto = Decimal(0)
+        if plugin_id is not None:
+            from services import labs_admin_service
+            desconto = labs_admin_service.desconto_do_orcamento(db, orcamento.id)
         item = PropostaItem(
             descricao=orcamento.servico, quantidade=1,
             valor_unitario=snapshot.orcamento.valor_total or Decimal(0),
-            beat_id=beat_id, licenca_beat=beat_license, plugin_id=plugin_id,
+            beat_id=beat_id, licenca_beat=beat_license, plugin_id=plugin_id, desconto=desconto,
         )
         if beat_id is not None or plugin_id is not None:
             from services import proposta_snapshot_service

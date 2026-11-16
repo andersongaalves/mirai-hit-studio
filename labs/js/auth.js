@@ -50,7 +50,18 @@ const MESSAGES = [
     [/Link invalido|indisponivel ou expirado/i, "linkInvalid"],
     [/Voc[eê] j[aá] tem este plugin/i, "alreadyOwned"],
     [/Complete seu cadastro/i, "completeProfile"],
+    [/^Cupom expirado/, "couponExpired"],
+    [/^Cupom esgotado/, "couponUsedUp"],
+    [/^Cupom n[aã]o vale/, "couponNotForPlugin"],
+    [/^Cupom j[aá] usado/, "couponAlreadyUsed"],
+    [/^Cupom/, "couponInvalid"],
 ];
+
+// The same reasons, for the coupon check before buying.
+export function couponMessage(detail) {
+    const match = MESSAGES.find(([pattern]) => pattern.test(detail || ""));
+    return t(match && match[1].startsWith("coupon") ? match[1] : "couponInvalid");
+}
 
 export class ApiError extends Error {
     constructor(message, status) {

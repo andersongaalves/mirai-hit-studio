@@ -108,3 +108,21 @@ export function setYear() {
 }
 
 setYear();
+
+// Announcement banner set in the admin panel (Loja). Store paths get the page's language.
+async function showBanner() {
+    if (document.querySelector(".announcement")) return;
+    let content;
+    try { content = await getJSON("/labs/conteudo"); } catch { return; }
+    const banner = content?.banner;
+    const text = (LANG === "pt" ? banner?.texto : banner?.texto_en) || banner?.texto || banner?.texto_en;
+    if (!text) return;
+    const bar = el("aside", "announcement");
+    bar.setAttribute("aria-label", t("announcement"));
+    const inner = el(banner.link ? "a" : "p", "announcement__text", text);
+    if (banner.link) inner.href = banner.link.startsWith("/") ? href(banner.link) : banner.link;
+    bar.append(inner);
+    document.body.prepend(bar);
+}
+
+if (READY) showBanner();

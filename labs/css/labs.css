@@ -260,3 +260,18 @@ button { font: inherit; }
 }
 .eyebrow[data-loading] { padding: 48px 0; }
 .product__cover .plugin-card__placeholder img { width: 40%; height: auto; object-fit: contain; }
+
+/* Announcement banner (admin > Loja) */
+.announcement { color: var(--paper); background: var(--ink); text-align: center; }
+.announcement__text { display: block; margin: 0; padding: 10px 16px; font: 600 13px/1.4 var(--font-text); letter-spacing: 0.04em; text-decoration: none; }
+a.announcement__text:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Coupon on the plugin page */
+.coupon { display: grid; gap: 8px; }
+.coupon:empty { display: none; }
+.coupon .link-button { font-size: 13px; }
+.coupon__form { display: flex; gap: 8px; }
+.coupon__form[hidden] { display: none; }
+.coupon__input { min-height: 40px; text-transform: uppercase; font-size: 15px; }
+.coupon__message { margin: 0; color: var(--muted); font-size: 14px; }
+.coupon__message:empty { display: none; }

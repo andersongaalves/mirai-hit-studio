@@ -19,7 +19,7 @@ from decimal import Decimal
 import httpx
 from core import config
 from fastapi import HTTPException
-from models import PluginLicencaModel, PluginPedidoStripeModel
+from models import LabsCupomUsoModel, PluginLicencaModel, PluginPedidoStripeModel
 from services import audit_service, plugin_service
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -96,7 +96,9 @@ def _still_open(order):
 # ---------------------------------------------------------------- buying
 
 
-def criar_checkout(db: Session, slug: str, actor, idempotency_key: str, request_id=None):
+def criar_checkout(db: Session, slug: str, actor, idempotency_key: str, request_id=None, cupom=None):
+    from services import labs_admin_service
+
     if not configurado():
         raise HTTPException(503, UNAVAILABLE)
     plugin = plugin_service._publicado(db, slug)
@@ -110,9 +112,19 @@ def criar_checkout(db: Session, slug: str, actor, idempotency_key: str, request_
         raise HTTPException(409, "Complete seu cadastro antes de comprar.")
     if plugin_service._licenca_ativa(db, plugin.id, client.id) is not None:
         raise HTTPException(409, "Você já tem este plugin. Baixe em Meus plugins.")
+    existing = db.scalar(select(PluginPedidoStripeModel).where(PluginPedidoStripeModel.idempotency_key == idempotency_key))
+    coupon, discount = None, Decimal(0)
+    if cupom and existing is None:
+        coupon, discount = labs_admin_service.aplicar_cupom(db, cupom, plugin, client.id, price)
+        if price - discount == 0:
+            return plugin_service.comprar_com_cupom_gratis(db, plugin, client, actor, coupon, discount, "usd", request_id)
+    elif cupom and existing is not None:
+        use = db.scalar(select(LabsCupomUsoModel).where(LabsCupomUsoModel.pedido_stripe_id == existing.id))
+        if use is not None:
+            coupon, discount = use.cupom, Decimal(str(use.desconto))
+    full_price, price = price, price - discount
     fingerprint = _fingerprint(actor.id, plugin.id, price)
 
-    existing = db.scalar(select(PluginPedidoStripeModel).where(PluginPedidoStripeModel.idempotency_key == idempotency_key))
     if existing is not None:
         if existing.request_hash != fingerprint:
             raise HTTPException(409, "Chave de repetição usada para outra compra.")
@@ -139,6 +151,9 @@ def criar_checkout(db: Session, slug: str, actor, idempotency_key: str, request_
     except IntegrityError:
         db.rollback()
         raise HTTPException(409, "Compra concorrente; recarregue a página.") from None
+    if coupon is not None:
+        labs_admin_service.registrar_uso(db, coupon, cliente_id=client.id, plugin_id=plugin.id, desconto=discount,
+                                         moeda="usd", licenca_id=license.id, pedido_stripe_id=order.id)
     audit_service.record(db, actor=actor, action="plugin.stripe_order_opened", entity_type="plugin_pedido_stripe",
                          entity_id=order.id, metadata={"plugin_id": plugin.id, "licenca_id": license.id},
                          request_id=request_id)
@@ -155,7 +170,9 @@ def criar_checkout(db: Session, slug: str, actor, idempotency_key: str, request_
             "line_items[0][price_data][currency]": "usd",
             "line_items[0][price_data][unit_amount]": str(_cents(price)),
             "line_items[0][price_data][product_data][name]": plugin.nome,
-            "line_items[0][price_data][product_data][description]": "Mirai Hit Labs plugin - personal license",
+            "line_items[0][price_data][product_data][description]": (
+                f"Mirai Hit Labs plugin - personal license (coupon {coupon.codigo}: -US$ {discount} of US$ {full_price})"
+                if coupon is not None else "Mirai Hit Labs plugin - personal license"),
             "metadata[order_id]": str(order.id),
             "payment_intent_data[metadata][order_id]": str(order.id),
             "success_url": f"{base}/my-plugins?checkout=success&session_id={{CHECKOUT_SESSION_ID}}",

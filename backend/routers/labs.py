@@ -8,6 +8,7 @@ from database import get_db
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Path, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
+from schemas.labs_admin import PluginCompra
 from schemas.plugin import (
     PluginCortesia,
     PluginInstaladorLink,
@@ -67,10 +68,12 @@ def comprar_plugin(
     db: Db,
     user: Customer,
     idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
+    payload: PluginCompra | None = None,
 ):
     if idempotency_key is None:
         raise HTTPException(422, "Idempotency-Key obrigatoria.")
-    return plugin_service.comprar(db, slug, user, str(idempotency_key), getattr(request.state, "request_id", None))
+    return plugin_service.comprar(db, slug, user, str(idempotency_key), getattr(request.state, "request_id", None),
+                                  cupom=payload.cupom if payload else None)
 
 
 # International purchase on the English store (Stripe Checkout, USD; same number as the price).
@@ -81,10 +84,12 @@ def comprar_plugin_internacional(
     db: Db,
     user: Customer,
     idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
+    payload: PluginCompra | None = None,
 ):
     if idempotency_key is None:
         raise HTTPException(422, "Idempotency-Key obrigatoria.")
-    return stripe_service.criar_checkout(db, slug, user, str(idempotency_key), getattr(request.state, "request_id", None))
+    return stripe_service.criar_checkout(db, slug, user, str(idempotency_key), getattr(request.state, "request_id", None),
+                                         cupom=payload.cupom if payload else None)
 
 
 MAX_STRIPE_BODY = 256 * 1024
