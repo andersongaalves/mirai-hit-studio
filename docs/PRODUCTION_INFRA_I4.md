@@ -27,7 +27,8 @@ All I.4 external gates are now confirmed. No secret value is recorded here.
 - Service branch: `main`; root directory: `backend`; both were confirmed in Render.
 - Build command: `pip install -r requirements.txt`.
 - Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`, without reload.
-- Auto-deploy is enabled on commit.
+- Auto-deploy is off (checked in Render on 16/11/2026): the API is deployed only by the
+  Protected Production Release workflow (`production-release.yml`, `release_mode=publish`).
 - Health path: `/health`; Render probes returned 200 after it was configured.
 - Runtime is pinned by `backend/.python-version` to Python 3.13.1, matching the
   development and connected-test interpreter. The deploy log supplied for this gate did
